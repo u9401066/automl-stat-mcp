@@ -2,20 +2,23 @@
 
 ## Done
 
-- AutoML API Service - 完整實作 (FastAPI + Redis Queue)
-- AutoML Worker - AutoGluon 1.3.1 整合完成
-- MinIO 連線與 S3 路徑解析修復
-- E2E 測試成功: Dataset → Job → Training → Model
-- README 更新完成
+- AutoML API Service - FastAPI + Redis Queue 完整實作
+- AutoML Worker - AutoGluon 1.3.1 官方鏡像整合
+- MinIO S3 路徑解析修復
+- MCP Basic Tools - 15 個 API Proxy 工具
+- MCP Smart Orchestration - 5 個智能工具 (quick_train, train_and_wait, wait_for_job, analyze_dataset, get_training_summary)
+- E2E 測試成功 - Iris Dataset 100% Accuracy
+- VS Code MCP 連線成功 - 20 tools discovered
+- README 完整更新
 
 ## Doing
 
-- MCP Server 驗證與測試
 - Memory Bank 更新
+- Git commit
 
 ## Next
 
-- MCP Handler 完整測試
-- Predict 功能測試
-- 多用戶隔離測試
 - Docker Compose 整合
+- GPU Worker 支援
+- Web UI Dashboard
+- 多用戶資源限制

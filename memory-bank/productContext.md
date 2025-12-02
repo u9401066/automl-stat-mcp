@@ -18,6 +18,10 @@ Provide a high-level overview of the project.
 
 ## Project Description
 
+AutoML MCP Server - 基於 DDD 架構的自動化機器學習平台，透過 MCP 提供 AI 助手整合介面，包含 20 個工具 (15 個基礎 + 5 個智能 Orchestration)
+
+
+
 AutoML MCP Server - \u57fa\u65bc DDD \u67b6\u69cb\u7684\u81ea\u52d5\u5316\u6a5f\u5668\u5b78\u7fd2\u5e73\u53f0\uff0c\u900f\u904e MCP (Model Context Protocol) \u63d0\u4f9b AI \u52a9\u624b\u6574\u5408\u4ecb\u9762
 
 
@@ -45,6 +49,10 @@ Multi-user AutoML system accessible via AI Agents through MCP. Users can submit 
 
 
 ## Architecture
+
+Clean Architecture with DDD + MCP Orchestration Layer - Domain (核心業務), Application (用例), Infrastructure (外部服務), Interface (API/MCP), MCP Orchestration (智能工具封裝)
+
+
 
 Clean Architecture with DDD - Domain Layer (\u6838\u5fc3\u696d\u52d9\u908f\u8f2f), Application Layer (\u7528\u4f8b\u7de8\u6392), Infrastructure Layer (\u5916\u90e8\u670d\u52d9\u6574\u5408), Interface Layer (API/MCP \u7aef\u9ede)
 
@@ -216,6 +224,17 @@ Separated Container Architecture with 4 components: 1) AutoML API (FastAPI) - li
 - Python 3.11
 - FastAPI
 - AutoGluon 1.3.1
+- Redis 7
+- MinIO
+- Docker
+- MCP SSE Transport
+- FastMCP
+
+
+
+- Python 3.11
+- FastAPI
+- AutoGluon 1.3.1
 - Redis (Job Queue)
 - MinIO (S3-compatible Storage)
 - Docker
@@ -273,6 +292,18 @@ Separated Container Architecture with 4 components: 1) AutoML API (FastAPI) - li
 
 
 ## Libraries and Dependencies
+
+- autogluon.tabular==1.3.1
+- fastapi
+- uvicorn
+- redis
+- minio
+- mcp
+- fastmcp
+- pydantic
+- httpx
+
+
 
 - autogluon.tabular==1.3.1
 - fastapi

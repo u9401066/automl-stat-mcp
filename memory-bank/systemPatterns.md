@@ -141,3 +141,14 @@ Redis-based job queue for distributing training jobs. API pushes job to Redis li
 
 - automl-service/src/infrastructure/file_storage.py: _parse_path() 方法
 - automl-worker/src/worker.py: _download_dataset() 方法
+
+
+## MCP Tool Layering Pattern
+
+MCP Server \u63d0\u4f9b\u4e09\u5c64\u5de5\u5177: 1) Basic Tools - \u76f4\u63a5\u5c0d\u61c9 API \u7684 proxy\uff0c2) Orchestration Tools - \u7d44\u5408\u591a\u500b\u64cd\u4f5c\u7684\u4fbf\u5229\u5de5\u5177\uff0c3) Analysis Tools - \u63d0\u4f9b\u667a\u80fd\u5efa\u8b70
+
+### Examples
+
+- quick_train: register + submit + wait
+- train_and_wait: submit + poll + return
+- analyze_dataset: 分析資料集提供訓練建議

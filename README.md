@@ -145,6 +145,23 @@ For Claude Desktop, add to config:
 
 ## Usage Flow
 
+### 🎯 Quick Path (Recommended for Agents)
+
+```
+User: "Train a model on my-bucket/data.csv to predict 'outcome'"
+
+Agent:
+1. quick_train(minio_path="my-bucket/data.csv", target="outcome", problem_type="binary")
+   → Waits for training, returns model_id + leaderboard
+
+2. "Training complete! Best model: XGBoost with 95% accuracy"
+
+3. predict(model_id, new_dataset_id)
+   → Predictions
+```
+
+### 📊 Detailed Path (Full Control)
+
 ```
 User: "Train a model on my dataset to predict 'outcome'"
 
@@ -152,19 +169,29 @@ Agent:
 1. register_dataset(minio_path="bucket/data.csv")
    → dataset_id
 
-2. submit_automl_job(dataset_id, target="outcome", problem_type="binary")
+2. analyze_dataset(dataset_id, target="outcome")
+   → Recommendations: presets="high_quality", time_limit=600
+
+3. submit_automl_job(dataset_id, target="outcome", problem_type="binary")
    → job_id (returns immediately!)
 
-3. "Training started. I'll check progress..."
+4. "Training started. I'll check progress..."
 
-4. get_job_status(job_id)  [poll until complete]
+5. wait_for_job(job_id, timeout=3600)  # or poll with get_job_status
    → status: "completed", model_id
 
-5. get_model_leaderboard(model_id)
+6. get_model_leaderboard(model_id)
    → Show results to user
 
-6. predict(model_id, new_dataset_id)
+7. predict(model_id, new_dataset_id)
    → Predictions
+```
+
+### 📋 Resource Management
+
+```
+Agent: get_training_summary(user_id)
+→ Overview of all datasets, jobs, models
 ```
 
 ## Update AutoGluon
@@ -204,20 +231,81 @@ docker run -d --name automl-worker ... automl-worker  # Same run command as abov
 
 ## MCP Tools
 
+### Basic Tools (API Proxy)
+
 | Tool | Description |
 |------|-------------|
 | `health_check` | Check service status |
 | `list_algorithms` | Get available ML algorithms |
 | `register_dataset` | Register dataset from MinIO |
 | `list_datasets` | List registered datasets |
-| `submit_automl_job` | Start AutoML training |
-| `submit_specific_job` | Train specific algorithms |
+| `delete_dataset` | Delete a dataset |
+| `submit_automl_job` | Start AutoML training (async) |
+| `submit_specific_job` | Train specific algorithms (async) |
+| `submit_compare_job` | Compare multiple algorithms (async) |
 | `get_job_status` | Check training progress |
 | `list_jobs` | List all jobs |
 | `cancel_job` | Cancel running job |
 | `list_models` | List trained models |
 | `get_model_leaderboard` | Get model comparison |
 | `predict` | Make predictions |
+| `delete_model` | Delete a model |
+
+### 🚀 Smart Orchestration Tools
+
+These tools combine multiple operations for better Agent UX:
+
+| Tool | Description | Use Case |
+|------|-------------|----------|
+| `quick_train` | 🎯 **Fastest path**: register + train + wait | "Train a model on this CSV" |
+| `train_and_wait` | Submit training and block until complete | Full control with waiting |
+| `wait_for_job` | Wait for any job to complete with timeout | Long-running jobs |
+| `analyze_dataset` | Get training recommendations | Optimize settings before training |
+| `get_training_summary` | Overview of all ML resources | Dashboard view |
+
+### Example: One-Call Training
+
+```python
+# Agent uses quick_train - one call does everything!
+result = quick_train(
+    minio_path="my-bucket/sales_data.csv",
+    target_column="revenue",
+    problem_type="regression",
+    user_id="user123",
+    time_limit=300
+)
+
+# Returns:
+# {
+#   "dataset_id": "abc-123",
+#   "job_id": "def-456", 
+#   "model_id": "ghi-789",
+#   "status": "completed",
+#   "summary": "✅ Model ready! 14 models trained in 2.5 min",
+#   "leaderboard": [...]
+# }
+```
+
+### Example: Step-by-Step with Analysis
+
+```python
+# 1. Analyze dataset first
+analysis = analyze_dataset(dataset_id, target_column, user_id)
+# Returns recommendations for presets, time_limit, warnings
+
+# 2. Train with recommended settings
+result = train_and_wait(
+    dataset_id=dataset_id,
+    target_column=target_column,
+    problem_type=analysis["recommended_problem_type"],
+    presets=analysis["recommendations"]["presets"],
+    time_limit=analysis["recommendations"]["time_limit"],
+    user_id=user_id
+)
+
+# 3. Make predictions
+predictions = predict(model_id=result["model_id"], dataset_id=test_data_id, user_id=user_id)
+```
 
 ## Development
 
