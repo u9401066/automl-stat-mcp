@@ -7,6 +7,7 @@
 - Docker Compose scaling support with 4 default workers
 - Refactoring: removed duplicate code and unused files
 - Unified docker-compose.yml for one-command startup
+- MCP Handler refactoring: 802-line monolith → 8 modular files
 
 ## Doing
 
