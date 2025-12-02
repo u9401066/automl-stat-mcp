@@ -1,0 +1,29 @@
+# AutoML MCP Server - Docker Compose
+#
+# This runs the MCP server in SSE mode for remote access.
+# For local development with STDIO, use: python src/main.py
+
+version: '3.8'
+
+services:
+  automl-mcp-server:
+    build: .
+    container_name: automl-mcp-server
+    ports:
+      - "8002:8002"
+    environment:
+      - AUTOML_SERVICE_URL=http://automl-service:8001
+      - MCP_MODE=sse
+      - MCP_PORT=8002
+      - MCP_HOST=0.0.0.0
+      - LOG_LEVEL=INFO
+    networks:
+      - automl-network
+    depends_on:
+      - automl-service
+    restart: unless-stopped
+
+networks:
+  automl-network:
+    external: true
+    name: automl-service_automl-network  # Connect to automl-service's network

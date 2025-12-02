@@ -1,0 +1,18 @@
+[project]
+name = "automl-mcp-server"
+version = "1.0.0"
+description = "AutoML MCP Server for AI Agent Integration"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "mcp>=1.0.0",
+    "httpx>=0.25.0",
+    "pydantic>=2.0.0",
+]
+
+[project.scripts]
+automl-mcp = "src.main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

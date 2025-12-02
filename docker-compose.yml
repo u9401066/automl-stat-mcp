@@ -1,0 +1,135 @@
+# =============================================================================
+# AutoML Full Stack - Separated Architecture
+# =============================================================================
+#
+# Components:
+#   - automl-api: FastAPI service (lightweight, no AutoGluon)
+#   - automl-worker: AutoGluon training (official image, zero maintenance)
+#   - automl-mcp: MCP Server for AI agents
+#   - redis: Job queue and status storage
+#
+# External (connect only, no local data storage):
+#   - MinIO: Your existing MinIO server
+#
+# Usage:
+#   1. Copy .env.example to .env and configure MinIO connection
+#   2. docker-compose up -d
+#
+# Update AutoGluon:
+#   1. Change FROM tag in automl-worker/Dockerfile
+#   2. docker-compose build automl-worker
+#   3. docker-compose up -d automl-worker
+#
+# =============================================================================
+
+services:
+  # ===========================================================================
+  # Redis - Job Queue & Status Store
+  # ===========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: automl-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - automl-network
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===========================================================================
+  # AutoML API Service (Lightweight - No AutoGluon)
+  # ===========================================================================
+  automl-api:
+    build: ./automl-service
+    container_name: automl-api
+    ports:
+      - "8001:8001"
+    environment:
+      # MinIO - Connect to your existing server (no local storage)
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio.example.com:9000}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
+      - MINIO_SECURE=${MINIO_SECURE:-false}
+      - MINIO_DATASET_BUCKET=${MINIO_DATASET_BUCKET:-automl-datasets}
+      - MINIO_MODEL_BUCKET=${MINIO_MODEL_BUCKET:-automl-models}
+      # Redis
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      # Logging
+      - LOG_LEVEL=INFO
+    networks:
+      - automl-network
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ===========================================================================
+  # AutoGluon Worker (Official Image - Zero Maintenance)
+  # ===========================================================================
+  # To update AutoGluon: Change the FROM tag in automl-worker/Dockerfile
+  # Available tags: https://hub.docker.com/r/autogluon/autogluon/tags
+  # ===========================================================================
+  automl-worker:
+    build: ./automl-worker
+    container_name: automl-worker
+    environment:
+      # MinIO - Same as API
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio.example.com:9000}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
+      - MINIO_SECURE=${MINIO_SECURE:-false}
+      - MINIO_DATASET_BUCKET=${MINIO_DATASET_BUCKET:-automl-datasets}
+      - MINIO_MODEL_BUCKET=${MINIO_MODEL_BUCKET:-automl-models}
+      # Redis
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      # Worker settings
+      - WORKER_TEMP_DIR=/tmp/autogluon-work
+      - LOG_LEVEL=INFO
+    networks:
+      - automl-network
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+        reservations:
+          memory: 4G
+    # Scale for parallel training:
+    # docker-compose up -d --scale automl-worker=3
+
+  # ===========================================================================
+  # AutoML MCP Server
+  # ===========================================================================
+  automl-mcp:
+    build: ./automl-mcp-server
+    container_name: automl-mcp
+    ports:
+      - "8002:8002"
+    environment:
+      - AUTOML_SERVICE_URL=http://automl-api:8001
+      - MCP_MODE=sse
+      - MCP_PORT=8002
+      - LOG_LEVEL=INFO
+    networks:
+      - automl-network
+    depends_on:
+      - automl-api
+    restart: unless-stopped
+
+volumes:
+  redis-data:
+
+networks:
+  automl-network:
+    driver: bridge

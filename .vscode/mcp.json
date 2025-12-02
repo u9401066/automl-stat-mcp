@@ -1,0 +1,13 @@
+{
+  "servers": {
+    "automl": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["-m", "src.infrastructure.mcp.server"],
+      "cwd": "${workspaceFolder}/automl-mcp-server",
+      "env": {
+        "AUTOML_SERVICE_URL": "http://localhost:8001"
+      }
+    }
+  }
+}
