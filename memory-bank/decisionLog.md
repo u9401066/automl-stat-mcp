@@ -26,3 +26,11 @@
 | 2025-12-02 | \u4f7f\u7528 predictor.model_best \u5c6c\u6027\u800c\u975e get_model_best() \u65b9\u6cd5 | AutoGluon 1.3.x API \u8b8a\u66f4\uff0cget_model_best() \u5df2\u79fb\u9664\uff0c\u6539\u7528\u5c6c\u6027\u5b58\u53d6\u65b9\u5f0f |
 | 2025-12-02 | MCP Server \u5347\u7d1a\u70ba\u667a\u80fd Job Orchestrator\uff0c\u800c\u975e\u55ae\u7d14 API Proxy | \u63d0\u4f9b\u66f4\u597d\u7684 Agent UX\uff0c\u6e1b\u5c11 Agent \u8981\u505a\u7684\u5de5\u4f5c\u3002\u65b0\u589e 5 \u500b\u667a\u80fd\u5de5\u5177: quick_train, train_and_wait, wait_for_job, analyze_dataset, get_training_summary |
 | 2025-12-02 | Worker \u652f\u63f4 GPU \u81ea\u52d5\u5075\u6e2c\u8207 CPU fallback\uff0c\u4e26\u652f\u63f4\u6c34\u5e73\u64f4\u5c55 | \u4f7f\u7528 PyTorch torch.cuda.is_available() \u5075\u6e2c GPU\uff0c\u900f\u904e ag_args_fit num_gpus \u63a7\u5236\u8a13\u7df4\u88dd\u7f6e\u3002Worker \u5728 Redis \u8a3b\u518a\u81ea\u5df1\u4ee5\u652f\u63f4\u76e3\u63a7\u548c\u64f4\u5c55\u3002 |
+| 2025-12-02 | Refactoring: 移除重複程式碼和未使用的檔案 | 1. storage/minio_client.py 與 file_storage.py 重複功能，統一使用 file_storage.py
+2. job_worker.py 和 ml_engine.py 已被獨立的 Worker container 取代，API container 不需要 AutoGluon
+3. config.py 改為只包含外部服務設定（MinIO/Redis/API），本地目錄設定移到 repositories.py
+4. repositories.py 使用 PERSIST_DIR 環境變數，方便 Docker volume mount |
+| 2025-12-02 | Docker Compose 預設 4 個 Worker 並整合所有服務 | 1. 一鍵啟動：docker compose up -d 啟動全部服務（Redis、API、MCP、4x Worker）
+2. 4 個 Worker 可同時處理 4 個訓練任務，適合多人使用
+3. 可透過 --scale automl-worker=N 動態調整 Worker 數量
+4. 移除 docker-compose.scale.yml，簡化部署流程 |

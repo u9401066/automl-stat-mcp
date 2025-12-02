@@ -60,14 +60,13 @@ Multi-user AutoML system accessible via AI Agents through MCP (Model Context Pro
 
 ### Prerequisites
 
-- Docker
+- Docker & Docker Compose
 - External MinIO server (or modify to use local MinIO)
-- Python 3.10+ (for local development)
 
 ### 1. Configure Environment
 
 ```bash
-# Edit .env with your MinIO credentials
+cp .env.example .env
 nano .env
 ```
 
@@ -79,52 +78,37 @@ MINIO_SECRET_KEY=your-secret-key
 MINIO_SECURE=false
 ```
 
-### 2. Create Docker Network
+### 2. Start All Services (One Command!)
 
 ```bash
-docker network create automl-network
+docker compose up -d
 ```
 
-### 3. Start Services
+This starts:
+- **Redis** - Job queue (port 6379)
+- **AutoML API** - REST API (port 8001)
+- **AutoML MCP** - MCP Server for AI agents (port 8002)
+- **4x AutoML Workers** - Parallel training execution
+
+### 3. Verify Services
 
 ```bash
-# Start Redis
-docker run -d --name automl-redis --network automl-network -p 6379:6379 redis:7-alpine
+# Check running containers
+docker ps
 
-# Build and start API
-docker build -t automl-api ./automl-service
-docker run -d --name automl-api --network automl-network -p 8001:8001 \
-  -e REDIS_HOST=automl-redis \
-  -e MINIO_ENDPOINT=$MINIO_ENDPOINT \
-  -e MINIO_ACCESS_KEY=$MINIO_ACCESS_KEY \
-  -e MINIO_SECRET_KEY=$MINIO_SECRET_KEY \
-  automl-api
-
-# Build and start MCP Server
-docker build -t automl-mcp ./automl-mcp-server
-docker run -d --name automl-mcp --network automl-network -p 8002:8002 \
-  -e AUTOML_SERVICE_URL=http://automl-api:8001 \
-  automl-mcp
-
-# Build and start Worker
-docker build -t automl-worker ./automl-worker
-docker run -d --name automl-worker --network automl-network \
-  -e REDIS_HOST=automl-redis \
-  -e MINIO_ENDPOINT=$MINIO_ENDPOINT \
-  -e MINIO_ACCESS_KEY=$MINIO_ACCESS_KEY \
-  -e MINIO_SECRET_KEY=$MINIO_SECRET_KEY \
-  automl-worker
-```
-
-### 4. Verify Services
-
-```bash
 # Check API health
 curl http://localhost:8001/health
 # {"status":"healthy","version":"1.0.0"}
+```
 
-# Check available algorithms
-curl http://localhost:8001/algorithms
+### 4. Scale Workers (Optional)
+
+```bash
+# Scale to 8 workers for high concurrency
+docker compose up -d --scale automl-worker=8
+
+# Scale down to 2 workers
+docker compose up -d --scale automl-worker=2
 ```
 
 ### 5. Connect AI Agent
@@ -235,8 +219,8 @@ docker run -d --name automl-worker-gpu \
 ### Option 2: Docker Compose with GPU
 
 ```bash
-# Start with GPU worker
-docker-compose -f docker-compose.yml -f docker-compose.gpu.yml up -d
+# Start all services with GPU worker
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d
 ```
 
 ### GPU Auto-Detection
@@ -260,18 +244,16 @@ Training with CPU
 
 ## Scaling Workers
 
-### Horizontal Scaling (Multiple Workers)
+Workers are scaled via docker compose. Default is 4 workers.
 
-Workers can scale horizontally to process multiple jobs in parallel:
+### Horizontal Scaling
 
 ```bash
-# Scale to 3 workers
-docker-compose -f docker-compose.yml -f docker-compose.scale.yml up -d
+# Scale to 8 workers for high concurrency
+docker compose up -d --scale automl-worker=8
 
-# Or manually start multiple workers
-docker run -d --name automl-worker-1 --network automl-network ... automl-worker
-docker run -d --name automl-worker-2 --network automl-network ... automl-worker
-docker run -d --name automl-worker-3 --network automl-network ... automl-worker
+# Scale down to 2 workers
+docker compose up -d --scale automl-worker=2
 ```
 
 ### Mixed GPU/CPU Scaling
@@ -279,10 +261,8 @@ docker run -d --name automl-worker-3 --network automl-network ... automl-worker
 Run both GPU and CPU workers for optimal resource usage:
 
 ```bash
-# 1 GPU worker + 2 CPU workers
-docker-compose -f docker-compose.yml \
-               -f docker-compose.gpu.yml \
-               -f docker-compose.scale.yml up -d
+# GPU workers with compose override
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d
 ```
 
 ### Worker Monitoring

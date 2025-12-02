@@ -2,23 +2,18 @@
 
 ## Done
 
-- AutoML API Service - FastAPI + Redis Queue 完整實作
-- AutoML Worker - AutoGluon 1.3.1 官方鏡像整合
-- MinIO S3 路徑解析修復
-- MCP Basic Tools - 15 個 API Proxy 工具
-- MCP Smart Orchestration - 5 個智能工具 (quick_train, train_and_wait, wait_for_job, analyze_dataset, get_training_summary)
-- E2E 測試成功 - Iris Dataset 100% Accuracy
-- VS Code MCP 連線成功 - 20 tools discovered
-- README 完整更新
+- MCP Smart Orchestration (quick_train, train_and_wait, wait_for_job, analyze_dataset, get_training_summary)
+- GPU Worker with auto-detection and CPU fallback
+- Docker Compose scaling support with 4 default workers
+- Refactoring: removed duplicate code and unused files
+- Unified docker-compose.yml for one-command startup
 
 ## Doing
 
-- Memory Bank 更新
-- Git commit
+
 
 ## Next
 
-- Docker Compose 整合
-- GPU Worker 支援
-- Web UI Dashboard
-- 多用戶資源限制
+- Implement predict endpoint (Worker or API-based ML engine)
+- Production deployment guide
+- Monitoring and alerting setup
