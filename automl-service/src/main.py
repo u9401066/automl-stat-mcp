@@ -1,21 +1,23 @@
 """
 AutoML Service - FastAPI Main Application
+
+Lightweight API service. AutoGluon runs in separate worker container.
 """
-import asyncio
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .interface.api.routes import datasets, training, jobs, models
-from .interface.api.dependencies import get_container
 from .interface.api.schemas import HealthResponse
 from .config import API_HOST, API_PORT, AVAILABLE_ALGORITHMS
 
 # Configure logging
+log_level = os.environ.get("LOG_LEVEL", "INFO")
 logging.basicConfig(
-    level=logging.INFO,
+    level=getattr(logging, log_level.upper()),
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
@@ -25,24 +27,13 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Application lifespan - startup and shutdown"""
     # Startup
-    logger.info("Starting AutoML Service...")
-    
-    container = get_container()
-    
-    # Start job worker
-    worker_task = asyncio.create_task(container.job_worker.run())
-    logger.info("Job worker started")
+    logger.info("Starting AutoML API Service...")
+    logger.info("Note: Training jobs are processed by the worker container")
     
     yield
     
     # Shutdown
-    logger.info("Shutting down AutoML Service...")
-    container.job_worker.stop()
-    worker_task.cancel()
-    try:
-        await worker_task
-    except asyncio.CancelledError:
-        pass
+    logger.info("Shutting down AutoML API Service...")
     logger.info("Shutdown complete")
 
 
@@ -84,8 +75,14 @@ app.include_router(models.router)
 
 
 @app.get("/", response_model=HealthResponse, tags=["Health"])
+async def root():
+    """Root endpoint"""
+    return HealthResponse(status="healthy", version="1.0.0")
+
+
+@app.get("/health", response_model=HealthResponse, tags=["Health"])
 async def health_check():
-    """Health check endpoint"""
+    """Health check endpoint for Docker healthcheck"""
     return HealthResponse(status="healthy", version="1.0.0")
 
 

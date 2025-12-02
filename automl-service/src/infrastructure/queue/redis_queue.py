@@ -11,7 +11,7 @@ from uuid import uuid4
 
 import redis
 
-from src.domain.models.job import Job, JobStatus, JobType
+from src.domain.models.job import Job, JobId, JobStatus, JobType
 from src.domain.models.training_config import TrainingConfig
 
 
@@ -56,14 +56,14 @@ class RedisJobQueue:
         
         # Create job record
         job = Job(
-            id=job_id,
+            id=JobId.from_string(job_id),
             job_type=job_type,
             user_id=user_id,
+            dataset_id=config.dataset_id,
             session_id=session_id,
             status=JobStatus.PENDING,
-            config=config,
+            config=config.__dict__ if hasattr(config, '__dict__') else {},
             created_at=now,
-            updated_at=now,
         )
         
         # Prepare job data for Redis

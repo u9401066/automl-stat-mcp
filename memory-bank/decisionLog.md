@@ -22,3 +22,5 @@
 
 參考 medical-calc-mcp 的 DDD + FastMCP 架構實作。 |
 | 2025-12-02 | 採用 Separated Container Architecture: API Container (lightweight) + AutoGluon Worker Container (official image) | 1. API container 不裝 AutoGluon，只處理 REST API 和 Redis 通訊，啟動快、image 小 2. AutoGluon worker 用官方 image，更新只需換 FROM tag，零維護 3. MinIO 為外部服務，只連線不存本地資料 4. 透過 Redis queue 分發 jobs，支援 worker 水平擴展 |
+| 2025-12-02 | AutoGluon 1.3.1 \u4f7f\u7528\u5b98\u65b9 Docker \u93e1\u50cf autogluon/autogluon:1.3.1-cpu-framework-ubuntu22.04-py3.11 | \u907f\u514d\u624b\u52d5\u5b89\u88dd\u4f9d\u8cf4\u554f\u984c\uff0c\u7c21\u5316\u90e8\u7f72\u6d41\u7a0b\uff0c\u6b64\u93e1\u50cf\u5305\u542b\u5b8c\u6574\u7684 CPU \u63a8\u8ad6\u74b0\u5883 |
+| 2025-12-02 | \u4f7f\u7528 predictor.model_best \u5c6c\u6027\u800c\u975e get_model_best() \u65b9\u6cd5 | AutoGluon 1.3.x API \u8b8a\u66f4\uff0cget_model_best() \u5df2\u79fb\u9664\uff0c\u6539\u7528\u5c6c\u6027\u5b58\u53d6\u65b9\u5f0f |

@@ -40,11 +40,15 @@ class MinIOStorageService(FileStorageService):
         Parse path into bucket and object name.
         
         Supports formats:
-        - "bucket/path/to/file.csv"
+        - "s3://bucket/path/to/file.csv"
         - "minio://bucket/path/to/file.csv"
+        - "bucket/path/to/file.csv"
         - "path/to/file.csv" (uses default bucket)
         """
-        if path.startswith("minio://"):
+        # Remove s3:// or minio:// prefix
+        if path.startswith("s3://"):
+            path = path[5:]
+        elif path.startswith("minio://"):
             path = path[8:]
         
         if "/" in path:

@@ -18,6 +18,10 @@ Provide a high-level overview of the project.
 
 ## Project Description
 
+AutoML MCP Server - \u57fa\u65bc DDD \u67b6\u69cb\u7684\u81ea\u52d5\u5316\u6a5f\u5668\u5b78\u7fd2\u5e73\u53f0\uff0c\u900f\u904e MCP (Model Context Protocol) \u63d0\u4f9b AI \u52a9\u624b\u6574\u5408\u4ecb\u9762
+
+
+
 Multi-user AutoML system accessible via AI Agents through MCP. Users can submit ML training jobs, compare algorithms, and make predictions through natural language with AI agents.
 
 
@@ -41,6 +45,10 @@ Multi-user AutoML system accessible via AI Agents through MCP. Users can submit 
 
 
 ## Architecture
+
+Clean Architecture with DDD - Domain Layer (\u6838\u5fc3\u696d\u52d9\u908f\u8f2f), Application Layer (\u7528\u4f8b\u7de8\u6392), Infrastructure Layer (\u5916\u90e8\u670d\u52d9\u6574\u5408), Interface Layer (API/MCP \u7aef\u9ede)
+
+
 
 Separated Container Architecture with 4 components: 1) AutoML API (FastAPI) - lightweight REST API handling job/dataset management via Redis queue, 2) AutoML MCP Server (FastMCP) - exposes MCP tools for AI agents, 3) AutoGluon Worker (official image) - pulls jobs from Redis and runs training, 4) External services: Redis (job queue) + MinIO (file storage). Key design: API container has NO AutoGluon installed, training delegated to worker containers.
 
@@ -205,6 +213,16 @@ Separated Container Architecture with 4 components: 1) AutoML API (FastAPI) - li
 
 ## Technologies
 
+- Python 3.11
+- FastAPI
+- AutoGluon 1.3.1
+- Redis (Job Queue)
+- MinIO (S3-compatible Storage)
+- Docker
+- MCP SSE Transport
+
+
+
 - Python 3.10+
 - FastAPI
 - FastMCP
@@ -255,6 +273,17 @@ Separated Container Architecture with 4 components: 1) AutoML API (FastAPI) - li
 
 
 ## Libraries and Dependencies
+
+- autogluon.tabular==1.3.1
+- fastapi
+- uvicorn
+- redis
+- minio
+- mcp
+- pydantic
+- python-multipart
+
+
 
 - fastapi
 - uvicorn

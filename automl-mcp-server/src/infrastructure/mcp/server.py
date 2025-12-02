@@ -56,7 +56,7 @@ class AutoMLMcpServer:
     Design follows medical-calc-mcp patterns.
     """
     
-    def __init__(self, config=None):
+    def __init__(self, config=None, host: str = "127.0.0.1", port: int = 8000):
         """Initialize the MCP server."""
         self._config = config or default_config
         
@@ -65,6 +65,8 @@ class AutoMLMcpServer:
             name=self._config.name,
             json_response=self._config.json_response,
             instructions=self._config.instructions,
+            host=host,
+            port=port,
         )
         
         # Initialize handlers
@@ -105,11 +107,11 @@ class AutoMLMcpServer:
 _server = None
 
 
-def get_server() -> AutoMLMcpServer:
+def get_server(host: str = "127.0.0.1", port: int = 8000) -> AutoMLMcpServer:
     """Get or create the server instance"""
     global _server
     if _server is None:
-        _server = AutoMLMcpServer()
+        _server = AutoMLMcpServer(host=host, port=port)
     return _server
 
 
@@ -154,11 +156,7 @@ def main():
     
     args = parser.parse_args()
     
-    if args.transport in ("sse", "http"):
-        os.environ["MCP_PORT"] = str(args.port)
-        os.environ["MCP_HOST"] = args.host
-    
-    get_server().run(transport=args.transport)
+    get_server(host=args.host, port=args.port).run(transport=args.transport)
 
 
 if __name__ == "__main__":

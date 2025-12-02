@@ -1,0 +1,123 @@
+# =============================================================================
+# AutoML Full Stack - Integration Test Environment
+# =============================================================================
+#
+# Uses your existing MinIO server at 192.168.1.102:9000
+#
+# Usage:
+#   docker-compose -f docker-compose.test.yml up -d
+#
+# Test endpoints:
+#   - AutoML API: http://localhost:8001/docs
+#   - MCP Server: http://localhost:8002/sse
+#   - MinIO Console: http://192.168.1.102:9001 (your existing server)
+#   - Redis: localhost:6379
+#
+# =============================================================================
+
+services:
+  # ===========================================================================
+  # Redis - Job Queue & Status Store
+  # ===========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: automl-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - automl-network
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===========================================================================
+  # AutoML API Service (Lightweight - No AutoGluon)
+  # ===========================================================================
+  automl-api:
+    build: ./automl-service
+    container_name: automl-api
+    ports:
+      - "8001:8001"
+    environment:
+      # MinIO - Your existing server (API port is 9000, console is 9001)
+      - MINIO_ENDPOINT=192.168.1.102:9000
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
+      - MINIO_SECURE=false
+      - MINIO_DATASET_BUCKET=automl-datasets
+      - MINIO_MODEL_BUCKET=automl-models
+      # Redis
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      # Logging
+      - LOG_LEVEL=DEBUG
+    networks:
+      - automl-network
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ===========================================================================
+  # AutoGluon Worker (Official Image - Zero Maintenance)
+  # ===========================================================================
+  automl-worker:
+    build: ./automl-worker
+    container_name: automl-worker
+    environment:
+      # MinIO - Your existing server
+      - MINIO_ENDPOINT=192.168.1.102:9000
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
+      - MINIO_SECURE=false
+      - MINIO_DATASET_BUCKET=automl-datasets
+      - MINIO_MODEL_BUCKET=automl-models
+      # Redis
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      # Worker settings
+      - WORKER_TEMP_DIR=/tmp/autogluon-work
+      - LOG_LEVEL=DEBUG
+    networks:
+      - automl-network
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+        reservations:
+          memory: 4G
+
+  # ===========================================================================
+  # AutoML MCP Server
+  # ===========================================================================
+  automl-mcp:
+    build: ./automl-mcp-server
+    container_name: automl-mcp
+    ports:
+      - "8002:8002"
+    environment:
+      - AUTOML_SERVICE_URL=http://automl-api:8001
+      - MCP_MODE=sse
+      - MCP_PORT=8002
+      - LOG_LEVEL=DEBUG
+    networks:
+      - automl-network
+    depends_on:
+      - automl-api
+    restart: unless-stopped
+
+volumes:
+  redis-data:
+
+networks:
+  automl-network:
+    driver: bridge

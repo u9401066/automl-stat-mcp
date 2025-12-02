@@ -10,7 +10,7 @@ import asyncio
 from mcp.server.fastmcp import FastMCP
 from pydantic import Field
 
-from .client import get_client
+from ..client import get_client
 
 
 class AutoMLHandler:

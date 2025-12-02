@@ -20,6 +20,7 @@ class TrainingConfig:
     
     Immutable configuration for a training job.
     """
+    dataset_id: str
     target_column: str
     problem_type: ProblemType
     
@@ -68,6 +69,7 @@ class TrainingConfig:
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary"""
         return {
+            "dataset_id": self.dataset_id,
             "target_column": self.target_column,
             "problem_type": self.problem_type.value,
             "algorithms": self.algorithms,
@@ -80,23 +82,28 @@ class TrainingConfig:
     @classmethod
     def for_automl(
         cls,
+        dataset_id: str,
         target_column: str,
         problem_type: ProblemType,
         time_limit: int = 300,
         presets: str = "medium_quality",
+        metric: Optional[str] = None,
     ) -> "TrainingConfig":
         """Factory method for AutoML configuration"""
         return cls(
+            dataset_id=dataset_id,
             target_column=target_column,
             problem_type=problem_type,
             algorithms=None,
             time_limit=time_limit,
             presets=presets,
+            metric=metric,
         )
 
     @classmethod
     def for_specific_algorithms(
         cls,
+        dataset_id: str,
         target_column: str,
         problem_type: ProblemType,
         algorithms: List[str],
@@ -104,6 +111,7 @@ class TrainingConfig:
     ) -> "TrainingConfig":
         """Factory method for specific algorithm training"""
         return cls(
+            dataset_id=dataset_id,
             target_column=target_column,
             problem_type=problem_type,
             algorithms=algorithms,
@@ -114,6 +122,7 @@ class TrainingConfig:
     @classmethod
     def for_comparison(
         cls,
+        dataset_id: str,
         target_column: str,
         problem_type: ProblemType,
         algorithms: List[str],
@@ -121,6 +130,7 @@ class TrainingConfig:
     ) -> "TrainingConfig":
         """Factory method for algorithm comparison"""
         return cls(
+            dataset_id=dataset_id,
             target_column=target_column,
             problem_type=problem_type,
             algorithms=algorithms,

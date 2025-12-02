@@ -138,7 +138,7 @@ class AutoGluonWorker:
                 result={
                     "model_minio_path": model_minio_path,
                     "leaderboard": leaderboard,
-                    "best_model": predictor.get_model_best(),
+                    "best_model": predictor.model_best,  # Property, not method
                 }
             )
             
@@ -159,6 +159,12 @@ class AutoGluonWorker:
 
     def _download_dataset(self, minio_path: str, work_dir: Path) -> Path:
         """Download dataset from MinIO to temp directory"""
+        # Remove s3:// or minio:// prefix
+        if minio_path.startswith("s3://"):
+            minio_path = minio_path[5:]
+        elif minio_path.startswith("minio://"):
+            minio_path = minio_path[8:]
+        
         # Parse path: bucket/path/to/file.csv
         parts = minio_path.split("/", 1)
         bucket = parts[0] if len(parts) > 1 else self.dataset_bucket
@@ -167,7 +173,7 @@ class AutoGluonWorker:
         local_path = work_dir / "dataset.csv"
         self.minio.fget_object(bucket, object_name, str(local_path))
         
-        logger.info(f"Downloaded dataset: {minio_path} -> {local_path}")
+        logger.info(f"Downloaded dataset: {bucket}/{object_name} -> {local_path}")
         return local_path
 
     def _train_model(

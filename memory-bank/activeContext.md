@@ -2,42 +2,23 @@
 
 ## Current Goals
 
-- ## 目前工作重點：實作 AutoML + Stats 系統
-- ### ✅ 已確認的技術選型
-- | 項目 | 選擇 | 理由 |
-- |------|------|------|
-- | **AutoML 後端** | AutoGluon | Python 全棧易 debug、效能最佳 |
-- | **統計分析** | tableone + pingouin | 臨床研究標準 |
-- | **API 框架** | FastAPI | async 支援、自動文檔 |
-- | **檔案存儲** | MinIO | Agent 上傳，MCP 驗證 |
-- | **任務處理** | 非同步 + WebSocket | 長時間訓練 |
-- | **資源隔離** | User ID + Session | 多用戶 |
-- | **認證** | 無（內網） | 簡化部署 |
-- | **開發風格** | DDD | 開發者偏好 |
-- ### 🔍 待評估
-- - Python MCP SDK 原生 + FastMCP 與 DDD 的整合方式
-- - MCP tool handlers 應放在 Interface Layer
-- ### DDD 架構規劃
-- ```
-- automl-service/
-- ├── domain/           # 領域層
-- │   ├── models/       # 聚合根、實體、值對象
-- │   ├── events/       # 領域事件
-- │   └── services/     # 領域服務
-- ├── application/      # 應用層
-- │   ├── use_cases/    # 用例
-- │   ├── dto/          # 資料傳輸對象
-- │   └── services/     # 應用服務
-- ├── infrastructure/   # 基礎設施層
-- │   ├── repositories/ # Repository 實作
-- │   ├── ml_engine/    # AutoGluon 整合
-- │   └── storage/      # MinIO 整合
-- └── interface/        # 介面層
-- ├── api/          # FastAPI endpoints
-- └── mcp/          # MCP tools
-- ```
-- ### 下一步
-- 用 DDD 架構重新組織 AutoML Service
+- ## \u7576\u524d\u72c0\u614b (2024-12-02)
+- ### \u904b\u884c\u4e2d\u7684\u670d\u52d9
+- - **automl-redis**: Redis 7 Job Queue (6379)
+- - **automl-api**: FastAPI \u670d\u52d9 (8001)
+- - **automl-mcp**: MCP SSE Server (8002)
+- - **automl-worker**: AutoGluon 1.3.1 Worker
+- ### MinIO \u914d\u7f6e
+- - \u4f4d\u5740: 192.168.1.102:9000
+- - Access Key: o5AwTLmDZrYDsXb2sYjG
+- - Secret Key: APZks0iBrNoeANdUj6BCVx92DktANonnrwvuT7yi
+- ### E2E \u6e2c\u8a66\u7d50\u679c
+- - Iris \u8cc7\u6599\u96c6\u8a13\u7df4\u6210\u529f
+- - \u6700\u4f73\u6a21\u578b: WeightedEnsemble_L2
+- - \u6e96\u78ba\u7387: 100% (CatBoost, LightGBM, XGBoost)
+- ### \u4e0b\u4e00\u6b65
+- - MCP Handler \u6e2c\u8a66
+- - Git \u63d0\u4ea4
 
 ## Current Blockers
 

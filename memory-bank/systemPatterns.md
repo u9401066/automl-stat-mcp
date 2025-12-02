@@ -131,3 +131,13 @@ Redis-based job queue for distributing training jobs. API pushes job to Redis li
 
 - automl-service/src/infrastructure/queue/redis_queue.py
 - automl-worker/src/worker.py
+
+
+## S3 Path Parsing Pattern
+
+\u7d71\u4e00\u89e3\u6790 s3:// \u548c minio:// \u524d\u7db4\u7684\u8def\u5f91\u683c\u5f0f\uff0c\u5728 _parse_path() \u65b9\u6cd5\u4e2d\u5148\u8655\u7406\u524d\u7db4\u518d\u62c6\u89e3 bucket/object \u7d50\u69cb
+
+### Examples
+
+- automl-service/src/infrastructure/file_storage.py: _parse_path() 方法
+- automl-worker/src/worker.py: _download_dataset() 方法

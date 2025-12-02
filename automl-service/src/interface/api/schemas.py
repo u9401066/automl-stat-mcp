@@ -71,10 +71,17 @@ class JobResponse(BaseModel):
     progress: float
     status_message: str
     model_id: Optional[str] = None
+    result: Optional[Dict[str, Any]] = None
     error_message: Optional[str] = None
     created_at: str
     started_at: Optional[str] = None
     completed_at: Optional[str] = None
+
+
+class JobListResponse(BaseModel):
+    """Response containing list of jobs"""
+    jobs: List[JobResponse]
+    total: int
 
 
 class LeaderboardEntryResponse(BaseModel):

@@ -2,34 +2,32 @@
 Dependency Injection Container
 
 Provides instances of repositories and services.
+Uses Redis Queue for job management (not in-memory).
 """
+import os
 from functools import lru_cache
 
 from ...infrastructure.repositories import (
     InMemoryDatasetRepository,
     InMemoryModelRepository,
-    InMemoryJobRepository,
 )
-from ...infrastructure.storage import MinIOStorageService, LocalFileStorageService
-from ...infrastructure.ml_engine import AutoGluonEngine
-from ...infrastructure.job_worker import JobWorker
+from ...infrastructure.file_storage import MinIOStorageService
+from ...infrastructure.queue.redis_queue import RedisJobQueue, get_job_queue
 
 
 class Container:
-    """Simple DI container"""
+    """Simple DI container for API service (no ML engine needed)"""
     
     _instance = None
     
     def __init__(self):
-        # Repositories
+        # Repositories (in-memory for now, can move to Redis/DB later)
         self._dataset_repo = None
         self._model_repo = None
-        self._job_repo = None
         
         # Services
-        self._file_storage = None
-        self._ml_engine = None
-        self._job_worker = None
+        self._minio_client = None
+        self._job_queue = None
 
     @classmethod
     def get_instance(cls) -> "Container":
@@ -50,38 +48,18 @@ class Container:
         return self._model_repo
 
     @property
-    def job_repo(self):
-        if self._job_repo is None:
-            self._job_repo = InMemoryJobRepository()
-        return self._job_repo
+    def file_storage(self) -> MinIOStorageService:
+        """MinIO file storage service"""
+        if self._minio_client is None:
+            self._minio_client = MinIOStorageService()
+        return self._minio_client
 
     @property
-    def file_storage(self):
-        if self._file_storage is None:
-            try:
-                self._file_storage = MinIOStorageService()
-            except Exception:
-                # Fallback to local storage for testing
-                self._file_storage = LocalFileStorageService()
-        return self._file_storage
-
-    @property
-    def ml_engine(self):
-        if self._ml_engine is None:
-            self._ml_engine = AutoGluonEngine()
-        return self._ml_engine
-
-    @property
-    def job_worker(self):
-        if self._job_worker is None:
-            self._job_worker = JobWorker(
-                job_repo=self.job_repo,
-                dataset_repo=self.dataset_repo,
-                model_repo=self.model_repo,
-                ml_engine=self.ml_engine,
-                file_storage=self.file_storage,
-            )
-        return self._job_worker
+    def job_queue(self) -> RedisJobQueue:
+        """Redis job queue"""
+        if self._job_queue is None:
+            self._job_queue = get_job_queue()
+        return self._job_queue
 
 
 def get_container() -> Container:

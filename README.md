@@ -60,24 +60,74 @@ Multi-user AutoML system accessible via AI Agents through MCP (Model Context Pro
 
 ### Prerequisites
 
-- Docker & Docker Compose
-- External MinIO server
+- Docker
+- External MinIO server (or modify to use local MinIO)
 - Python 3.10+ (for local development)
 
 ### 1. Configure Environment
 
 ```bash
-cp .env.example .env
-# Edit .env with your MinIO settings
+# Edit .env with your MinIO credentials
+nano .env
 ```
 
-### 2. Start Services
+Example `.env`:
+```bash
+MINIO_ENDPOINT=192.168.1.102:9000
+MINIO_ACCESS_KEY=your-access-key
+MINIO_SECRET_KEY=your-secret-key
+MINIO_SECURE=false
+```
+
+### 2. Create Docker Network
 
 ```bash
-docker-compose up -d
+docker network create automl-network
 ```
 
-### 3. Connect AI Agent
+### 3. Start Services
+
+```bash
+# Start Redis
+docker run -d --name automl-redis --network automl-network -p 6379:6379 redis:7-alpine
+
+# Build and start API
+docker build -t automl-api ./automl-service
+docker run -d --name automl-api --network automl-network -p 8001:8001 \
+  -e REDIS_HOST=automl-redis \
+  -e MINIO_ENDPOINT=$MINIO_ENDPOINT \
+  -e MINIO_ACCESS_KEY=$MINIO_ACCESS_KEY \
+  -e MINIO_SECRET_KEY=$MINIO_SECRET_KEY \
+  automl-api
+
+# Build and start MCP Server
+docker build -t automl-mcp ./automl-mcp-server
+docker run -d --name automl-mcp --network automl-network -p 8002:8002 \
+  -e AUTOML_SERVICE_URL=http://automl-api:8001 \
+  automl-mcp
+
+# Build and start Worker
+docker build -t automl-worker ./automl-worker
+docker run -d --name automl-worker --network automl-network \
+  -e REDIS_HOST=automl-redis \
+  -e MINIO_ENDPOINT=$MINIO_ENDPOINT \
+  -e MINIO_ACCESS_KEY=$MINIO_ACCESS_KEY \
+  -e MINIO_SECRET_KEY=$MINIO_SECRET_KEY \
+  automl-worker
+```
+
+### 4. Verify Services
+
+```bash
+# Check API health
+curl http://localhost:8001/health
+# {"status":"healthy","version":"1.0.0"}
+
+# Check available algorithms
+curl http://localhost:8001/algorithms
+```
+
+### 5. Connect AI Agent
 
 For VS Code Copilot, the MCP config is in `.vscode/mcp.json`.
 
@@ -122,14 +172,52 @@ Agent:
 Just change the tag in `automl-worker/Dockerfile`:
 
 ```dockerfile
-FROM autogluon/autogluon:1.3.0-cpu-py3.10  # Update version here
+# Available tags: https://hub.docker.com/r/autogluon/autogluon/tags
+FROM autogluon/autogluon:1.3.1-cpu-framework-ubuntu22.04-py3.11  # Current
+# For GPU: autogluon/autogluon:1.3.1-cuda12.4-framework-ubuntu22.04-py3.11
 ```
 
 Then rebuild:
 ```bash
-docker-compose build automl-worker
-docker-compose up -d automl-worker
+docker build -t automl-worker ./automl-worker
+docker rm -f automl-worker
+docker run -d --name automl-worker ... automl-worker  # Same run command as above
 ```
+
+## API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/datasets/register` | Register CSV from MinIO |
+| GET | `/datasets` | List user's datasets |
+| DELETE | `/datasets/{id}` | Delete dataset |
+| POST | `/train/automl` | Submit AutoML job |
+| POST | `/train/specific` | Train specific algorithms |
+| GET | `/jobs/{id}` | Get job status |
+| GET | `/jobs` | List user's jobs |
+| POST | `/jobs/{id}/cancel` | Cancel running job |
+| GET | `/models` | List user's models |
+| GET | `/models/{id}/leaderboard` | Get model leaderboard |
+| POST | `/models/predict` | Make predictions |
+| GET | `/health` | Health check |
+| GET | `/algorithms` | List available algorithms |
+
+## MCP Tools
+
+| Tool | Description |
+|------|-------------|
+| `health_check` | Check service status |
+| `list_algorithms` | Get available ML algorithms |
+| `register_dataset` | Register dataset from MinIO |
+| `list_datasets` | List registered datasets |
+| `submit_automl_job` | Start AutoML training |
+| `submit_specific_job` | Train specific algorithms |
+| `get_job_status` | Check training progress |
+| `list_jobs` | List all jobs |
+| `cancel_job` | Cancel running job |
+| `list_models` | List trained models |
+| `get_model_leaderboard` | Get model comparison |
+| `predict` | Make predictions |
 
 ## Development
 
