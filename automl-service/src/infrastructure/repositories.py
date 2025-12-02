@@ -1,8 +1,12 @@
 """
 In-Memory Repository Implementations
 
-For production, these should be replaced with persistent storage (PostgreSQL, Redis, etc.)
+Metadata is persisted to local JSON files for restart recovery.
+Actual data/models are stored in MinIO.
+
+For production, consider using Redis or PostgreSQL for metadata.
 """
+import os
 from typing import Optional, List, Dict
 from datetime import datetime
 import json
@@ -14,11 +18,21 @@ from ..domain.models import (
     Job, JobId, JobStatus, JobType,
 )
 from ..domain.repositories import DatasetRepository, ModelRepository, JobRepository
-from ..config import DATA_DIR, MODELS_DIR, JOBS_DIR
+
+# Persistence directories - configurable via environment variable
+PERSIST_DIR = Path(os.environ.get("PERSIST_DIR", "/app/data"))
+DATASETS_META_DIR = PERSIST_DIR / "datasets"
+MODELS_META_DIR = PERSIST_DIR / "models"
+JOBS_META_DIR = PERSIST_DIR / "jobs"
+
+# Ensure directories exist
+DATASETS_META_DIR.mkdir(parents=True, exist_ok=True)
+MODELS_META_DIR.mkdir(parents=True, exist_ok=True)
+JOBS_META_DIR.mkdir(parents=True, exist_ok=True)
 
 
 class InMemoryDatasetRepository(DatasetRepository):
-    """In-memory implementation of DatasetRepository"""
+    """In-memory implementation of DatasetRepository with JSON persistence"""
 
     def __init__(self):
         self._datasets: Dict[str, Dataset] = {}
@@ -26,9 +40,8 @@ class InMemoryDatasetRepository(DatasetRepository):
 
     def _load_from_disk(self):
         """Load datasets from disk on startup"""
-        meta_dir = DATA_DIR / "meta"
-        if meta_dir.exists():
-            for meta_file in meta_dir.glob("*.json"):
+        if DATASETS_META_DIR.exists():
+            for meta_file in DATASETS_META_DIR.glob("*.json"):
                 try:
                     with open(meta_file, "r") as f:
                         data = json.load(f)
@@ -50,10 +63,7 @@ class InMemoryDatasetRepository(DatasetRepository):
 
     def _save_to_disk(self, dataset: Dataset):
         """Persist dataset metadata to disk"""
-        meta_dir = DATA_DIR / "meta"
-        meta_dir.mkdir(parents=True, exist_ok=True)
-        
-        meta_file = meta_dir / f"{dataset.id}.json"
+        meta_file = DATASETS_META_DIR / f"{dataset.id}.json"
         data = {
             "id": str(dataset.id),
             "name": dataset.name,
@@ -90,7 +100,7 @@ class InMemoryDatasetRepository(DatasetRepository):
         key = str(dataset_id)
         if key in self._datasets:
             del self._datasets[key]
-            meta_file = DATA_DIR / "meta" / f"{key}.json"
+            meta_file = DATASETS_META_DIR / f"{key}.json"
             if meta_file.exists():
                 meta_file.unlink()
             return True
@@ -109,9 +119,8 @@ class InMemoryModelRepository(ModelRepository):
 
     def _load_from_disk(self):
         """Load models from disk on startup"""
-        meta_dir = MODELS_DIR / "meta"
-        if meta_dir.exists():
-            for meta_file in meta_dir.glob("*.json"):
+        if MODELS_META_DIR.exists():
+            for meta_file in MODELS_META_DIR.glob("*.json"):
                 try:
                     with open(meta_file, "r") as f:
                         data = json.load(f)
@@ -144,10 +153,7 @@ class InMemoryModelRepository(ModelRepository):
 
     def _save_to_disk(self, model: MLModel):
         """Persist model metadata to disk"""
-        meta_dir = MODELS_DIR / "meta"
-        meta_dir.mkdir(parents=True, exist_ok=True)
-        
-        meta_file = meta_dir / f"{model.id}.json"
+        meta_file = MODELS_META_DIR / f"{model.id}.json"
         data = {
             "id": str(model.id),
             "name": model.name,
@@ -198,7 +204,7 @@ class InMemoryModelRepository(ModelRepository):
                 shutil.rmtree(model_path)
             
             del self._models[key]
-            meta_file = MODELS_DIR / "meta" / f"{key}.json"
+            meta_file = MODELS_META_DIR / f"{key}.json"
             if meta_file.exists():
                 meta_file.unlink()
             return True
@@ -214,8 +220,8 @@ class InMemoryJobRepository(JobRepository):
 
     def _load_from_disk(self):
         """Load jobs from disk on startup"""
-        if JOBS_DIR.exists():
-            for job_file in JOBS_DIR.glob("*.json"):
+        if JOBS_META_DIR.exists():
+            for job_file in JOBS_META_DIR.glob("*.json"):
                 try:
                     with open(job_file, "r") as f:
                         data = json.load(f)
@@ -242,9 +248,7 @@ class InMemoryJobRepository(JobRepository):
 
     def _save_to_disk(self, job: Job):
         """Persist job to disk"""
-        JOBS_DIR.mkdir(parents=True, exist_ok=True)
-        
-        job_file = JOBS_DIR / f"{job.id}.json"
+        job_file = JOBS_META_DIR / f"{job.id}.json"
         data = {
             "id": str(job.id),
             "job_type": job.job_type.value,
@@ -296,7 +300,7 @@ class InMemoryJobRepository(JobRepository):
         key = str(job_id)
         if key in self._jobs:
             del self._jobs[key]
-            job_file = JOBS_DIR / f"{key}.json"
+            job_file = JOBS_META_DIR / f"{key}.json"
             if job_file.exists():
                 job_file.unlink()
             return True

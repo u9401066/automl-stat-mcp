@@ -1,5 +1,7 @@
 """
 MinIO File Storage Service Implementation
+
+All file storage is on MinIO - no local file storage.
 """
 from typing import Any, Dict, List, Tuple
 import io
@@ -10,7 +12,7 @@ from minio.error import S3Error
 from ..domain.services import FileStorageService
 from ..config import (
     MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, 
-    MINIO_SECURE, MINIO_BUCKET, DATA_DIR
+    MINIO_SECURE, MINIO_BUCKET
 )
 
 

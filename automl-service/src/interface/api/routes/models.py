@@ -105,7 +105,7 @@ async def get_model_leaderboard(
 @router.post(
     "/predict",
     response_model=PredictResponse,
-    responses={404: {"model": ErrorResponse}},
+    responses={404: {"model": ErrorResponse}, 501: {"model": ErrorResponse}},
 )
 async def predict(
     request: PredictRequest,
@@ -116,35 +116,19 @@ async def predict(
     
     The prediction dataset should have the same features as the training dataset
     (excluding the target column).
+    
+    NOTE: Prediction is currently not implemented. 
+    Models need to be downloaded from MinIO and loaded locally.
+    This will be added in a future version.
     """
-    container = get_container()
-    
-    use_case = PredictUseCase(
-        model_repo=container.model_repo,
-        dataset_repo=container.dataset_repo,
-        ml_engine=container.ml_engine,
-        file_storage=container.file_storage,
+    # TODO: Implement prediction
+    # Options:
+    # 1. Download model from MinIO, load with AutoGluon, predict
+    # 2. Create a prediction worker that handles this async
+    raise HTTPException(
+        status_code=501, 
+        detail="Prediction not yet implemented. Coming soon!"
     )
-    
-    try:
-        result = await use_case.execute(
-            PredictDTO(
-                model_id=request.model_id,
-                dataset_id=request.dataset_id,
-                user_id=x_user_id,
-            )
-        )
-        
-        return PredictResponse(
-            model_id=result.model_id,
-            predictions=result.predictions,
-            probabilities=result.probabilities,
-        )
-    
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    except PermissionError as e:
-        raise HTTPException(status_code=403, detail=str(e))
 
 
 @router.delete(

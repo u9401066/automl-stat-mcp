@@ -1,19 +1,10 @@
 """
 Configuration settings for AutoML Service
+
+Note: All storage is on MinIO, no local file storage.
+      Metadata persistence uses PERSIST_DIR environment variable (see repositories.py)
 """
 import os
-from pathlib import Path
-
-# Base directories
-BASE_DIR = Path(__file__).resolve().parent.parent
-DATA_DIR = BASE_DIR / "data"
-MODELS_DIR = BASE_DIR / "models"
-JOBS_DIR = BASE_DIR / "jobs"
-
-# Create directories
-DATA_DIR.mkdir(parents=True, exist_ok=True)
-MODELS_DIR.mkdir(parents=True, exist_ok=True)
-JOBS_DIR.mkdir(parents=True, exist_ok=True)
 
 # MinIO Configuration
 MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "localhost:9000")
@@ -21,6 +12,10 @@ MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
 MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "minioadmin")
 MINIO_SECURE = os.getenv("MINIO_SECURE", "false").lower() == "true"
 MINIO_BUCKET = os.getenv("MINIO_BUCKET", "automl-datasets")
+
+# Redis Configuration
+REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
+REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
 
 # AutoGluon Configuration
 AUTOGLUON_PRESETS = os.getenv("AUTOGLUON_PRESETS", "medium_quality")
