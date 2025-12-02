@@ -75,10 +75,13 @@ services:
   # ===========================================================================
   # To update AutoGluon: Change the FROM tag in automl-worker/Dockerfile
   # Available tags: https://hub.docker.com/r/autogluon/autogluon/tags
+  #
+  # GPU support: Use docker-compose.gpu.yml
+  # Scaling: docker-compose up -d --scale automl-worker=3
   # ===========================================================================
   automl-worker:
     build: ./automl-worker
-    container_name: automl-worker
+    # Note: container_name removed to support scaling
     environment:
       # MinIO - Same as API
       - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio.example.com:9000}
@@ -92,6 +95,7 @@ services:
       - REDIS_PORT=6379
       # Worker settings
       - WORKER_TEMP_DIR=/tmp/autogluon-work
+      - WORKER_TYPE=cpu
       - LOG_LEVEL=INFO
     networks:
       - automl-network

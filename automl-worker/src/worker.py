@@ -3,6 +3,11 @@ AutoGluon Worker - Job Consumer
 
 Pulls jobs from Redis queue, runs AutoGluon training, saves results to MinIO.
 
+Supports:
+- GPU acceleration (auto-detected)
+- CPU fallback when GPU unavailable
+- Multiple worker instances for scaling
+
 This runs in the official AutoGluon container - no need to maintain AutoGluon installation.
 """
 import asyncio
@@ -13,7 +18,7 @@ import shutil
 import tempfile
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 import redis
 from minio import Minio
@@ -28,19 +33,52 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def detect_gpu() -> Tuple[bool, str]:
+    """
+    Detect if GPU is available for training.
+    
+    Returns:
+        (gpu_available, device_info)
+    """
+    try:
+        import torch
+        if torch.cuda.is_available():
+            gpu_count = torch.cuda.device_count()
+            gpu_name = torch.cuda.get_device_name(0) if gpu_count > 0 else "Unknown"
+            return True, f"GPU: {gpu_name} (x{gpu_count})"
+        else:
+            return False, "CPU only (CUDA not available)"
+    except ImportError:
+        return False, "CPU only (PyTorch not installed)"
+    except Exception as e:
+        return False, f"CPU only (GPU detection failed: {e})"
+
+
 class AutoGluonWorker:
     """
     Worker that consumes training jobs from Redis queue.
     
+    Features:
+    - Auto GPU/CPU detection
+    - Horizontal scaling via multiple workers
+    - MinIO model storage
+    
     Flow:
     1. Pop job from Redis queue
     2. Download dataset from MinIO
-    3. Run AutoGluon training
+    3. Run AutoGluon training (GPU if available)
     4. Upload trained model to MinIO
     5. Update job status in Redis
     """
     
     def __init__(self):
+        # Detect GPU availability
+        self.gpu_available, self.device_info = detect_gpu()
+        
+        # Worker identity (for scaling)
+        self.worker_id = os.environ.get("WORKER_ID", os.environ.get("HOSTNAME", "worker-1"))
+        self.worker_type = os.environ.get("WORKER_TYPE", "auto")  # cpu, gpu, or auto
+        
         # Redis connection
         self.redis = redis.Redis(
             host=os.environ.get("REDIS_HOST", "redis"),
@@ -68,11 +106,16 @@ class AutoGluonWorker:
         self.job_queue = "automl:jobs:pending"
         self.job_prefix = "automl:job:"
         
-        logger.info("AutoGluon Worker initialized")
+        logger.info(f"AutoGluon Worker initialized: {self.worker_id}")
+        logger.info(f"Device: {self.device_info}")
+        logger.info(f"Worker type: {self.worker_type}")
 
     def run(self):
         """Main worker loop"""
-        logger.info("Starting worker loop...")
+        logger.info(f"Starting worker loop... ({self.worker_id})")
+        
+        # Register worker in Redis for monitoring
+        self._register_worker()
         
         while True:
             try:
@@ -82,17 +125,49 @@ class AutoGluonWorker:
                 if result:
                     _, job_id = result
                     self._process_job(job_id)
+                else:
+                    # Heartbeat when idle
+                    self._update_worker_heartbeat()
                     
             except KeyboardInterrupt:
                 logger.info("Worker shutting down...")
+                self._unregister_worker()
                 break
             except Exception as e:
                 logger.error(f"Error in worker loop: {e}")
                 asyncio.sleep(1)
+    
+    def _register_worker(self):
+        """Register this worker in Redis for monitoring"""
+        worker_info = {
+            "id": self.worker_id,
+            "type": self.worker_type,
+            "device": self.device_info,
+            "gpu_available": str(self.gpu_available),
+            "started_at": datetime.utcnow().isoformat(),
+            "status": "running",
+        }
+        self.redis.hset(f"automl:workers:{self.worker_id}", mapping=worker_info)
+        self.redis.sadd("automl:workers:active", self.worker_id)
+        logger.info(f"Worker registered: {self.worker_id}")
+    
+    def _unregister_worker(self):
+        """Unregister this worker from Redis"""
+        self.redis.srem("automl:workers:active", self.worker_id)
+        self.redis.hset(f"automl:workers:{self.worker_id}", "status", "stopped")
+        logger.info(f"Worker unregistered: {self.worker_id}")
+    
+    def _update_worker_heartbeat(self):
+        """Update worker heartbeat in Redis"""
+        self.redis.hset(
+            f"automl:workers:{self.worker_id}", 
+            "last_heartbeat", 
+            datetime.utcnow().isoformat()
+        )
 
     def _process_job(self, job_id: str):
         """Process a single training job"""
-        logger.info(f"Processing job: {job_id}")
+        logger.info(f"Processing job: {job_id} (worker: {self.worker_id})")
         
         work_dir = None
         try:
@@ -183,7 +258,7 @@ class AutoGluonWorker:
         config: Dict[str, Any],
         work_dir: Path,
     ) -> Path:
-        """Run AutoGluon training"""
+        """Run AutoGluon training with GPU/CPU auto-detection"""
         import pandas as pd
         
         # Load data
@@ -212,12 +287,28 @@ class AutoGluonWorker:
                 algo: {} for algo in config["algorithms"]
             }
         
+        # GPU/CPU configuration for neural networks
+        if self.gpu_available:
+            # Use GPU for neural network models
+            fit_args["ag_args_fit"] = {"num_gpus": 1}
+            logger.info("Training with GPU acceleration")
+        else:
+            # Force CPU for neural networks
+            fit_args["ag_args_fit"] = {"num_gpus": 0}
+            logger.info("Training with CPU")
+        
         # Create and train predictor
         logger.info(f"Starting AutoGluon training: {predictor_args}")
+        logger.info(f"Fit args: {fit_args}")
         predictor = TabularPredictor(**predictor_args)
         
         # Progress callback (simplified)
-        self._update_job_status(job_id, "running", progress=0.2, message="Training started")
+        self._update_job_status(
+            job_id, 
+            "running", 
+            progress=0.2, 
+            message=f"Training started ({self.device_info})"
+        )
         
         predictor.fit(df, **fit_args)
         

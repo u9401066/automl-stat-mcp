@@ -201,7 +201,6 @@ Just change the tag in `automl-worker/Dockerfile`:
 ```dockerfile
 # Available tags: https://hub.docker.com/r/autogluon/autogluon/tags
 FROM autogluon/autogluon:1.3.1-cpu-framework-ubuntu22.04-py3.11  # Current
-# For GPU: autogluon/autogluon:1.3.1-cuda12.4-framework-ubuntu22.04-py3.11
 ```
 
 Then rebuild:
@@ -209,6 +208,93 @@ Then rebuild:
 docker build -t automl-worker ./automl-worker
 docker rm -f automl-worker
 docker run -d --name automl-worker ... automl-worker  # Same run command as above
+```
+
+## GPU Support
+
+The worker automatically detects GPU availability and uses it for neural network training.
+
+### Option 1: Single GPU Worker
+
+```bash
+# Build GPU image
+docker build -f automl-worker/Dockerfile.gpu -t automl-worker-gpu ./automl-worker
+
+# Run with NVIDIA runtime
+docker run -d --name automl-worker-gpu \
+  --network automl-network \
+  --runtime nvidia \
+  --gpus all \
+  -e REDIS_HOST=automl-redis \
+  -e MINIO_ENDPOINT=$MINIO_ENDPOINT \
+  -e MINIO_ACCESS_KEY=$MINIO_ACCESS_KEY \
+  -e MINIO_SECRET_KEY=$MINIO_SECRET_KEY \
+  automl-worker-gpu
+```
+
+### Option 2: Docker Compose with GPU
+
+```bash
+# Start with GPU worker
+docker-compose -f docker-compose.yml -f docker-compose.gpu.yml up -d
+```
+
+### GPU Auto-Detection
+
+The worker automatically:
+1. Detects if CUDA is available
+2. Uses GPU for neural network models (NeuralNetTorch, NeuralNetFastAI)
+3. Falls back to CPU if GPU unavailable
+
+Worker logs show:
+```
+Device: GPU: NVIDIA GeForce RTX 3080 (x1)
+Training with GPU acceleration
+```
+
+or:
+```
+Device: CPU only (CUDA not available)
+Training with CPU
+```
+
+## Scaling Workers
+
+### Horizontal Scaling (Multiple Workers)
+
+Workers can scale horizontally to process multiple jobs in parallel:
+
+```bash
+# Scale to 3 workers
+docker-compose -f docker-compose.yml -f docker-compose.scale.yml up -d
+
+# Or manually start multiple workers
+docker run -d --name automl-worker-1 --network automl-network ... automl-worker
+docker run -d --name automl-worker-2 --network automl-network ... automl-worker
+docker run -d --name automl-worker-3 --network automl-network ... automl-worker
+```
+
+### Mixed GPU/CPU Scaling
+
+Run both GPU and CPU workers for optimal resource usage:
+
+```bash
+# 1 GPU worker + 2 CPU workers
+docker-compose -f docker-compose.yml \
+               -f docker-compose.gpu.yml \
+               -f docker-compose.scale.yml up -d
+```
+
+### Worker Monitoring
+
+Workers register themselves in Redis for monitoring:
+
+```bash
+# Check active workers
+redis-cli SMEMBERS automl:workers:active
+
+# Get worker info
+redis-cli HGETALL automl:workers:worker-1
 ```
 
 ## API Endpoints

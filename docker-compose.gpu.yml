@@ -1,0 +1,54 @@
+# =============================================================================
+# Docker Compose - GPU Workers Extension
+# =============================================================================
+#
+# Use with:
+#   docker-compose -f docker-compose.yml -f docker-compose.gpu.yml up -d
+#
+# Requirements:
+#   - NVIDIA Docker runtime installed
+#   - NVIDIA drivers on host
+#
+# =============================================================================
+
+services:
+  # ===========================================================================
+  # GPU Worker - Uses CUDA-enabled AutoGluon image
+  # ===========================================================================
+  automl-worker-gpu:
+    build:
+      context: ./automl-worker
+      dockerfile: Dockerfile.gpu
+    environment:
+      # MinIO
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio.example.com:9000}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
+      - MINIO_SECURE=${MINIO_SECURE:-false}
+      - MINIO_DATASET_BUCKET=${MINIO_DATASET_BUCKET:-automl-datasets}
+      - MINIO_MODEL_BUCKET=${MINIO_MODEL_BUCKET:-automl-models}
+      # Redis
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      # Worker settings
+      - WORKER_TEMP_DIR=/tmp/autogluon-work
+      - WORKER_TYPE=gpu
+      - LOG_LEVEL=INFO
+    networks:
+      - automl-network
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 16G
+        reservations:
+          memory: 8G
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    # NVIDIA runtime configuration
+    runtime: nvidia
