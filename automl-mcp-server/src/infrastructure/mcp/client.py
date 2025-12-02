@@ -203,8 +203,8 @@ class AutoMLClient:
     ) -> Dict[str, Any]:
         """Cancel a job"""
         return await self._request(
-            "DELETE",
-            f"/jobs/{job_id}",
+            "POST",
+            f"/jobs/{job_id}/cancel",
             user_id=user_id,
         )
 
