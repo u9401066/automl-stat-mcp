@@ -396,12 +396,21 @@ def _generate_result_summary(result: dict) -> dict:
         }
     
     # Recommendations
-    recommendations = result.get("recommendations", {})
+    recommendations = result.get("recommendations", [])
     if recommendations:
         summary["top_recommendations"] = []
-        for category in ["data_cleaning", "feature_engineering", "ml_models"]:
-            items = recommendations.get(category, [])
-            if items:
-                summary["top_recommendations"].extend(items[:2])
+        if isinstance(recommendations, list):
+            # New format: list of recommendation objects
+            for rec in recommendations[:5]:
+                if isinstance(rec, dict):
+                    summary["top_recommendations"].append(rec.get("suggestion", str(rec)))
+                else:
+                    summary["top_recommendations"].append(str(rec))
+        elif isinstance(recommendations, dict):
+            # Old format: dict with categories
+            for category in ["data_cleaning", "feature_engineering", "ml_models"]:
+                items = recommendations.get(category, [])
+                if items:
+                    summary["top_recommendations"].extend(items[:2])
     
     return summary

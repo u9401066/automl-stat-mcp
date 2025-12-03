@@ -2,10 +2,9 @@
 
 ## Done
 
-- Architecture documentation (README + Memory Bank)
-- Direct analyze in automl-service (Issue #2 resolved)
-- Stats-service DDD refactoring complete (Issue #3 resolved)
-- Git commits: a04bdea, 4ad6f37, 63e8743
+- Architecture Issues #1, #2, #3 all resolved
+- Stats-service DDD refactoring complete
+- Smart workflow tools with ticket system (38 total tools)
 
 ## Doing
 
@@ -13,6 +12,6 @@
 
 ## Next
 
-- Consider Issue #1: Stats service dataset dependency (technical debt)
-- Add domain layer for stats-service models (stats_job.py)
-- Add unit tests for domain layer
+- Implement full MinIO upload in execute_analysis_ticket (currently uses direct analyze for both paths)
+- Add unit tests for smart_tools
+- Consider ML training ticket workflow (similar pattern)
