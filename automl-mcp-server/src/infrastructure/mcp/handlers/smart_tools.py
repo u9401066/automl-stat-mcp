@@ -340,16 +340,23 @@ def register_smart_tools(mcp: FastMCP, automl_client) -> None:
                 # Use provided decisions or default actions
                 decisions = cleaning_decisions or data_cleaner.get_default_actions(validation_report)
                 
-                # Apply cleaning
-                df = data_cleaner.clean(df, validation_report, decisions)
+                # Apply cleaning - returns CleaningResult object
+                cleaning_result = data_cleaner.clean(df, validation_report, decisions)
+                
+                # Check if cleaning was successful
+                if not cleaning_result.success:
+                    return {
+                        "ticket_id": ticket_id,
+                        "status": "error",
+                        "error": cleaning_result.error or "Cleaning failed",
+                        "cleaning_report": cleaning_result.to_dict(),
+                    }
+                
+                # Get cleaned DataFrame from result
+                df = cleaning_result.df
                 
                 # Generate cleaning report
-                cleaning_report = data_cleaner.generate_cleaning_report(
-                    original_df=None,  # We don't keep original to save memory
-                    cleaned_df=df,
-                    validation_report=validation_report,
-                    decisions=decisions,
-                )
+                cleaning_report = cleaning_result.to_dict()
                 cleaning_report["original_shape"] = {"rows": original_shape[0], "columns": original_shape[1]}
                 cleaning_report["cleaned_shape"] = {"rows": df.shape[0], "columns": df.shape[1]}
             

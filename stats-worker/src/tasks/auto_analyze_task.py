@@ -821,17 +821,40 @@ class AutoAnalyzeEngine:
         self.result.recommendations = recs
 
 
-def run_auto_analyze(df: pd.DataFrame, target_column: Optional[str] = None) -> Dict:
+def run_auto_analyze(
+    df: pd.DataFrame, 
+    target_column: Optional[str] = None,
+    include_advanced: bool = True,
+) -> Dict:
     """
     Main entry point for auto-analysis
     
     Args:
         df: DataFrame to analyze
         target_column: Optional target column for association analysis
+        include_advanced: Include advanced analysis (VIF, missing pattern)
     
     Returns:
         Complete analysis result as dictionary
     """
     engine = AutoAnalyzeEngine(df, target_column)
     result = engine.analyze()
-    return result.to_dict()
+    output = result.to_dict()
+    
+    # Add advanced analysis if requested
+    if include_advanced:
+        try:
+            from .advanced_analysis import run_enhanced_analysis
+            advanced = run_enhanced_analysis(
+                df, 
+                target_column=target_column,
+                include_vif=True,
+                include_missing_analysis=True,
+            )
+            output["advanced_analysis"] = advanced
+        except ImportError:
+            logger.warning("Advanced analysis module not available")
+        except Exception as e:
+            logger.warning(f"Advanced analysis failed: {e}")
+    
+    return output

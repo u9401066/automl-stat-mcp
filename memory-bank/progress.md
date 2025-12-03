@@ -2,12 +2,10 @@
 
 ## Done
 
-- Architecture Issue #1-3 resolved
-- Smart Workflow tools (3 tools)
-- Data Validation Layer implementation
-- DataValidator + DataCleaner modules
-- Integration with smart_tools.py
-- Git commit 2dcd43a
+- Data Validation Layer 實作完成
+- PII_DETECTED vs PII_EMBEDDED 區分邏輯
+- 8/8 單元測試通過
+- IQR outlier detection 修正
 
 ## Doing
 
@@ -15,6 +13,5 @@
 
 ## Next
 
-- Test full workflow via MCP call
-- Update Design Issue #001 status
-- Update README with validation docs
+- 建立專門的 PHI MCP 處理散佈的個資
+- 與 MCP SSE endpoint 整合測試
