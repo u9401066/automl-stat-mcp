@@ -467,7 +467,7 @@ class DataValidator:
         return issues
     
     def _check_outliers(self, df: pd.DataFrame) -> List[DataIssue]:
-        """Detect outliers in numeric columns"""
+        """Detect outliers in numeric columns using IQR method (more robust than z-score)"""
         issues = []
         
         numeric_cols = df.select_dtypes(include=[np.number]).columns
@@ -477,17 +477,22 @@ class DataValidator:
             if len(values) < 10:
                 continue
             
-            # Z-score method
-            mean = values.mean()
-            std = values.std()
-            if std == 0:
+            # IQR method (more robust to outliers than z-score)
+            q1 = values.quantile(0.25)
+            q3 = values.quantile(0.75)
+            iqr = q3 - q1
+            
+            if iqr == 0:
                 continue
             
-            z_scores = np.abs((values - mean) / std)
-            outlier_count = (z_scores > self.outlier_zscore_threshold).sum()
+            lower_bound = q1 - 1.5 * iqr
+            upper_bound = q3 + 1.5 * iqr
+            
+            outlier_mask = (values < lower_bound) | (values > upper_bound)
+            outlier_count = outlier_mask.sum()
             outlier_ratio = outlier_count / len(values)
             
-            if outlier_ratio > 0.01:  # More than 1% outliers
+            if outlier_count > 0 and outlier_ratio > 0.01:  # More than 1% outliers
                 issues.append(DataIssue(
                     issue_type=IssueType.OUTLIERS_DETECTED,
                     severity=IssueSeverity.MEDIUM,
@@ -496,9 +501,12 @@ class DataValidator:
                     details={
                         "outlier_count": int(outlier_count),
                         "outlier_ratio": float(outlier_ratio),
-                        "mean": float(mean),
-                        "std": float(std),
-                        "threshold": self.outlier_zscore_threshold,
+                        "method": "IQR",
+                        "q1": float(q1),
+                        "q3": float(q3),
+                        "iqr": float(iqr),
+                        "lower_bound": float(lower_bound),
+                        "upper_bound": float(upper_bound),
                     },
                     suggested_actions=[
                         CleaningAction.KEEP_AS_IS,
