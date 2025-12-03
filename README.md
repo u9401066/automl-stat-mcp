@@ -2,6 +2,12 @@
 
 Multi-user AutoML system accessible via AI Agents through MCP (Model Context Protocol).
 
+**Features:**
+- 🤖 **AutoML Training** - Automatic model selection with AutoGluon
+- 📊 **Statistical Analysis** - Automated EDA and Table 1 generation (coming soon)
+- 🔌 **MCP Integration** - Direct access from AI Agents (Claude, Copilot)
+- 🔒 **Enterprise Ready** - HTTPS, POST-only API, multi-user isolation
+
 ## 📚 Documentation
 
 | Document | Description |
@@ -13,55 +19,48 @@ Multi-user AutoML system accessible via AI Agents through MCP (Model Context Pro
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                           Custom Code (Maintained)                           │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  ┌──────────────────────────┐      ┌──────────────────────────┐             │
-│  │   AutoML MCP Server      │      │   AutoML API Service     │             │
-│  │   (automl-mcp-server/)   │─────▶│   (automl-service/)      │             │
-│  │                          │ HTTP │                          │             │
-│  │   • FastMCP              │      │   • FastAPI + Pydantic   │             │
-│  │   • MCP Tools for Agents │      │   • Job Queue (Redis)    │             │
-│  │   • SSE/STDIO transport  │      │   • Dataset Management   │             │
-│  │                          │      │   • DDD Architecture     │             │
-│  │   Port: 8002             │      │   Port: 8001             │             │
-│  └──────────────────────────┘      └───────────┬──────────────┘             │
-│                                                │                             │
-└────────────────────────────────────────────────┼─────────────────────────────┘
-                                                 │ Redis Queue
-                                                 ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                     External Services (Zero Maintenance)                     │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  ┌──────────────────────────┐      ┌──────────────────────────┐             │
-│  │   Redis                  │      │   AutoGluon Worker       │             │
-│  │   (redis:7-alpine)       │      │   (autogluon/autogluon)  │             │
-│  │                          │      │                          │             │
-│  │   • Job Queue            │◀────▶│   • Official Docker image│             │
-│  │   • Status Store         │      │   • Update: change tag   │             │
-│  │                          │      │                          │             │
-│  │   Port: 6379             │      │   • Pop job from Redis   │             │
-│  └──────────────────────────┘      │   • Run AutoGluon train  │             │
-│                                    │   • Save model to MinIO  │             │
-│  ┌──────────────────────────┐      └──────────────────────────┘             │
-│  │   MinIO                  │                 │                              │
-│  │   (External Server)      │◀────────────────┘                              │
-│  │                          │                                                │
-│  │   • Dataset storage      │                                                │
-│  │   • Model storage        │                                                │
-│  └──────────────────────────┘                                                │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
+│                              MCP Server (8002)                               │
+│  ┌─────────────────────────────────┐  ┌─────────────────────────────────┐   │
+│  │      AutoML Tools (20)          │  │      Stats Tools (5) [planned]  │   │
+│  │  register_dataset, train, ...   │  │  eda_report, tableone, ...      │   │
+│  └───────────────┬─────────────────┘  └───────────────┬─────────────────┘   │
+└──────────────────┼────────────────────────────────────┼─────────────────────┘
+                   │                                    │
+                   ▼                                    ▼
+┌──────────────────────────────┐      ┌──────────────────────────────┐
+│      AutoML API (8001)       │      │      Stats API (8003)        │ [planned]
+│  • Dataset management        │      │  • EDA endpoints             │
+│  • Training job submission   │      │  • TableOne endpoints        │
+│  • Model management          │      │  • Quality check             │
+└──────────────┬───────────────┘      └──────────────┬───────────────┘
+               │                                     │
+               ▼                                     ▼
+┌──────────────────────────────┐      ┌──────────────────────────────┐
+│     AutoML Worker            │      │     Stats Worker             │ [planned]
+│  • AutoGluon 1.3.1           │      │  • ydata-profiling           │
+│  • Model training            │      │  • tableone                  │
+└──────────────┬───────────────┘      └──────────────┬───────────────┘
+               │                                     │
+               └──────────────┬──────────────────────┘
+                              ▼
+               ┌──────────────────────────────┐
+               │   Shared Infrastructure      │
+               │  ┌────────┐    ┌────────┐   │
+               │  │ Redis  │    │ MinIO  │   │
+               │  │ (6379) │    │ (9000) │   │
+               │  └────────┘    └────────┘   │
+               └──────────────────────────────┘
 ```
 
 ## Components
 
-| Component | Directory | Purpose | Tech Stack |
-|-----------|-----------|---------|------------|
-| AutoML API | `automl-service/` | REST API for job/dataset management | FastAPI, Redis, DDD |
-| AutoML MCP | `automl-mcp-server/` | MCP server for AI agents | FastMCP, httpx |
-| AutoGluon Worker | `automl-worker/` | ML training execution | Official AutoGluon image |
+| Component | Directory | Purpose | Tech Stack | Status |
+|-----------|-----------|---------|------------|--------|
+| AutoML API | `automl-service/` | REST API for job/dataset management | FastAPI, Redis, DDD | ✅ Ready |
+| AutoML MCP | `automl-mcp-server/` | MCP server for AI agents | FastMCP, httpx | ✅ Ready |
+| AutoML Worker | `automl-worker/` | ML training execution | AutoGluon 1.3.1 | ✅ Ready |
+| Stats API | `stats-service/` | Statistical analysis API | FastAPI, Redis | 🚧 Planned |
+| Stats Worker | `stats-worker/` | EDA & TableOne execution | ydata-profiling, tableone | 🚧 Planned |
 
 ## Quick Start
 

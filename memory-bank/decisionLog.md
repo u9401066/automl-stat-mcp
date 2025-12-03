@@ -34,3 +34,12 @@
 2. 4 個 Worker 可同時處理 4 個訓練任務，適合多人使用
 3. 可透過 --scale automl-worker=N 動態調整 Worker 數量
 4. 移除 docker-compose.scale.yml，簡化部署流程 |
+| 2025-12-03 | 採用獨立 Stats Service 架構（方案 A 改良版），共用 Redis 和 MinIO | 1. 獨立部署、獨立擴展，不影響現有 AutoML 服務
+2. 統計分析（EDA）可能耗時，使用獨立 Worker 避免阻塞
+3. 共用 Redis 佇列機制，保持一致的 Job 處理模式
+4. MinIO 只存最終結果（JSON/HTML 報告）
+5. MCP Server 統一入口，Agent 無需知道後端是哪個服務 |
+| 2025-12-03 | 選用 ydata-profiling + tableone 作為統計分析套件 | 1. ydata-profiling: 一行產出完整 EDA 報告，支援 JSON 輸出適合 API
+2. tableone: 標準 Table 1 格式，已有學術引用（JAMIA Open），適合醫學/臨床研究
+3. 不選 statsmodels: 太低階，需要大量包裝才能自動化
+4. 兩者可以互補：ydata-profiling 做探索性分析，tableone 做研究報告 |
