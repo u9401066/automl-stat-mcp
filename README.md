@@ -667,15 +667,17 @@ User → MCP → stats-service → Redis Queue → stats-worker → Return resul
 - Option B: Shared dataset registration service
 - Option C: Accept dependency (document as requirement)
 
-#### Issue 2: AutoML Service Lacks Direct Analyze
+#### Issue 2: ~~AutoML Service Lacks Direct Analyze~~ ✅ RESOLVED
 
-**Problem**: stats-service has `analyze_csv_directly` and `get_quick_stats` for analyzing CSV content without MinIO storage. automl-service should also support this for quick dataset analysis before training.
+**Solution Implemented**: Added direct analyze endpoints to automl-service:
+- `POST /direct/analyze` - ML training preparation analysis
+- `POST /direct/quick-stats` - Quick statistics
+- `POST /direct/preview` - Preview data before registration
 
-**Current State**:
-- stats-service: ✅ Has direct analysis (`/direct/analyze`, `/direct/quick-stats`)
-- automl-service: ❌ Requires MinIO registration first
-
-**Planned Solution**: Add direct analyze endpoints to automl-service for consistency.
+**MCP Tools Added**:
+- `direct_ml_analyze` - Analyze CSV for ML recommendations
+- `direct_ml_quick_stats` - Quick statistics
+- `direct_preview_data` - Preview before MinIO upload
 
 #### Issue 3: Stats Service Lacks DDD Architecture
 
@@ -704,15 +706,16 @@ stats-service/src/
 | AutoML Models | 4 | list_models, get_model_leaderboard, predict, delete_model |
 | AutoML Datasets | 3 | list_datasets, delete_dataset, analyze_dataset |
 | AutoML Smart | 3 | quick_train, train_and_wait, get_training_summary |
+| AutoML Direct | 3 | direct_ml_analyze, direct_ml_quick_stats, direct_preview_data |
 | AutoML Utility | 2 | health_check, list_algorithms |
-| **AutoML Total** | **20** | |
+| **AutoML Total** | **23** | |
 | Statistics EDA | 3 | submit_eda_job, run_quick_eda, preview_dataset_stats |
 | Statistics TableOne | 3 | submit_tableone_job, run_quick_tableone, get_column_suggestions |
 | Statistics Auto | 3 | auto_analyze, run_quick_auto_analyze, get_analysis_capabilities |
 | Statistics Direct | 2 | analyze_csv_directly, get_quick_stats |
 | Statistics Jobs | 1 | get_stats_job_status, get_stats_job_result, list_stats_jobs |
 | **Statistics Total** | **12** | |
-| **Grand Total** | **32** | |
+| **Grand Total** | **35** | |
 
 ## License
 

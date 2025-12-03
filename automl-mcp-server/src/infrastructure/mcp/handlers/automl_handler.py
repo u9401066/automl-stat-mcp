@@ -16,6 +16,7 @@ from .job_tools import register_job_tools
 from .model_tools import register_model_tools
 from .orchestration_tools import register_orchestration_tools
 from .statistics_tools import register_statistics_tools
+from .direct_tools import register_direct_tools
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +31,7 @@ class AutoMLHandler:
     - Training: submit_automl_job, submit_specific_job, submit_compare_job
     - Job: get_job_status, list_jobs, cancel_job
     - Model: list_models, get_model_leaderboard, predict, delete_model
+    - Direct: direct_ml_analyze, direct_ml_quick_stats, direct_preview_data
     
     🧠 Statistics (Smart Analysis):
     - auto_analyze: Intelligent automatic statistical analysis (RECOMMENDED)
@@ -39,6 +41,7 @@ class AutoMLHandler:
     - get_stats_job_status, get_stats_job_result, list_stats_jobs
     - get_column_suggestions, preview_dataset_stats
     - run_quick_eda, run_quick_tableone
+    - analyze_csv_directly, get_quick_stats: Direct stats analysis
     
     🚀 Smart Orchestration (convenience tools):
     - quick_train: Fastest path from CSV to model
@@ -47,14 +50,14 @@ class AutoMLHandler:
     - analyze_dataset: Get recommendations before training
     - get_training_summary: Overview of all resources
     
-    Total: 34 tools (20 AutoML + 14 Statistics)
+    Total: 35 tools (23 AutoML + 12 Statistics)
     """
 
     def __init__(self, mcp: FastMCP):
         self._mcp = mcp
         self._client = get_client()
         self._register_all_tools()
-        logger.info("AutoML Handler initialized with 34 tools")
+        logger.info("AutoML Handler initialized with 35 tools")
 
     def _register_all_tools(self) -> None:
         """Register all tool categories"""
@@ -64,4 +67,5 @@ class AutoMLHandler:
         register_job_tools(self._mcp, self._client)
         register_model_tools(self._mcp, self._client)
         register_orchestration_tools(self._mcp, self._client)
+        register_direct_tools(self._mcp, self._client)
         register_statistics_tools(self._mcp, self._client)

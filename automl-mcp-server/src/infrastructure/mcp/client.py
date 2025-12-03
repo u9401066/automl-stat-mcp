@@ -280,6 +280,63 @@ class AutoMLClient:
             response.raise_for_status()
             return response.json()
 
+    # ============== Direct Analysis Operations ==============
+
+    async def direct_analyze(
+        self,
+        csv_content: str,
+        user_id: str,
+        is_base64: bool = False,
+        target_column: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Analyze CSV data directly for ML preparation"""
+        return await self._request(
+            "POST",
+            "/direct/analyze",
+            user_id=user_id,
+            json={
+                "csv_content": csv_content,
+                "is_base64": is_base64,
+                "target_column": target_column,
+            },
+        )
+
+    async def direct_quick_stats(
+        self,
+        csv_content: str,
+        user_id: str,
+        is_base64: bool = False,
+    ) -> Dict[str, Any]:
+        """Get quick statistics for CSV data"""
+        return await self._request(
+            "POST",
+            "/direct/quick-stats",
+            user_id=user_id,
+            json={
+                "csv_content": csv_content,
+                "is_base64": is_base64,
+            },
+        )
+
+    async def direct_preview(
+        self,
+        csv_content: str,
+        user_id: str,
+        is_base64: bool = False,
+        n_rows: int = 10,
+    ) -> Dict[str, Any]:
+        """Preview CSV data before registration"""
+        return await self._request(
+            "POST",
+            "/direct/preview",
+            user_id=user_id,
+            json={
+                "csv_content": csv_content,
+                "is_base64": is_base64,
+                "n_rows": n_rows,
+            },
+        )
+
 
 # Singleton client instance
 _client: Optional[AutoMLClient] = None
