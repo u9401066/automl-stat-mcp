@@ -116,6 +116,34 @@ class StatsClient:
             params={"dataset_id": dataset_id, "user_id": user_id},
         )
 
+    # ============== Auto-Analyze Operations ==============
+    
+    async def submit_auto_analyze_job(
+        self,
+        dataset_id: str,
+        user_id: str,
+        session_id: Optional[str] = None,
+        target_column: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Submit an auto-analyze job"""
+        return await self._request(
+            "POST",
+            "/auto-analyze/submit",
+            json={
+                "dataset_id": dataset_id,
+                "user_id": user_id,
+                "session_id": session_id,
+                "target_column": target_column,
+            },
+        )
+    
+    async def get_auto_analyze_capabilities(self) -> Dict[str, Any]:
+        """Get auto-analyze capabilities"""
+        return await self._request(
+            "GET",
+            "/auto-analyze/capabilities",
+        )
+
     # ============== Job Operations ==============
     
     async def get_job_status(

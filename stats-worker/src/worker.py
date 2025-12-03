@@ -4,6 +4,7 @@ Stats Worker - Main Worker Process
 Processes statistical analysis jobs from Redis queue:
 - EDA reports using ydata-profiling
 - Table 1 using tableone
+- Auto-analyze: intelligent statistical analysis
 """
 import json
 import logging
@@ -264,6 +265,88 @@ class StatsWorker:
         
         logger.info(f"TableOne job {job_id} completed")
     
+    def process_auto_analyze_job(self, job: dict):
+        """Process auto-analyze job - intelligent statistical analysis"""
+        from .tasks.auto_analyze_task import run_auto_analyze
+        
+        job_id = job["job_id"]
+        params = job["params"]
+        
+        logger.info(f"Processing auto-analyze job {job_id}")
+        
+        self.update_job_status(job_id, "running", progress=0.1, message="Loading dataset...")
+        
+        # Load dataset
+        df = self.load_dataset(params["dataset_id"])
+        logger.info(f"Loaded dataset with shape {df.shape}")
+        
+        self.update_job_status(job_id, "running", progress=0.2, message="Analyzing data quality...")
+        
+        # Run auto-analysis
+        target_column = params.get("target_column")
+        
+        self.update_job_status(job_id, "running", progress=0.4, message="Profiling columns...")
+        
+        result = run_auto_analyze(df, target_column=target_column)
+        
+        self.update_job_status(job_id, "running", progress=0.8, message="Saving analysis report...")
+        
+        # Add summary for easy reading
+        result["summary"] = self._generate_summary(result)
+        
+        # Save report
+        result_path = self.save_report(job_id, result, format="json")
+        
+        self.update_job_status(
+            job_id, "completed",
+            progress=1.0,
+            message="Auto-analysis completed successfully",
+            result_path=result_path,
+        )
+        
+        logger.info(f"Auto-analyze job {job_id} completed")
+    
+    def _generate_summary(self, result: dict) -> dict:
+        """Generate human-readable summary from analysis result"""
+        summary = {
+            "overview": f"Dataset has {result['metadata']['n_rows']} rows and {result['metadata']['n_cols']} columns",
+            "quality": f"Data quality score: {result['data_quality']['score']}/100",
+        }
+        
+        # Column summary
+        col_summary = result.get("column_summary", {})
+        summary["columns"] = {
+            "numeric": len(col_summary.get("numeric", [])),
+            "categorical": len(col_summary.get("categorical", [])),
+            "datetime": len(col_summary.get("datetime", [])),
+            "excluded": len(col_summary.get("id_columns", [])) + len(col_summary.get("constant", [])),
+        }
+        
+        # Top issues
+        issues = result.get("data_quality", {}).get("issues", [])
+        if issues:
+            summary["top_issues"] = issues[:3]
+        
+        # Target analysis summary
+        if result.get("target_analysis") and result["target_analysis"].get("associations"):
+            assocs = result["target_analysis"]["associations"]
+            significant = [a for a in assocs if a.get("p_value", 1) < 0.05]
+            summary["target_analysis"] = {
+                "total_features_tested": len(assocs),
+                "significant_associations": len(significant),
+                "top_predictors": [a["variable"] for a in significant[:5]],
+            }
+        
+        # Top recommendations
+        recs = result.get("recommendations", [])
+        if recs:
+            summary["key_recommendations"] = [
+                {"category": r["category"], "suggestion": r["suggestion"]}
+                for r in recs[:3]
+            ]
+        
+        return summary
+    
     def process_job(self, job: dict):
         """Process a single job"""
         job_type = job.get("job_type")
@@ -274,6 +357,8 @@ class StatsWorker:
                 self.process_eda_job(job)
             elif job_type == "tableone":
                 self.process_tableone_job(job)
+            elif job_type == "auto_analyze":
+                self.process_auto_analyze_job(job)
             else:
                 raise ValueError(f"Unknown job type: {job_type}")
                 

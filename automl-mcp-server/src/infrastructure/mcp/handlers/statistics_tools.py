@@ -2,6 +2,7 @@
 Statistics Tools for MCP
 
 Provides statistical analysis capabilities through the Stats Service:
+- Auto-analyze: Intelligent automatic statistical analysis
 - EDA (Exploratory Data Analysis) reports using ydata-profiling
 - Table 1 generation using tableone package
 """
@@ -19,6 +20,160 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
     
     from .stats_client import StatsClient
     stats_client = StatsClient()
+    
+    # ==================== AUTO-ANALYZE (Smart Analysis) ====================
+    
+    @mcp.tool()
+    async def auto_analyze(
+        dataset_id: str,
+        user_id: str,
+        target_column: Optional[str] = None,
+        session_id: Optional[str] = None,
+    ) -> dict:
+        """
+        🧠 Intelligent automatic statistical analysis.
+        
+        This is the RECOMMENDED tool for data analysis. It automatically:
+        
+        1. **Data Quality Check**
+           - Missing values (count, percentage)
+           - Outliers (IQR and Z-score methods)
+           - Duplicates, constant columns
+        
+        2. **Smart Type Inference**
+           - Numeric vs Categorical detection
+           - ID columns auto-excluded
+           - Datetime detection
+        
+        3. **Descriptive Statistics**
+           - Numeric: mean, std, median, skewness, kurtosis
+           - Categorical: frequency, mode, distribution
+        
+        4. **Hypothesis Testing**
+           - Normality tests (auto-selects appropriate test)
+           - Determines parametric vs non-parametric approach
+        
+        5. **Association Analysis** (if target_column provided)
+           - Auto-selects appropriate test based on variable types:
+             * Numeric vs Numeric: Pearson/Spearman correlation
+             * Categorical vs Categorical: Chi-square + Cramér's V
+             * Numeric vs Categorical: t-test/ANOVA/Mann-Whitney/Kruskal-Wallis
+        
+        6. **Recommendations**
+           - Data cleaning suggestions
+           - Feature engineering ideas
+           - Suitable ML models
+        
+        Args:
+            dataset_id: Dataset to analyze
+            user_id: User ID
+            target_column: Optional target for association analysis
+            session_id: Optional session ID
+        
+        Returns:
+            job_id: Job identifier for tracking
+            
+        Example:
+            # Basic analysis
+            auto_analyze(dataset_id="abc", user_id="user1")
+            
+            # With target (for ML preparation)
+            auto_analyze(dataset_id="abc", user_id="user1", target_column="price")
+        """
+        return await stats_client.submit_auto_analyze_job(
+            dataset_id=dataset_id,
+            user_id=user_id,
+            session_id=session_id,
+            target_column=target_column,
+        )
+    
+    @mcp.tool()
+    async def run_quick_auto_analyze(
+        dataset_id: str,
+        user_id: str,
+        target_column: Optional[str] = None,
+        wait_timeout: int = 600,
+    ) -> dict:
+        """
+        🚀 Quick Auto-Analysis: One command, complete results.
+        
+        Submits auto_analyze and waits for completion.
+        Returns the full analysis report directly.
+        
+        ⚠️ This blocks until analysis completes (typically 30-120 seconds).
+        
+        Args:
+            dataset_id: Dataset to analyze
+            user_id: User ID
+            target_column: Optional target column for association analysis
+            wait_timeout: Max seconds to wait (default: 600)
+        
+        Returns:
+            status: "completed" | "failed" | "timeout"
+            summary: Human-readable overview
+            result: Full analysis result including:
+                - metadata: rows, columns, memory
+                - column_summary: columns by type
+                - columns: detailed profile per column
+                - data_quality: score and issues
+                - correlation_matrix: for numeric columns
+                - target_analysis: associations with target
+                - recommendations: actionable suggestions
+        """
+        # Submit job
+        submit_result = await stats_client.submit_auto_analyze_job(
+            dataset_id=dataset_id,
+            user_id=user_id,
+            target_column=target_column,
+        )
+        
+        job_id = submit_result.get("job_id")
+        if not job_id:
+            return {"status": "failed", "error": "Failed to submit job"}
+        
+        # Poll for completion
+        start_time = time.time()
+        poll_interval = 5
+        
+        while time.time() - start_time < wait_timeout:
+            status = await stats_client.get_job_status(job_id)
+            job_status = status.get("status")
+            
+            if job_status == "completed":
+                result = await stats_client.get_job_result(job_id)
+                return {
+                    "job_id": job_id,
+                    "status": "completed",
+                    "summary": result.get("result", {}).get("summary"),
+                    "result": result.get("result"),
+                }
+            
+            if job_status == "failed":
+                return {
+                    "job_id": job_id,
+                    "status": "failed",
+                    "error": status.get("error"),
+                }
+            
+            time.sleep(poll_interval)
+        
+        return {
+            "job_id": job_id,
+            "status": "timeout",
+            "message": f"Analysis did not complete in {wait_timeout}s. Use get_stats_job_status('{job_id}') to check.",
+        }
+    
+    @mcp.tool()
+    async def get_analysis_capabilities() -> dict:
+        """
+        📋 Get capabilities of the auto-analyze engine.
+        
+        Returns detailed information about what the auto-analyze
+        engine can do, including all tests and metrics available.
+        """
+        return await stats_client.get_auto_analyze_capabilities()
+    
+    # ==================== EDA (ydata-profiling) ====================
     
     @mcp.tool()
     async def submit_eda_job(
@@ -394,4 +549,4 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             "message": f"Job did not complete within {wait_timeout} seconds.",
         }
     
-    logger.info("Registered 9 statistics tools")
+    logger.info("Registered 12 statistics tools (including auto_analyze)")

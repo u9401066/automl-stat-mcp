@@ -30,9 +30,15 @@ class AutoMLHandler:
     - Training: submit_automl_job, submit_specific_job, submit_compare_job
     - Job: get_job_status, list_jobs, cancel_job
     - Model: list_models, get_model_leaderboard, predict, delete_model
-    - Statistics: submit_eda_job, submit_tableone_job, get_stats_job_status,
-                  get_stats_job_result, list_stats_jobs, get_column_suggestions,
-                  preview_dataset_stats, run_quick_eda, run_quick_tableone
+    
+    🧠 Statistics (Smart Analysis):
+    - auto_analyze: Intelligent automatic statistical analysis (RECOMMENDED)
+    - run_quick_auto_analyze: One command, complete analysis results
+    - get_analysis_capabilities: What auto_analyze can do
+    - submit_eda_job, submit_tableone_job: Manual analysis options
+    - get_stats_job_status, get_stats_job_result, list_stats_jobs
+    - get_column_suggestions, preview_dataset_stats
+    - run_quick_eda, run_quick_tableone
     
     🚀 Smart Orchestration (convenience tools):
     - quick_train: Fastest path from CSV to model
@@ -41,14 +47,14 @@ class AutoMLHandler:
     - analyze_dataset: Get recommendations before training
     - get_training_summary: Overview of all resources
     
-    Total: 34 tools (25 AutoML + 9 Statistics)
+    Total: 37 tools (25 AutoML + 12 Statistics)
     """
 
     def __init__(self, mcp: FastMCP):
         self._mcp = mcp
         self._client = get_client()
         self._register_all_tools()
-        logger.info("AutoML Handler initialized with 34 tools")
+        logger.info("AutoML Handler initialized with 37 tools")
 
     def _register_all_tools(self) -> None:
         """Register all tool categories"""

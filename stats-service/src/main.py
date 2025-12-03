@@ -4,6 +4,7 @@ Stats Service - FastAPI Main Application
 Provides statistical analysis endpoints:
 - EDA reports (ydata-profiling)
 - Table 1 generation (tableone)
+- Auto-analyze: intelligent statistical analysis
 """
 import logging
 import os
@@ -16,7 +17,7 @@ from pydantic import BaseModel
 from .config import SERVICE_HOST, SERVICE_PORT
 from .infrastructure.redis_client import redis_client
 from .infrastructure.minio_client import minio_client
-from .routes import eda, tableone, jobs
+from .routes import eda, tableone, jobs, auto_analyze
 
 # Configure logging
 log_level = os.environ.get("LOG_LEVEL", "INFO")
@@ -118,6 +119,7 @@ async def health():
 # Include Routers
 # =============================================================================
 
+app.include_router(auto_analyze.router)  # Smart analysis first
 app.include_router(eda.router)
 app.include_router(tableone.router)
 app.include_router(jobs.router)
