@@ -211,6 +211,22 @@ curl -X POST https://your-server/api/v1/jobs/get \
   -d '{"job_id": "job-abc-123"}'
 ```
 
+### MCP Transport Modes
+
+| Mode | Use Case | Protocol |
+|------|----------|----------|
+| `stdio` | Local (Claude Desktop, VS Code) | stdin/stdout |
+| `sse` | Development/Internal | GET + Server-Sent Events |
+| `http` | **Enterprise (POST-only)** | POST + Streamable HTTP |
+
+For enterprise HTTPS deployment, MCP uses `streamable-http` transport which is fully POST-based.
+
+```yaml
+# In docker-compose.https.yml
+environment:
+  - MCP_MODE=http  # Uses POST-only streamable-http transport
+```
+
 ## Usage Flow
 
 ### 🎯 Quick Path (Recommended for Agents)

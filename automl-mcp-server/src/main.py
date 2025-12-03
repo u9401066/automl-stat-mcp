@@ -54,6 +54,15 @@ def run_sse(host: str = "0.0.0.0", port: int = 8002):
     server.run(transport="sse")
 
 
+def run_http(host: str = "0.0.0.0", port: int = 8002):
+    """Run in Streamable HTTP mode (POST-only, enterprise compliant)"""
+    logger.info(f"Starting AutoML MCP Server in Streamable HTTP mode on {host}:{port}...")
+    os.environ["MCP_HOST"] = host
+    os.environ["MCP_PORT"] = str(port)
+    server = create_app()
+    server.run(transport="http")
+
+
 def main():
     """Main entry point with argument parsing"""
     parser = argparse.ArgumentParser(
@@ -67,6 +76,9 @@ Examples:
   # Remote SSE mode (for Docker deployment)
   python src/main.py --mode sse --port 8002
   
+  # Enterprise HTTP mode (POST-only, for secure environments)
+  python src/main.py --mode http --port 8002
+  
   # Development with MCP Inspector
   mcp dev src/infrastructure/mcp/server.py
         """
@@ -74,20 +86,20 @@ Examples:
     
     parser.add_argument(
         "--mode",
-        choices=["stdio", "sse"],
+        choices=["stdio", "sse", "http"],
         default=os.environ.get("MCP_MODE", "stdio"),
-        help="Transport mode (default: stdio)"
+        help="Transport mode: stdio (local), sse (remote), http (enterprise POST-only)"
     )
     parser.add_argument(
         "--host",
         default=os.environ.get("MCP_HOST", "0.0.0.0"),
-        help="Host for SSE mode (default: 0.0.0.0)"
+        help="Host for SSE/HTTP mode (default: 0.0.0.0)"
     )
     parser.add_argument(
         "--port",
         type=int,
         default=int(os.environ.get("MCP_PORT", "8002")),
-        help="Port for SSE mode (default: 8002)"
+        help="Port for SSE/HTTP mode (default: 8002)"
     )
     
     args = parser.parse_args()
@@ -96,6 +108,8 @@ Examples:
         run_stdio()
     elif args.mode == "sse":
         run_sse(args.host, args.port)
+    elif args.mode == "http":
+        run_http(args.host, args.port)
 
 
 if __name__ == "__main__":

@@ -123,7 +123,7 @@ services:
           memory: 4G
 
   # ===========================================================================
-  # AutoML MCP Server (Internal Only)
+  # AutoML MCP Server (Internal Only - Streamable HTTP)
   # ===========================================================================
   automl-mcp:
     build: ./automl-mcp-server
@@ -133,7 +133,7 @@ services:
       - "8002"
     environment:
       - AUTOML_SERVICE_URL=http://automl-api:8001
-      - MCP_MODE=sse
+      - MCP_MODE=http
       - MCP_PORT=8002
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
     networks:
