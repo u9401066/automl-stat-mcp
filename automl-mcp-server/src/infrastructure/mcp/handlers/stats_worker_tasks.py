@@ -31,6 +31,15 @@ try:
         TableOneConfig,
         TableOneResult,
     )
+    from tasks.survival_analysis import (
+        kaplan_meier_analysis,
+        cox_regression,
+        log_rank_test,
+        survival_summary,
+        compare_survival_curves,
+        KaplanMeierEstimator,
+        CoxPHFitter,
+    )
     
     __all__ = [
         "compute_enhanced_correlation",
@@ -48,6 +57,14 @@ try:
         "TableOneGenerator",
         "TableOneConfig",
         "TableOneResult",
+        # Survival Analysis exports
+        "kaplan_meier_analysis",
+        "cox_regression",
+        "log_rank_test",
+        "survival_summary",
+        "compare_survival_curves",
+        "KaplanMeierEstimator",
+        "CoxPHFitter",
     ]
     
 except ImportError as e:
@@ -85,5 +102,29 @@ except ImportError as e:
             raise ImportError("stats-worker tasks not available")
     
     class TableOneResult:
+        def __init__(self, *args, **kwargs):
+            raise ImportError("stats-worker tasks not available")
+    
+    # Survival Analysis stubs
+    def kaplan_meier_analysis(*args, **kwargs):
+        raise ImportError("stats-worker tasks not available")
+    
+    def cox_regression(*args, **kwargs):
+        raise ImportError("stats-worker tasks not available")
+    
+    def log_rank_test(*args, **kwargs):
+        raise ImportError("stats-worker tasks not available")
+    
+    def survival_summary(*args, **kwargs):
+        raise ImportError("stats-worker tasks not available")
+    
+    def compare_survival_curves(*args, **kwargs):
+        raise ImportError("stats-worker tasks not available")
+    
+    class KaplanMeierEstimator:
+        def __init__(self, *args, **kwargs):
+            raise ImportError("stats-worker tasks not available")
+    
+    class CoxPHFitter:
         def __init__(self, *args, **kwargs):
             raise ImportError("stats-worker tasks not available")

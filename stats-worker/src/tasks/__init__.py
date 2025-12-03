@@ -13,6 +13,17 @@ from .tableone_generator import (
     generate_tableone,
     quick_tableone,
 )
+from .survival_analysis import (
+    KaplanMeierEstimator,
+    KaplanMeierResult,
+    CoxPHFitter,
+    CoxRegressionResult,
+    kaplan_meier_analysis,
+    cox_regression,
+    log_rank_test,
+    survival_summary,
+    compare_survival_curves,
+)
 
 __all__ = [
     "run_auto_analyze",
@@ -26,4 +37,14 @@ __all__ = [
     "TableOneResult",
     "generate_tableone",
     "quick_tableone",
+    # Survival Analysis
+    "KaplanMeierEstimator",
+    "KaplanMeierResult",
+    "CoxPHFitter",
+    "CoxRegressionResult",
+    "kaplan_meier_analysis",
+    "cox_regression",
+    "log_rank_test",
+    "survival_summary",
+    "compare_survival_curves",
 ]
