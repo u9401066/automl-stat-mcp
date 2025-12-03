@@ -10,7 +10,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .interface.api.routes import datasets, training, jobs, models
+from .interface.api.routes import datasets, training, jobs, models, post_only
 from .interface.api.schemas import HealthResponse
 from .config import API_HOST, API_PORT, AVAILABLE_ALGORITHMS
 
@@ -72,6 +72,9 @@ app.include_router(datasets.router)
 app.include_router(training.router)
 app.include_router(jobs.router)
 app.include_router(models.router)
+
+# POST-only API for enterprise environments (external access)
+app.include_router(post_only.router)
 
 
 @app.get("/", response_model=HealthResponse, tags=["Health"])

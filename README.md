@@ -128,6 +128,89 @@ For Claude Desktop, add to config:
 }
 ```
 
+## 🔒 Enterprise HTTPS Deployment
+
+For enterprise environments requiring HTTPS and POST-only API access:
+
+### Security Features
+
+| Feature | Description |
+|---------|-------------|
+| **HTTPS Only** | TLS 1.2/1.3, HTTP redirects to HTTPS |
+| **POST-Only API** | All external endpoints accept POST only |
+| **No Internal Exposure** | Redis, API, Workers not exposed externally |
+| **Rate Limiting** | 10 req/s per IP with burst handling |
+| **Security Headers** | HSTS, X-Frame-Options, CSP, etc. |
+
+### Setup
+
+1. **Prepare SSL Certificates**
+
+```bash
+# Create SSL directory
+mkdir -p nginx/ssl
+
+# Option A: Use your organization's certificates
+cp /path/to/your/server.crt nginx/ssl/
+cp /path/to/your/server.key nginx/ssl/
+
+# Option B: Generate self-signed (for testing only)
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout nginx/ssl/server.key \
+  -out nginx/ssl/server.crt \
+  -subj "/CN=automl.local"
+```
+
+2. **Configure Environment**
+
+```bash
+cp .env.example .env
+nano .env
+```
+
+```bash
+# Required
+MINIO_ENDPOINT=your-minio-host:9000
+MINIO_ACCESS_KEY=your-access-key
+MINIO_SECRET_KEY=your-secret-key
+MINIO_SECURE=true  # Use HTTPS for MinIO too
+
+# Optional HTTPS settings
+HTTPS_PORT=443
+HTTP_PORT=80
+```
+
+3. **Start HTTPS Stack**
+
+```bash
+docker-compose -f docker-compose.https.yml up -d
+```
+
+### POST-Only API Endpoints
+
+External clients must use these POST endpoints:
+
+| Endpoint | Description | Request Body |
+|----------|-------------|--------------|
+| `POST /api/v1/datasets/list` | List datasets | `{}` |
+| `POST /api/v1/datasets/get` | Get dataset | `{"dataset_id": "..."}` |
+| `POST /api/v1/jobs/list` | List jobs | `{}` |
+| `POST /api/v1/jobs/get` | Get job status | `{"job_id": "..."}` |
+| `POST /api/v1/models/list` | List models | `{}` |
+| `POST /api/v1/models/get` | Get model | `{"model_id": "..."}` |
+| `POST /api/v1/models/leaderboard` | Get leaderboard | `{"model_id": "..."}` |
+
+All existing POST endpoints (training, predict, etc.) work as-is.
+
+### Example: HTTPS POST Request
+
+```bash
+curl -X POST https://your-server/api/v1/jobs/get \
+  -H "Content-Type: application/json" \
+  -H "X-User-Id: user123" \
+  -d '{"job_id": "job-abc-123"}'
+```
+
 ## Usage Flow
 
 ### 🎯 Quick Path (Recommended for Agents)
