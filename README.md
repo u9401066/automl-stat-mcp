@@ -72,7 +72,8 @@ nano .env
 
 Example `.env`:
 ```bash
-MINIO_ENDPOINT=192.168.1.102:9000
+# Your MinIO server address
+MINIO_ENDPOINT=your-minio-host:9000
 MINIO_ACCESS_KEY=your-access-key
 MINIO_SECRET_KEY=your-secret-key
 MINIO_SECURE=false

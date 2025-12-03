@@ -10,7 +10,7 @@ Tests the complete flow:
 5. Get leaderboard results
 
 Prerequisites:
-- MinIO running at 192.168.1.102:9000
+- MinIO running (configure MINIO_ENDPOINT environment variable)
 - automl-api running at localhost:8001
 - automl-worker running (for actual training)
 
@@ -27,12 +27,14 @@ import pandas as pd
 from minio import Minio
 from sklearn.datasets import load_iris
 
-# Configuration
-MINIO_ENDPOINT = "192.168.1.102:9000"
-MINIO_ACCESS_KEY = "minioadmin"  # Change if different
-MINIO_SECRET_KEY = "minioadmin"  # Change if different
-MINIO_BUCKET = "automl-datasets"
-MINIO_SECURE = False
+import os
+
+# Configuration - Override with environment variables
+MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "localhost:9000")
+MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
+MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "minioadmin")
+MINIO_BUCKET = os.getenv("MINIO_DATASET_BUCKET", "automl-datasets")
+MINIO_SECURE = os.getenv("MINIO_SECURE", "false").lower() == "true"
 
 API_BASE_URL = "http://localhost:8001"
 

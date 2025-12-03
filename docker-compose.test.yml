@@ -2,15 +2,16 @@
 # AutoML Full Stack - Integration Test Environment
 # =============================================================================
 #
-# Uses your existing MinIO server at 192.168.1.102:9000
+# Uses your existing MinIO server (configure via .env file)
 #
-# Usage:
-#   docker-compose -f docker-compose.test.yml up -d
+# Setup:
+#   1. Copy .env.example to .env
+#   2. Edit .env with your MinIO settings
+#   3. docker-compose -f docker-compose.test.yml up -d
 #
 # Test endpoints:
 #   - AutoML API: http://localhost:8001/docs
 #   - MCP Server: http://localhost:8002/sse
-#   - MinIO Console: http://192.168.1.102:9001 (your existing server)
 #   - Redis: localhost:6379
 #
 # =============================================================================
@@ -44,18 +45,18 @@ services:
     ports:
       - "8001:8001"
     environment:
-      # MinIO - Your existing server (API port is 9000, console is 9001)
-      - MINIO_ENDPOINT=192.168.1.102:9000
-      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
-      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
-      - MINIO_SECURE=false
-      - MINIO_DATASET_BUCKET=automl-datasets
-      - MINIO_MODEL_BUCKET=automl-models
+      # MinIO - Configure via .env file
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:?Please set MINIO_ENDPOINT in .env}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:?Please set MINIO_ACCESS_KEY in .env}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:?Please set MINIO_SECRET_KEY in .env}
+      - MINIO_SECURE=${MINIO_SECURE:-false}
+      - MINIO_DATASET_BUCKET=${MINIO_DATASET_BUCKET:-automl-datasets}
+      - MINIO_MODEL_BUCKET=${MINIO_MODEL_BUCKET:-automl-models}
       # Redis
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       # Logging
-      - LOG_LEVEL=DEBUG
+      - LOG_LEVEL=${LOG_LEVEL:-DEBUG}
     networks:
       - automl-network
     depends_on:
@@ -70,13 +71,13 @@ services:
     build: ./automl-worker
     container_name: automl-worker
     environment:
-      # MinIO - Your existing server
-      - MINIO_ENDPOINT=192.168.1.102:9000
-      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
-      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
-      - MINIO_SECURE=false
-      - MINIO_DATASET_BUCKET=automl-datasets
-      - MINIO_MODEL_BUCKET=automl-models
+      # MinIO - Configure via .env file
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:?Please set MINIO_ENDPOINT in .env}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:?Please set MINIO_ACCESS_KEY in .env}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:?Please set MINIO_SECRET_KEY in .env}
+      - MINIO_SECURE=${MINIO_SECURE:-false}
+      - MINIO_DATASET_BUCKET=${MINIO_DATASET_BUCKET:-automl-datasets}
+      - MINIO_MODEL_BUCKET=${MINIO_MODEL_BUCKET:-automl-models}
       # Redis
       - REDIS_HOST=redis
       - REDIS_PORT=6379
