@@ -8,14 +8,14 @@
 - Direct analyze routes in stats-service
 - JSON safe_round() fix for NaN/Inf serialization
 - Architecture analysis and documentation (README updated)
+- Direct analyze capability added to automl-service (3 endpoints, 3 MCP tools)
 
 ## Doing
 
-- Update Memory Bank with architecture decisions
-- Git commit documentation changes
+
 
 ## Next
 
-- Add direct analyze capability to automl-service
+- Test direct analyze endpoints
 - Consider stats-service independent dataset registration
 - Refactor stats-service to DDD architecture (when time permits)

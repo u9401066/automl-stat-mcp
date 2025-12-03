@@ -546,10 +546,12 @@ workspace251202/
 │   ├── src/worker.py        # Job Consumer
 │   └── Dockerfile           # Uses official AutoGluon image
 │
-├── stats-service/           # Statistics API Service
+├── stats-service/           # Statistics API Service (DDD Architecture)
 │   ├── src/
-│   │   ├── routes/          # FastAPI Routes (EDA, TableOne, Auto Analyze)
-│   │   └── infrastructure/  # Redis, MinIO clients
+│   │   ├── domain/          # Domain Layer (models, repositories interface)
+│   │   ├── application/     # Application Layer (use cases, DTOs)
+│   │   ├── infrastructure/  # Infrastructure (Redis repos, MinIO, job queue)
+│   │   └── routes/          # Interface Layer (FastAPI routes)
 │   ├── Dockerfile
 │   └── requirements.txt
 │
@@ -679,24 +681,29 @@ User → MCP → stats-service → Redis Queue → stats-worker → Return resul
 - `direct_ml_quick_stats` - Quick statistics
 - `direct_preview_data` - Preview before MinIO upload
 
-#### Issue 3: Stats Service Lacks DDD Architecture
+#### Issue 3: ~~Stats Service Lacks DDD Architecture~~ ✅ RESOLVED
 
-**Problem**: automl-service follows Domain-Driven Design (domain/application/infrastructure/interface layers), but stats-service only has routes + infrastructure.
+**Solution Implemented**: Refactored stats-service to follow DDD architecture:
 
-**Current Structure**:
+**New Structure**:
 ```
-automl-service/src/
-├── domain/          ✅ Domain models, repositories
-├── application/     ✅ Use cases, DTOs
-├── infrastructure/  ✅ Redis, MinIO, repos impl
-└── interface/       ✅ FastAPI routes
-
 stats-service/src/
-├── routes/          ⚠️ Only API routes
-└── infrastructure/  ⚠️ Only Redis, MinIO
+├── domain/              ✅ NEW
+│   ├── models/
+│   │   └── stats_job.py    # StatsJob aggregate, StatsJobId value object
+│   └── repositories.py     # StatsJobRepository interface
+├── application/         ✅ NEW
+│   ├── dto.py              # Request/Response DTOs
+│   └── use_cases.py        # SubmitAutoAnalyze, SubmitEDA, SubmitTableOne, etc.
+├── infrastructure/      ✅ UPDATED
+│   └── repositories.py     # RedisStatsJobRepository, RedisJobQueue
+└── routes/              ✅ REFACTORED (acts as Interface layer)
+    ├── auto_analyze.py     # Uses SubmitAutoAnalyzeUseCase
+    ├── eda.py              # Uses SubmitEDAUseCase
+    ├── tableone.py         # Uses SubmitTableOneUseCase
+    ├── jobs.py             # Uses GetJobStatus/Result/ListUseCase
+    └── direct.py           # Uses domain models directly
 ```
-
-**Planned Solution**: Refactor stats-service to follow DDD when time permits.
 
 ## MCP Tool Summary
 

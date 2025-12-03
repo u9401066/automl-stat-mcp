@@ -1,13 +1,17 @@
 """
-Stats Service - TableOne Routes
+Stats Service - TableOne Routes (DDD)
 
 Routes for generating Table 1 (descriptive statistics) using tableone package.
+Refactored to use Domain-Driven Design with Use Cases.
 """
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from typing import Optional, List
 
-from ..infrastructure.redis_client import redis_client
+from ..application.use_cases import SubmitTableOneUseCase, DatasetNotFoundError
+from ..application.dto import SubmitTableOneRequest as SubmitTableOneDTO
+from ..infrastructure.redis_dataset_store import redis_dataset_store
+from ..infrastructure.repositories import get_job_repository, get_job_queue
 from ..infrastructure.minio_client import minio_client
 
 router = APIRouter(prefix="/tableone", tags=["TableOne"])
@@ -36,6 +40,15 @@ class TableOneResponse(BaseModel):
     message: str
 
 
+def _get_submit_use_case() -> SubmitTableOneUseCase:
+    """Dependency injection for submit use case"""
+    return SubmitTableOneUseCase(
+        job_repo=get_job_repository(),
+        dataset_store=redis_dataset_store,
+        job_queue=get_job_queue(),
+    )
+
+
 @router.post("/submit", response_model=TableOneResponse)
 async def submit_tableone_job(request: TableOneRequest):
     """
@@ -54,36 +67,32 @@ async def submit_tableone_job(request: TableOneRequest):
     Returns:
         TableOneResponse with job_id for tracking
     """
-    # Verify dataset exists
-    dataset_info = minio_client.get_dataset_info(request.dataset_id)
-    if not dataset_info:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Dataset {request.dataset_id} not found in storage"
+    use_case = _get_submit_use_case()
+    
+    try:
+        result = await use_case.execute(
+            SubmitTableOneDTO(
+                dataset_id=request.dataset_id,
+                user_id=request.user_id,
+                session_id=request.session_id,
+                columns=request.columns,
+                categorical=request.categorical,
+                continuous=request.continuous,
+                groupby=request.groupby,
+                nonnormal=request.nonnormal,
+                pval=request.pval if request.pval is not None else False,
+            )
         )
-    
-    # Create job
-    job = await redis_client.create_job(
-        job_type="tableone",
-        params={
-            "dataset_id": request.dataset_id,
-            "columns": request.columns,
-            "categorical": request.categorical,
-            "continuous": request.continuous,
-            "groupby": request.groupby,
-            "nonnormal": request.nonnormal,
-            "pval": request.pval,
-        },
-        user_id=request.user_id,
-        session_id=request.session_id
-    )
-    
-    return TableOneResponse(
-        job_id=job["job_id"],
-        job_type="tableone",
-        status="pending",
-        message="TableOne job submitted successfully. Use /jobs/{job_id} to check status."
-    )
+        
+        return TableOneResponse(
+            job_id=result.job_id,
+            job_type=result.job_type,
+            status=result.status,
+            message=result.message,
+        )
+        
+    except DatasetNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
 
 
 @router.post("/columns")
@@ -94,12 +103,22 @@ async def get_column_suggestions(dataset_id: str, user_id: str):
     Analyzes the dataset and suggests which columns are likely
     categorical vs continuous.
     """
-    df = minio_client.load_dataset_preview(dataset_id, n_rows=1000)
+    # Check dataset exists
+    dataset_info = redis_dataset_store.get_dataset(dataset_id)
+    if not dataset_info:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Dataset {dataset_id} not found. Please register it first."
+        )
+    
+    # Load preview from MinIO
+    minio_path = dataset_info.get("minio_path")
+    df = minio_client.load_dataset_by_path(minio_path, n_rows=1000)
     
     if df is None:
         raise HTTPException(
             status_code=404,
-            detail=f"Dataset {dataset_id} not found"
+            detail=f"Dataset file not found at {minio_path}"
         )
     
     categorical = []

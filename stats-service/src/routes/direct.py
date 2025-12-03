@@ -1,8 +1,9 @@
 """
-Stats Service - Direct Analysis Routes
+Stats Service - Direct Analysis Routes (DDD)
 
 Routes for analyzing data directly without storing in MinIO.
 Useful for one-time analysis or temporary data.
+Refactored to use Domain-Driven Design patterns.
 """
 import base64
 import io
@@ -12,7 +13,8 @@ from typing import Optional, List
 
 import pandas as pd
 
-from ..infrastructure.redis_client import redis_client
+from ..domain.models import StatsJob, StatsJobId, StatsJobType
+from ..infrastructure.repositories import get_job_repository, get_job_queue
 
 router = APIRouter(prefix="/direct", tags=["Direct Analysis"])
 
@@ -112,22 +114,29 @@ async def direct_analyze(request: DirectAnalyzeRequest):
             "dtypes": {col: str(dtype) for col, dtype in df.dtypes.items()},
         }
         
-        # Create job with embedded CSV content
-        job = await redis_client.create_job(
-            job_type="auto_analyze_direct",
+        # Create job using domain model
+        job = StatsJob(
+            id=StatsJobId.generate(),
+            job_type=StatsJobType.AUTO_ANALYZE_DIRECT,
+            user_id=request.user_id,
+            session_id=request.session_id,
             params={
                 "csv_content": csv_str,  # Store CSV content directly
                 "target_column": request.target_column,
                 "is_direct": True,  # Flag for worker
             },
-            user_id=request.user_id,
-            session_id=request.session_id
         )
         
+        # Save and enqueue
+        job_repo = get_job_repository()
+        job_queue = get_job_queue()
+        await job_repo.save(job)
+        await job_queue.enqueue_job(job)
+        
         return DirectAnalyzeResponse(
-            job_id=job["job_id"],
-            job_type="auto_analyze_direct",
-            status="pending",
+            job_id=str(job.id),
+            job_type=job.job_type.value,
+            status=job.status.value,
             message="Direct analysis job submitted. Use /jobs/{job_id} to check status.",
             data_preview=preview
         )

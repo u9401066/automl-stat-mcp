@@ -2,13 +2,19 @@
 Stats Service - Auto Analyze Routes
 
 Routes for intelligent automatic statistical analysis.
+Refactored to use DDD Use Cases.
 """
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from typing import Optional
 
-from ..infrastructure.redis_client import redis_client
+from ..application.use_cases import (
+    SubmitAutoAnalyzeUseCase,
+    DatasetNotFoundError,
+)
+from ..application.dto import SubmitAutoAnalyzeRequest as SubmitAutoAnalyzeDTO
 from ..infrastructure.redis_dataset_store import redis_dataset_store
+from ..infrastructure.repositories import get_job_repository, get_job_queue
 
 router = APIRouter(prefix="/auto-analyze", tags=["Auto Analyze"])
 
@@ -30,6 +36,15 @@ class AutoAnalyzeResponse(BaseModel):
     job_type: str
     status: str
     message: str
+
+
+def _get_submit_use_case() -> SubmitAutoAnalyzeUseCase:
+    """Dependency injection for submit use case"""
+    return SubmitAutoAnalyzeUseCase(
+        job_repo=get_job_repository(),
+        dataset_store=redis_dataset_store,
+        job_queue=get_job_queue(),
+    )
 
 
 @router.post("/submit", response_model=AutoAnalyzeResponse)
@@ -88,32 +103,27 @@ async def submit_auto_analyze_job(request: AutoAnalyzeRequest):
         )
         ```
     """
-    # Get dataset metadata from shared Redis store
-    dataset_info = redis_dataset_store.get_dataset(request.dataset_id)
-    if not dataset_info:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Dataset {request.dataset_id} not found. Please register it first using AutoML service."
+    use_case = _get_submit_use_case()
+    
+    try:
+        result = await use_case.execute(
+            SubmitAutoAnalyzeDTO(
+                dataset_id=request.dataset_id,
+                user_id=request.user_id,
+                session_id=request.session_id,
+                target_column=request.target_column,
+            )
         )
-    
-    # Create job with minio_path for worker
-    job = await redis_client.create_job(
-        job_type="auto_analyze",
-        params={
-            "dataset_id": request.dataset_id,
-            "minio_path": dataset_info.get("minio_path"),
-            "target_column": request.target_column,
-        },
-        user_id=request.user_id,
-        session_id=request.session_id
-    )
-    
-    return AutoAnalyzeResponse(
-        job_id=job["job_id"],
-        job_type="auto_analyze",
-        status="pending",
-        message="Auto-analysis job submitted. Use /jobs/{job_id} to check status."
-    )
+        
+        return AutoAnalyzeResponse(
+            job_id=result.job_id,
+            job_type=result.job_type,
+            status=result.status,
+            message=result.message,
+        )
+        
+    except DatasetNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
 
 
 @router.get("/capabilities")
