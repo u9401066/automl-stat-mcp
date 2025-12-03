@@ -6,6 +6,7 @@
 
 ## 目錄
 
+0. [安裝 MinIO（如果沒有現成的）](#0-安裝-minio)
 1. [快速開發部署](#1-快速開發部署)
 2. [生產環境部署](#2-生產環境部署)
 3. [企業安全部署 (HTTPS + POST-only)](#3-企業安全部署)
@@ -20,7 +21,7 @@
 
 - Docker Engine 24.0+
 - Docker Compose v2.20+
-- 外部 MinIO 伺服器（或修改 compose 使用本地 MinIO）
+- MinIO 伺服器（參考章節 0 安裝）
 
 ### 企業部署額外需要
 
@@ -34,6 +35,155 @@
 | 開發 | 4 核 | 8 GB | 1 個 worker |
 | 生產 | 8 核 | 32 GB | 4 個 workers |
 | 高負載 | 16 核 | 64 GB | 8+ workers |
+
+---
+
+## 0. 安裝 MinIO
+
+如果你已經有 MinIO 伺服器，可以跳過這個章節。
+
+### 0.1 單機 Docker 部署（開發/測試）
+
+```bash
+# 建立資料目錄
+mkdir -p ~/minio/data
+
+# 啟動 MinIO
+docker run -d \
+  --name minio \
+  --restart unless-stopped \
+  -p 9000:9000 \
+  -p 9001:9001 \
+  -e "MINIO_ROOT_USER=minioadmin" \
+  -e "MINIO_ROOT_PASSWORD=minioadmin" \
+  -v ~/minio/data:/data \
+  quay.io/minio/minio server /data --console-address ":9001"
+```
+
+### 0.2 使用 Docker Compose（推薦）
+
+建立 `docker-compose.minio.yml`：
+
+```yaml
+# docker-compose.minio.yml
+services:
+  minio:
+    image: quay.io/minio/minio:latest
+    container_name: minio
+    ports:
+      - "9000:9000"  # API
+      - "9001:9001"  # Console
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    volumes:
+      - minio-data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    restart: unless-stopped
+
+volumes:
+  minio-data:
+```
+
+啟動：
+
+```bash
+docker compose -f docker-compose.minio.yml up -d
+```
+
+### 0.3 驗證安裝
+
+```bash
+# 檢查容器狀態
+docker ps | grep minio
+
+# 測試 API
+curl http://localhost:9000/minio/health/live
+# 應該回傳空白（200 OK）
+```
+
+### 0.4 存取 MinIO Console
+
+開啟瀏覽器：http://localhost:9001
+
+- 帳號：`minioadmin`（或你設定的 MINIO_ROOT_USER）
+- 密碼：`minioadmin`（或你設定的 MINIO_ROOT_PASSWORD）
+
+### 0.5 建立 Bucket（可選）
+
+AutoML 會自動建立 bucket，但你也可以手動建立：
+
+#### 方法 A：使用 Console
+
+1. 登入 http://localhost:9001
+2. 點選「Buckets」→「Create Bucket」
+3. 建立 `automl-datasets` 和 `automl-models`
+
+#### 方法 B：使用 mc 命令行
+
+```bash
+# 安裝 mc（MinIO Client）
+docker run --rm -it --entrypoint /bin/sh minio/mc -c "
+  mc alias set myminio http://host.docker.internal:9000 minioadmin minioadmin
+  mc mb myminio/automl-datasets
+  mc mb myminio/automl-models
+  mc ls myminio
+"
+```
+
+### 0.6 設定 .env
+
+確認你的 MinIO 連線資訊：
+
+```bash
+# 本機 MinIO
+MINIO_ENDPOINT=localhost:9000
+MINIO_ACCESS_KEY=minioadmin
+MINIO_SECRET_KEY=minioadmin
+MINIO_SECURE=false
+
+# 如果 MinIO 在其他主機
+MINIO_ENDPOINT=192.168.1.100:9000
+MINIO_ACCESS_KEY=your-access-key
+MINIO_SECRET_KEY=your-secret-key
+```
+
+### 0.7 生產環境建議
+
+對於生產環境，建議：
+
+1. **修改預設密碼**：
+   ```bash
+   MINIO_ROOT_USER=your-secure-username
+   MINIO_ROOT_PASSWORD=your-very-secure-password-at-least-8-chars
+   ```
+
+2. **啟用 HTTPS**：
+   ```bash
+   docker run -d \
+     --name minio \
+     -p 9000:9000 \
+     -p 9001:9001 \
+     -v ~/minio/data:/data \
+     -v ~/minio/certs:/root/.minio/certs \
+     -e "MINIO_ROOT_USER=admin" \
+     -e "MINIO_ROOT_PASSWORD=securepassword" \
+     quay.io/minio/minio server /data --console-address ":9001"
+   ```
+   
+   將憑證放在：
+   - `~/minio/certs/public.crt`
+   - `~/minio/certs/private.key`
+
+3. **建立專用 Access Key**（不要用 root）：
+   - 登入 Console → Access Keys → Create Access Key
+   - 記下 Access Key 和 Secret Key
+   - 在 .env 中使用這組金鑰
 
 ---
 
