@@ -4,7 +4,7 @@ Multi-user AutoML system accessible via AI Agents through MCP (Model Context Pro
 
 **Features:**
 - 🤖 **AutoML Training** - Automatic model selection with AutoGluon
-- 📊 **Statistical Analysis** - Automated EDA and Table 1 generation
+- 📊 **Smart Statistical Analysis** - Intelligent auto-analysis with automatic method selection
 - 🔌 **MCP Integration** - Direct access from AI Agents (Claude, Copilot)
 - 🔒 **Enterprise Ready** - HTTPS, POST-only API, multi-user isolation
 
@@ -21,24 +21,24 @@ Multi-user AutoML system accessible via AI Agents through MCP (Model Context Pro
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                              MCP Server (8002)                               │
 │  ┌─────────────────────────────────┐  ┌─────────────────────────────────┐   │
-│  │      AutoML Tools (25)          │  │      Stats Tools (9)            │   │
-│  │  register_dataset, train, ...   │  │  eda_report, tableone, ...      │   │
+│  │      AutoML Tools (25)          │  │      Stats Tools (12)           │   │
+│  │  register_dataset, train, ...   │  │  auto_analyze, eda, tableone    │   │
 │  └───────────────┬─────────────────┘  └───────────────┬─────────────────┘   │
 └──────────────────┼────────────────────────────────────┼─────────────────────┘
                    │                                    │
                    ▼                                    ▼
 ┌──────────────────────────────┐      ┌──────────────────────────────┐
 │      AutoML API (8001)       │      │      Stats API (8003)        │
-│  • Dataset management        │      │  • EDA endpoints             │
-│  • Training job submission   │      │  • TableOne endpoints        │
-│  • Model management          │      │  • Quality check             │
+│  • Dataset management        │      │  • Auto analysis engine      │
+│  • Training job submission   │      │  • EDA endpoints             │
+│  • Model management          │      │  • TableOne endpoints        │
 └──────────────┬───────────────┘      └──────────────┬───────────────┘
                │                                     │
                ▼                                     ▼
 ┌──────────────────────────────┐      ┌──────────────────────────────┐
 │     AutoML Worker            │      │     Stats Worker             │
 │  • AutoGluon 1.3.1           │      │  • ydata-profiling           │
-│  • Model training            │      │  • tableone                  │
+│  • Model training            │      │  • tableone, scipy, statsmodels│
 └──────────────┬───────────────┘      └──────────────┬───────────────┘
                │                                     │
                └──────────────┬──────────────────────┘
@@ -46,11 +46,26 @@ Multi-user AutoML system accessible via AI Agents through MCP (Model Context Pro
                ┌──────────────────────────────┐
                │   Shared Infrastructure      │
                │  ┌────────┐    ┌────────┐   │
-               │  │ Redis  │    │ (6379) │   │
-               │  │        │    │ MinIO  │   │
-               │  │        │    │ (9000) │   │
+               │  │ Redis  │    │ MinIO  │   │
+               │  │ (6379) │    │ (9000) │   │
                │  └────────┘    └────────┘   │
                └──────────────────────────────┘
+```
+
+## 🧠 Smart Auto-Analysis
+
+The `auto_analyze` tool automatically:
+
+1. **Data Quality Check** - Missing values, outliers, duplicates
+2. **Variable Type Inference** - Numeric, categorical, datetime, ID columns
+3. **Descriptive Statistics** - Automatically chooses appropriate measures
+4. **Hypothesis Testing** - Normality tests to determine parametric vs non-parametric
+5. **Association Analysis** - Correlation, chi-square, t-test based on variable types
+6. **Recommendations** - Data cleaning, feature engineering, suitable ML models
+
+```
+User: "Analyze this dataset"
+AI:   auto_analyze(dataset_id) → Complete statistical report with recommendations
 ```
 
 ## Components

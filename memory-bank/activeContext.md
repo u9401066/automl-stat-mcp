@@ -2,7 +2,39 @@
 
 ## Current Goals
 
-- \u5df2\u5b8c\u6210 Stats Service \u5b8c\u6574\u5be6\u4f5c\uff1a\n\n## \u5df2\u5efa\u7acb\u7684\u6a94\u6848\n\n### stats-service/\n- requirements.txt (ydata-profiling, tableone, pandas, redis, minio)\n- Dockerfile (python:3.11-slim)\n- src/config.py (\u670d\u52d9\u8a2d\u5b9a)\n- src/main.py (FastAPI app with routers)\n- src/routes/eda.py (EDA endpoints)\n- src/routes/tableone.py (TableOne endpoints)\n- src/routes/jobs.py (\u4f5c\u696d\u7ba1\u7406)\n- src/infrastructure/redis_client.py (async Redis)\n- src/infrastructure/minio_client.py (MinIO operations)\n\n### stats-worker/\n- requirements.txt\n- Dockerfile\n- src/config.py\n- src/worker.py (\u4e3b\u8981 worker loop + job \u8655\u7406)\n\n### MCP \u6574\u5408\n- handlers/statistics_tools.py (9 \u500b\u65b0\u5de5\u5177)\n- handlers/stats_client.py (Stats Service HTTP client)\n\n### docker-compose.yml \u66f4\u65b0\n- \u65b0\u589e stats-service (port 8003)\n- \u65b0\u589e stats-worker (replicas: 2)\n- MCP \u52a0\u5165 STATS_SERVICE_URL \u74b0\u5883\u8b8a\u6578\n\n## \u4e0b\u4e00\u6b65\n- Git commit \u6240\u6709\u8b8a\u66f4\n- \u6574\u5408\u6e2c\u8a66
+- ## 當前任務：實作 auto_analyze 智能統計分析
+- ### 設計目標
+- 一個工具搞定所有統計分析，AI Agent 不需要知道該用什麼方法。
+- ### auto_analyze 功能規劃
+- 1. **資料品質檢查**
+- - 缺失值分析（比例、模式）
+- - 離群值偵測（IQR、Z-score）
+- - 重複值檢查
+- 2. **變數類型推論**
+- - 數值型（連續/離散）
+- - 類別型（有序/無序）
+- - 日期時間型
+- - ID/索引型（排除分析）
+- 3. **描述統計（依類型自動選擇）**
+- - 數值：mean, sd, median, IQR, skewness, kurtosis
+- - 類別：frequency, mode, entropy
+- 4. **假設檢定（自動判斷）**
+- - 常態性檢定（Shapiro-Wilk）→ 決定用參數/非參數
+- - 同質性檢定（Levene）
+- 5. **關聯分析（有 target 時）**
+- - 數值 vs 數值 → Pearson/Spearman correlation
+- - 類別 vs 類別 → Chi-square + Cramér's V
+- - 數值 vs 類別 → t-test/ANOVA/Mann-Whitney/Kruskal-Wallis
+- 6. **自動產生建議**
+- - 資料清理建議
+- - 特徵工程建議
+- - 適合的 ML 模型建議
+- ### 實作計畫
+- 1. stats-worker: 新增 auto_analyze_task.py
+- 2. stats-service: 新增 /auto-analyze/submit 端點
+- 3. MCP: 新增 auto_analyze, run_quick_analysis 工具
+- ### 備案
+- 如果 auto_analyze 過於複雜，Agent 可以自己決定跑哪些分析（使用現有的獨立工具）
 
 ## Current Blockers
 
