@@ -3,14 +3,27 @@ Smart Tools for MCP
 
 Intelligent workflow tools that guide AI agents through data analysis processes.
 These tools return structured "tickets" for task tracking and user interaction.
+
+Enhanced with Data Validation Layer for:
+- Missing value detection
+- PII (Personally Identifiable Information) detection
+- Invalid column detection
+- Outlier detection
+- Data type issues
 """
 import logging
 import time
 import uuid
+import base64
+import io
 from datetime import datetime
-from typing import Optional, Literal
+from typing import Optional, Literal, List, Dict, Any
 
+import pandas as pd
 from mcp.server.fastmcp import FastMCP
+
+from .data_validator import DataValidator, DataIssue, ValidationReport
+from .data_cleaner import DataCleaner
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +33,65 @@ def register_smart_tools(mcp: FastMCP, automl_client) -> None:
     
     from .stats_client import StatsClient
     stats_client = StatsClient()
+    
+    # Initialize validation and cleaning tools
+    data_validator = DataValidator()
+    data_cleaner = DataCleaner()
+    
+    # ==================== HELPER FUNCTIONS ====================
+    
+    def _parse_csv_content(csv_content: str, is_base64: bool = False) -> pd.DataFrame:
+        """Parse CSV content into DataFrame"""
+        if is_base64:
+            decoded = base64.b64decode(csv_content).decode("utf-8")
+            return pd.read_csv(io.StringIO(decoded))
+        return pd.read_csv(io.StringIO(csv_content))
+    
+    def _format_issues_for_response(report: ValidationReport) -> List[dict]:
+        """Convert ValidationReport issues to dict for JSON response"""
+        return [issue.to_dict() for issue in report.issues]
+    
+    def _generate_questions_from_issues(report: ValidationReport) -> List[str]:
+        """Generate user questions based on detected issues"""
+        questions = []
+        
+        # Critical issues first
+        critical_issues = [i for i in report.issues if i.severity.value == "critical"]
+        if critical_issues:
+            pii_issues = [i for i in critical_issues if i.issue_type.value == "pii_detected"]
+            if pii_issues:
+                cols = [i.column for i in pii_issues if i.column]
+                questions.append(
+                    f"⚠️ CRITICAL: PII detected in columns: {cols}. "
+                    "Options: mask (replace with ***), hash (SHA256), or drop these columns?"
+                )
+        
+        # High severity
+        high_issues = [i for i in report.issues if i.severity.value == "high"]
+        for issue in high_issues:
+            if issue.issue_type.value == "high_missing_ratio":
+                questions.append(
+                    f"Missing values found in '{issue.column}' "
+                    f"({issue.details.get('missing_pct', 0):.1f}% missing). "
+                    "Options: drop rows, drop column, or impute (mean/median/mode)?"
+                )
+        
+        # Medium severity
+        medium_issues = [i for i in report.issues if i.severity.value == "medium"]
+        outlier_issues = [i for i in medium_issues if i.issue_type.value == "outliers_detected"]
+        if outlier_issues:
+            cols = [i.column for i in outlier_issues if i.column]
+            questions.append(
+                f"Outliers detected in: {cols[:5]}{'...' if len(cols) > 5 else ''}. "
+                "Options: cap to IQR bounds, remove, or keep as-is?"
+            )
+        
+        # Always add storage question
+        questions.append(
+            "Do you want to save this dataset for future use, or is this a one-time analysis?"
+        )
+        
+        return questions
     
     # ==================== SMART DATA ANALYSIS ====================
     
@@ -45,6 +117,14 @@ def register_smart_tools(mcp: FastMCP, automl_client) -> None:
            - `execute_analysis_ticket(ticket_id, save_to_storage=False)` → Quick analysis
            - `execute_analysis_ticket(ticket_id, save_to_storage=True)` → Persistent storage
         
+        **NEW: Data Validation Layer**
+        This tool now automatically detects:
+        - Missing values (with severity based on percentage)
+        - PII (emails, phones, SSNs, credit cards)
+        - Invalid columns (constant, all-null, high-cardinality IDs)
+        - Outliers (using IQR method)
+        - Duplicate rows
+        
         Args:
             csv_content: CSV data as string (or base64 if is_base64=True)
             user_id: User ID for tracking
@@ -57,8 +137,9 @@ def register_smart_tools(mcp: FastMCP, automl_client) -> None:
                 - ticket_id: Unique identifier for this analysis request
                 - status: "pending_user_decision"
                 - data_preview: Quick overview of the data
+                - data_issues: Detected issues with severity and suggested actions
                 - options: Available paths forward
-                - suggested_questions: Questions to ask the user
+                - suggested_questions: Questions to ask the user (including issue-specific)
         
         Example:
             ticket = start_data_analysis(
@@ -66,10 +147,14 @@ def register_smart_tools(mcp: FastMCP, automl_client) -> None:
                 user_id="user1",
                 target_column="score"
             )
-            # → Returns ticket, agent asks user about storage preference
-            # → User decides, agent calls execute_analysis_ticket
+            # → Returns ticket with any detected issues
+            # → Agent asks user about issues and storage preference
+            # → User decides, agent calls execute_analysis_ticket with cleaning_decisions
         """
         try:
+            # Parse CSV to DataFrame for validation
+            df = _parse_csv_content(csv_content, is_base64)
+            
             # Get quick stats for preview
             quick_stats = await stats_client.quick_stats(
                 csv_content=csv_content,
@@ -79,8 +164,17 @@ def register_smart_tools(mcp: FastMCP, automl_client) -> None:
             # Generate ticket
             ticket_id = f"analysis-{uuid.uuid4().hex[:12]}"
             
-            # Store ticket data in memory (in production, use Redis)
-            # For now, encode essential info in ticket_id or return all needed data
+            # validation_report is a ValidationReport object
+            validation_report = data_validator.validate(df, target_column=target_column)
+            
+            # Determine if cleaning is needed before analysis
+            requires_attention = not validation_report.can_proceed
+            
+            # Generate suggested questions based on issues
+            suggested_questions = _generate_questions_from_issues(validation_report)
+            
+            # Get default cleaning actions
+            default_actions = data_cleaner.get_default_actions(validation_report) if validation_report.total_issues > 0 else {}
             
             ticket = {
                 "ticket_id": ticket_id,
@@ -96,6 +190,21 @@ def register_smart_tools(mcp: FastMCP, automl_client) -> None:
                     "column_names": [c["name"] for c in quick_stats.get("column_info", [])],
                     "column_types": {c["name"]: c["dtype"] for c in quick_stats.get("column_info", [])},
                     "missing_summary": quick_stats.get("missing_summary", {}),
+                },
+                
+                # Data validation results (NEW)
+                "data_issues": {
+                    "total_issues": validation_report.total_issues,
+                    "requires_attention": requires_attention,
+                    "can_proceed": validation_report.can_proceed,
+                    "summary": {
+                        "critical": validation_report.critical_count,
+                        "high": validation_report.high_count,
+                        "medium": validation_report.medium_count,
+                        "low": validation_report.low_count,
+                    },
+                    "issues": _format_issues_for_response(validation_report),
+                    "default_cleaning_actions": default_actions,
                 },
                 
                 # Analysis context
@@ -117,13 +226,15 @@ def register_smart_tools(mcp: FastMCP, automl_client) -> None:
                         "use_case": "ML pipeline, repeated access, collaboration",
                         "action": "execute_analysis_ticket(ticket_id, save_to_storage=True, dataset_name='...')",
                     },
+                    "clean_and_analyze": {
+                        "description": "Apply cleaning then analyze",
+                        "use_case": "When data issues detected",
+                        "action": "execute_analysis_ticket(ticket_id, cleaning_decisions={...})",
+                    },
                 },
                 
                 # Suggested questions for AI to ask user
-                "suggested_questions": [
-                    "Do you want to save this dataset for future use, or is this a one-time analysis?",
-                    "If saving, what would you like to name this dataset?",
-                ],
+                "suggested_questions": suggested_questions,
                 
                 # Raw data preserved for execution
                 "_internal": {
@@ -154,6 +265,7 @@ def register_smart_tools(mcp: FastMCP, automl_client) -> None:
         minio_bucket: Optional[str] = None,
         target_column: Optional[str] = None,
         is_base64: bool = False,
+        cleaning_decisions: Optional[Dict[str, Any]] = None,
         wait_for_result: bool = True,
         wait_timeout: int = 300,
     ) -> dict:
@@ -173,6 +285,10 @@ def register_smart_tools(mcp: FastMCP, automl_client) -> None:
         - Analyzes with full tracking
         - Returns job ticket with dataset_id for future reference
         
+        **NEW: Data Cleaning (cleaning_decisions provided)**
+        - Applies cleaning based on user decisions before analysis
+        - Returns cleaning report showing what was changed
+        
         Args:
             ticket_id: Ticket ID from start_data_analysis
             csv_content: CSV data (same as start_data_analysis)
@@ -182,6 +298,21 @@ def register_smart_tools(mcp: FastMCP, automl_client) -> None:
             minio_bucket: Optional bucket name (defaults to 'automl-data')
             target_column: Optional target column for association analysis
             is_base64: Set True if csv_content is base64 encoded
+            cleaning_decisions: Optional dict of cleaning actions to apply.
+                Format: {
+                    "missing_values": {
+                        "column_name": "impute_mean" | "impute_median" | "impute_mode" | "drop_rows" | "drop_column"
+                    },
+                    "pii": {
+                        "column_name": "mask" | "hash" | "drop"
+                    },
+                    "outliers": {
+                        "column_name": "cap_iqr" | "remove" | "keep"
+                    },
+                    "invalid_columns": ["col1", "col2"],  # columns to drop
+                    "duplicates": "drop" | "keep"
+                }
+                If None, uses default actions for detected issues.
             wait_for_result: If True, wait for analysis completion
             wait_timeout: Max seconds to wait (if wait_for_result=True)
         
@@ -192,9 +323,39 @@ def register_smart_tools(mcp: FastMCP, automl_client) -> None:
                 - status: "submitted" | "running" | "completed" | "failed"
                 - storage_mode: "temporary" | "persistent"
                 - dataset_id: (if persistent) Dataset ID for future use
+                - cleaning_report: (if cleaning applied) Summary of cleaning actions
                 - result: (if wait_for_result and completed) Analysis results
         """
         try:
+            # Parse CSV to DataFrame
+            df = _parse_csv_content(csv_content, is_base64)
+            original_shape = df.shape
+            
+            # Validate data to get issues
+            validation_report = data_validator.validate(df, target_column=target_column)
+            
+            # Apply cleaning if there are issues
+            cleaning_report = None
+            if validation_report.total_issues > 0:
+                # Use provided decisions or default actions
+                decisions = cleaning_decisions or data_cleaner.get_default_actions(validation_report)
+                
+                # Apply cleaning
+                df = data_cleaner.clean(df, validation_report, decisions)
+                
+                # Generate cleaning report
+                cleaning_report = data_cleaner.generate_cleaning_report(
+                    original_df=None,  # We don't keep original to save memory
+                    cleaned_df=df,
+                    validation_report=validation_report,
+                    decisions=decisions,
+                )
+                cleaning_report["original_shape"] = {"rows": original_shape[0], "columns": original_shape[1]}
+                cleaning_report["cleaned_shape"] = {"rows": df.shape[0], "columns": df.shape[1]}
+            
+            # Convert cleaned DataFrame back to CSV for analysis
+            cleaned_csv = df.to_csv(index=False)
+            
             if save_to_storage:
                 # Path B: Persistent storage
                 if not dataset_name:
@@ -208,13 +369,12 @@ def register_smart_tools(mcp: FastMCP, automl_client) -> None:
                 # For now, use direct analysis but mark as persistent
                 # TODO: Implement actual MinIO upload through automl-service
                 
-                # Use direct analysis (temporary implementation)
-                # In production, would upload to MinIO first, then use auto_analyze
+                # Use direct analysis with cleaned data
                 submit_result = await stats_client.direct_analyze(
-                    csv_content=csv_content,
+                    csv_content=cleaned_csv,
                     user_id=user_id,
                     target_column=target_column,
-                    is_base64=is_base64,
+                    is_base64=False,  # cleaned_csv is plain text now
                 )
                 
                 job_id = submit_result.get("job_id")
@@ -222,12 +382,12 @@ def register_smart_tools(mcp: FastMCP, automl_client) -> None:
                 dataset_id = None  # TODO: return actual dataset_id after upload
                 
             else:
-                # Path A: Quick analysis (temporary)
+                # Path A: Quick analysis (temporary) with cleaned data
                 submit_result = await stats_client.direct_analyze(
-                    csv_content=csv_content,
+                    csv_content=cleaned_csv,
                     user_id=user_id,
                     target_column=target_column,
-                    is_base64=is_base64,
+                    is_base64=False,  # cleaned_csv is plain text now
                 )
                 
                 job_id = submit_result.get("job_id")
@@ -239,6 +399,7 @@ def register_smart_tools(mcp: FastMCP, automl_client) -> None:
                     "ticket_id": ticket_id,
                     "status": "error",
                     "error": "Failed to submit analysis job",
+                    "cleaning_report": cleaning_report,  # Include cleaning report even if job fails
                 }
             
             # Build job ticket
@@ -252,6 +413,8 @@ def register_smart_tools(mcp: FastMCP, automl_client) -> None:
                 "submitted_at": datetime.utcnow().isoformat(),
                 "user_id": user_id,
                 "target_column": target_column,
+                "cleaning_applied": cleaning_report is not None,
+                "cleaning_report": cleaning_report,
                 
                 # Tracking info
                 "tracking": {
@@ -357,6 +520,9 @@ def register_smart_tools(mcp: FastMCP, automl_client) -> None:
                 "status": "error",
                 "error": str(e),
             }
+    
+    # Note: get_analysis_capabilities is already registered in statistics_tools.py
+    # We could extend it there with validation info if needed
     
     logger.info("Registered 3 smart workflow tools")
 
