@@ -76,6 +76,53 @@ class MinioClient:
         
         return None
     
+    def load_dataset_by_path(
+        self,
+        minio_path: str,
+        n_rows: Optional[int] = None
+    ) -> Optional[pd.DataFrame]:
+        """
+        Load dataset from MinIO by path.
+        
+        Args:
+            minio_path: Path in format 'bucket/path/to/file.csv' or 'path/to/file.csv'
+            n_rows: Number of rows to load (None for all)
+        """
+        client = self._get_client()
+        
+        try:
+            # Parse path: could be 'bucket/path' or just 'path' (use default bucket)
+            if '/' in minio_path:
+                parts = minio_path.split('/', 1)
+                # Check if first part is a bucket name
+                if client.bucket_exists(parts[0]):
+                    bucket = parts[0]
+                    object_name = parts[1]
+                else:
+                    bucket = MINIO_DATASET_BUCKET
+                    object_name = minio_path
+            else:
+                bucket = MINIO_DATASET_BUCKET
+                object_name = minio_path
+            
+            logger.info(f"Loading dataset from {bucket}/{object_name}")
+            
+            response = client.get_object(bucket, object_name)
+            data = response.read()
+            response.close()
+            response.release_conn()
+            
+            if n_rows:
+                df = pd.read_csv(io.BytesIO(data), nrows=n_rows)
+            else:
+                df = pd.read_csv(io.BytesIO(data))
+            
+            return df
+            
+        except Exception as e:
+            logger.error(f"Failed to load dataset from {minio_path}: {e}")
+            return None
+    
     def load_dataset_preview(
         self,
         dataset_id: str,

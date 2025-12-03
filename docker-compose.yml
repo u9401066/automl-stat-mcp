@@ -146,6 +146,8 @@ services:
     ports:
       - "8003:8003"
     environment:
+      # AutoML Service - For dataset lookup
+      - AUTOML_SERVICE_URL=http://automl-api:8001
       # MinIO - Same as AutoML
       - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio.example.com:9000}
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
@@ -165,6 +167,8 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+      automl-api:
+        condition: service_started
     restart: unless-stopped
 
   # ===========================================================================

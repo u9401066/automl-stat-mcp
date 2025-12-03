@@ -522,19 +522,21 @@ cd automl-mcp-server && python -m src.main
 
 ```
 workspace251202/
-├── automl-service/          # REST API Service
+├── automl-service/          # REST API Service (DDD Architecture)
 │   ├── src/
-│   │   ├── domain/          # DDD Domain Layer
-│   │   ├── application/     # Use Cases
-│   │   ├── infrastructure/  # Redis, MinIO, etc.
-│   │   └── interface/       # FastAPI Routes
+│   │   ├── domain/          # Domain Layer (models, repositories interfaces)
+│   │   ├── application/     # Application Layer (use cases, DTOs)
+│   │   ├── infrastructure/  # Infrastructure (Redis, MinIO, repo implementations)
+│   │   └── interface/       # Interface Layer (FastAPI Routes)
 │   ├── Dockerfile
 │   └── requirements.txt
 │
-├── automl-mcp-server/       # MCP Server
+├── automl-mcp-server/       # MCP Server (32 tools total)
 │   ├── src/
 │   │   └── infrastructure/mcp/
-│   │       ├── handlers/    # MCP Tool Handlers
+│   │       ├── handlers/
+│   │       │   ├── automl_tools.py      # 20 AutoML tools
+│   │       │   └── statistics_tools.py  # 12 Statistics tools
 │   │       ├── client.py    # HTTP Client
 │   │       └── server.py    # FastMCP Server
 │   ├── Dockerfile
@@ -544,10 +546,173 @@ workspace251202/
 │   ├── src/worker.py        # Job Consumer
 │   └── Dockerfile           # Uses official AutoGluon image
 │
+├── stats-service/           # Statistics API Service
+│   ├── src/
+│   │   ├── routes/          # FastAPI Routes (EDA, TableOne, Auto Analyze)
+│   │   └── infrastructure/  # Redis, MinIO clients
+│   ├── Dockerfile
+│   └── requirements.txt
+│
+├── stats-worker/            # Statistics Worker
+│   ├── src/
+│   │   └── tasks/
+│   │       ├── eda_task.py           # ydata-profiling EDA
+│   │       ├── tableone_task.py      # TableOne summary stats
+│   │       └── auto_analyze_task.py  # Intelligent auto analysis (~830 lines)
+│   ├── Dockerfile
+│   └── requirements.txt
+│
 ├── docker-compose.yml       # Full stack deployment
+├── docker-compose.gpu.yml   # GPU overlay
 ├── .env.example             # Environment template
 └── .vscode/mcp.json         # VS Code MCP config
 ```
+
+## Architecture
+
+### Service Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              MCP Protocol                                    │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                        automl-mcp-server                             │   │
+│  │  ┌─────────────────┐    ┌─────────────────────────────────────────┐ │   │
+│  │  │ AutoML Tools(20)│    │ Statistics Tools (12)                   │ │   │
+│  │  │ - register      │    │ - submit_eda_job, submit_tableone_job   │ │   │
+│  │  │ - train         │    │ - auto_analyze, run_quick_auto_analyze  │ │   │
+│  │  │ - predict       │    │ - analyze_csv_directly, get_quick_stats │ │   │
+│  │  └────────┬────────┘    └────────────────┬────────────────────────┘ │   │
+│  └───────────┼──────────────────────────────┼──────────────────────────┘   │
+│              │ HTTP                         │ HTTP                         │
+│  ┌───────────▼───────────┐      ┌───────────▼───────────┐                 │
+│  │    automl-service     │      │    stats-service      │                 │
+│  │  ┌─────────────────┐  │      │  ┌─────────────────┐  │                 │
+│  │  │ Dataset Mgmt    │  │      │  │ EDA/TableOne    │  │                 │
+│  │  │ Job Submission  │  │      │  │ Auto Analyze    │  │                 │
+│  │  │ Model Mgmt      │  │      │  │ Direct Analyze  │  │                 │
+│  │  └────────┬────────┘  │      │  └────────┬────────┘  │                 │
+│  └───────────┼───────────┘      └───────────┼───────────┘                 │
+│              │ Redis Queue                  │ Redis Queue                  │
+│  ┌───────────▼───────────┐      ┌───────────▼───────────┐                 │
+│  │    automl-worker      │      │    stats-worker       │                 │
+│  │  ┌─────────────────┐  │      │  ┌─────────────────┐  │                 │
+│  │  │ AutoGluon       │  │      │  │ ydata-profiling │  │                 │
+│  │  │ Training Engine │  │      │  │ tableone        │  │                 │
+│  │  └─────────────────┘  │      │  │ statsmodels     │  │                 │
+│  └───────────────────────┘      │  └─────────────────┘  │                 │
+│                                 └───────────────────────┘                 │
+│                                                                           │
+│  ┌─────────────────────────────────────────────────────────────────────┐ │
+│  │                        Shared Infrastructure                         │ │
+│  │  ┌───────────────┐    ┌───────────────┐    ┌───────────────┐        │ │
+│  │  │     Redis     │    │     MinIO     │    │   PostgreSQL  │        │ │
+│  │  │ - Job Queues  │    │ - CSV Files   │    │ - (optional)  │        │ │
+│  │  │ - Dataset Meta│    │ - Models      │    │               │        │ │
+│  │  │ - Results     │    │ - Reports     │    │               │        │ │
+│  │  └───────────────┘    └───────────────┘    └───────────────┘        │ │
+│  └─────────────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Use Case Flows
+
+**Use Case 1: AutoML Training (Register → Train → Predict)**
+```
+User → MCP → automl-service → Redis Queue → automl-worker → MinIO (model)
+                    ↓
+            Redis (datasets:{id})  ← Shared metadata for both services
+```
+
+**Use Case 2: Model Prediction**
+```
+User → MCP → automl-service → Load model from MinIO → Return predictions
+```
+
+**Use Case 3: Statistical Analysis (EDA, TableOne, Auto Analyze)**
+```
+User → MCP → stats-service → Redis (read datasets:{id}) → Redis Queue → stats-worker
+                                                                              ↓
+                                                                    MinIO (CSV read)
+                                                                              ↓
+                                                                    MinIO (report save)
+```
+
+**Use Case 4: Direct Analysis (No MinIO Storage)**
+```
+User → MCP → stats-service → Redis Queue → stats-worker → Return results
+         (CSV content in request)     (process in memory)
+```
+
+### ⚠️ Known Architecture Issues
+
+#### Issue 1: Stats Service Dataset Dependency
+
+**Problem**: Stats service reads dataset metadata from Redis key `datasets:{id}`, but this metadata is only written by automl-service during `register_dataset`. If a user wants to use stats-service independently (without first registering via automl-service), the dataset won't exist.
+
+**Current Flow**:
+```
+1. User calls register_dataset → automl-service writes to Redis
+2. User calls auto_analyze(dataset_id) → stats-service reads from Redis ✅
+```
+
+**Problematic Flow**:
+```
+1. User calls auto_analyze(dataset_id) directly → Redis key doesn't exist ❌
+```
+
+**Planned Solution**: 
+- Option A: Stats service can register datasets independently
+- Option B: Shared dataset registration service
+- Option C: Accept dependency (document as requirement)
+
+#### Issue 2: AutoML Service Lacks Direct Analyze
+
+**Problem**: stats-service has `analyze_csv_directly` and `get_quick_stats` for analyzing CSV content without MinIO storage. automl-service should also support this for quick dataset analysis before training.
+
+**Current State**:
+- stats-service: ✅ Has direct analysis (`/direct/analyze`, `/direct/quick-stats`)
+- automl-service: ❌ Requires MinIO registration first
+
+**Planned Solution**: Add direct analyze endpoints to automl-service for consistency.
+
+#### Issue 3: Stats Service Lacks DDD Architecture
+
+**Problem**: automl-service follows Domain-Driven Design (domain/application/infrastructure/interface layers), but stats-service only has routes + infrastructure.
+
+**Current Structure**:
+```
+automl-service/src/
+├── domain/          ✅ Domain models, repositories
+├── application/     ✅ Use cases, DTOs
+├── infrastructure/  ✅ Redis, MinIO, repos impl
+└── interface/       ✅ FastAPI routes
+
+stats-service/src/
+├── routes/          ⚠️ Only API routes
+└── infrastructure/  ⚠️ Only Redis, MinIO
+```
+
+**Planned Solution**: Refactor stats-service to follow DDD when time permits.
+
+## MCP Tool Summary
+
+| Category | Count | Tools |
+|----------|-------|-------|
+| AutoML Training | 8 | register_dataset, submit_automl_job, submit_specific_job, submit_compare_job, get_job_status, list_jobs, cancel_job, wait_for_job |
+| AutoML Models | 4 | list_models, get_model_leaderboard, predict, delete_model |
+| AutoML Datasets | 3 | list_datasets, delete_dataset, analyze_dataset |
+| AutoML Smart | 3 | quick_train, train_and_wait, get_training_summary |
+| AutoML Utility | 2 | health_check, list_algorithms |
+| **AutoML Total** | **20** | |
+| Statistics EDA | 3 | submit_eda_job, run_quick_eda, preview_dataset_stats |
+| Statistics TableOne | 3 | submit_tableone_job, run_quick_tableone, get_column_suggestions |
+| Statistics Auto | 3 | auto_analyze, run_quick_auto_analyze, get_analysis_capabilities |
+| Statistics Direct | 2 | analyze_csv_directly, get_quick_stats |
+| Statistics Jobs | 1 | get_stats_job_status, get_stats_job_result, list_stats_jobs |
+| **Statistics Total** | **12** | |
+| **Grand Total** | **32** | |
 
 ## License
 

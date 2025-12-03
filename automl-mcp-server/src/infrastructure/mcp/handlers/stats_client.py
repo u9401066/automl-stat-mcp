@@ -194,3 +194,39 @@ class StatsClient:
             f"/jobs/{job_id}",
             params={"user_id": user_id},
         )
+    
+    # ============== Direct Analysis ==============
+    
+    async def direct_analyze(
+        self,
+        csv_content: str,
+        user_id: str,
+        target_column: Optional[str] = None,
+        is_base64: bool = False,
+    ) -> Dict[str, Any]:
+        """Submit direct analysis (no MinIO storage)"""
+        return await self._request(
+            "POST",
+            "/direct/analyze",
+            json={
+                "csv_content": csv_content,
+                "is_base64": is_base64,
+                "user_id": user_id,
+                "target_column": target_column,
+            },
+        )
+    
+    async def quick_stats(
+        self,
+        csv_content: str,
+        is_base64: bool = False,
+    ) -> Dict[str, Any]:
+        """Get quick stats synchronously"""
+        return await self._request(
+            "POST",
+            "/direct/quick-stats",
+            json={
+                "csv_content": csv_content,
+                "is_base64": is_base64,
+            },
+        )

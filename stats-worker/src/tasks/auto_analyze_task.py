@@ -5,6 +5,7 @@ Automatically performs comprehensive statistical analysis based on data characte
 No manual method selection required - the engine decides what's appropriate.
 """
 import logging
+import math
 from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass, field
 import warnings
@@ -18,6 +19,18 @@ logger = logging.getLogger(__name__)
 # Suppress warnings for cleaner output
 warnings.filterwarnings('ignore', category=RuntimeWarning)
 warnings.filterwarnings('ignore', category=FutureWarning)
+
+
+def safe_round(value: Optional[float], decimals: int = 4) -> Optional[float]:
+    """Round a value safely, returning None for NaN/Inf"""
+    if value is None:
+        return None
+    if isinstance(value, float) and (math.isnan(value) or math.isinf(value)):
+        return None
+    try:
+        return round(float(value), decimals)
+    except (TypeError, ValueError):
+        return None
 
 
 @dataclass
@@ -105,7 +118,7 @@ class AutoAnalyzeResult:
                 "n_rows": self.n_rows,
                 "n_cols": self.n_cols,
                 "n_duplicates": self.n_duplicates,
-                "memory_usage_mb": round(self.memory_usage_mb, 2),
+                "memory_usage_mb": safe_round(self.memory_usage_mb, 2),
             },
             "column_summary": {
                 "numeric": self.numeric_columns,
@@ -119,7 +132,7 @@ class AutoAnalyzeResult:
                 for name, profile in self.columns.items()
             },
             "data_quality": {
-                "score": round(self.quality_score, 2),
+                "score": safe_round(self.quality_score, 2),
                 "issues": self.quality_issues,
             },
             "target_analysis": {
@@ -128,9 +141,9 @@ class AutoAnalyzeResult:
                     {
                         "variable": a.var1,
                         "test": a.test_name,
-                        "statistic": round(a.statistic, 4),
-                        "p_value": round(a.pvalue, 4),
-                        "effect_size": round(a.effect_size, 4) if a.effect_size else None,
+                        "statistic": safe_round(a.statistic, 4),
+                        "p_value": safe_round(a.pvalue, 4),
+                        "effect_size": safe_round(a.effect_size, 4),
                         "effect_size_name": a.effect_size_name,
                         "interpretation": a.interpretation,
                     }
@@ -148,22 +161,22 @@ class AutoAnalyzeResult:
             "inferred_type": p.inferred_type,
             "n_unique": p.n_unique,
             "n_missing": p.n_missing,
-            "missing_pct": round(p.missing_pct, 2),
+            "missing_pct": safe_round(p.missing_pct, 2),
         }
         
         if p.inferred_type == "numeric":
             base.update({
-                "mean": round(p.mean, 4) if p.mean is not None else None,
-                "std": round(p.std, 4) if p.std is not None else None,
-                "median": round(p.median, 4) if p.median is not None else None,
-                "min": round(p.min_val, 4) if p.min_val is not None else None,
-                "max": round(p.max_val, 4) if p.max_val is not None else None,
-                "q25": round(p.q25, 4) if p.q25 is not None else None,
-                "q75": round(p.q75, 4) if p.q75 is not None else None,
-                "skewness": round(p.skewness, 4) if p.skewness is not None else None,
-                "kurtosis": round(p.kurtosis, 4) if p.kurtosis is not None else None,
+                "mean": safe_round(p.mean, 4),
+                "std": safe_round(p.std, 4),
+                "median": safe_round(p.median, 4),
+                "min": safe_round(p.min_val, 4),
+                "max": safe_round(p.max_val, 4),
+                "q25": safe_round(p.q25, 4),
+                "q75": safe_round(p.q75, 4),
+                "skewness": safe_round(p.skewness, 4),
+                "kurtosis": safe_round(p.kurtosis, 4),
                 "is_normal": p.is_normal,
-                "normality_pvalue": round(p.normality_pvalue, 4) if p.normality_pvalue is not None else None,
+                "normality_pvalue": safe_round(p.normality_pvalue, 4),
                 "n_outliers_iqr": p.n_outliers_iqr,
                 "n_outliers_zscore": p.n_outliers_zscore,
             })
@@ -361,7 +374,7 @@ class AutoAnalyzeEngine:
             # Top values
             top_n = min(10, len(value_counts))
             profile.top_values = [
-                {"value": str(val), "count": int(cnt), "pct": round(cnt / len(series) * 100, 2)}
+                {"value": str(val), "count": int(cnt), "pct": safe_round(cnt / len(series) * 100, 2)}
                 for val, cnt in value_counts.head(top_n).items()
             ]
     
@@ -429,9 +442,16 @@ class AutoAnalyzeEngine:
         # Pearson correlation
         corr_matrix = numeric_df.corr()
         
+        # Clean NaN/Inf values in correlation matrix
+        corr_dict = {}
+        for col in corr_matrix.columns:
+            corr_dict[col] = {
+                k: safe_round(v, 4) for k, v in corr_matrix[col].to_dict().items()
+            }
+        
         self.result.correlation_matrix = {
             "columns": self.result.numeric_columns,
-            "values": corr_matrix.round(4).to_dict(),
+            "values": corr_dict,
             "high_correlations": self._find_high_correlations(corr_matrix)
         }
     
@@ -443,15 +463,15 @@ class AutoAnalyzeEngine:
         for i, col1 in enumerate(cols):
             for col2 in cols[i+1:]:
                 corr = corr_matrix.loc[col1, col2]
-                if abs(corr) >= threshold:
+                if pd.notna(corr) and abs(corr) >= threshold:
                     high_corr.append({
                         "var1": col1,
                         "var2": col2,
-                        "correlation": round(corr, 4),
+                        "correlation": safe_round(corr, 4),
                         "strength": "strong" if abs(corr) >= 0.8 else "moderate"
                     })
         
-        return sorted(high_corr, key=lambda x: abs(x["correlation"]), reverse=True)
+        return sorted(high_corr, key=lambda x: abs(x["correlation"] or 0), reverse=True)
     
     def _analyze_target_associations(self):
         """Analyze associations between features and target"""

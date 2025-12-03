@@ -18,6 +18,7 @@ from ..domain.models import (
     Job, JobId, JobStatus, JobType,
 )
 from ..domain.repositories import DatasetRepository, ModelRepository, JobRepository
+from .redis_dataset_store import redis_dataset_store
 
 # Persistence directories - configurable via environment variable
 PERSIST_DIR = Path(os.environ.get("PERSIST_DIR", "/app/data"))
@@ -78,10 +79,26 @@ class InMemoryDatasetRepository(DatasetRepository):
         }
         with open(meta_file, "w") as f:
             json.dump(data, f, indent=2)
+    
+    def _save_to_redis(self, dataset: Dataset):
+        """Save dataset metadata to Redis for cross-service access"""
+        redis_dataset_store.save_dataset({
+            "dataset_id": str(dataset.id),
+            "name": dataset.name,
+            "minio_path": dataset.minio_path,
+            "user_id": dataset.user_id,
+            "session_id": dataset.session_id,
+            "description": dataset.description,
+            "columns": dataset.columns,
+            "row_count": dataset.row_count,
+            "file_size_bytes": dataset.file_size_bytes,
+            "created_at": dataset.created_at.isoformat(),
+        })
 
     async def save(self, dataset: Dataset) -> None:
         self._datasets[str(dataset.id)] = dataset
         self._save_to_disk(dataset)
+        self._save_to_redis(dataset)  # Sync to Redis for stats-service
 
     async def get_by_id(self, dataset_id: DatasetId) -> Optional[Dataset]:
         return self._datasets.get(str(dataset_id))
@@ -99,10 +116,13 @@ class InMemoryDatasetRepository(DatasetRepository):
     async def delete(self, dataset_id: DatasetId) -> bool:
         key = str(dataset_id)
         if key in self._datasets:
+            user_id = self._datasets[key].user_id
             del self._datasets[key]
             meta_file = DATASETS_META_DIR / f"{key}.json"
             if meta_file.exists():
                 meta_file.unlink()
+            # Also delete from Redis
+            redis_dataset_store.delete_dataset(key, user_id)
             return True
         return False
 

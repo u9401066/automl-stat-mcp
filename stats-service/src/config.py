@@ -7,6 +7,9 @@ import os
 SERVICE_HOST = os.getenv("SERVICE_HOST", "0.0.0.0")
 SERVICE_PORT = int(os.getenv("SERVICE_PORT", "8003"))
 
+# AutoML Service URL (for dataset lookup)
+AUTOML_SERVICE_URL = os.getenv("AUTOML_SERVICE_URL", "http://localhost:8001")
+
 # Redis settings
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
 REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))

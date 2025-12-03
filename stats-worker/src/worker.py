@@ -88,6 +88,36 @@ class StatsWorker:
             job.update(kwargs)
             self.redis_client.set(key, json.dumps(job))
     
+    def load_dataset_by_path(self, minio_path: str) -> pd.DataFrame:
+        """Load dataset from MinIO by path (bucket/object format)"""
+        try:
+            # Parse path: could be 'bucket/path' or just 'path'
+            if '/' in minio_path:
+                parts = minio_path.split('/', 1)
+                # Check if first part is a bucket name
+                if self.minio_client.bucket_exists(parts[0]):
+                    bucket = parts[0]
+                    object_name = parts[1]
+                else:
+                    bucket = MINIO_DATASET_BUCKET
+                    object_name = minio_path
+            else:
+                bucket = MINIO_DATASET_BUCKET
+                object_name = minio_path
+            
+            logger.info(f"Loading dataset from {bucket}/{object_name}")
+            
+            response = self.minio_client.get_object(bucket, object_name)
+            data = response.read()
+            response.close()
+            response.release_conn()
+            
+            return pd.read_csv(BytesIO(data))
+            
+        except Exception as e:
+            logger.error(f"Failed to load dataset from {minio_path}: {e}")
+            raise FileNotFoundError(f"Dataset not found at {minio_path}")
+    
     def load_dataset(self, dataset_id: str) -> pd.DataFrame:
         """Load dataset from MinIO"""
         # Try to find the dataset file
@@ -276,8 +306,12 @@ class StatsWorker:
         
         self.update_job_status(job_id, "running", progress=0.1, message="Loading dataset...")
         
-        # Load dataset
-        df = self.load_dataset(params["dataset_id"])
+        # Load dataset - prefer minio_path if available
+        minio_path = params.get("minio_path")
+        if minio_path:
+            df = self.load_dataset_by_path(minio_path)
+        else:
+            df = self.load_dataset(params["dataset_id"])
         logger.info(f"Loaded dataset with shape {df.shape}")
         
         self.update_job_status(job_id, "running", progress=0.2, message="Analyzing data quality...")
@@ -347,6 +381,52 @@ class StatsWorker:
         
         return summary
     
+    def process_auto_analyze_direct_job(self, job: dict):
+        """Process auto-analyze job with direct CSV content (no MinIO)"""
+        from .tasks.auto_analyze_task import run_auto_analyze
+        
+        job_id = job["job_id"]
+        params = job["params"]
+        
+        logger.info(f"Processing direct auto-analyze job {job_id}")
+        
+        self.update_job_status(job_id, "running", progress=0.1, message="Parsing CSV content...")
+        
+        # Load dataset from CSV content
+        csv_content = params.get("csv_content")
+        if not csv_content:
+            raise ValueError("No CSV content provided")
+        
+        df = pd.read_csv(BytesIO(csv_content.encode('utf-8')))
+        logger.info(f"Loaded direct CSV with shape {df.shape}")
+        
+        self.update_job_status(job_id, "running", progress=0.2, message="Analyzing data quality...")
+        
+        # Run auto-analysis
+        target_column = params.get("target_column")
+        
+        self.update_job_status(job_id, "running", progress=0.4, message="Profiling columns...")
+        
+        result = run_auto_analyze(df, target_column=target_column)
+        
+        self.update_job_status(job_id, "running", progress=0.8, message="Saving analysis report...")
+        
+        # Add summary
+        result["summary"] = self._generate_summary(result)
+        result["is_direct"] = True  # Mark as direct analysis
+        
+        # Save report
+        result_path = self.save_report(job_id, result, format="json")
+        
+        self.update_job_status(
+            job_id, "completed",
+            progress=1.0,
+            message="Direct auto-analysis completed successfully",
+            result_path=result_path,
+        )
+        
+        logger.info(f"Direct auto-analyze job {job_id} completed")
+    
     def process_job(self, job: dict):
         """Process a single job"""
         job_type = job.get("job_type")
@@ -359,6 +439,8 @@ class StatsWorker:
                 self.process_tableone_job(job)
             elif job_type == "auto_analyze":
                 self.process_auto_analyze_job(job)
+            elif job_type == "auto_analyze_direct":
+                self.process_auto_analyze_direct_job(job)
             else:
                 raise ValueError(f"Unknown job type: {job_type}")
                 

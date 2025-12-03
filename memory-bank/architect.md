@@ -5,6 +5,14 @@ This file contains the architectural decisions and design patterns for the Memor
 
 ## Architectural Decisions
 
+- Separated container architecture for AutoML and Statistics services
+- Shared Redis for dataset metadata (datasets:{id} key format)
+- stats-service reads but doesn't write dataset metadata (dependency on automl-service)
+- Direct analyze pattern for CSV content without MinIO storage
+- MCP server acts as unified gateway with 32 tools
+
+
+
 - 使用 FLAML 作為 AutoML 後端
 - FastAPI + Pydantic v2 作為 API 框架
 - MinIO 作為檔案存儲（取代本地 CSV 字串傳輸）
@@ -31,6 +39,13 @@ This file contains the architectural decisions and design patterns for the Memor
 
 ## Design Considerations
 
+- stats-service cannot work independently without automl-service dataset registration
+- automl-service should also support direct analyze for pre-training analysis
+- stats-service lacks DDD architecture (technical debt)
+- Consider shared dataset registration service in future
+
+
+
 - 多用戶並發：需要任務佇列管理同時進行的訓練
 - WebSocket 連接管理：需處理斷線重連
 - MinIO 整合：需要 minio Python client
@@ -48,6 +63,67 @@ This file contains the architectural decisions and design patterns for the Memor
 
 
 ## Components
+
+### automl-service
+
+AutoML REST API with DDD architecture
+
+**Responsibilities:**
+
+- Dataset registration and management
+- Training job submission and tracking
+- Model management and predictions
+- Write dataset metadata to Redis (datasets:{id})
+
+### stats-service
+
+Statistics REST API (routes + infrastructure only, no DDD)
+
+**Responsibilities:**
+
+- EDA report generation
+- TableOne summary statistics
+- Auto Analyze intelligent analysis
+- Direct CSV analysis (no MinIO)
+- Read dataset metadata from Redis
+
+### automl-worker
+
+AutoGluon training job consumer
+
+**Responsibilities:**
+
+- Consume jobs from Redis queue
+- Execute AutoGluon training
+- Save models to MinIO
+- Update job status in Redis
+
+### stats-worker
+
+Statistics job consumer
+
+**Responsibilities:**
+
+- Consume jobs from Redis queue
+- Execute ydata-profiling EDA
+- Execute TableOne generation
+- Execute Auto Analyze engine
+- Save reports to MinIO
+
+### automl-mcp-server
+
+MCP protocol server with 32 tools
+
+**Responsibilities:**
+
+- Expose 20 AutoML tools
+- Expose 12 Statistics tools
+- Route requests to appropriate backend service
+- Smart orchestration (quick_train, train_and_wait)
+
+
+
+
 
 ### AutoML Server
 

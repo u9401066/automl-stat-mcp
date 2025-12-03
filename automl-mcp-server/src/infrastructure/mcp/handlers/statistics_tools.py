@@ -549,4 +549,80 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             "message": f"Job did not complete within {wait_timeout} seconds.",
         }
     
-    logger.info("Registered 12 statistics tools (including auto_analyze)")
+    # ==================== DIRECT ANALYSIS (No MinIO Storage) ====================
+    
+    @mcp.tool()
+    async def analyze_csv_directly(
+        csv_content: str,
+        user_id: str,
+        target_column: Optional[str] = None,
+        is_base64: bool = False,
+    ) -> dict:
+        """
+        📊 Analyze CSV data directly without storing in MinIO.
+        
+        This is useful for:
+        - One-time analysis of temporary data
+        - Quick data exploration without permanent storage
+        - Testing with small datasets
+        
+        The CSV content is passed directly and processed without being 
+        saved to MinIO. Results are stored temporarily for retrieval.
+        
+        ⚠️ For large datasets, use register_dataset + auto_analyze instead.
+        
+        Args:
+            csv_content: CSV data as string (or base64 if is_base64=True)
+            user_id: User ID
+            target_column: Optional target for association analysis
+            is_base64: Set True if csv_content is base64 encoded
+        
+        Returns:
+            job_id: Job ID for tracking
+            data_preview: Preview of parsed data (rows, columns, sample)
+            
+        Example:
+            # Analyze temporary data
+            analyze_csv_directly(
+                csv_content="name,age,score\\nAlice,30,85\\nBob,25,90",
+                user_id="user1",
+                target_column="score"
+            )
+        """
+        result = await stats_client.direct_analyze(
+            csv_content=csv_content,
+            user_id=user_id,
+            target_column=target_column,
+            is_base64=is_base64,
+        )
+        return result
+    
+    @mcp.tool()
+    async def get_quick_stats(
+        csv_content: str,
+        is_base64: bool = False,
+    ) -> dict:
+        """
+        ⚡ Get quick statistics synchronously (instant results).
+        
+        Returns immediately with basic statistics without job queue.
+        For full analysis, use analyze_csv_directly instead.
+        
+        Args:
+            csv_content: CSV data as string
+            is_base64: Set True if csv_content is base64 encoded
+        
+        Returns:
+            rows: Number of rows
+            columns: Number of columns  
+            column_info: Type, nulls, unique count per column
+            missing_summary: Missing value statistics
+            numeric_summary: Basic stats for numeric columns
+        """
+        result = await stats_client.quick_stats(
+            csv_content=csv_content,
+            is_base64=is_base64,
+        )
+        return result
+    
+    logger.info("Registered 14 statistics tools (including auto_analyze and direct analysis)")

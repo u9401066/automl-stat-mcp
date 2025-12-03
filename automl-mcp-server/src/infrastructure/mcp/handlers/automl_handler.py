@@ -47,14 +47,14 @@ class AutoMLHandler:
     - analyze_dataset: Get recommendations before training
     - get_training_summary: Overview of all resources
     
-    Total: 37 tools (25 AutoML + 12 Statistics)
+    Total: 34 tools (20 AutoML + 14 Statistics)
     """
 
     def __init__(self, mcp: FastMCP):
         self._mcp = mcp
         self._client = get_client()
         self._register_all_tools()
-        logger.info("AutoML Handler initialized with 37 tools")
+        logger.info("AutoML Handler initialized with 34 tools")
 
     def _register_all_tools(self) -> None:
         """Register all tool categories"""

@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from typing import Optional
 
 from ..infrastructure.redis_client import redis_client
-from ..infrastructure.minio_client import minio_client
+from ..infrastructure.redis_dataset_store import redis_dataset_store
 
 router = APIRouter(prefix="/auto-analyze", tags=["Auto Analyze"])
 
@@ -88,19 +88,20 @@ async def submit_auto_analyze_job(request: AutoAnalyzeRequest):
         )
         ```
     """
-    # Verify dataset exists
-    dataset_info = minio_client.get_dataset_info(request.dataset_id)
+    # Get dataset metadata from shared Redis store
+    dataset_info = redis_dataset_store.get_dataset(request.dataset_id)
     if not dataset_info:
         raise HTTPException(
             status_code=404,
-            detail=f"Dataset {request.dataset_id} not found in storage"
+            detail=f"Dataset {request.dataset_id} not found. Please register it first using AutoML service."
         )
     
-    # Create job
+    # Create job with minio_path for worker
     job = await redis_client.create_job(
         job_type="auto_analyze",
         params={
             "dataset_id": request.dataset_id,
+            "minio_path": dataset_info.get("minio_path"),
             "target_column": request.target_column,
         },
         user_id=request.user_id,

@@ -152,3 +152,25 @@ MCP Server \u63d0\u4f9b\u4e09\u5c64\u5de5\u5177: 1) Basic Tools - \u76f4\u63a5\u
 - quick_train: register + submit + wait
 - train_and_wait: submit + poll + return
 - analyze_dataset: 分析資料集提供訓練建議
+
+
+## Shared Redis Dataset Store
+
+Both automl-service and stats-service share dataset metadata via Redis keys. Format: 'datasets:{dataset_id}' containing JSON with id, name, user_id, minio_path, columns, row_count, created_at. automl-service writes on register_dataset, stats-service reads for analysis jobs. This enables loose coupling but creates implicit dependency.
+
+### Examples
+
+- automl-service/src/infrastructure/redis_dataset_store.py
+- stats-service/src/infrastructure/redis_dataset_store.py
+- automl-service/src/infrastructure/repositories.py (RedisDatasetRepository.save calls redis_dataset_store.save)
+
+
+## Direct Analyze Pattern
+
+Support for analyzing CSV data without MinIO storage. CSV content is passed directly in the request body (optionally base64 encoded for large files). Results are returned directly or stored temporarily in Redis. Useful for one-time analysis, testing, and small datasets.
+
+### Examples
+
+- stats-service/src/routes/direct.py
+- analyze_csv_directly MCP tool
+- get_quick_stats MCP tool
