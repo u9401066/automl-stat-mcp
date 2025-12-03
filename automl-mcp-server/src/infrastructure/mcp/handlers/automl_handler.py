@@ -17,6 +17,7 @@ from .model_tools import register_model_tools
 from .orchestration_tools import register_orchestration_tools
 from .statistics_tools import register_statistics_tools
 from .direct_tools import register_direct_tools
+from .smart_tools import register_smart_tools
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +44,11 @@ class AutoMLHandler:
     - run_quick_eda, run_quick_tableone
     - analyze_csv_directly, get_quick_stats: Direct stats analysis
     
+    🎯 Smart Workflow (guided analysis with tickets):
+    - start_data_analysis: Create analysis ticket, guide user decisions
+    - execute_analysis_ticket: Execute based on user choice (temp/persistent)
+    - check_analysis_progress: Track running analysis jobs
+    
     🚀 Smart Orchestration (convenience tools):
     - quick_train: Fastest path from CSV to model
     - train_and_wait: Submit and wait for completion
@@ -50,14 +56,14 @@ class AutoMLHandler:
     - analyze_dataset: Get recommendations before training
     - get_training_summary: Overview of all resources
     
-    Total: 35 tools (23 AutoML + 12 Statistics)
+    Total: 38 tools (23 AutoML + 12 Statistics + 3 Smart Workflow)
     """
 
     def __init__(self, mcp: FastMCP):
         self._mcp = mcp
         self._client = get_client()
         self._register_all_tools()
-        logger.info("AutoML Handler initialized with 35 tools")
+        logger.info("AutoML Handler initialized with 38 tools")
 
     def _register_all_tools(self) -> None:
         """Register all tool categories"""
@@ -69,3 +75,4 @@ class AutoMLHandler:
         register_orchestration_tools(self._mcp, self._client)
         register_direct_tools(self._mcp, self._client)
         register_statistics_tools(self._mcp, self._client)
+        register_smart_tools(self._mcp, self._client)

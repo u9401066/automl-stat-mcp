@@ -731,7 +731,28 @@ stats-service/src/
 | Statistics Direct | 2 | analyze_csv_directly, get_quick_stats |
 | Statistics Jobs | 1 | get_stats_job_status, get_stats_job_result, list_stats_jobs |
 | **Statistics Total** | **12** | |
-| **Grand Total** | **35** | |
+| 🎯 Smart Workflow | 3 | start_data_analysis, execute_analysis_ticket, check_analysis_progress |
+| **Grand Total** | **38** | |
+
+### 🎯 Smart Workflow Tools
+
+The smart workflow tools provide a guided analysis experience:
+
+```
+User: "Analyze this data"
+     ↓
+Agent: start_data_analysis(csv_content) 
+     ↓
+Returns: Analysis Ticket with data preview and options
+     ↓
+Agent asks: "Do you want to save this for future use?"
+     ↓
+User: "Yes, name it sales_data" | "No, just analyze it"
+     ↓
+Agent: execute_analysis_ticket(ticket_id, save_to_storage=True/False)
+     ↓
+Returns: Job Ticket with results or tracking info
+```
 
 ## License
 
