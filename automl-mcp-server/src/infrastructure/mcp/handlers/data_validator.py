@@ -32,7 +32,8 @@ class IssueSeverity(str, Enum):
 class IssueType(str, Enum):
     """Types of data quality issues"""
     # Critical
-    PII_DETECTED = "pii_detected"
+    PII_DETECTED = "pii_detected"              # Entire column is PII (can be deleted/masked)
+    PII_EMBEDDED = "pii_embedded"              # PII mixed in other data (needs PHI MCP)
     
     # High
     HIGH_MISSING_RATIO = "high_missing_ratio"
@@ -73,6 +74,10 @@ class CleaningAction(str, Enum):
     # PII handling
     MASK_PII = "mask_pii"
     REMOVE_PII_COLUMN = "remove_pii_column"
+    
+    # Complex PII - requires external processing
+    REQUIRE_PHI_MCP = "require_phi_mcp"        # Needs dedicated PHI MCP to handle
+    REJECT_DATA = "reject_data"                # Data too complex, reject entirely
     
     # No action
     IGNORE = "ignore"
@@ -156,11 +161,19 @@ class DataValidator:
     
     # Column name patterns suggesting PII
     PII_COLUMN_PATTERNS = [
-        r'(?i).*email.*', r'(?i).*phone.*', r'(?i).*ssn.*', 
-        r'(?i).*social.*security.*', r'(?i).*credit.*card.*',
-        r'(?i).*address.*', r'(?i).*passport.*', r'(?i).*license.*',
-        r'(?i).*身分證.*', r'(?i).*電話.*', r'(?i).*地址.*',
-        r'(?i).*password.*', r'(?i).*secret.*',
+        r'(?i)^name$', r'(?i).*_name$', r'(?i)^.*name_.*',  # Name fields
+        r'(?i).*fullname.*', r'(?i).*first.*name.*', r'(?i).*last.*name.*',
+        r'(?i)^姓名$', r'(?i).*姓名.*',  # Chinese name
+        r'(?i).*email.*', r'(?i).*e-mail.*',  # Email
+        r'(?i).*phone.*', r'(?i).*mobile.*', r'(?i).*cell.*',  # Phone
+        r'(?i).*ssn.*', r'(?i).*social.*security.*',  # SSN
+        r'(?i).*credit.*card.*', r'(?i).*card.*number.*',  # Credit card
+        r'(?i).*address.*', r'(?i).*addr.*',  # Address
+        r'(?i).*passport.*', r'(?i).*license.*',  # ID documents
+        r'(?i).*身分證.*', r'(?i).*電話.*', r'(?i).*地址.*',  # Chinese PII
+        r'(?i).*password.*', r'(?i).*secret.*', r'(?i).*token.*',  # Secrets
+        r'(?i).*birthday.*', r'(?i).*birth.*date.*', r'(?i).*dob.*',  # DOB
+        r'(?i).*生日.*', r'(?i).*出生.*',  # Chinese DOB
     ]
     
     # ID column patterns
@@ -256,20 +269,37 @@ class DataValidator:
             auto_fixable=auto_fixable,
         )
     
+    # Threshold for determining if a column is "entirely PII" vs "embedded PII"
+    PII_COLUMN_THRESHOLD = 0.5  # If >50% values match PII pattern, treat as PII column
+    PII_EMBEDDED_THRESHOLD = 0.05  # If <5% but some matches, consider embedded PII
+    
     def _check_pii(self, df: pd.DataFrame) -> List[DataIssue]:
-        """Check for potential PII in data"""
+        """
+        Check for potential PII in data.
+        
+        Distinguishes between:
+        1. PII_DETECTED: Entire column is clearly PII (>50% matches) - can be deleted/masked
+        2. PII_EMBEDDED: PII scattered in other data (<50% matches) - needs PHI MCP
+        """
         issues = []
+        pii_columns_detected = set()  # Track columns already flagged by name pattern
         
         for col in df.columns:
-            # Check column name
+            # Check column name patterns (like 'email', 'phone', etc.)
+            name_suggests_pii = False
             for pattern in self.PII_COLUMN_PATTERNS:
                 if re.match(pattern, col):
+                    name_suggests_pii = True
+                    pii_columns_detected.add(col)
                     issues.append(DataIssue(
                         issue_type=IssueType.PII_DETECTED,
                         severity=IssueSeverity.CRITICAL,
                         column=col,
-                        description=f"Column '{col}' name suggests it may contain PII",
-                        details={"detection_method": "column_name_pattern"},
+                        description=f"欄位 '{col}' 名稱明顯為個資欄位，可刪除或遮罩整欄",
+                        details={
+                            "detection_method": "column_name_pattern",
+                            "handling": "simple",  # Can be handled by delete/mask
+                        },
                         suggested_actions=[
                             CleaningAction.REMOVE_PII_COLUMN,
                             CleaningAction.MASK_PII,
@@ -280,22 +310,42 @@ class DataValidator:
                     ))
                     break
             
+            # Skip content check if already flagged by name
+            if name_suggests_pii:
+                continue
+                
             # Check content for string columns
             if df[col].dtype == 'object':
-                sample = df[col].dropna().head(100).astype(str)
+                non_null = df[col].dropna()
+                if len(non_null) == 0:
+                    continue
+                    
+                sample = non_null.astype(str)
+                sample_size = len(sample)
+                
                 for pii_type, pattern in self.PII_PATTERNS.items():
                     matches = sample.str.contains(pattern, regex=True, na=False)
-                    if matches.any():
-                        match_count = matches.sum()
+                    match_count = matches.sum()
+                    
+                    if match_count == 0:
+                        continue
+                        
+                    match_ratio = match_count / sample_size
+                    
+                    if match_ratio >= self.PII_COLUMN_THRESHOLD:
+                        # High ratio: Entire column is PII - can delete/mask column
+                        pii_columns_detected.add(col)
                         issues.append(DataIssue(
                             issue_type=IssueType.PII_DETECTED,
                             severity=IssueSeverity.CRITICAL,
                             column=col,
-                            description=f"Potential {pii_type} detected in column '{col}'",
+                            description=f"欄位 '{col}' 內容為 {pii_type} ({match_ratio:.0%} 匹配)，可刪除或遮罩整欄",
                             details={
                                 "pii_type": pii_type,
-                                "sample_matches": int(match_count),
+                                "match_count": int(match_count),
+                                "match_ratio": float(match_ratio),
                                 "detection_method": "content_pattern",
+                                "handling": "simple",  # Can be handled by delete/mask
                             },
                             suggested_actions=[
                                 CleaningAction.REMOVE_PII_COLUMN,
@@ -306,6 +356,30 @@ class DataValidator:
                             requires_user_decision=True,
                         ))
                         break  # One PII type per column is enough
+                        
+                    elif match_ratio >= self.PII_EMBEDDED_THRESHOLD:
+                        # Low ratio: PII embedded in other data - needs PHI MCP
+                        issues.append(DataIssue(
+                            issue_type=IssueType.PII_EMBEDDED,
+                            severity=IssueSeverity.CRITICAL,
+                            column=col,
+                            description=f"⚠️ 欄位 '{col}' 含有散佈的 {pii_type} ({match_count} 筆)，無法簡單處理，請先使用 PHI MCP 處理",
+                            details={
+                                "pii_type": pii_type,
+                                "match_count": int(match_count),
+                                "match_ratio": float(match_ratio),
+                                "detection_method": "content_pattern",
+                                "handling": "complex",  # Needs PHI MCP
+                                "reason": "PII散佈在普通資料中，無法用刪除/遮罩整欄解決",
+                            },
+                            suggested_actions=[
+                                CleaningAction.REQUIRE_PHI_MCP,
+                                CleaningAction.REJECT_DATA,
+                            ],
+                            default_action=CleaningAction.REQUIRE_PHI_MCP,
+                            requires_user_decision=True,
+                        ))
+                        break
         
         return issues
     
@@ -380,18 +454,27 @@ class DataValidator:
         
         for col in df.columns:
             is_id = False
+            detection_reason = ""
             
-            # Check column name
+            # Check column name pattern (high confidence)
             for pattern in self.ID_PATTERNS:
                 if re.match(pattern, col):
                     is_id = True
+                    detection_reason = "column_name_pattern"
                     break
             
-            # Check if all values are unique (potential ID)
-            if not is_id and df[col].nunique() == len(df):
-                # Could be an ID if it's string or integer
-                if df[col].dtype in ['object', 'int64', 'int32']:
-                    is_id = True
+            # Check if all values are unique AND it's an integer column (medium confidence)
+            # Only for datasets with > 10 rows to avoid false positives on small data
+            if not is_id and len(df) > 10 and df[col].nunique() == len(df):
+                # Only consider integer columns with sequential-like values
+                if pd.api.types.is_integer_dtype(df[col]):
+                    # Check if values look like sequential IDs (e.g., 1, 2, 3, ...)
+                    sorted_vals = df[col].dropna().sort_values()
+                    if len(sorted_vals) > 0:
+                        min_val, max_val = sorted_vals.iloc[0], sorted_vals.iloc[-1]
+                        if max_val - min_val == len(sorted_vals) - 1:
+                            is_id = True
+                            detection_reason = "sequential_integer"
             
             if is_id:
                 issues.append(DataIssue(
@@ -399,7 +482,10 @@ class DataValidator:
                     severity=IssueSeverity.LOW,
                     column=col,
                     description=f"Column '{col}' appears to be an ID column (will be excluded from modeling)",
-                    details={"unique_values": int(df[col].nunique())},
+                    details={
+                        "unique_values": int(df[col].nunique()),
+                        "detection_reason": detection_reason,
+                    },
                     suggested_actions=[
                         CleaningAction.EXCLUDE_COLUMN,
                         CleaningAction.KEEP_AS_IS,

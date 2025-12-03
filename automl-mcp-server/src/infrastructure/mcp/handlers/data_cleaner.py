@@ -32,6 +32,9 @@ class CleaningResult:
         columns_before: int,
         columns_after: int,
         warnings: List[str],
+        error: Optional[str] = None,
+        requires_phi_mcp: bool = False,
+        phi_columns: Optional[List[str]] = None,
     ):
         self.success = success
         self.df = df
@@ -41,9 +44,12 @@ class CleaningResult:
         self.columns_before = columns_before
         self.columns_after = columns_after
         self.warnings = warnings
+        self.error = error
+        self.requires_phi_mcp = requires_phi_mcp
+        self.phi_columns = phi_columns or []
     
     def to_dict(self) -> dict:
-        return {
+        result = {
             "success": self.success,
             "actions_applied": self.actions_applied,
             "rows_before": self.rows_before,
@@ -54,6 +60,13 @@ class CleaningResult:
             "columns_removed": self.columns_before - self.columns_after,
             "warnings": self.warnings,
         }
+        if self.error:
+            result["error"] = self.error
+        if self.requires_phi_mcp:
+            result["requires_phi_mcp"] = True
+            result["phi_columns"] = self.phi_columns
+            result["message"] = "請先使用 PHI MCP 處理含有散佈個資的欄位"
+        return result
 
 
 class DataCleaner:
@@ -87,6 +100,48 @@ class DataCleaner:
         
         rows_before = len(df)
         columns_before = len(df.columns)
+        
+        # First pass: Check for PII_EMBEDDED issues that need PHI MCP
+        phi_columns = []
+        for issue in validation_report.issues:
+            if issue.issue_type == IssueType.PII_EMBEDDED:
+                # Check if user provided a decision for this column
+                action = self._get_action(issue, user_decisions)
+                
+                # If no decision or decision is REQUIRE_PHI_MCP, we need to stop
+                if action is None or action == CleaningAction.REQUIRE_PHI_MCP:
+                    phi_columns.append(issue.column)
+                elif action == CleaningAction.REJECT_DATA:
+                    # User explicitly rejected
+                    return CleaningResult(
+                        success=False,
+                        df=df,
+                        actions_applied=[],
+                        rows_before=rows_before,
+                        rows_after=rows_before,
+                        columns_before=columns_before,
+                        columns_after=columns_before,
+                        warnings=[],
+                        error=f"❌ 資料被拒絕: 欄位 '{issue.column}' 含有複雜的 PII 無法處理",
+                        requires_phi_mcp=False,
+                        phi_columns=[],
+                    )
+        
+        # If there are embedded PII columns without proper handling, return error
+        if phi_columns:
+            return CleaningResult(
+                success=False,
+                df=df,
+                actions_applied=[],
+                rows_before=rows_before,
+                rows_after=rows_before,
+                columns_before=columns_before,
+                columns_after=columns_before,
+                warnings=[],
+                error=f"⚠️ 發現散佈的 PII 無法簡單處理，請先使用 PHI MCP 處理",
+                requires_phi_mcp=True,
+                phi_columns=phi_columns,
+            )
         
         # Work on a copy
         df_clean = df.copy()
@@ -123,6 +178,21 @@ class DataCleaner:
                 if warning:
                     warnings.append(warning)
                     
+            except ValueError as e:
+                # REQUIRE_PHI_MCP or REJECT_DATA raised
+                return CleaningResult(
+                    success=False,
+                    df=df,
+                    actions_applied=actions_applied,
+                    rows_before=rows_before,
+                    rows_after=rows_before,
+                    columns_before=columns_before,
+                    columns_after=columns_before,
+                    warnings=warnings,
+                    error=str(e),
+                    requires_phi_mcp="PHI MCP" in str(e),
+                    phi_columns=[issue.column] if issue.column else [],
+                )
             except Exception as e:
                 warnings.append(f"Failed to apply {action.value} to {issue.column}: {str(e)}")
                 logger.warning(f"Cleaning action failed: {e}")
@@ -158,8 +228,18 @@ class DataCleaner:
         
         # Check user decisions by column name
         if issue.column and issue.column in user_decisions:
-            action_str = user_decisions[issue.column]
-            return self._parse_action(action_str)
+            action = self._parse_action(user_decisions[issue.column])
+            
+            # PII-specific actions should only apply to PII issues
+            pii_actions = {CleaningAction.MASK_PII, CleaningAction.REMOVE_PII_COLUMN}
+            pii_issue_types = {IssueType.PII_DETECTED, IssueType.PII_EMBEDDED}
+            
+            if action in pii_actions and issue.issue_type not in pii_issue_types:
+                # User's PII action doesn't apply to non-PII issues
+                # Fall through to check default action
+                pass
+            else:
+                return action
         
         # Check user decisions by issue type
         if issue.issue_type.value in user_decisions:
@@ -199,6 +279,20 @@ class DataCleaner:
         """
         col = issue.column
         warning = None
+        
+        # Reject data entirely - raise exception to abort
+        if action == CleaningAction.REJECT_DATA:
+            raise ValueError(
+                f"❌ 資料被拒絕: 欄位 '{col}' 含有複雜的 PII/PHI 資料無法處理。"
+                f"請先使用 PHI MCP 處理後再重試。"
+            )
+        
+        # Require PHI MCP - this is a blocking action
+        if action == CleaningAction.REQUIRE_PHI_MCP:
+            raise ValueError(
+                f"⚠️ 欄位 '{col}' 含有散佈的 PII ({issue.details.get('pii_type', 'unknown')})，"
+                f"無法用簡單的刪除/遮罩處理。請先使用 PHI MCP 處理此欄位後再繼續分析。"
+            )
         
         # Column exclusion actions
         if action in [CleaningAction.EXCLUDE_COLUMN, CleaningAction.DROP_COLUMN, CleaningAction.REMOVE_PII_COLUMN]:
