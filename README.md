@@ -2,6 +2,13 @@
 
 Multi-user AutoML system accessible via AI Agents through MCP (Model Context Protocol).
 
+## 📚 Documentation
+
+| Document | Description |
+|----------|-------------|
+| [Deployment Guide](docs/deployment-guide.md) | 完整部署教學（開發/生產/企業HTTPS） |
+| [README.md](README.md) | 快速入門與架構說明 |
+
 ## Architecture
 
 ```
