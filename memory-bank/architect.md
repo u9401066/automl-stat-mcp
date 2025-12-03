@@ -5,6 +5,12 @@ This file contains the architectural decisions and design patterns for the Memor
 
 ## Architectural Decisions
 
+- Smart Workflow with Ticket System implemented for storage decisions
+- Stats service DDD architecture completed
+- Accept dependency pattern for dataset registration
+
+
+
 - Separated container architecture for AutoML and Statistics services
 - Shared Redis for dataset metadata (datasets:{id} key format)
 - stats-service reads but doesn't write dataset metadata (dependency on automl-service)
@@ -38,6 +44,13 @@ This file contains the architectural decisions and design patterns for the Memor
 
 
 ## Design Considerations
+
+- Data cleaning workflow design needed - how to handle missing values, PII, invalid columns
+- Agent vs MCP responsibility boundary for data quality decisions
+- User interaction frequency during data cleaning process
+- Automated vs manual data cleaning options
+
+
 
 - stats-service cannot work independently without automl-service dataset registration
 - automl-service should also support direct analyze for pre-training analysis
