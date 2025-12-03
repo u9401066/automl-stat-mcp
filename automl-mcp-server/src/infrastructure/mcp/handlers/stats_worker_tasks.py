@@ -25,6 +25,12 @@ try:
         MulticollinearityAnalysis,
     )
     from tasks.auto_analyze_task import run_auto_analyze
+    from tasks.tableone_generator import (
+        generate_tableone,
+        TableOneGenerator,
+        TableOneConfig,
+        TableOneResult,
+    )
     
     __all__ = [
         "compute_enhanced_correlation",
@@ -37,6 +43,11 @@ try:
         "GroupComparisonResult",
         "MissingValueAnalysis",
         "MulticollinearityAnalysis",
+        # TableOne exports
+        "generate_tableone",
+        "TableOneGenerator",
+        "TableOneConfig",
+        "TableOneResult",
     ]
     
 except ImportError as e:
@@ -61,3 +72,18 @@ except ImportError as e:
     
     def run_auto_analyze(*args, **kwargs):
         raise ImportError("stats-worker tasks not available")
+    
+    def generate_tableone(*args, **kwargs):
+        raise ImportError("stats-worker tasks not available")
+    
+    class TableOneGenerator:
+        def __init__(self, *args, **kwargs):
+            raise ImportError("stats-worker tasks not available")
+    
+    class TableOneConfig:
+        def __init__(self, *args, **kwargs):
+            raise ImportError("stats-worker tasks not available")
+    
+    class TableOneResult:
+        def __init__(self, *args, **kwargs):
+            raise ImportError("stats-worker tasks not available")
