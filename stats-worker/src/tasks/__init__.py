@@ -24,6 +24,21 @@ from .survival_analysis import (
     survival_summary,
     compare_survival_curves,
 )
+from .propensity_score import (
+    PropensityScoreEstimator,
+    PropensityScoreMatcher,
+    IPWeighting,
+    BalanceAssessor,
+    PropensityScoreResult,
+    MatchingResult,
+    BalanceDiagnostics,
+    TreatmentEffectResult,
+    estimate_propensity_scores,
+    match_propensity_scores,
+    estimate_treatment_effect,
+    assess_balance,
+    propensity_score_analysis,
+)
 
 __all__ = [
     "run_auto_analyze",
@@ -47,4 +62,18 @@ __all__ = [
     "log_rank_test",
     "survival_summary",
     "compare_survival_curves",
+    # Propensity Score Analysis
+    "PropensityScoreEstimator",
+    "PropensityScoreMatcher",
+    "IPWeighting",
+    "BalanceAssessor",
+    "PropensityScoreResult",
+    "MatchingResult",
+    "BalanceDiagnostics",
+    "TreatmentEffectResult",
+    "estimate_propensity_scores",
+    "match_propensity_scores",
+    "estimate_treatment_effect",
+    "assess_balance",
+    "propensity_score_analysis",
 ]

@@ -40,6 +40,17 @@ try:
         KaplanMeierEstimator,
         CoxPHFitter,
     )
+    from tasks.propensity_score import (
+        estimate_propensity_scores,
+        match_propensity_scores,
+        estimate_treatment_effect,
+        assess_balance,
+        propensity_score_analysis,
+        PropensityScoreEstimator,
+        PropensityScoreMatcher,
+        IPWeighting,
+        BalanceAssessor,
+    )
     
     __all__ = [
         "compute_enhanced_correlation",
@@ -65,6 +76,16 @@ try:
         "compare_survival_curves",
         "KaplanMeierEstimator",
         "CoxPHFitter",
+        # Propensity Score exports
+        "estimate_propensity_scores",
+        "match_propensity_scores",
+        "estimate_treatment_effect",
+        "assess_balance",
+        "propensity_score_analysis",
+        "PropensityScoreEstimator",
+        "PropensityScoreMatcher",
+        "IPWeighting",
+        "BalanceAssessor",
     ]
     
 except ImportError as e:
@@ -126,5 +147,37 @@ except ImportError as e:
             raise ImportError("stats-worker tasks not available")
     
     class CoxPHFitter:
+        def __init__(self, *args, **kwargs):
+            raise ImportError("stats-worker tasks not available")
+
+    # Propensity Score stubs
+    def estimate_propensity_scores(*args, **kwargs):
+        raise ImportError("stats-worker tasks not available")
+    
+    def match_propensity_scores(*args, **kwargs):
+        raise ImportError("stats-worker tasks not available")
+    
+    def estimate_treatment_effect(*args, **kwargs):
+        raise ImportError("stats-worker tasks not available")
+    
+    def assess_balance(*args, **kwargs):
+        raise ImportError("stats-worker tasks not available")
+    
+    def propensity_score_analysis(*args, **kwargs):
+        raise ImportError("stats-worker tasks not available")
+    
+    class PropensityScoreEstimator:
+        def __init__(self, *args, **kwargs):
+            raise ImportError("stats-worker tasks not available")
+    
+    class PropensityScoreMatcher:
+        def __init__(self, *args, **kwargs):
+            raise ImportError("stats-worker tasks not available")
+    
+    class IPWeighting:
+        def __init__(self, *args, **kwargs):
+            raise ImportError("stats-worker tasks not available")
+    
+    class BalanceAssessor:
         def __init__(self, *args, **kwargs):
             raise ImportError("stats-worker tasks not available")

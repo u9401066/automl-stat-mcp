@@ -2,10 +2,9 @@
 
 ## Done
 
-- Phase 1: Enhanced Statistical Analysis (4 features, 32 tests)
-- Phase 2: TableOne Generator (1036 lines, 43 tests)
-- Docker deployment for both phases
-- Git commits: 4f66c83 (Phase 1), ea1d412 (Phase 2)
+- Phase 1: Enhanced Statistical Analysis (32 tests) - commit 4f66c83
+- Phase 2: TableOne Generator (43 tests) - commit ea1d412
+- Phase 3: Survival Analysis Module (40 tests) - commit a749693
 
 ## Doing
 
@@ -13,6 +12,6 @@
 
 ## Next
 
-- Phase 3: Survival Analysis (Kaplan-Meier, Cox)
-- Phase 4: Biomarker Analysis
-- Phase 5: Enhanced Data Cleaning
+- Phase 4: Propensity Score Analysis
+- Phase 5: ROC/AUC Analysis
+- Phase 6: Statistical Validation Enhancement
