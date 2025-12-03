@@ -2,13 +2,10 @@
 
 ## Done
 
-- Auto Analyze Engine implementation (auto_analyze_task.py ~830 lines)
-- Docker HTTPS fix for apt-get (sed command in Dockerfile)
-- Shared redis_dataset_store for both services
-- Direct analyze routes in stats-service
-- JSON safe_round() fix for NaN/Inf serialization
-- Architecture analysis and documentation (README updated)
-- Direct analyze capability added to automl-service (3 endpoints, 3 MCP tools)
+- Architecture documentation (README + Memory Bank)
+- Direct analyze in automl-service (Issue #2 resolved)
+- Stats-service DDD refactoring complete (Issue #3 resolved)
+- Git commits: a04bdea, 4ad6f37, 63e8743
 
 ## Doing
 
@@ -16,6 +13,6 @@
 
 ## Next
 
-- Test direct analyze endpoints
-- Consider stats-service independent dataset registration
-- Refactor stats-service to DDD architecture (when time permits)
+- Consider Issue #1: Stats service dataset dependency (technical debt)
+- Add domain layer for stats-service models (stats_job.py)
+- Add unit tests for domain layer

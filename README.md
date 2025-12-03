@@ -647,27 +647,36 @@ User → MCP → stats-service → Redis Queue → stats-worker → Return resul
          (CSV content in request)     (process in memory)
 ```
 
-### ⚠️ Known Architecture Issues
+### ⚠️ Architecture Decisions
 
-#### Issue 1: Stats Service Dataset Dependency
+#### Decision 1: Stats Service Dataset Dependency ✅ ACCEPTED
 
-**Problem**: Stats service reads dataset metadata from Redis key `datasets:{id}`, but this metadata is only written by automl-service during `register_dataset`. If a user wants to use stats-service independently (without first registering via automl-service), the dataset won't exist.
+**Design Choice**: Stats service uses shared dataset metadata from Redis, which is written by automl-service during `register_dataset`.
 
-**Current Flow**:
+**Rationale**:
+1. **Single Source of Truth** - Dataset metadata managed in one place
+2. **Direct Analysis Available** - `/direct/analyze` endpoints don't require registration
+3. **Avoids Duplication** - No need for separate dataset registration logic
+
+**Usage Patterns**:
+
+| Pattern | Use Case | API |
+|---------|----------|-----|
+| **Quick Analysis** | One-time analysis, temporary data | `/direct/analyze`, `/direct/quick-stats` |
+| **Tracked Analysis** | Registered datasets, ML pipeline | `/auto-analyze/submit` with `dataset_id` |
+
+**Flow for Quick Analysis (No Registration)**:
 ```
-1. User calls register_dataset → automl-service writes to Redis
-2. User calls auto_analyze(dataset_id) → stats-service reads from Redis ✅
+User → analyze_csv_directly(csv_content) → stats-service → Results
 ```
 
-**Problematic Flow**:
+**Flow for Tracked Analysis (With Registration)**:
 ```
-1. User calls auto_analyze(dataset_id) directly → Redis key doesn't exist ❌
+1. User → register_dataset(minio_path) → automl-service → dataset_id
+2. User → auto_analyze(dataset_id) → stats-service → Results (linked to dataset)
 ```
 
-**Planned Solution**: 
-- Option A: Stats service can register datasets independently
-- Option B: Shared dataset registration service
-- Option C: Accept dependency (document as requirement)
+**Recommendation**: Use `analyze_csv_directly` or `get_quick_stats` for ad-hoc analysis. Use `auto_analyze` with `dataset_id` when the dataset is part of an ML pipeline.
 
 #### Issue 2: ~~AutoML Service Lacks Direct Analyze~~ ✅ RESOLVED
 
