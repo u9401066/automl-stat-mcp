@@ -4,7 +4,7 @@ Multi-user AutoML system accessible via AI Agents through MCP (Model Context Pro
 
 **Features:**
 - 🤖 **AutoML Training** - Automatic model selection with AutoGluon
-- 📊 **Statistical Analysis** - Automated EDA and Table 1 generation (coming soon)
+- 📊 **Statistical Analysis** - Automated EDA and Table 1 generation
 - 🔌 **MCP Integration** - Direct access from AI Agents (Claude, Copilot)
 - 🔒 **Enterprise Ready** - HTTPS, POST-only API, multi-user isolation
 
@@ -21,14 +21,14 @@ Multi-user AutoML system accessible via AI Agents through MCP (Model Context Pro
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                              MCP Server (8002)                               │
 │  ┌─────────────────────────────────┐  ┌─────────────────────────────────┐   │
-│  │      AutoML Tools (20)          │  │      Stats Tools (5) [planned]  │   │
+│  │      AutoML Tools (25)          │  │      Stats Tools (9)            │   │
 │  │  register_dataset, train, ...   │  │  eda_report, tableone, ...      │   │
 │  └───────────────┬─────────────────┘  └───────────────┬─────────────────┘   │
 └──────────────────┼────────────────────────────────────┼─────────────────────┘
                    │                                    │
                    ▼                                    ▼
 ┌──────────────────────────────┐      ┌──────────────────────────────┐
-│      AutoML API (8001)       │      │      Stats API (8003)        │ [planned]
+│      AutoML API (8001)       │      │      Stats API (8003)        │
 │  • Dataset management        │      │  • EDA endpoints             │
 │  • Training job submission   │      │  • TableOne endpoints        │
 │  • Model management          │      │  • Quality check             │
@@ -36,7 +36,7 @@ Multi-user AutoML system accessible via AI Agents through MCP (Model Context Pro
                │                                     │
                ▼                                     ▼
 ┌──────────────────────────────┐      ┌──────────────────────────────┐
-│     AutoML Worker            │      │     Stats Worker             │ [planned]
+│     AutoML Worker            │      │     Stats Worker             │
 │  • AutoGluon 1.3.1           │      │  • ydata-profiling           │
 │  • Model training            │      │  • tableone                  │
 └──────────────┬───────────────┘      └──────────────┬───────────────┘
@@ -46,8 +46,9 @@ Multi-user AutoML system accessible via AI Agents through MCP (Model Context Pro
                ┌──────────────────────────────┐
                │   Shared Infrastructure      │
                │  ┌────────┐    ┌────────┐   │
-               │  │ Redis  │    │ MinIO  │   │
-               │  │ (6379) │    │ (9000) │   │
+               │  │ Redis  │    │ (6379) │   │
+               │  │        │    │ MinIO  │   │
+               │  │        │    │ (9000) │   │
                │  └────────┘    └────────┘   │
                └──────────────────────────────┘
 ```
@@ -59,8 +60,8 @@ Multi-user AutoML system accessible via AI Agents through MCP (Model Context Pro
 | AutoML API | `automl-service/` | REST API for job/dataset management | FastAPI, Redis, DDD | ✅ Ready |
 | AutoML MCP | `automl-mcp-server/` | MCP server for AI agents | FastMCP, httpx | ✅ Ready |
 | AutoML Worker | `automl-worker/` | ML training execution | AutoGluon 1.3.1 | ✅ Ready |
-| Stats API | `stats-service/` | Statistical analysis API | FastAPI, Redis | 🚧 Planned |
-| Stats Worker | `stats-worker/` | EDA & TableOne execution | ydata-profiling, tableone | 🚧 Planned |
+| Stats API | `stats-service/` | Statistical analysis API | FastAPI, Redis | ✅ Ready |
+| Stats Worker | `stats-worker/` | EDA & TableOne execution | ydata-profiling, tableone | ✅ Ready |
 
 ## Quick Start
 
@@ -95,7 +96,9 @@ This starts:
 - **Redis** - Job queue (port 6379)
 - **AutoML API** - REST API (port 8001)
 - **AutoML MCP** - MCP Server for AI agents (port 8002)
+- **Stats API** - Statistical analysis API (port 8003)
 - **4x AutoML Workers** - Parallel training execution
+- **2x Stats Workers** - Statistical analysis execution
 
 ### 3. Verify Services
 
@@ -111,11 +114,14 @@ curl http://localhost:8001/health
 ### 4. Scale Workers (Optional)
 
 ```bash
-# Scale to 8 workers for high concurrency
+# Scale AutoML workers to 8 for high concurrency
 docker compose up -d --scale automl-worker=8
 
-# Scale down to 2 workers
-docker compose up -d --scale automl-worker=2
+# Scale Stats workers to 4
+docker compose up -d --scale stats-worker=4
+
+# Scale both
+docker compose up -d --scale automl-worker=8 --scale stats-worker=4
 ```
 
 ### 5. Connect AI Agent

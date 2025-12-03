@@ -1,0 +1,23 @@
+# Stats Service Dependencies
+
+# Web framework
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+pydantic>=2.0.0
+
+# Statistical analysis
+ydata-profiling>=4.6.0
+tableone>=0.9.0
+
+# Data processing
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Redis client
+redis>=5.0.0
+
+# MinIO client
+minio>=7.2.0
+
+# HTTP client (for health checks)
+httpx>=0.25.0

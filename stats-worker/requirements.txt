@@ -1,0 +1,19 @@
+# Stats Worker Dependencies
+
+# Statistical analysis (main packages)
+ydata-profiling>=4.6.0
+tableone>=0.9.0
+
+# Data processing
+pandas>=2.0.0
+numpy>=1.24.0
+scipy>=1.11.0
+
+# Redis client
+redis>=5.0.0
+
+# MinIO client
+minio>=7.2.0
+
+# Utilities
+python-dateutil>=2.8.0

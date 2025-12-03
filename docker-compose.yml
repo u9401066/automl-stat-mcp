@@ -6,6 +6,8 @@
 #   - automl-api: FastAPI service (lightweight, no AutoGluon)
 #   - automl-worker: AutoGluon training workers (default: 4 replicas)
 #   - automl-mcp: MCP Server for AI agents
+#   - stats-service: Statistical analysis API (EDA, TableOne)
+#   - stats-worker: Statistical analysis workers
 #   - redis: Job queue and status storage
 #
 # External (connect only, no local data storage):
@@ -16,7 +18,7 @@
 #   2. docker compose up -d   # Starts all services with 4 workers
 #
 # Scaling Workers:
-#   docker compose up -d --scale automl-worker=8
+#   docker compose up -d --scale automl-worker=8 --scale stats-worker=2
 #
 # GPU Support:
 #   docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d
@@ -122,6 +124,7 @@ services:
       - "8002:8002"
     environment:
       - AUTOML_SERVICE_URL=http://automl-api:8001
+      - STATS_SERVICE_URL=http://stats-service:8003
       - MCP_MODE=sse
       - MCP_PORT=8002
       - LOG_LEVEL=INFO
@@ -129,7 +132,77 @@ services:
       - automl-network
     depends_on:
       - automl-api
+      - stats-service
     restart: unless-stopped
+
+  # ===========================================================================
+  # Stats Service - Statistical Analysis API
+  # ===========================================================================
+  # Provides EDA reports and Table 1 generation
+  # ===========================================================================
+  stats-service:
+    build: ./stats-service
+    container_name: stats-service
+    ports:
+      - "8003:8003"
+    environment:
+      # MinIO - Same as AutoML
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio.example.com:9000}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
+      - MINIO_SECURE=${MINIO_SECURE:-false}
+      - MINIO_DATASET_BUCKET=${MINIO_DATASET_BUCKET:-automl-datasets}
+      - MINIO_REPORTS_BUCKET=${MINIO_REPORTS_BUCKET:-stats-reports}
+      # Redis
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      # Service
+      - SERVICE_HOST=0.0.0.0
+      - SERVICE_PORT=8003
+      - LOG_LEVEL=INFO
+    networks:
+      - automl-network
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ===========================================================================
+  # Stats Worker - Statistical Analysis Background Worker
+  # ===========================================================================
+  # Processes EDA and TableOne jobs using ydata-profiling and tableone
+  # Scaling: docker-compose up -d --scale stats-worker=2
+  # ===========================================================================
+  stats-worker:
+    build: ./stats-worker
+    # Note: container_name removed to support scaling
+    environment:
+      # MinIO - Same as API
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio.example.com:9000}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
+      - MINIO_SECURE=${MINIO_SECURE:-false}
+      - MINIO_DATASET_BUCKET=${MINIO_DATASET_BUCKET:-automl-datasets}
+      - MINIO_REPORTS_BUCKET=${MINIO_REPORTS_BUCKET:-stats-reports}
+      # Redis
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      # Worker
+      - TEMP_DIR=/tmp/stats-work
+      - LOG_LEVEL=INFO
+    networks:
+      - automl-network
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      replicas: 2  # Default 2 stats workers
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 2G
 
 volumes:
   redis-data:
