@@ -21,11 +21,11 @@ Multi-user AutoML system accessible via AI Agents through MCP (Model Context Pro
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                              MCP Server (8002)                               │
 │  ┌─────────────────────────────────┐  ┌─────────────────────────────────┐   │
-│  │      AutoML Tools (23)          │  │      Stats Tools (57)           │   │
+│  │      AutoML Tools (26)          │  │      Stats Tools (56)           │   │
 │  │  register_dataset, train, ...   │  │  auto_analyze, eda, tableone    │   │
 │  └───────────────┬─────────────────┘  └───────────────┬─────────────────┘   │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │              🎯 Smart Workflow Tools (3)                             │   │
+│  │              🎯 Smart Workflow Tools (included in AutoML)            │   │
 │  │  start_data_analysis, execute_analysis_ticket, check_progress       │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
 └──────────────────┼────────────────────────────────────┼─────────────────────┘
@@ -752,7 +752,7 @@ stats-service/src/
 | AutoML Smart | 3 | quick_train, train_and_wait, get_training_summary |
 | AutoML Direct | 3 | direct_ml_analyze, direct_ml_quick_stats, direct_preview_data |
 | AutoML Utility | 2 | health_check, list_algorithms |
-| **AutoML Total** | **23** | |
+| **AutoML Total** | **26** | |
 | Statistics EDA | 5 | auto_analyze, submit_eda_job, run_quick_eda, preview_dataset_stats, etc. |
 | Statistics TableOne | 3 | submit_tableone_job, run_quick_tableone, get_tableone_preview |
 | Statistics Survival | 4 | kaplan_meier_survival, cox_proportional_hazards, compare_survival, survival_data_summary |
@@ -764,9 +764,8 @@ stats-service/src/
 | Statistics Power (Chi-square) | 3 | calculate_chisquare_sample_size, calculate_chisquare_power, calculate_chisquare_effect_size |
 | Statistics Power (Survival) | 5 | calculate_survival_events, calculate_survival_sample_size, calculate_survival_power, calculate_survival_from_medians, convert_hazard_ratio_to_log |
 | Statistics Utility | 14 | analyze_correlations, compare_groups, analyze_missing_values, check_multicollinearity, etc. |
-| **Statistics Total** | **57** | |
-| 🎯 Smart Workflow | 3 | start_data_analysis, execute_analysis_ticket, check_analysis_progress |
-| **Grand Total** | **83** | |
+| **Statistics Total** | **56** | |
+| **Grand Total** | **82** | |
 
 ## 📁 Documentation
 
@@ -783,7 +782,7 @@ stats-service/src/
 
 | Metric | Value | Target | Status |
 |--------|-------|--------|--------|
-| Total MCP Tools | 83 | - | ✅ |
+| Total MCP Tools | 82 | - | ✅ |
 | Test Coverage | 297 tests | High | ✅ |
 | Max File Lines | 1258 | < 800 | 🟡 |
 | Large Files (>500 lines) | 3 | < 5 | ✅ |

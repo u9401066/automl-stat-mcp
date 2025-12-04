@@ -26,7 +26,7 @@
 | **Phase 6** | Power Analysis (T-test, Proportion, ANOVA, Chi-square, Survival) | 19 | ✅ |
 | **DDD Refactoring** | 代碼重構 (statistics_tools, power_analysis, roc_analysis, advanced_analysis) | - | ✅ |
 
-**總計: 83 MCP 工具, 297 項測試通過**
+**總計: 82 MCP 工具 (26 AutoML + 56 Stats), 297 項測試通過**
 
 ---
 
@@ -126,7 +126,7 @@ v2.0 (Planned - Q1/Q2 2026)
 
 | Metric | v1.0 | v1.1 (Current) | Target v2.0 |
 |--------|------|----------------|-------------|
-| MCP Tools | 38 | 83 ✅ | 100+ |
+| MCP Tools | 38 | 82 ✅ | 100+ |
 | Test Coverage | 188 | 297 ✅ | 400+ |
 | Supported Analyses | 15+ | 35+ ✅ | 50+ |
 | Max File Lines | 3407 | 1258 ✅ | <1000 |
