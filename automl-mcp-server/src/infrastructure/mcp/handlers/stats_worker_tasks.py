@@ -68,6 +68,10 @@ try:
         compute_precision_recall,
         find_optimal_threshold,
         full_classifier_evaluation,
+        # Phase 5A: Enhanced Interactive Functions
+        compare_multiple_models,
+        threshold_analysis,
+        generate_publication_report,
     )
     
     __all__ = [
@@ -121,6 +125,10 @@ try:
         "compute_precision_recall",
         "find_optimal_threshold",
         "full_classifier_evaluation",
+        # Phase 5A: Enhanced Interactive Functions
+        "compare_multiple_models",
+        "threshold_analysis",
+        "generate_publication_report",
     ]
     
 except ImportError as e:
@@ -275,3 +283,13 @@ except ImportError as e:
     class NetBenefitAnalyzer:
         def __init__(self, *args, **kwargs):
             raise ImportError("stats-worker tasks not available")
+
+    # Phase 5A: Enhanced Interactive Functions stubs
+    def compare_multiple_models(*args, **kwargs):
+        raise ImportError("stats-worker tasks not available")
+    
+    def threshold_analysis(*args, **kwargs):
+        raise ImportError("stats-worker tasks not available")
+    
+    def generate_publication_report(*args, **kwargs):
+        raise ImportError("stats-worker tasks not available")

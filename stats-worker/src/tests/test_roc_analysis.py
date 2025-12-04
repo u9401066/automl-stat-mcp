@@ -27,6 +27,10 @@ from tasks.roc_analysis import (
     find_optimal_threshold,
     full_classifier_evaluation,
     DeLongTest,
+    # Phase 5A: Enhanced Interactive Functions
+    compare_multiple_models,
+    threshold_analysis,
+    generate_publication_report,
 )
 
 
@@ -533,6 +537,374 @@ class TestIntegration:
         
         # Should show good discrimination
         assert evaluation['discrimination']['auc_roc'] > 0.6
+
+
+# ==================== Phase 5A: Enhanced Interactive Functions Tests ====================
+
+class TestMultiModelComparison:
+    """Tests for compare_multiple_models function."""
+    
+    def test_three_model_comparison(self, binary_classification_data):
+        """Test comparing three models."""
+        y_true = binary_classification_data['y_true']
+        
+        models = {
+            'Good Model': binary_classification_data['y_score_good'],
+            'Poor Model': binary_classification_data['y_score_poor'],
+            'Random Model': binary_classification_data['y_score_random'],
+        }
+        
+        result = compare_multiple_models(y_true, models)
+        
+        assert result['status'] == 'success'
+        assert result['n_models'] == 3
+        assert result['n_comparisons'] == 3  # C(3,2) = 3
+        
+        # Check rankings
+        assert len(result['model_rankings']) == 3
+        assert result['model_rankings'][0]['rank'] == 1
+        
+        # Good model should be ranked first
+        assert result['model_rankings'][0]['model'] == 'Good Model'
+        
+        # Check pairwise comparisons
+        assert len(result['pairwise_comparisons']) == 3
+    
+    def test_multiple_comparison_correction(self, binary_classification_data):
+        """Test different correction methods."""
+        y_true = binary_classification_data['y_true']
+        
+        models = {
+            'Model A': binary_classification_data['y_score_good'],
+            'Model B': binary_classification_data['y_score_poor'],
+            'Model C': binary_classification_data['y_score_random'],
+        }
+        
+        # Test Bonferroni
+        result_bonf = compare_multiple_models(y_true, models, correction='bonferroni')
+        assert 'p_value_adjusted' in result_bonf['pairwise_comparisons'][0]
+        
+        # Test Holm
+        result_holm = compare_multiple_models(y_true, models, correction='holm')
+        assert 'p_value_adjusted' in result_holm['pairwise_comparisons'][0]
+        
+        # Test BH
+        result_bh = compare_multiple_models(y_true, models, correction='bh')
+        assert 'p_value_adjusted' in result_bh['pairwise_comparisons'][0]
+        
+        # Test no correction
+        result_none = compare_multiple_models(y_true, models, correction='none')
+        for comp in result_none['pairwise_comparisons']:
+            assert comp['p_value'] == comp['p_value_adjusted']
+    
+    def test_best_model_identification(self, binary_classification_data):
+        """Test best model is correctly identified."""
+        y_true = binary_classification_data['y_true']
+        
+        models = {
+            'Excellent': binary_classification_data['y_score_good'],
+            'Medium': binary_classification_data['y_score_poor'],
+        }
+        
+        result = compare_multiple_models(y_true, models)
+        
+        assert result['best_model']['name'] == 'Excellent'
+        assert result['best_model']['auc'] > 0.5
+    
+    def test_interpretation_generated(self, binary_classification_data):
+        """Test interpretation text is generated."""
+        y_true = binary_classification_data['y_true']
+        
+        models = {
+            'Model 1': binary_classification_data['y_score_good'],
+            'Model 2': binary_classification_data['y_score_poor'],
+        }
+        
+        result = compare_multiple_models(y_true, models)
+        
+        assert 'interpretation' in result
+        assert 'Multi-Model Comparison' in result['interpretation']
+        assert 'Rankings' in result['interpretation']
+    
+    def test_two_models(self, binary_classification_data):
+        """Test with just two models (minimum)."""
+        y_true = binary_classification_data['y_true']
+        
+        models = {
+            'A': binary_classification_data['y_score_good'],
+            'B': binary_classification_data['y_score_poor'],
+        }
+        
+        result = compare_multiple_models(y_true, models)
+        
+        assert result['n_models'] == 2
+        assert result['n_comparisons'] == 1
+    
+    def test_error_on_single_model(self, binary_classification_data):
+        """Test error with only one model."""
+        y_true = binary_classification_data['y_true']
+        
+        models = {
+            'Single': binary_classification_data['y_score_good'],
+        }
+        
+        with pytest.raises(ValueError, match="Need at least 2 models"):
+            compare_multiple_models(y_true, models)
+
+
+class TestThresholdAnalysis:
+    """Tests for threshold_analysis function."""
+    
+    def test_basic_threshold_analysis(self, binary_classification_data):
+        """Test basic threshold analysis."""
+        result = threshold_analysis(
+            binary_classification_data['y_true'],
+            binary_classification_data['y_score_good']
+        )
+        
+        assert result['status'] == 'success'
+        assert 'threshold_table' in result
+        assert len(result['threshold_table']) > 0
+    
+    def test_threshold_table_metrics(self, binary_classification_data):
+        """Test all metrics are included in threshold table."""
+        result = threshold_analysis(
+            binary_classification_data['y_true'],
+            binary_classification_data['y_score_good']
+        )
+        
+        row = result['threshold_table'][10]  # Middle threshold
+        
+        # Check all required metrics
+        assert 'threshold' in row
+        assert 'sensitivity' in row
+        assert 'specificity' in row
+        assert 'ppv' in row
+        assert 'npv' in row
+        assert 'f1' in row
+        assert 'accuracy' in row
+        assert 'youden_j' in row
+        assert 'confusion_matrix' in row
+    
+    def test_target_sensitivity(self, binary_classification_data):
+        """Test finding threshold for target sensitivity."""
+        result = threshold_analysis(
+            binary_classification_data['y_true'],
+            binary_classification_data['y_score_good'],
+            target_metric='sensitivity',
+            target_value=0.90
+        )
+        
+        assert 'target_threshold' in result
+        assert result['target_threshold'] is not None
+        assert result['target_threshold']['achieved_value'] >= 0.90
+    
+    def test_target_specificity(self, binary_classification_data):
+        """Test finding threshold for target specificity."""
+        result = threshold_analysis(
+            binary_classification_data['y_true'],
+            binary_classification_data['y_score_good'],
+            target_metric='specificity',
+            target_value=0.90
+        )
+        
+        assert 'target_threshold' in result
+        assert result['target_threshold'] is not None
+    
+    def test_recommended_thresholds(self, binary_classification_data):
+        """Test recommended thresholds are provided."""
+        result = threshold_analysis(
+            binary_classification_data['y_true'],
+            binary_classification_data['y_score_good']
+        )
+        
+        assert 'recommended_thresholds' in result
+        assert 'youden_optimal' in result['recommended_thresholds']
+        assert 'f1_optimal' in result['recommended_thresholds']
+    
+    def test_custom_thresholds(self, binary_classification_data):
+        """Test with custom threshold list."""
+        custom_thresholds = [0.1, 0.2, 0.3, 0.5, 0.7, 0.9]
+        
+        result = threshold_analysis(
+            binary_classification_data['y_true'],
+            binary_classification_data['y_score_good'],
+            thresholds=custom_thresholds
+        )
+        
+        assert len(result['threshold_table']) == len(custom_thresholds)
+    
+    def test_clinical_interpretation(self, binary_classification_data):
+        """Test clinical interpretation text."""
+        result = threshold_analysis(
+            binary_classification_data['y_true'],
+            binary_classification_data['y_score_good']
+        )
+        
+        assert 'clinical_interpretation' in result
+        assert 'Clinical Decision Support' in result['clinical_interpretation']
+    
+    def test_unachievable_target(self, binary_classification_data):
+        """Test behavior when target is unachievable."""
+        result = threshold_analysis(
+            binary_classification_data['y_true'],
+            binary_classification_data['y_score_poor'],
+            target_metric='sensitivity',
+            target_value=0.99  # Very high target
+        )
+        
+        # Should still return a result, but may not achieve target
+        assert 'target_threshold' in result
+
+
+class TestPublicationReport:
+    """Tests for generate_publication_report function."""
+    
+    def test_basic_report_generation(self, binary_classification_data):
+        """Test basic report generation."""
+        result = generate_publication_report(
+            binary_classification_data['y_true'],
+            binary_classification_data['y_score_good'],
+            model_name="The test model",
+            outcome_name="test outcome"
+        )
+        
+        assert result['status'] == 'success'
+        assert 'results_text' in result
+        assert 'methods_text' in result
+        assert 'table_data' in result
+        assert 'figure_data' in result
+    
+    def test_results_text_format(self, binary_classification_data):
+        """Test results text contains key information."""
+        result = generate_publication_report(
+            binary_classification_data['y_true'],
+            binary_classification_data['y_score_good'],
+            model_name="The gradient boosting model",
+            outcome_name="30-day mortality"
+        )
+        
+        results_text = result['results_text']
+        
+        # Should contain model name and outcome
+        assert 'gradient boosting model' in results_text
+        assert '30-day mortality' in results_text
+        
+        # Should contain AUC
+        assert 'AUC' in results_text or 'area under' in results_text.lower()
+        
+        # Should contain CI
+        assert '95% CI' in results_text
+        
+        # Should contain sensitivity/specificity
+        assert 'sensitivity' in results_text
+        assert 'specificity' in results_text
+    
+    def test_methods_text(self, binary_classification_data):
+        """Test methods text is appropriate."""
+        result = generate_publication_report(
+            binary_classification_data['y_true'],
+            binary_classification_data['y_score_good']
+        )
+        
+        methods_text = result['methods_text']
+        
+        # Should mention DeLong
+        assert 'DeLong' in methods_text
+        
+        # Should mention bootstrap
+        assert 'bootstrap' in methods_text
+    
+    def test_table_data_structure(self, binary_classification_data):
+        """Test table data has proper structure."""
+        result = generate_publication_report(
+            binary_classification_data['y_true'],
+            binary_classification_data['y_score_good']
+        )
+        
+        table_data = result['table_data']
+        
+        assert 'title' in table_data
+        assert 'metrics' in table_data
+        assert len(table_data['metrics']) > 5
+        
+        # Check metric structure
+        for metric in table_data['metrics']:
+            assert 'metric' in metric
+            assert 'value' in metric
+    
+    def test_figure_data_structure(self, binary_classification_data):
+        """Test figure data has ROC curve coordinates."""
+        result = generate_publication_report(
+            binary_classification_data['y_true'],
+            binary_classification_data['y_score_good']
+        )
+        
+        figure_data = result['figure_data']
+        
+        assert 'roc_curve' in figure_data
+        assert 'auc' in figure_data
+        assert 'optimal_point' in figure_data
+        
+        # Check curve data
+        assert len(figure_data['roc_curve']) > 0
+        for point in figure_data['roc_curve']:
+            assert 'fpr' in point
+            assert 'tpr' in point
+    
+    def test_all_metrics_included(self, binary_classification_data):
+        """Test all metrics are included in all_metrics."""
+        result = generate_publication_report(
+            binary_classification_data['y_true'],
+            binary_classification_data['y_score_good']
+        )
+        
+        metrics = result['all_metrics']
+        
+        # Check essential metrics
+        assert 'auc' in metrics
+        assert 'auc_ci_lower' in metrics
+        assert 'auc_ci_upper' in metrics
+        assert 'sensitivity' in metrics
+        assert 'specificity' in metrics
+        assert 'ppv' in metrics
+        assert 'npv' in metrics
+        assert 'brier_score' in metrics
+    
+    def test_decimal_places(self, binary_classification_data):
+        """Test decimal places parameter."""
+        result_2 = generate_publication_report(
+            binary_classification_data['y_true'],
+            binary_classification_data['y_score_good'],
+            decimal_places=2
+        )
+        
+        result_3 = generate_publication_report(
+            binary_classification_data['y_true'],
+            binary_classification_data['y_score_good'],
+            decimal_places=3
+        )
+        
+        # Different decimal places should produce different text
+        assert result_2['results_text'] != result_3['results_text']
+    
+    def test_threshold_method(self, binary_classification_data):
+        """Test different threshold methods."""
+        result_youden = generate_publication_report(
+            binary_classification_data['y_true'],
+            binary_classification_data['y_score_good'],
+            threshold_method='youden'
+        )
+        
+        assert "Youden" in result_youden['results_text']
+        
+        result_f1 = generate_publication_report(
+            binary_classification_data['y_true'],
+            binary_classification_data['y_score_good'],
+            threshold_method='f1'
+        )
+        
+        assert "F1" in result_f1['results_text']
 
 
 if __name__ == '__main__':

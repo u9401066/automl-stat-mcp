@@ -2082,6 +2082,290 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         except Exception as e:
             return {"status": "error", "error": str(e)}
     
-    logger.info("Registered 36 statistics tools (including advanced analysis + TableOne + Survival + Propensity + ROC/AUC)")
+    # =========================================================================
+    # Phase 5A: Enhanced ROC/AUC Interactive Tools
+    # =========================================================================
+    
+    @mcp.tool()
+    async def compare_multiple_roc_curves(
+        csv_content: str,
+        y_true_col: str,
+        model_columns: str,  # JSON string: {"Model A": "score_a", "Model B": "score_b", ...}
+        correction: str = "bonferroni",
+        alpha: float = 0.05,
+        is_base64: bool = False,
+    ) -> dict:
+        """
+        📊 Compare 3+ classification models simultaneously.
+        
+        Performs comprehensive multi-model comparison:
+        
+        1. **Individual Performance**
+           - AUC with 95% CI for each model
+           - Ranked by discriminative ability
+        
+        2. **Pairwise Comparisons**
+           - DeLong test between all model pairs
+           - Multiple comparison correction
+           - Significance matrix
+        
+        3. **Best Model Selection**
+           - Identifies top performer
+           - Reports if significantly better
+        
+        Correction Methods:
+        - "bonferroni": Conservative, controls family-wise error
+        - "holm": Less conservative step-down procedure
+        - "bh": Benjamini-Hochberg FDR control
+        - "none": No correction (not recommended)
+        
+        Args:
+            csv_content: CSV data as string
+            y_true_col: Column with true binary labels
+            model_columns: JSON mapping model names to score columns
+                Example: '{"Logistic": "lr_prob", "XGBoost": "xgb_prob", "RF": "rf_prob"}'
+            correction: Multiple comparison correction method
+            alpha: Significance level (default: 0.05)
+            is_base64: Set True if csv_content is base64 encoded
+        
+        Returns:
+            model_rankings: Models ranked by AUC
+            pairwise_comparisons: All DeLong test results
+            comparison_matrix: P-value matrix
+            best_model: Recommended best performer
+            interpretation: Human-readable summary
+        
+        Example:
+            >>> result = await compare_multiple_roc_curves(
+            ...     csv_content,
+            ...     y_true_col="outcome",
+            ...     model_columns='{"LR": "lr_probs", "XGB": "xgb_probs", "RF": "rf_probs"}'
+            ... )
+            >>> print(result["interpretation"])
+        """
+        import pandas as pd
+        import base64
+        import json
+        from io import StringIO
+        
+        try:
+            if is_base64:
+                csv_content = base64.b64decode(csv_content).decode('utf-8')
+            df = pd.read_csv(StringIO(csv_content))
+            
+            # Parse model columns
+            model_cols = json.loads(model_columns)
+            
+            from .stats_worker_tasks import compare_multiple_models as _compare_multi
+            
+            y_true = df[y_true_col].values
+            models = {name: df[col].values for name, col in model_cols.items()}
+            
+            result = _compare_multi(
+                y_true=y_true,
+                models=models,
+                correction=correction,
+                alpha=alpha,
+            )
+            
+            return result
+            
+        except ImportError:
+            return {"status": "error", "error": "ROC analysis module not available"}
+        except json.JSONDecodeError as e:
+            return {"status": "error", "error": f"Invalid JSON for model_columns: {e}"}
+        except Exception as e:
+            return {"status": "error", "error": str(e)}
+    
+    @mcp.tool()
+    async def interactive_threshold_analysis(
+        csv_content: str,
+        y_true_col: str,
+        y_score_col: str,
+        target_metric: Optional[str] = None,
+        target_value: Optional[float] = None,
+        n_thresholds: int = 21,
+        is_base64: bool = False,
+    ) -> dict:
+        """
+        🎯 Interactive threshold analysis for clinical decision support.
+        
+        Comprehensive threshold-by-threshold analysis showing:
+        
+        1. **Complete Metrics Table**
+           - Sensitivity, Specificity, PPV, NPV at each threshold
+           - F1, Accuracy, Youden's J
+           - Likelihood ratios (LR+, LR-)
+           - Number needed to screen (NNS)
+        
+        2. **Target-Based Selection**
+           - Find threshold for target sensitivity (screening)
+           - Find threshold for target specificity (confirmation)
+           - Trade-off analysis
+        
+        3. **Recommended Thresholds**
+           - Youden optimal (balanced)
+           - F1 optimal (precision-recall balance)
+           - High sensitivity (≥90% for screening)
+           - High specificity (≥90% for confirmation)
+        
+        **Clinical Use Cases:**
+        - Screening test: "Need 95% sensitivity, what specificity?"
+        - Confirmatory test: "Need 95% specificity, what threshold?"
+        - Cost analysis: "What threshold minimizes false negatives?"
+        
+        Args:
+            csv_content: CSV data as string
+            y_true_col: Column with true binary labels
+            y_score_col: Column with predicted probabilities
+            target_metric: Metric to optimize ('sensitivity', 'specificity', 'ppv', 'npv', 'f1')
+            target_value: Target value (e.g., 0.95 for 95% sensitivity)
+            n_thresholds: Number of thresholds to evaluate (default: 21)
+            is_base64: Set True if csv_content is base64 encoded
+        
+        Returns:
+            threshold_table: Complete metrics at each threshold
+            target_threshold: Threshold achieving target (if specified)
+            recommended_thresholds: Best thresholds for common scenarios
+            clinical_interpretation: Decision support text
+        
+        Example:
+            >>> # Find threshold for 95% sensitivity
+            >>> result = await interactive_threshold_analysis(
+            ...     csv_content, "outcome", "pred_prob",
+            ...     target_metric="sensitivity",
+            ...     target_value=0.95
+            ... )
+            >>> print(result["target_threshold"])
+        """
+        import pandas as pd
+        import base64
+        from io import StringIO
+        
+        try:
+            if is_base64:
+                csv_content = base64.b64decode(csv_content).decode('utf-8')
+            df = pd.read_csv(StringIO(csv_content))
+            
+            from .stats_worker_tasks import threshold_analysis as _threshold_analysis
+            
+            y_true = df[y_true_col].values
+            y_scores = df[y_score_col].values
+            
+            result = _threshold_analysis(
+                y_true=y_true,
+                y_scores=y_scores,
+                target_metric=target_metric,
+                target_value=target_value,
+                n_thresholds=n_thresholds,
+            )
+            
+            return result
+            
+        except ImportError:
+            return {"status": "error", "error": "ROC analysis module not available"}
+        except Exception as e:
+            return {"status": "error", "error": str(e)}
+    
+    @mcp.tool()
+    async def generate_roc_publication_report(
+        csv_content: str,
+        y_true_col: str,
+        y_score_col: str,
+        model_name: str = "The prediction model",
+        outcome_name: str = "the outcome",
+        threshold_method: str = "youden",
+        decimal_places: int = 2,
+        is_base64: bool = False,
+    ) -> dict:
+        """
+        📝 Generate publication-ready ROC analysis report.
+        
+        Produces formatted text suitable for journal submission:
+        
+        1. **Results Paragraph** (copy-paste ready)
+           - AUC with 95% CI (DeLong method)
+           - Optimal threshold and method
+           - Sensitivity, Specificity with bootstrap CIs
+           - PPV, NPV, Accuracy
+           - Calibration assessment
+        
+        2. **Methods Paragraph**
+           - Statistical methods description
+           - CI calculation methods
+           - Software citations
+        
+        3. **Table Data**
+           - Ready for Table X (Model Performance)
+           - All metrics with CIs
+        
+        4. **Figure Data**
+           - ROC curve coordinates
+           - AUC annotation
+           - Optimal point marker
+        
+        **Follows Guidelines:**
+        - TRIPOD reporting guidelines
+        - PROBAST assessment criteria
+        - Standard journal formatting
+        
+        Args:
+            csv_content: CSV data as string
+            y_true_col: Column with true binary labels
+            y_score_col: Column with predicted probabilities
+            model_name: Name for text (e.g., "The XGBoost classifier")
+            outcome_name: Outcome for text (e.g., "30-day mortality")
+            threshold_method: Method for optimal threshold ('youden', 'f1')
+            decimal_places: Decimal places for reporting (default: 2)
+            is_base64: Set True if csv_content is base64 encoded
+        
+        Returns:
+            results_text: Main results paragraph
+            methods_text: Methods description
+            table_data: Data for performance table
+            figure_data: Data for ROC curve figure
+            all_metrics: Complete metrics dictionary
+        
+        Example:
+            >>> report = await generate_roc_publication_report(
+            ...     csv_content,
+            ...     y_true_col="mortality_30d",
+            ...     y_score_col="risk_score",
+            ...     model_name="The gradient boosting model",
+            ...     outcome_name="30-day mortality"
+            ... )
+            >>> print(report["results_text"])
+        """
+        import pandas as pd
+        import base64
+        from io import StringIO
+        
+        try:
+            if is_base64:
+                csv_content = base64.b64decode(csv_content).decode('utf-8')
+            df = pd.read_csv(StringIO(csv_content))
+            
+            from .stats_worker_tasks import generate_publication_report as _gen_report
+            
+            y_true = df[y_true_col].values
+            y_scores = df[y_score_col].values
+            
+            result = _gen_report(
+                y_true=y_true,
+                y_scores=y_scores,
+                model_name=model_name,
+                outcome_name=outcome_name,
+                threshold_method=threshold_method,
+                decimal_places=decimal_places,
+            )
+            
+            return result
+            
+        except ImportError:
+            return {"status": "error", "error": "ROC analysis module not available"}
+        except Exception as e:
+            return {"status": "error", "error": str(e)}
+    
+    logger.info("Registered 39 statistics tools (including advanced analysis + TableOne + Survival + Propensity + ROC/AUC + Phase 5A)")
 
 
