@@ -783,9 +783,27 @@ stats-service/src/
 | Metric | Value | Target | Status |
 |--------|-------|--------|--------|
 | Total MCP Tools | 82 | - | ✅ |
-| Test Coverage | 297 tests | High | ✅ |
+| Unit Tests | 352 | High | ✅ |
+| Code Coverage | 78.67% | > 80% | 🟡 |
 | Max File Lines | 1258 | < 800 | 🟡 |
 | Large Files (>500 lines) | 3 | < 5 | ✅ |
+
+### 🧪 Testing
+
+```bash
+# Run stats-worker unit tests with coverage
+cd stats-worker
+pip install -r requirements-dev.txt
+python3 -m pytest tests/ src/tests/ --cov=src/tasks --cov-report=term-missing
+
+# Run e2e tests (requires services running)
+cd tests
+pip install -r requirements.txt
+python3 -m pytest test_e2e_full.py -v -m "e2e"
+
+# Skip slow tests
+python3 -m pytest test_e2e_full.py -v -m "e2e and not slow"
+```
 
 ### ✅ Completed DDD Refactoring
 
