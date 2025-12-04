@@ -1,34 +1,32 @@
 """
-ROC/AUC Analysis - Backward Compatibility Wrapper
+ROC/AUC Analysis Package
 
-This file re-exports all classes and functions from the roc/ package
-for backward compatibility. All new development should use the modular
-roc/ package directly.
+Domain-driven modular structure for classifier evaluation.
 
-Package structure:
-    roc/
-    ├── __init__.py        - Package exports
-    ├── types.py           - Data classes (ROCPoint, ROCCurveResult, etc.)
-    ├── core.py            - ROCAnalyzer, DeLongTest
-    ├── calibration.py     - CalibrationAnalyzer
-    ├── precision_recall.py - PrecisionRecallAnalyzer, NetBenefitAnalyzer
-    └── functions.py       - Convenience and advanced functions
+Submodules:
+    - types: Data classes for ROC results
+    - core: ROCAnalyzer and DeLongTest
+    - calibration: CalibrationAnalyzer
+    - precision_recall: PrecisionRecallAnalyzer and NetBenefitAnalyzer
+    - functions: Convenience functions for MCP tools
 """
-# Re-export everything from the roc package for backward compatibility
-from .roc import (
-    # Types
+from .types import (
     ROCPoint,
     ROCCurveResult,
     AUCComparisonResult,
     CalibrationResult,
     PrecisionRecallResult,
-    # Core analyzers
+)
+from .core import (
     ROCAnalyzer,
     DeLongTest,
-    CalibrationAnalyzer,
+)
+from .calibration import CalibrationAnalyzer
+from .precision_recall import (
     PrecisionRecallAnalyzer,
     NetBenefitAnalyzer,
-    # Functions
+)
+from .functions import (
     compute_roc_curve,
     compare_roc_curves,
     analyze_calibration,
