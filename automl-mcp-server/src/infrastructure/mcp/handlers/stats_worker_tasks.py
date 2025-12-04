@@ -51,6 +51,24 @@ try:
         IPWeighting,
         BalanceAssessor,
     )
+    from tasks.roc_analysis import (
+        ROCPoint,
+        ROCCurveResult,
+        AUCComparisonResult,
+        CalibrationResult,
+        PrecisionRecallResult,
+        ROCAnalyzer,
+        DeLongTest,
+        CalibrationAnalyzer,
+        PrecisionRecallAnalyzer,
+        NetBenefitAnalyzer,
+        compute_roc_curve,
+        compare_roc_curves,
+        analyze_calibration,
+        compute_precision_recall,
+        find_optimal_threshold,
+        full_classifier_evaluation,
+    )
     
     __all__ = [
         "compute_enhanced_correlation",
@@ -86,6 +104,23 @@ try:
         "PropensityScoreMatcher",
         "IPWeighting",
         "BalanceAssessor",
+        # ROC/AUC Analysis exports
+        "ROCPoint",
+        "ROCCurveResult",
+        "AUCComparisonResult",
+        "CalibrationResult",
+        "PrecisionRecallResult",
+        "ROCAnalyzer",
+        "DeLongTest",
+        "CalibrationAnalyzer",
+        "PrecisionRecallAnalyzer",
+        "NetBenefitAnalyzer",
+        "compute_roc_curve",
+        "compare_roc_curves",
+        "analyze_calibration",
+        "compute_precision_recall",
+        "find_optimal_threshold",
+        "full_classifier_evaluation",
     ]
     
 except ImportError as e:
@@ -179,5 +214,64 @@ except ImportError as e:
             raise ImportError("stats-worker tasks not available")
     
     class BalanceAssessor:
+        def __init__(self, *args, **kwargs):
+            raise ImportError("stats-worker tasks not available")
+
+    # ROC/AUC Analysis stubs
+    def compute_roc_curve(*args, **kwargs):
+        raise ImportError("stats-worker tasks not available")
+    
+    def compare_roc_curves(*args, **kwargs):
+        raise ImportError("stats-worker tasks not available")
+    
+    def analyze_calibration(*args, **kwargs):
+        raise ImportError("stats-worker tasks not available")
+    
+    def compute_precision_recall(*args, **kwargs):
+        raise ImportError("stats-worker tasks not available")
+    
+    def find_optimal_threshold(*args, **kwargs):
+        raise ImportError("stats-worker tasks not available")
+    
+    def full_classifier_evaluation(*args, **kwargs):
+        raise ImportError("stats-worker tasks not available")
+    
+    class ROCPoint:
+        def __init__(self, *args, **kwargs):
+            raise ImportError("stats-worker tasks not available")
+    
+    class ROCCurveResult:
+        def __init__(self, *args, **kwargs):
+            raise ImportError("stats-worker tasks not available")
+    
+    class AUCComparisonResult:
+        def __init__(self, *args, **kwargs):
+            raise ImportError("stats-worker tasks not available")
+    
+    class CalibrationResult:
+        def __init__(self, *args, **kwargs):
+            raise ImportError("stats-worker tasks not available")
+    
+    class PrecisionRecallResult:
+        def __init__(self, *args, **kwargs):
+            raise ImportError("stats-worker tasks not available")
+    
+    class ROCAnalyzer:
+        def __init__(self, *args, **kwargs):
+            raise ImportError("stats-worker tasks not available")
+    
+    class DeLongTest:
+        def __init__(self, *args, **kwargs):
+            raise ImportError("stats-worker tasks not available")
+    
+    class CalibrationAnalyzer:
+        def __init__(self, *args, **kwargs):
+            raise ImportError("stats-worker tasks not available")
+    
+    class PrecisionRecallAnalyzer:
+        def __init__(self, *args, **kwargs):
+            raise ImportError("stats-worker tasks not available")
+    
+    class NetBenefitAnalyzer:
         def __init__(self, *args, **kwargs):
             raise ImportError("stats-worker tasks not available")

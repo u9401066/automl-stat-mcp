@@ -39,6 +39,24 @@ from .propensity_score import (
     assess_balance,
     propensity_score_analysis,
 )
+from .roc_analysis import (
+    ROCPoint,
+    ROCCurveResult,
+    AUCComparisonResult,
+    CalibrationResult,
+    PrecisionRecallResult,
+    ROCAnalyzer,
+    DeLongTest,
+    CalibrationAnalyzer,
+    PrecisionRecallAnalyzer,
+    NetBenefitAnalyzer,
+    compute_roc_curve,
+    compare_roc_curves,
+    analyze_calibration,
+    compute_precision_recall,
+    find_optimal_threshold,
+    full_classifier_evaluation,
+)
 
 __all__ = [
     "run_auto_analyze",
@@ -76,4 +94,21 @@ __all__ = [
     "estimate_treatment_effect",
     "assess_balance",
     "propensity_score_analysis",
+    # ROC/AUC Analysis
+    "ROCPoint",
+    "ROCCurveResult",
+    "AUCComparisonResult",
+    "CalibrationResult",
+    "PrecisionRecallResult",
+    "ROCAnalyzer",
+    "DeLongTest",
+    "CalibrationAnalyzer",
+    "PrecisionRecallAnalyzer",
+    "NetBenefitAnalyzer",
+    "compute_roc_curve",
+    "compare_roc_curves",
+    "analyze_calibration",
+    "compute_precision_recall",
+    "find_optimal_threshold",
+    "full_classifier_evaluation",
 ]
