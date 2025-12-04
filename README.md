@@ -21,7 +21,7 @@ Multi-user AutoML system accessible via AI Agents through MCP (Model Context Pro
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                              MCP Server (8002)                               │
 │  ┌─────────────────────────────────┐  ┌─────────────────────────────────┐   │
-│  │      AutoML Tools (23)          │  │      Stats Tools (12)           │   │
+│  │      AutoML Tools (23)          │  │      Stats Tools (57)           │   │
 │  │  register_dataset, train, ...   │  │  auto_analyze, eda, tableone    │   │
 │  └───────────────┬─────────────────┘  └───────────────┬─────────────────┘   │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
@@ -773,31 +773,37 @@ stats-service/src/
 | Document | Description |
 |----------|-------------|
 | [Deployment Guide](docs/deployment-guide.md) | 完整部署教學 |
-| [DDD Refactoring Plan](docs/DDD_Refactoring_Plan.md) | 代碼重構計畫 |
-| [Phase 6 Power Analysis](docs/Phase6_Power_Analysis_Plan.md) | Power Analysis 實作計畫 |
+| [DDD Refactoring Plan](docs/DDD_Refactoring_Plan.md) | 代碼重構計畫 (✅ 已完成) |
 | [Tool Architecture](docs/Tool_Architecture_Audit.md) | MCP 工具架構說明 |
 | [ROADMAP](docs/ROADMAP.md) | 開發路線圖 |
 
 ## 📊 Code Quality Metrics
 
-### Current Status (2024-12-04)
+### Current Status (2025-12-04)
 
-| Metric | Value | Target |
-|--------|-------|--------|
-| Total MCP Tools | 83 | - |
-| Test Coverage | 142+ tests | High |
-| Max File Lines | 3407 | < 800 |
-| Large Files (>500 lines) | 11 | < 5 |
+| Metric | Value | Target | Status |
+|--------|-------|--------|--------|
+| Total MCP Tools | 83 | - | ✅ |
+| Test Coverage | 297 tests | High | ✅ |
+| Max File Lines | 1258 | < 800 | 🟡 |
+| Large Files (>500 lines) | 3 | < 5 | ✅ |
 
-### Files Requiring Refactoring
+### ✅ Completed DDD Refactoring
 
-| File | Lines | Priority |
-|------|-------|----------|
-| `statistics_tools.py` | 3407 | 🔴 High |
-| `power_analysis.py` | 2827 | 🔴 High |
-| `roc_analysis.py` | 1961 | 🟡 Medium |
+| Original File | Lines | New Package | Modules |
+|---------------|-------|-------------|--------|
+| `statistics_tools.py` | 3407 → 66 | `statistics/` | 13 modules |
+| `power_analysis.py` | 2827 → 149 | `power/` | 6 modules |
+| `roc_analysis.py` | 1961 → 66 | `roc/` | 6 modules |
+| `advanced_analysis.py` | 1201 → 63 | `analysis/` | 7 modules |
 
-See [DDD Refactoring Plan](docs/DDD_Refactoring_Plan.md) for details.
+### Remaining Large Files (Well-Structured, No Refactoring Needed)
+
+| File | Lines | Status |
+|------|-------|--------|
+| `propensity_score.py` | 1258 | 🟢 4 cohesive classes |
+| `survival_analysis.py` | 1058 | 🟢 Single domain |
+| `tableone_generator.py` | 1035 | 🟢 Single domain |
 
 ### 🎯 Smart Workflow Tools
 

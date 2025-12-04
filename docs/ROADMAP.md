@@ -8,7 +8,7 @@
 
 ---
 
-## 📊 Current Status (v1.0)
+## 📊 Current Status (v1.1)
 
 ### ✅ 已完成功能
 
@@ -17,37 +17,20 @@
 | **AutoML Core** | 資料集管理、模型訓練、預測 | 23 | ✅ |
 | **Statistics Core** | EDA、TableOne、智能分析 | 12 | ✅ |
 | **Smart Workflow** | 引導式分析流程 | 3 | ✅ |
-| **Phase 1** | 增強統計分析 (相關性、分布、VIF) | - | 32 |
-| **Phase 2** | TableOne 生成器 | - | 43 |
-| **Phase 3** | 存活分析 (Kaplan-Meier, Cox) | - | 40 |
-| **Phase 4** | 傾向性分數分析 (PSM, IPTW) | - | 40 |
-| **Phase 5** | ROC/AUC 分析 (DeLong, 校準) | - | 33 |
+| **Phase 1** | 增強統計分析 (相關性、分布、VIF) | 4 | ✅ |
+| **Phase 2** | TableOne 生成器 | 3 | ✅ |
+| **Phase 3** | 存活分析 (Kaplan-Meier, Cox) | 4 | ✅ |
+| **Phase 4** | 傾向性分數分析 (PSM, IPTW) | 5 | ✅ |
+| **Phase 5** | ROC/AUC 分析 (DeLong, 校準) | 7 | ✅ |
+| **Phase 5+** | ROC 增強 (多模型比較、閾值分析、發表報告) | - | ✅ |
+| **Phase 6** | Power Analysis (T-test, Proportion, ANOVA, Chi-square, Survival) | 19 | ✅ |
+| **DDD Refactoring** | 代碼重構 (statistics_tools, power_analysis, roc_analysis, advanced_analysis) | - | ✅ |
 
-**總計: 38 MCP 工具, 188 項測試通過**
+**總計: 83 MCP 工具, 297 項測試通過**
 
 ---
 
 ## 🗺️ Roadmap
-
-### Q4 2025 - 研究設計與臨床決策支援
-
-#### Phase 6: Power Analysis / Sample Size ⭐ (Highest Priority)
-> 💡 **臨床研究第一步**：在收集資料前就需要計算樣本量
-
-| 功能 | 描述 | 臨床價值 |
-|------|------|----------|
-| 雙組比較 | t-test, chi-square 樣本量 | 最常用的研究設計 |
-| 多組比較 | ANOVA 樣本量 | 多組治療比較 |
-| 存活分析 | Log-rank 樣本量 | 生存研究設計 |
-| 事後功效 | 觀察到的功效計算 | 評估既有研究 |
-| 非劣性/等效性 | 非劣性試驗設計 | 藥物/治療比較 |
-
-#### Phase 5+ ROC/AUC 增強 (High Priority)
-| 功能 | 描述 | 臨床價值 |
-|------|------|----------|
-| 批量模型比較 | 3+ 模型同時比較 + Bonferroni 校正 | 選擇最佳預測模型 |
-| 交互式閾值調整 | 依目標靈敏度/特異度找閾值 | 臨床決策閾值選擇 |
-| 發表品質報告 | 一鍵生成期刊格式統計報告 | 加速論文撰寫 |
 
 ### Q1 2026 - 進階分析能力
 
@@ -106,40 +89,24 @@
 ## 📈 MCP 工具演進
 
 ```
-v1.0 (Current)
+v1.1 (Current) ✅
 ├── AutoML Tools (23)
 │   ├── Dataset: register, list, delete, analyze
 │   ├── Training: automl, specific, compare, wait
 │   ├── Models: list, leaderboard, predict, delete
 │   └── Smart: quick_train, train_and_wait, summary
-├── Stats Tools (12)
-│   ├── EDA: submit, quick, preview
-│   ├── TableOne: submit, quick, suggestions
-│   ├── AutoAnalyze: submit, quick, capabilities
-│   └── Direct: analyze_csv, quick_stats
+├── Stats Tools (57)
+│   ├── Core: EDA, TableOne, AutoAnalyze, Direct (12)
+│   ├── Phase 1-2: Enhanced Stats, TableOne Generator (7)
+│   ├── Phase 3-4: Survival, Propensity Score (9)
+│   ├── Phase 5/5+: ROC/AUC Analysis (10)
+│   └── Phase 6: Power Analysis (19)
 └── Workflow Tools (3)
     ├── start_data_analysis
     ├── execute_analysis_ticket
     └── check_analysis_progress
 
-v1.1 (Planned - Phase 6) ⭐ 研究設計優先
-└── Power Analysis (5)
-    ├── calculate_sample_size (t-test, chi-square, ANOVA)
-    ├── survival_sample_size (log-rank)
-    ├── non_inferiority_sample_size
-    ├── post_hoc_power
-    └── power_analysis_report
-
-v1.2 (Planned - Phase 5+)
-└── ROC Enhancement (6)
-    ├── compare_multiple_roc_curves
-    ├── interactive_threshold_analysis
-    ├── generate_roc_report
-    ├── subgroup_roc_analysis
-    ├── recalibrate_predictions
-    └── decision_curve_analysis
-
-v2.0 (Planned - Phase 7-8)
+v2.0 (Planned - Q1/Q2 2026)
 ├── Meta-Analysis (5)
 │   ├── fixed_effects_meta
 │   ├── random_effects_meta
@@ -157,12 +124,12 @@ v2.0 (Planned - Phase 7-8)
 
 ## 🎯 Success Metrics
 
-| Metric | Current | Target v1.1 | Target v2.0 |
-|--------|---------|-------------|-------------|
-| MCP Tools | 38 | 44 | 55+ |
-| Test Coverage | 188 | 250+ | 350+ |
-| Supported Analyses | 15+ | 25+ | 40+ |
-| Avg Response Time | ~2s | <2s | <1s |
+| Metric | v1.0 | v1.1 (Current) | Target v2.0 |
+|--------|------|----------------|-------------|
+| MCP Tools | 38 | 83 ✅ | 100+ |
+| Test Coverage | 188 | 297 ✅ | 400+ |
+| Supported Analyses | 15+ | 35+ ✅ | 50+ |
+| Max File Lines | 3407 | 1258 ✅ | <1000 |
 
 ---
 
