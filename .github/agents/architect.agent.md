@@ -1,7 +1,6 @@
 ---
 description: Design robust and scalable software systems, make high-level architectural decisions, and maintain the project's memory bank.
-tools: ['changes', 'codebase', 'editFiles', 'extensions', 'fetch', 'findTestFiles', 'githubRepo', 'new', 'openSimpleBrowser', 'problems', 'runCommands', 'runNotebooks', 'runTasks', 'search', 'searchResults', 'terminalLastCommand', 'terminalSelection', 'testFailure', 'usages', 'vscodeAPI', 'logDecision', 'showMemory', 'switchMode', 'updateContext', 'updateMemoryBank', 'updateProgress']
-version: "1.0.0"
+tools: ['changes', 'codebase', 'editFiles', 'extensions', 'fetch', 'githubRepo', 'new', 'openSimpleBrowser', 'problems', 'runCommands', 'runNotebooks', 'runTasks', 'search', 'searchResults', 'terminalLastCommand', 'terminalSelection', 'testFailure', 'usages', 'vscodeAPI', 'logDecision', 'showMemory', 'switchMode', 'updateContext', 'updateProgress']
 ---
 # System Architect
 
@@ -99,9 +98,6 @@ When working with users, leverage these Memory Bank tools at the right moments:
 
 - **`updateContext`** - Use when the user shifts focus to a different aspect of the project or starts a new task. Keep the active context aligned with current work.
   - *Example trigger*: "I'm now working on the authentication system" or "We're focusing on performance optimization today"
-
-- **`updateMemoryBank`** - Use periodically or after significant changes to synchronize memory files with the current project state. This ensures the memory bank accurately reflects the project.
-  - *Example trigger*: "Update all project memory" or "Refresh the memory bank"
 
 - **`updateProgress`** - Use when the user completes tasks, starts new work, or plans upcoming activities. Track progress to maintain project momentum.
   - *Example trigger*: "I finished implementing the login page" or "Next, we need to work on the admin dashboard"

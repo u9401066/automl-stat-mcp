@@ -1,7 +1,6 @@
 ---
 description: Implement features and write high-quality code aligned with the project's established patterns.
-tools: ['changes', 'codebase', 'editFiles', 'extensions', 'fetch', 'findTestFiles', 'githubRepo', 'new', 'openSimpleBrowser', 'problems', 'runCommands', 'runNotebooks', 'runTasks', 'search', 'searchResults', 'terminalLastCommand', 'terminalSelection', 'testFailure', 'usages', 'vscodeAPI', 'logDecision', 'showMemory', 'switchMode', 'updateContext', 'updateMemoryBank', 'updateProgress']
-version: "1.0.0"
+tools: ['changes', 'codebase', 'editFiles', 'extensions', 'fetch', 'githubRepo', 'new', 'openSimpleBrowser', 'problems', 'runCommands', 'runNotebooks', 'runTasks', 'search', 'searchResults', 'terminalLastCommand', 'terminalSelection', 'testFailure', 'usages', 'vscodeAPI', 'logDecision', 'showMemory', 'switchMode', 'updateContext', 'updateProgress']
 ---
 # Code Expert
 
@@ -102,9 +101,6 @@ In Code mode, you have limited access to specialized memory update tools:
 
 For more extensive architectural updates, suggest switching to Architect mode:
   - *Example response*: "To update the project architecture documentation, I recommend switching to Architect mode. Would you like me to help you do that?"
-
-- **`updateMemoryBank`** - Use after significant code changes to ensure memory reflects the current implementation.
-  - *Example trigger*: "Update all project memory" or "Refresh the memory bank with our new code"
 
 ## Core Responsibilities
 

@@ -73,6 +73,43 @@ try:
         threshold_analysis,
         generate_publication_report,
     )
+    # Phase 6: Power Analysis
+    from tasks.power_analysis import (
+        TTestPowerAnalysis,
+        ProportionPowerAnalysis,
+        PowerAnalysisResult,
+        calculate_ttest_sample_size,
+        calculate_ttest_power,
+        calculate_proportion_sample_size,
+        calculate_proportion_power,
+        cohens_d_from_means,
+        cohens_h_from_proportions,
+        interpret_effect_size,
+        EffectSizeType,
+        TestType,
+        # Phase 6.2: ANOVA and Chi-square
+        ANOVAPowerAnalysis,
+        ANOVAPowerResult,
+        ChiSquarePowerAnalysis,
+        ChiSquarePowerResult,
+        calculate_anova_sample_size,
+        calculate_anova_power,
+        calculate_chisquare_sample_size,
+        calculate_chisquare_power,
+        cohens_f_from_means,
+        cohens_f_from_eta_squared,
+        eta_squared_from_cohens_f,
+        effect_size_w_from_proportions,
+        cramers_v_from_table,
+        # Phase 6.3: Survival Analysis Power
+        SurvivalPowerAnalysis,
+        SurvivalPowerResult,
+        calculate_survival_events,
+        calculate_survival_sample_size,
+        calculate_survival_power,
+        calculate_survival_from_medians,
+        hazard_ratio_to_log_hr,
+    )
     
     __all__ = [
         "compute_enhanced_correlation",
@@ -129,6 +166,41 @@ try:
         "compare_multiple_models",
         "threshold_analysis",
         "generate_publication_report",
+        # Phase 6: Power Analysis
+        "TTestPowerAnalysis",
+        "ProportionPowerAnalysis",
+        "PowerAnalysisResult",
+        "calculate_ttest_sample_size",
+        "calculate_ttest_power",
+        "calculate_proportion_sample_size",
+        "calculate_proportion_power",
+        "cohens_d_from_means",
+        "cohens_h_from_proportions",
+        "interpret_effect_size",
+        "EffectSizeType",
+        "TestType",
+        # Phase 6.2: ANOVA and Chi-square
+        "ANOVAPowerAnalysis",
+        "ANOVAPowerResult",
+        "ChiSquarePowerAnalysis",
+        "ChiSquarePowerResult",
+        "calculate_anova_sample_size",
+        "calculate_anova_power",
+        "calculate_chisquare_sample_size",
+        "calculate_chisquare_power",
+        "cohens_f_from_means",
+        "cohens_f_from_eta_squared",
+        "eta_squared_from_cohens_f",
+        "effect_size_w_from_proportions",
+        "cramers_v_from_table",
+        # Phase 6.3: Survival Analysis Power
+        "SurvivalPowerAnalysis",
+        "SurvivalPowerResult",
+        "calculate_survival_events",
+        "calculate_survival_sample_size",
+        "calculate_survival_power",
+        "calculate_survival_from_medians",
+        "hazard_ratio_to_log_hr",
     ]
     
 except ImportError as e:
@@ -292,4 +364,114 @@ except ImportError as e:
         raise ImportError("stats-worker tasks not available")
     
     def generate_publication_report(*args, **kwargs):
+        raise ImportError("stats-worker tasks not available")
+
+    # Phase 6: Power Analysis stubs
+    class TTestPowerAnalysis:
+        def __init__(self, *args, **kwargs):
+            raise ImportError("stats-worker tasks not available")
+    
+    class ProportionPowerAnalysis:
+        def __init__(self, *args, **kwargs):
+            raise ImportError("stats-worker tasks not available")
+    
+    class PowerAnalysisResult:
+        def __init__(self, *args, **kwargs):
+            raise ImportError("stats-worker tasks not available")
+    
+    def calculate_ttest_sample_size(*args, **kwargs):
+        raise ImportError("stats-worker tasks not available")
+    
+    def calculate_ttest_power(*args, **kwargs):
+        raise ImportError("stats-worker tasks not available")
+    
+    def calculate_proportion_sample_size(*args, **kwargs):
+        raise ImportError("stats-worker tasks not available")
+    
+    def calculate_proportion_power(*args, **kwargs):
+        raise ImportError("stats-worker tasks not available")
+    
+    def cohens_d_from_means(*args, **kwargs):
+        raise ImportError("stats-worker tasks not available")
+    
+    def cohens_h_from_proportions(*args, **kwargs):
+        raise ImportError("stats-worker tasks not available")
+    
+    def interpret_effect_size(*args, **kwargs):
+        raise ImportError("stats-worker tasks not available")
+    
+    class EffectSizeType:
+        def __init__(self, *args, **kwargs):
+            raise ImportError("stats-worker tasks not available")
+    
+    class TestType:
+        def __init__(self, *args, **kwargs):
+            raise ImportError("stats-worker tasks not available")
+
+    # Phase 6.2: ANOVA and Chi-square stubs
+    class ANOVAPowerAnalysis:
+        def __init__(self, *args, **kwargs):
+            raise ImportError("stats-worker tasks not available")
+    
+    class ANOVAPowerResult:
+        def __init__(self, *args, **kwargs):
+            raise ImportError("stats-worker tasks not available")
+    
+    class ChiSquarePowerAnalysis:
+        def __init__(self, *args, **kwargs):
+            raise ImportError("stats-worker tasks not available")
+    
+    class ChiSquarePowerResult:
+        def __init__(self, *args, **kwargs):
+            raise ImportError("stats-worker tasks not available")
+    
+    def calculate_anova_sample_size(*args, **kwargs):
+        raise ImportError("stats-worker tasks not available")
+    
+    def calculate_anova_power(*args, **kwargs):
+        raise ImportError("stats-worker tasks not available")
+    
+    def calculate_chisquare_sample_size(*args, **kwargs):
+        raise ImportError("stats-worker tasks not available")
+    
+    def calculate_chisquare_power(*args, **kwargs):
+        raise ImportError("stats-worker tasks not available")
+    
+    def cohens_f_from_means(*args, **kwargs):
+        raise ImportError("stats-worker tasks not available")
+    
+    def cohens_f_from_eta_squared(*args, **kwargs):
+        raise ImportError("stats-worker tasks not available")
+    
+    def eta_squared_from_cohens_f(*args, **kwargs):
+        raise ImportError("stats-worker tasks not available")
+    
+    def effect_size_w_from_proportions(*args, **kwargs):
+        raise ImportError("stats-worker tasks not available")
+    
+    def cramers_v_from_table(*args, **kwargs):
+        raise ImportError("stats-worker tasks not available")
+
+    # Phase 6.3: Survival Analysis Power stubs
+    class SurvivalPowerAnalysis:
+        def __init__(self, *args, **kwargs):
+            raise ImportError("stats-worker tasks not available")
+    
+    class SurvivalPowerResult:
+        def __init__(self, *args, **kwargs):
+            raise ImportError("stats-worker tasks not available")
+    
+    def calculate_survival_events(*args, **kwargs):
+        raise ImportError("stats-worker tasks not available")
+    
+    def calculate_survival_sample_size(*args, **kwargs):
+        raise ImportError("stats-worker tasks not available")
+    
+    def calculate_survival_power(*args, **kwargs):
+        raise ImportError("stats-worker tasks not available")
+    
+    def calculate_survival_from_medians(*args, **kwargs):
+        raise ImportError("stats-worker tasks not available")
+    
+    def hazard_ratio_to_log_hr(*args, **kwargs):
         raise ImportError("stats-worker tasks not available")

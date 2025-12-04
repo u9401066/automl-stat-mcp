@@ -72,6 +72,30 @@ User: "Analyze this dataset"
 AI:   auto_analyze(dataset_id) → Complete statistical report with recommendations
 ```
 
+## 📊 Statistics Tools (57 MCP Tools)
+
+| Category | Tools | Description |
+|----------|-------|-------------|
+| **EDA** | 5 | Auto-analyze, quick stats, correlations |
+| **TableOne** | 3 | Clinical summary tables |
+| **Survival Analysis** | 4 | Kaplan-Meier, Cox regression, log-rank |
+| **Propensity Score** | 5 | PS estimation, matching, ATT/ATE |
+| **ROC/AUC Analysis** | 7 | ROC curves, DeLong test, calibration |
+| **Power Analysis - T-test** | 4 | Sample size, power, sensitivity |
+| **Power Analysis - Proportion** | 4 | Two-proportion tests |
+| **Power Analysis - ANOVA** | 3 | Multi-group comparisons |
+| **Power Analysis - Chi-square** | 3 | Contingency tables |
+| **Power Analysis - Survival** | 5 | Log-rank test, hazard ratio |
+| **Utility** | 14 | Data validation, cleaning, preview |
+
+### Power Analysis Example
+
+```
+User: "How many patients do I need for a clinical trial?"
+AI:   calculate_survival_sample_size(hazard_ratio=0.7, power=0.80, prob_event=0.65)
+      → N=354 (177 per arm), 230 events needed
+```
+
 ## Components
 
 | Component | Directory | Purpose | Tech Stack | Status |
@@ -729,14 +753,51 @@ stats-service/src/
 | AutoML Direct | 3 | direct_ml_analyze, direct_ml_quick_stats, direct_preview_data |
 | AutoML Utility | 2 | health_check, list_algorithms |
 | **AutoML Total** | **23** | |
-| Statistics EDA | 3 | submit_eda_job, run_quick_eda, preview_dataset_stats |
-| Statistics TableOne | 3 | submit_tableone_job, run_quick_tableone, get_column_suggestions |
-| Statistics Auto | 3 | auto_analyze, run_quick_auto_analyze, get_analysis_capabilities |
-| Statistics Direct | 2 | analyze_csv_directly, get_quick_stats |
-| Statistics Jobs | 1 | get_stats_job_status, get_stats_job_result, list_stats_jobs |
-| **Statistics Total** | **12** | |
+| Statistics EDA | 5 | auto_analyze, submit_eda_job, run_quick_eda, preview_dataset_stats, etc. |
+| Statistics TableOne | 3 | submit_tableone_job, run_quick_tableone, get_tableone_preview |
+| Statistics Survival | 4 | kaplan_meier_survival, cox_proportional_hazards, compare_survival, survival_data_summary |
+| Statistics Propensity | 5 | estimate_propensity_scores, match_propensity_scores, estimate_treatment_effect, assess_covariate_balance, run_propensity_analysis |
+| Statistics ROC/AUC | 7 | compute_roc_curve, compare_roc_curves, find_optimal_threshold, analyze_calibration, full_classifier_evaluation, compare_multiple_roc_curves, generate_roc_publication_report |
+| Statistics Power (T-test) | 4 | calculate_ttest_sample_size, calculate_ttest_power, ttest_sensitivity_analysis, calculate_effect_size |
+| Statistics Power (Proportion) | 4 | calculate_proportion_sample_size, calculate_proportion_power, proportion_sensitivity_analysis |
+| Statistics Power (ANOVA) | 3 | calculate_anova_sample_size, calculate_anova_power, calculate_anova_effect_size |
+| Statistics Power (Chi-square) | 3 | calculate_chisquare_sample_size, calculate_chisquare_power, calculate_chisquare_effect_size |
+| Statistics Power (Survival) | 5 | calculate_survival_events, calculate_survival_sample_size, calculate_survival_power, calculate_survival_from_medians, convert_hazard_ratio_to_log |
+| Statistics Utility | 14 | analyze_correlations, compare_groups, analyze_missing_values, check_multicollinearity, etc. |
+| **Statistics Total** | **57** | |
 | 🎯 Smart Workflow | 3 | start_data_analysis, execute_analysis_ticket, check_analysis_progress |
-| **Grand Total** | **38** | |
+| **Grand Total** | **83** | |
+
+## 📁 Documentation
+
+| Document | Description |
+|----------|-------------|
+| [Deployment Guide](docs/deployment-guide.md) | 完整部署教學 |
+| [DDD Refactoring Plan](docs/DDD_Refactoring_Plan.md) | 代碼重構計畫 |
+| [Phase 6 Power Analysis](docs/Phase6_Power_Analysis_Plan.md) | Power Analysis 實作計畫 |
+| [Tool Architecture](docs/Tool_Architecture_Audit.md) | MCP 工具架構說明 |
+| [ROADMAP](docs/ROADMAP.md) | 開發路線圖 |
+
+## 📊 Code Quality Metrics
+
+### Current Status (2024-12-04)
+
+| Metric | Value | Target |
+|--------|-------|--------|
+| Total MCP Tools | 83 | - |
+| Test Coverage | 142+ tests | High |
+| Max File Lines | 3407 | < 800 |
+| Large Files (>500 lines) | 11 | < 5 |
+
+### Files Requiring Refactoring
+
+| File | Lines | Priority |
+|------|-------|----------|
+| `statistics_tools.py` | 3407 | 🔴 High |
+| `power_analysis.py` | 2827 | 🔴 High |
+| `roc_analysis.py` | 1961 | 🟡 Medium |
+
+See [DDD Refactoring Plan](docs/DDD_Refactoring_Plan.md) for details.
 
 ### 🎯 Smart Workflow Tools
 

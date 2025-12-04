@@ -1,8 +1,0 @@
-{
-  "servers": {
-    "automl": {
-      "type": "sse",
-      "url": "http://localhost:8002/sse"
-    }
-  }
-}

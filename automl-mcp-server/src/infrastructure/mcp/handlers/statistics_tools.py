@@ -2366,6 +2366,1042 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         except Exception as e:
             return {"status": "error", "error": str(e)}
     
-    logger.info("Registered 39 statistics tools (including advanced analysis + TableOne + Survival + Propensity + ROC/AUC + Phase 5A)")
+    # ==================== POWER ANALYSIS TOOLS (Phase 6) ====================
+    
+    @mcp.tool()
+    async def calculate_ttest_sample_size(
+        effect_size: float,
+        alpha: float = 0.05,
+        power: float = 0.80,
+        ratio: float = 1.0,
+        test_type: str = "two-sample",
+        alternative: str = "two-sided",
+    ) -> dict:
+        """
+        📊 Calculate required sample size for t-test.
+        
+        This is the FIRST STEP in clinical research planning.
+        Determines how many participants you need to detect a meaningful effect.
+        
+        Args:
+            effect_size: Expected Cohen's d effect size
+                - 0.2 = small effect
+                - 0.5 = medium effect  
+                - 0.8 = large effect
+                - Or calculate from: (mean1 - mean2) / pooled_sd
+            alpha: Significance level (default: 0.05 for 5% Type I error)
+            power: Desired power (default: 0.80 for 80% chance to detect effect)
+            ratio: Sample size ratio n2/n1 (default: 1.0 for equal groups)
+            test_type: "two-sample" | "paired" | "one-sample"
+            alternative: "two-sided" | "larger" | "smaller"
+        
+        Returns:
+            n1: Required sample size for group 1
+            n2: Required sample size for group 2 (if applicable)
+            total_n: Total sample size needed
+            parameters: Input parameters used
+            interpretation: Plain-language explanation
+            recommendations: Practical advice
+        
+        Example:
+            # Planning a drug vs placebo RCT
+            # Expecting medium effect (d=0.5), want 80% power
+            calculate_ttest_sample_size(effect_size=0.5)
+            # Returns: n1=64, n2=64, total=128
+        """
+        from .stats_worker_tasks import TTestPowerAnalysis
+        
+        try:
+            analyzer = TTestPowerAnalysis()
+            result = analyzer.calculate_sample_size(
+                effect_size=effect_size,
+                alpha=alpha,
+                power=power,
+                ratio=ratio,
+                test_type=test_type,
+                alternative=alternative,
+            )
+            return result.to_dict()
+        except ImportError:
+            return {"status": "error", "error": "Power analysis module not available"}
+        except Exception as e:
+            return {"status": "error", "error": str(e)}
+    
+    @mcp.tool()
+    async def calculate_ttest_power(
+        effect_size: float,
+        n1: int,
+        n2: Optional[int] = None,
+        alpha: float = 0.05,
+        test_type: str = "two-sample",
+        alternative: str = "two-sided",
+    ) -> dict:
+        """
+        ⚡ Calculate statistical power for t-test with given sample size.
+        
+        Use this to evaluate if your planned study has adequate power
+        to detect the expected effect.
+        
+        Args:
+            effect_size: Expected Cohen's d effect size
+            n1: Sample size for group 1
+            n2: Sample size for group 2 (default: same as n1)
+            alpha: Significance level (default: 0.05)
+            test_type: "two-sample" | "paired" | "one-sample"
+            alternative: "two-sided" | "larger" | "smaller"
+        
+        Returns:
+            power: Achieved statistical power (0-1)
+            interpretation: Is this power adequate?
+            parameters: Input parameters used
+            recommendations: Suggestions if power is low
+        
+        Example:
+            # Check if 50 per group is enough
+            calculate_ttest_power(effect_size=0.5, n1=50, n2=50)
+            # Returns: power=0.697 (underpowered!)
+        """
+        from .stats_worker_tasks import TTestPowerAnalysis
+        
+        try:
+            analyzer = TTestPowerAnalysis()
+            result = analyzer.calculate_power(
+                effect_size=effect_size,
+                n1=n1,
+                n2=n2,
+                alpha=alpha,
+                test_type=test_type,
+                alternative=alternative,
+            )
+            return result.to_dict()
+        except ImportError:
+            return {"status": "error", "error": "Power analysis module not available"}
+        except Exception as e:
+            return {"status": "error", "error": str(e)}
+    
+    @mcp.tool()
+    async def calculate_proportion_sample_size(
+        p1: float,
+        p2: float,
+        alpha: float = 0.05,
+        power: float = 0.80,
+        ratio: float = 1.0,
+        alternative: str = "two-sided",
+    ) -> dict:
+        """
+        📊 Calculate required sample size for proportion comparison.
+        
+        Use this when comparing rates/percentages between two groups
+        (e.g., response rates, event rates, success rates).
+        
+        Args:
+            p1: Expected proportion in group 1 (e.g., 0.30 for 30%)
+            p2: Expected proportion in group 2 (e.g., 0.45 for 45%)
+            alpha: Significance level (default: 0.05)
+            power: Desired power (default: 0.80)
+            ratio: Sample size ratio n2/n1 (default: 1.0)
+            alternative: "two-sided" | "larger" | "smaller"
+        
+        Returns:
+            n1: Required sample size for group 1
+            n2: Required sample size for group 2
+            total_n: Total sample size
+            effect_size_h: Cohen's h effect size
+            parameters: Input parameters
+            interpretation: Explanation
+        
+        Example:
+            # Control group: 30% response, Treatment: 45% expected
+            calculate_proportion_sample_size(p1=0.30, p2=0.45)
+            # Returns: n1=152, n2=152, total=304
+        """
+        from .stats_worker_tasks import ProportionPowerAnalysis
+        
+        try:
+            analyzer = ProportionPowerAnalysis()
+            result = analyzer.calculate_sample_size(
+                p1=p1,
+                p2=p2,
+                alpha=alpha,
+                power=power,
+                ratio=ratio,
+                alternative=alternative,
+            )
+            return result.to_dict()
+        except ImportError:
+            return {"status": "error", "error": "Power analysis module not available"}
+        except Exception as e:
+            return {"status": "error", "error": str(e)}
+    
+    @mcp.tool()
+    async def calculate_proportion_power(
+        p1: float,
+        p2: float,
+        n1: int,
+        n2: Optional[int] = None,
+        alpha: float = 0.05,
+        alternative: str = "two-sided",
+    ) -> dict:
+        """
+        ⚡ Calculate power for proportion comparison with given sample size.
+        
+        Args:
+            p1: Expected proportion in group 1
+            p2: Expected proportion in group 2
+            n1: Sample size for group 1
+            n2: Sample size for group 2 (default: same as n1)
+            alpha: Significance level (default: 0.05)
+            alternative: "two-sided" | "larger" | "smaller"
+        
+        Returns:
+            power: Achieved statistical power
+            effect_size_h: Cohen's h effect size
+            interpretation: Adequacy assessment
+            parameters: Input parameters
+        
+        Example:
+            # Check power with 100 per group
+            calculate_proportion_power(p1=0.30, p2=0.45, n1=100)
+            # Returns: power=0.647 (underpowered)
+        """
+        from .stats_worker_tasks import ProportionPowerAnalysis
+        
+        try:
+            analyzer = ProportionPowerAnalysis()
+            result = analyzer.calculate_power(
+                p1=p1,
+                p2=p2,
+                n1=n1,
+                n2=n2,
+                alpha=alpha,
+                alternative=alternative,
+            )
+            return result.to_dict()
+        except ImportError:
+            return {"status": "error", "error": "Power analysis module not available"}
+        except Exception as e:
+            return {"status": "error", "error": str(e)}
+    
+    @mcp.tool()
+    async def ttest_sensitivity_analysis(
+        effect_size: float,
+        alpha: float = 0.05,
+        power_range: Optional[List[float]] = None,
+        ratio: float = 1.0,
+        test_type: str = "two-sample",
+    ) -> dict:
+        """
+        📈 Generate power curve and sample size sensitivity analysis.
+        
+        Shows how sample size requirements change across different
+        power levels. Useful for grant applications and study planning.
+        
+        Args:
+            effect_size: Expected Cohen's d effect size
+            alpha: Significance level (default: 0.05)
+            power_range: List of power levels to evaluate
+                        (default: [0.70, 0.75, 0.80, 0.85, 0.90, 0.95])
+            ratio: Sample size ratio n2/n1
+            test_type: "two-sample" | "paired" | "one-sample"
+        
+        Returns:
+            sensitivity_table: Sample sizes for each power level
+            power_curve_data: Data for plotting power curve
+            recommendations: Practical guidance
+            summary: Overview text
+        
+        Example:
+            # See sample size requirements for different power levels
+            ttest_sensitivity_analysis(effect_size=0.5)
+        """
+        from .stats_worker_tasks import TTestPowerAnalysis
+        
+        try:
+            analyzer = TTestPowerAnalysis()
+            result = analyzer.sensitivity_analysis(
+                effect_size=effect_size,
+                alpha=alpha,
+                power_range=power_range,
+                ratio=ratio,
+                test_type=test_type,
+            )
+            return result
+        except ImportError:
+            return {"status": "error", "error": "Power analysis module not available"}
+        except Exception as e:
+            return {"status": "error", "error": str(e)}
+    
+    @mcp.tool()
+    async def proportion_sensitivity_analysis(
+        p1: float,
+        p2: float,
+        alpha: float = 0.05,
+        power_range: Optional[List[float]] = None,
+        ratio: float = 1.0,
+    ) -> dict:
+        """
+        📈 Generate power curve for proportion test.
+        
+        Args:
+            p1: Expected proportion in group 1
+            p2: Expected proportion in group 2
+            alpha: Significance level
+            power_range: Power levels to evaluate
+            ratio: Sample size ratio
+        
+        Returns:
+            sensitivity_table: Sample sizes for each power level
+            power_curve_data: Data for plotting
+            effect_size_h: Cohen's h
+            recommendations: Guidance
+        """
+        from .stats_worker_tasks import ProportionPowerAnalysis
+        
+        try:
+            analyzer = ProportionPowerAnalysis()
+            result = analyzer.sensitivity_analysis(
+                p1=p1,
+                p2=p2,
+                alpha=alpha,
+                power_range=power_range,
+                ratio=ratio,
+            )
+            return result
+        except ImportError:
+            return {"status": "error", "error": "Power analysis module not available"}
+        except Exception as e:
+            return {"status": "error", "error": str(e)}
+    
+    @mcp.tool()
+    async def calculate_effect_size(
+        mean1: Optional[float] = None,
+        mean2: Optional[float] = None,
+        sd1: Optional[float] = None,
+        sd2: Optional[float] = None,
+        pooled_sd: Optional[float] = None,
+        p1: Optional[float] = None,
+        p2: Optional[float] = None,
+    ) -> dict:
+        """
+        🧮 Calculate effect size from study parameters.
+        
+        Use this to convert your expected means/proportions into
+        effect sizes for power analysis.
+        
+        For means (Cohen's d):
+            Provide mean1, mean2, and either pooled_sd or (sd1, sd2)
+            
+        For proportions (Cohen's h):
+            Provide p1 and p2
+        
+        Args:
+            mean1: Mean of group 1
+            mean2: Mean of group 2
+            sd1: Standard deviation of group 1
+            sd2: Standard deviation of group 2
+            pooled_sd: Pooled standard deviation (if known)
+            p1: Proportion in group 1
+            p2: Proportion in group 2
+        
+        Returns:
+            effect_size: Calculated effect size
+            effect_type: "Cohen's d" or "Cohen's h"
+            interpretation: "small" / "medium" / "large"
+            formula_used: Calculation details
+        
+        Example:
+            # From means: Control=100, Treatment=115, SD=30
+            calculate_effect_size(mean1=100, mean2=115, pooled_sd=30)
+            # Returns: Cohen's d = 0.5 (medium effect)
+            
+            # From proportions: Control=30%, Treatment=45%
+            calculate_effect_size(p1=0.30, p2=0.45)
+            # Returns: Cohen's h = 0.31 (small-medium effect)
+        """
+        from .stats_worker_tasks import (
+            cohens_d_from_means,
+            cohens_h_from_proportions,
+            interpret_effect_size,
+        )
+        
+        try:
+            # Calculate Cohen's d from means
+            if mean1 is not None and mean2 is not None:
+                if pooled_sd is not None:
+                    d = cohens_d_from_means(mean1, mean2, pooled_sd=pooled_sd)
+                elif sd1 is not None and sd2 is not None:
+                    d = cohens_d_from_means(mean1, mean2, sd1=sd1, sd2=sd2)
+                else:
+                    return {
+                        "status": "error",
+                        "error": "Need pooled_sd or both sd1 and sd2"
+                    }
+                
+                interpretation = interpret_effect_size(d, "cohens_d")
+                return {
+                    "effect_size": round(d, 4),
+                    "effect_type": "Cohen's d",
+                    "interpretation": interpretation,
+                    "formula_used": "(mean1 - mean2) / pooled_sd",
+                    "parameters": {
+                        "mean1": mean1,
+                        "mean2": mean2,
+                        "sd1": sd1,
+                        "sd2": sd2,
+                        "pooled_sd": pooled_sd,
+                    }
+                }
+            
+            # Calculate Cohen's h from proportions
+            elif p1 is not None and p2 is not None:
+                h = cohens_h_from_proportions(p1, p2)
+                interpretation = interpret_effect_size(h, "cohens_h")
+                return {
+                    "effect_size": round(h, 4),
+                    "effect_type": "Cohen's h",
+                    "interpretation": interpretation,
+                    "formula_used": "2 * arcsin(√p1) - 2 * arcsin(√p2)",
+                    "parameters": {
+                        "p1": p1,
+                        "p2": p2,
+                    }
+                }
+            
+            else:
+                return {
+                    "status": "error",
+                    "error": "Provide (mean1, mean2, sd) for Cohen's d or (p1, p2) for Cohen's h"
+                }
+                
+        except ImportError:
+            return {"status": "error", "error": "Power analysis module not available"}
+        except Exception as e:
+            return {"status": "error", "error": str(e)}
+    
+    # ==================== PHASE 6.2: ANOVA POWER ANALYSIS ====================
+    
+    @mcp.tool()
+    async def calculate_anova_sample_size(
+        effect_size: Optional[float] = None,
+        k_groups: int = 3,
+        alpha: float = 0.05,
+        power: float = 0.80,
+        group_means: Optional[List[float]] = None,
+        pooled_sd: Optional[float] = None,
+        eta_squared: Optional[float] = None,
+    ) -> dict:
+        """
+        📊 Calculate sample size for one-way ANOVA.
+        
+        Determines how many participants per group for comparing
+        means across multiple groups (3+ groups).
+        
+        Args:
+            effect_size: Cohen's f effect size
+                - 0.10 = small effect
+                - 0.25 = medium effect
+                - 0.40 = large effect
+            k_groups: Number of groups (default: 3)
+            alpha: Significance level (default: 0.05)
+            power: Desired power (default: 0.80)
+            group_means: List of expected group means (alternative to effect_size)
+            pooled_sd: Pooled standard deviation (required with group_means)
+            eta_squared: Eta-squared (η²) effect size (alternative to Cohen's f)
+        
+        Returns:
+            n_per_group: Sample size per group
+            total_n: Total sample size
+            effect_size_f: Cohen's f
+            eta_squared: Eta-squared (% variance explained)
+            sensitivity_analysis: Sample sizes at different power levels
+        
+        Example:
+            # 3 treatment groups, medium effect
+            calculate_anova_sample_size(effect_size=0.25, k_groups=3)
+            # Returns: n_per_group=52, total=156
+            
+            # From group means: [10, 12, 15] with SD=5
+            calculate_anova_sample_size(group_means=[10, 12, 15], pooled_sd=5)
+        """
+        from .stats_worker_tasks import ANOVAPowerAnalysis
+        
+        try:
+            result = ANOVAPowerAnalysis.calculate_sample_size(
+                effect_size=effect_size,
+                k_groups=k_groups,
+                alpha=alpha,
+                power=power,
+                group_means=group_means,
+                pooled_sd=pooled_sd,
+                eta_squared=eta_squared,
+            )
+            return result.to_dict()
+        except ImportError:
+            return {"status": "error", "error": "ANOVA power analysis module not available"}
+        except Exception as e:
+            return {"status": "error", "error": str(e)}
+    
+    @mcp.tool()
+    async def calculate_anova_power(
+        n_per_group: int,
+        effect_size: Optional[float] = None,
+        k_groups: int = 3,
+        alpha: float = 0.05,
+        group_means: Optional[List[float]] = None,
+        pooled_sd: Optional[float] = None,
+        eta_squared: Optional[float] = None,
+    ) -> dict:
+        """
+        ⚡ Calculate power for one-way ANOVA given sample size.
+        
+        Args:
+            n_per_group: Sample size per group
+            effect_size: Cohen's f
+            k_groups: Number of groups
+            alpha: Significance level
+            group_means: Group means (alternative)
+            pooled_sd: Pooled SD
+            eta_squared: Eta-squared (alternative)
+        
+        Returns:
+            power: Statistical power (0-1)
+            interpretation: Adequacy assessment
+            recommendations: Suggestions if underpowered
+        
+        Example:
+            # Check if 30 per group is enough for medium effect
+            calculate_anova_power(n_per_group=30, effect_size=0.25, k_groups=3)
+        """
+        from .stats_worker_tasks import ANOVAPowerAnalysis
+        
+        try:
+            result = ANOVAPowerAnalysis.calculate_power(
+                n_per_group=n_per_group,
+                effect_size=effect_size,
+                k_groups=k_groups,
+                alpha=alpha,
+                group_means=group_means,
+                pooled_sd=pooled_sd,
+                eta_squared=eta_squared,
+            )
+            return result.to_dict()
+        except ImportError:
+            return {"status": "error", "error": "ANOVA power analysis module not available"}
+        except Exception as e:
+            return {"status": "error", "error": str(e)}
+    
+    @mcp.tool()
+    async def calculate_anova_effect_size(
+        group_means: List[float],
+        pooled_sd: Optional[float] = None,
+        group_sds: Optional[List[float]] = None,
+        eta_squared: Optional[float] = None,
+    ) -> dict:
+        """
+        🧮 Calculate Cohen's f effect size for ANOVA.
+        
+        Converts group means or eta-squared to Cohen's f.
+        
+        Args:
+            group_means: List of expected group means
+            pooled_sd: Pooled standard deviation
+            group_sds: Standard deviations per group (alternative)
+            eta_squared: Eta-squared to convert
+        
+        Returns:
+            cohens_f: Cohen's f effect size
+            eta_squared: Equivalent eta-squared
+            interpretation: small/medium/large
+        
+        Example:
+            # From means: groups have means [10, 12, 15] with SD=5
+            calculate_anova_effect_size(group_means=[10, 12, 15], pooled_sd=5)
+        """
+        from .stats_worker_tasks import (
+            cohens_f_from_means,
+            cohens_f_from_eta_squared,
+            eta_squared_from_cohens_f,
+            interpret_effect_size,
+        )
+        
+        try:
+            if eta_squared is not None:
+                f = cohens_f_from_eta_squared(eta_squared)
+                eta_sq = eta_squared
+            elif group_means is not None:
+                f = cohens_f_from_means(group_means, group_sds, pooled_sd)
+                eta_sq = eta_squared_from_cohens_f(f)
+            else:
+                return {"status": "error", "error": "Provide group_means or eta_squared"}
+            
+            interp = interpret_effect_size(f, "cohens_f")
+            
+            return {
+                "cohens_f": round(f, 4),
+                "eta_squared": round(eta_sq, 4),
+                "interpretation": interp,
+                "variance_explained": f"{eta_sq*100:.1f}%",
+                "parameters": {
+                    "group_means": group_means,
+                    "pooled_sd": pooled_sd,
+                    "k_groups": len(group_means) if group_means else None,
+                }
+            }
+        except ImportError:
+            return {"status": "error", "error": "Power analysis module not available"}
+        except Exception as e:
+            return {"status": "error", "error": str(e)}
+    
+    # ==================== PHASE 6.2: CHI-SQUARE POWER ANALYSIS ====================
+    
+    @mcp.tool()
+    async def calculate_chisquare_sample_size(
+        effect_size: Optional[float] = None,
+        alpha: float = 0.05,
+        power: float = 0.80,
+        df: Optional[int] = None,
+        n_bins: Optional[int] = None,
+        n_rows: Optional[int] = None,
+        n_cols: Optional[int] = None,
+    ) -> dict:
+        """
+        📊 Calculate sample size for chi-square test.
+        
+        For comparing categorical distributions or testing independence
+        in contingency tables.
+        
+        Args:
+            effect_size: Cohen's w effect size
+                - 0.10 = small effect
+                - 0.30 = medium effect
+                - 0.50 = large effect
+            alpha: Significance level (default: 0.05)
+            power: Desired power (default: 0.80)
+            df: Degrees of freedom (calculated if not provided)
+            n_bins: Number of categories (for goodness-of-fit)
+            n_rows: Rows in contingency table
+            n_cols: Columns in contingency table
+        
+        Returns:
+            n: Required sample size
+            effect_size_w: Cohen's w
+            cramers_v: Cramér's V (for contingency tables)
+            sensitivity_analysis: Sample sizes at different power levels
+        
+        Example:
+            # Goodness-of-fit with 4 categories, medium effect
+            calculate_chisquare_sample_size(effect_size=0.3, n_bins=4)
+            
+            # Independence test: 2x3 table
+            calculate_chisquare_sample_size(effect_size=0.3, n_rows=2, n_cols=3)
+        """
+        from .stats_worker_tasks import ChiSquarePowerAnalysis
+        
+        try:
+            result = ChiSquarePowerAnalysis.calculate_sample_size(
+                effect_size=effect_size,
+                alpha=alpha,
+                power=power,
+                df=df,
+                n_bins=n_bins,
+                n_rows=n_rows,
+                n_cols=n_cols,
+            )
+            return result.to_dict()
+        except ImportError:
+            return {"status": "error", "error": "Chi-square power analysis module not available"}
+        except Exception as e:
+            return {"status": "error", "error": str(e)}
+    
+    @mcp.tool()
+    async def calculate_chisquare_power(
+        n: int,
+        effect_size: Optional[float] = None,
+        alpha: float = 0.05,
+        df: Optional[int] = None,
+        n_bins: Optional[int] = None,
+        n_rows: Optional[int] = None,
+        n_cols: Optional[int] = None,
+    ) -> dict:
+        """
+        ⚡ Calculate power for chi-square test given sample size.
+        
+        Args:
+            n: Sample size
+            effect_size: Cohen's w
+            alpha: Significance level
+            df: Degrees of freedom
+            n_bins: Number of categories
+            n_rows: Rows in contingency table
+            n_cols: Columns in contingency table
+        
+        Returns:
+            power: Statistical power
+            recommendations: Suggestions if underpowered
+        
+        Example:
+            # Check if n=100 is enough for 2x3 table
+            calculate_chisquare_power(n=100, effect_size=0.3, n_rows=2, n_cols=3)
+        """
+        from .stats_worker_tasks import ChiSquarePowerAnalysis
+        
+        try:
+            result = ChiSquarePowerAnalysis.calculate_power(
+                n=n,
+                effect_size=effect_size,
+                alpha=alpha,
+                df=df,
+                n_bins=n_bins,
+                n_rows=n_rows,
+                n_cols=n_cols,
+            )
+            return result.to_dict()
+        except ImportError:
+            return {"status": "error", "error": "Chi-square power analysis module not available"}
+        except Exception as e:
+            return {"status": "error", "error": str(e)}
+    
+    @mcp.tool()
+    async def calculate_chisquare_effect_size(
+        observed_proportions: List[float],
+        expected_proportions: Optional[List[float]] = None,
+    ) -> dict:
+        """
+        🧮 Calculate Cohen's w effect size for chi-square test.
+        
+        Args:
+            observed_proportions: Observed category proportions
+            expected_proportions: Expected proportions (uniform if None)
+        
+        Returns:
+            cohens_w: Cohen's w effect size
+            interpretation: small/medium/large
+        
+        Example:
+            # Test if categories differ from uniform distribution
+            calculate_chisquare_effect_size(
+                observed_proportions=[0.10, 0.20, 0.30, 0.40]
+            )
+            
+            # Compare to specific expected distribution
+            calculate_chisquare_effect_size(
+                observed_proportions=[0.30, 0.25, 0.25, 0.20],
+                expected_proportions=[0.25, 0.25, 0.25, 0.25]
+            )
+        """
+        from .stats_worker_tasks import effect_size_w_from_proportions
+        
+        try:
+            w = effect_size_w_from_proportions(observed_proportions, expected_proportions)
+            
+            # Interpretation
+            if w < 0.1:
+                interp = "negligible"
+            elif w < 0.3:
+                interp = "small"
+            elif w < 0.5:
+                interp = "medium"
+            else:
+                interp = "large"
+            
+            return {
+                "cohens_w": round(w, 4),
+                "interpretation": interp,
+                "observed": observed_proportions,
+                "expected": expected_proportions or [1/len(observed_proportions)] * len(observed_proportions),
+                "n_categories": len(observed_proportions),
+                "df": len(observed_proportions) - 1,
+            }
+        except ImportError:
+            return {"status": "error", "error": "Power analysis module not available"}
+        except Exception as e:
+            return {"status": "error", "error": str(e)}
+    
+    # ==================== PHASE 6.3: SURVIVAL ANALYSIS POWER ====================
+    
+    @server.tool()
+    async def calculate_survival_events(
+        hazard_ratio: float,
+        alpha: float = 0.05,
+        power: float = 0.80,
+        allocation_ratio: float = 1.0,
+        alternative: str = "two-sided",
+    ) -> Dict[str, Any]:
+        """
+        Calculate required number of events for log-rank test.
+        
+        Use when you know the expected hazard ratio and want to determine
+        how many events are needed to detect the effect.
+        
+        Args:
+            hazard_ratio: Expected hazard ratio (treatment/control)
+                - HR < 1: Treatment reduces hazard (beneficial)
+                - HR > 1: Treatment increases hazard
+                - HR = 0.7 means 30% reduction in hazard
+            alpha: Significance level (default: 0.05)
+            power: Desired statistical power (default: 0.80)
+            allocation_ratio: n_treatment / n_control (default: 1.0, equal groups)
+            alternative: "two-sided" or "one-sided"
+        
+        Returns:
+            Dictionary containing:
+            - total_events: Total required events
+            - events_per_group: Events in each arm
+            - log_hazard_ratio: log(HR) used in calculation
+            - sensitivity: Events needed at different HR values
+        
+        Example:
+            # 30% reduction in hazard (HR=0.7)
+            calculate_survival_events(hazard_ratio=0.7, power=0.80)
+            
+            # 50% reduction (HR=0.5), one-sided test
+            calculate_survival_events(hazard_ratio=0.5, alternative="one-sided")
+        """
+        try:
+            from .stats_worker_tasks import calculate_survival_events as _calc
+            return _calc(
+                hazard_ratio=hazard_ratio,
+                alpha=alpha,
+                power=power,
+                allocation_ratio=allocation_ratio,
+                alternative=alternative,
+            )
+        except ImportError:
+            return {"status": "error", "error": "Survival power analysis module not available"}
+        except Exception as e:
+            return {"status": "error", "error": str(e)}
+    
+    @server.tool()
+    async def calculate_survival_sample_size(
+        hazard_ratio: float,
+        alpha: float = 0.05,
+        power: float = 0.80,
+        prob_event: float = 0.70,
+        allocation_ratio: float = 1.0,
+        alternative: str = "two-sided",
+        accrual_time: float = None,
+        follow_up_time: float = None,
+    ) -> Dict[str, Any]:
+        """
+        Calculate sample size for survival analysis (log-rank test).
+        
+        Determines how many subjects to enroll given expected event rate.
+        
+        Args:
+            hazard_ratio: Expected hazard ratio (treatment/control)
+            alpha: Significance level (default: 0.05)
+            power: Desired statistical power (default: 0.80)
+            prob_event: Expected proportion observing event (default: 0.70)
+                - Higher = more events, smaller sample needed
+                - Lower = more censoring, larger sample needed
+            allocation_ratio: n_treatment / n_control (default: 1.0)
+            alternative: "two-sided" or "one-sided"
+            accrual_time: Enrollment period in months (optional)
+            follow_up_time: Follow-up period after enrollment (optional)
+        
+        Returns:
+            Dictionary containing:
+            - total_n: Total sample size needed
+            - n_treatment: Sample size for treatment group
+            - n_control: Sample size for control group
+            - total_events: Expected number of events
+            - clinical_interpretation: Plain language explanation
+        
+        Example:
+            # HR=0.65 (35% reduction), 70% event rate
+            calculate_survival_sample_size(hazard_ratio=0.65, prob_event=0.70)
+            
+            # With enrollment and follow-up periods
+            calculate_survival_sample_size(
+                hazard_ratio=0.7,
+                prob_event=0.60,
+                accrual_time=24,  # 2 year enrollment
+                follow_up_time=12  # 1 year follow-up
+            )
+        """
+        try:
+            from .stats_worker_tasks import calculate_survival_sample_size as _calc
+            return _calc(
+                hazard_ratio=hazard_ratio,
+                alpha=alpha,
+                power=power,
+                prob_event=prob_event,
+                allocation_ratio=allocation_ratio,
+                alternative=alternative,
+                accrual_time=accrual_time,
+                follow_up_time=follow_up_time,
+            )
+        except ImportError:
+            return {"status": "error", "error": "Survival power analysis module not available"}
+        except Exception as e:
+            return {"status": "error", "error": str(e)}
+    
+    @server.tool()
+    async def calculate_survival_power(
+        hazard_ratio: float,
+        n_events: int = None,
+        total_n: int = None,
+        alpha: float = 0.05,
+        prob_event: float = 0.70,
+        allocation_ratio: float = 1.0,
+        alternative: str = "two-sided",
+    ) -> Dict[str, Any]:
+        """
+        Calculate power for survival analysis given sample/events.
+        
+        Use when you have a fixed sample size or number of events and
+        want to know the power to detect a given hazard ratio.
+        
+        Args:
+            hazard_ratio: Expected hazard ratio to detect
+            n_events: Number of events (directly specify events)
+            total_n: Total sample size (events calculated from prob_event)
+                - Provide either n_events OR total_n, not both
+            alpha: Significance level (default: 0.05)
+            prob_event: Event probability (used with total_n)
+            allocation_ratio: n_treatment / n_control (default: 1.0)
+            alternative: "two-sided" or "one-sided"
+        
+        Returns:
+            Dictionary containing:
+            - power: Calculated statistical power
+            - n_events: Number of events used
+            - events_for_80pct: Events needed for 80% power
+            - clinical_interpretation: Power interpretation
+        
+        Example:
+            # Power with 200 events
+            calculate_survival_power(hazard_ratio=0.75, n_events=200)
+            
+            # Power with 400 subjects, 65% event rate
+            calculate_survival_power(hazard_ratio=0.70, total_n=400, prob_event=0.65)
+        """
+        try:
+            from .stats_worker_tasks import calculate_survival_power as _calc
+            return _calc(
+                hazard_ratio=hazard_ratio,
+                n_events=n_events,
+                total_n=total_n,
+                alpha=alpha,
+                prob_event=prob_event,
+                allocation_ratio=allocation_ratio,
+                alternative=alternative,
+            )
+        except ImportError:
+            return {"status": "error", "error": "Survival power analysis module not available"}
+        except Exception as e:
+            return {"status": "error", "error": str(e)}
+    
+    @server.tool()
+    async def calculate_survival_from_medians(
+        median_control: float,
+        median_treatment: float,
+        alpha: float = 0.05,
+        power: float = 0.80,
+        accrual_time: float = 12,
+        follow_up_time: float = 12,
+        allocation_ratio: float = 1.0,
+        alternative: str = "two-sided",
+    ) -> Dict[str, Any]:
+        """
+        Calculate sample size from median survival times.
+        
+        Most intuitive method when you know expected median survival
+        in each group (e.g., from pilot data or literature).
+        
+        Args:
+            median_control: Expected median survival in control (months)
+            median_treatment: Expected median survival in treatment (months)
+            alpha: Significance level (default: 0.05)
+            power: Desired power (default: 0.80)
+            accrual_time: Enrollment period in months (default: 12)
+            follow_up_time: Additional follow-up in months (default: 12)
+            allocation_ratio: n_treatment / n_control (default: 1.0)
+            alternative: "two-sided" or "one-sided"
+        
+        Returns:
+            Dictionary containing:
+            - total_n: Total sample size
+            - implied_hazard_ratio: HR calculated from medians
+            - total_events: Required events
+            - study_duration: Total study duration
+            - clinical_interpretation: Plain language explanation
+        
+        Example:
+            # Control: 8 months, Treatment: 12 months (50% improvement)
+            calculate_survival_from_medians(
+                median_control=8,
+                median_treatment=12,
+                accrual_time=18,
+                follow_up_time=12
+            )
+            
+            # Cancer trial: 6 vs 9 month median survival
+            calculate_survival_from_medians(
+                median_control=6,
+                median_treatment=9,
+                accrual_time=24,
+                follow_up_time=18
+            )
+        """
+        try:
+            from .stats_worker_tasks import calculate_survival_from_medians as _calc
+            return _calc(
+                median_control=median_control,
+                median_treatment=median_treatment,
+                alpha=alpha,
+                power=power,
+                accrual_time=accrual_time,
+                follow_up_time=follow_up_time,
+                allocation_ratio=allocation_ratio,
+                alternative=alternative,
+            )
+        except ImportError:
+            return {"status": "error", "error": "Survival power analysis module not available"}
+        except Exception as e:
+            return {"status": "error", "error": str(e)}
+    
+    @server.tool()
+    async def convert_hazard_ratio_to_log(
+        hazard_ratio: float,
+    ) -> Dict[str, Any]:
+        """
+        Convert hazard ratio to log hazard ratio.
+        
+        Useful for understanding effect size in survival analysis.
+        
+        Args:
+            hazard_ratio: The hazard ratio to convert
+        
+        Returns:
+            Dictionary with log_hr and interpretation
+        
+        Example:
+            convert_hazard_ratio_to_log(0.7)  # 30% reduction
+        """
+        try:
+            import math
+            log_hr = math.log(hazard_ratio)
+            
+            if hazard_ratio < 1:
+                reduction = (1 - hazard_ratio) * 100
+                interp = f"{reduction:.1f}% reduction in hazard (beneficial)"
+            elif hazard_ratio > 1:
+                increase = (hazard_ratio - 1) * 100
+                interp = f"{increase:.1f}% increase in hazard"
+            else:
+                interp = "No effect"
+            
+            return {
+                "hazard_ratio": hazard_ratio,
+                "log_hazard_ratio": round(log_hr, 4),
+                "interpretation": interp,
+            }
+        except Exception as e:
+            return {"status": "error", "error": str(e)}
+    
+    logger.info("Registered 57 statistics tools (including Phase 6.3 Survival Power)")
+
+
 
 

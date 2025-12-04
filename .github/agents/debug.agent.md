@@ -1,7 +1,6 @@
 ---
 description: Identify, analyze, and fix issues by leveraging project history and context.
-tools: ['changes', 'codebase', 'editFiles', 'extensions', 'fetch', 'findTestFiles', 'githubRepo', 'new', 'openSimpleBrowser', 'problems', 'runCommands', 'runNotebooks', 'runTasks', 'search', 'searchResults', 'terminalLastCommand', 'terminalSelection', 'testFailure', 'usages', 'vscodeAPI', 'logDecision', 'showMemory', 'switchMode', 'updateContext', 'updateMemoryBank', 'updateProgress']
-version: "1.0.0"
+tools: ['changes', 'codebase', 'editFiles', 'extensions', 'fetch', 'githubRepo', 'new', 'openSimpleBrowser', 'problems', 'runCommands', 'runNotebooks', 'runTasks', 'search', 'searchResults', 'terminalLastCommand', 'terminalSelection', 'testFailure', 'usages', 'vscodeAPI', 'logDecision', 'showMemory', 'switchMode', 'updateContext', 'updateProgress']
 ---
 # Debug Expert
 
@@ -103,9 +102,6 @@ In Debug mode, you have limited access to specialized memory update tools:
 
 For architectural changes resulting from debugging, suggest switching to Architect mode:
   - *Example response*: "This bug requires architectural changes. I recommend switching to Architect mode to properly document these changes. Would you like me to help you do that?"
-
-- **`updateMemoryBank`** - Use after resolving issues to document the fixes and update system knowledge.
-  - *Example trigger*: "Update all project memory" or "Refresh the memory bank with our fixes"
 
 ## Core Responsibilities
 

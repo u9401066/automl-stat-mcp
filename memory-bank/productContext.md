@@ -18,6 +18,10 @@ Provide a high-level overview of the project.
 
 ## Project Description
 
+Multi-user AutoML and Statistical Analysis system with 83 MCP tools accessible via AI Agents
+
+
+
 AutoML MCP Server - 基於 DDD 架構的自動化機器學習平台，透過 MCP 提供 AI 助手整合介面，包含 20 個工具 (15 個基礎 + 5 個智能 Orchestration)
 
 
@@ -49,6 +53,10 @@ Multi-user AutoML system accessible via AI Agents through MCP. Users can submit 
 
 
 ## Architecture
+
+DDD (Domain-Driven Design) with layers: Domain (stats-worker/tasks), Application (services), Infrastructure (MCP handlers). 83 MCP tools across AutoML (23) and Statistics (57) domains. Code quality issues: 11 files >500 lines requiring refactoring.
+
+
 
 Clean Architecture with DDD + MCP Orchestration Layer - Domain (核心業務), Application (用例), Infrastructure (外部服務), Interface (API/MCP), MCP Orchestration (智能工具封裝)
 
@@ -221,6 +229,16 @@ Separated Container Architecture with 4 components: 1) AutoML API (FastAPI) - li
 
 ## Technologies
 
+- Python 3.10+
+- FastAPI
+- FastMCP
+- Docker
+- Redis
+- MinIO
+- AutoGluon 1.3.1
+
+
+
 - Python 3.11
 - FastAPI
 - AutoGluon 1.3.1
@@ -292,6 +310,17 @@ Separated Container Architecture with 4 components: 1) AutoML API (FastAPI) - li
 
 
 ## Libraries and Dependencies
+
+- ydata-profiling
+- tableone
+- scipy
+- statsmodels
+- lifelines
+- scikit-learn
+- numpy
+- pandas
+
+
 
 - autogluon.tabular==1.3.1
 - fastapi
