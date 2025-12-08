@@ -141,7 +141,7 @@ async def submit_specific_train_job(
         )
         
         return JobResponse(
-            job_id=job.id,
+            job_id=str(job.id),
             job_type=job.job_type.value,
             status=job.status.value,
             progress=0.0,
@@ -213,7 +213,7 @@ async def submit_compare_job(
         )
         
         return JobResponse(
-            job_id=job.id,
+            job_id=str(job.id),
             job_type=job.job_type.value,
             status=job.status.value,
             progress=0.0,
