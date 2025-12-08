@@ -62,10 +62,39 @@
 | `routes/roc.py` | `/roc/compute/submit`, `/compare/submit`, `/threshold/submit`, `/calibration/submit`, `/full-eval/submit` | ✅ |
 | `routes/power.py` | `/power/ttest`, `/proportion`, `/anova`, `/chi-square`, `/survival` | ✅ |
 
-**下一步：**
-- [ ] 更新 MCP stats_client.py 調用新的 API
-- [ ] 更新 MCP tools 使用 API 而非直接 import
-- [ ] 新增 stats-worker 處理新的 job types
+### Phase 2: 更新 stats_client.py ✅ 完成
+
+**新增方法 (+25)：**
+- Propensity: `submit_propensity_estimate_job`, `submit_propensity_match_job`, `submit_propensity_effect_job`, `submit_propensity_balance_job`, `submit_propensity_full_job`
+- Survival: `submit_kaplan_meier_job`, `submit_cox_regression_job`, `submit_survival_compare_job`, `submit_survival_summary_job`
+- ROC: `submit_roc_compute_job`, `submit_roc_compare_job`, `submit_roc_threshold_job`, `submit_roc_calibration_job`, `submit_roc_full_eval_job`, `submit_roc_compare_multiple_job`, `submit_roc_threshold_analysis_job`, `submit_roc_publication_report_job`
+- Power: `calculate_ttest_power`, `calculate_proportion_power`, `calculate_anova_power`, `calculate_chisquare_power`, `calculate_survival_power`
+
+### Phase 3: 更新 MCP Tools ✅ 完成
+
+**修改的檔案：**
+
+| 檔案 | 工具數 | 變更 |
+|------|--------|------|
+| `propensity_tools.py` | 5 | 改用 `stats_client.submit_propensity_*_job()` |
+| `survival_tools.py` | 4 | 改用 `stats_client.submit_*_job()` |
+| `roc_tools.py` | 8 | 改用 `stats_client.submit_roc_*_job()` |
+| `power/ttest.py` | 7 | 改用 `stats_client.calculate_*_power()` |
+| `power/anova.py` | 6 | 改用 `stats_client.calculate_*_power()` |
+| `power/survival.py` | 5 | 改用 `stats_client.calculate_survival_power()` |
+
+**關鍵修改：**
+- ❌ 移除：`from .stats_worker_tasks import ...` (跨容器 import 失敗)
+- ✅ 新增：`await stats_client.submit_*_job(...)` (HTTP API 調用)
+- ✅ 保留：所有 docstrings 維護人員文件
+
+### Phase 4: stats-worker Job 處理 ⏳ 待完成
+
+**需新增 Job Types：**
+- [ ] `propensity_estimate`, `propensity_match`, `propensity_effect`, `propensity_balance`, `propensity_full`
+- [ ] `kaplan_meier`, `cox_regression`, `survival_compare`, `survival_summary`
+- [ ] `roc_compute`, `roc_compare`, `roc_threshold`, `roc_calibration`, `roc_full_eval`
+- [ ] Power calculations (可能不需要 worker，直接在 API 計算)
 
 ---
 
