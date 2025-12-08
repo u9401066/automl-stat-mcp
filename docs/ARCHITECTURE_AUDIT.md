@@ -380,6 +380,52 @@ async def calculate_proportion_power(
 
 ---
 
+## 🔍 詳細問題分析
+
+### 受影響的檔案清單
+
+**直接依賴 stats_worker_tasks.py 的檔案：**
+
+| 檔案 | 問題工具數 | 狀態 |
+|------|-----------|------|
+| `statistics/propensity_tools.py` | 5 | ❌ 全部壞掉 |
+| `statistics/survival_tools.py` | 4 | ❌ 全部壞掉 |
+| `statistics/roc_tools.py` | 9 | ❌ 全部壞掉 |
+| `statistics/tableone_tools.py` | 1 (部分) | ⚠️ 部分壞掉 |
+| `statistics/power/ttest.py` | 7 | ❌ 全部壞掉 |
+| `statistics/power/anova.py` | 6 | ❌ 全部壞掉 |
+| `statistics/power/survival.py` | 4 | ❌ 全部壞掉 |
+| `statistics_tools_backup.py` | ~40 | 📦 備份檔案，可刪除 |
+
+**總計：** ~36 個工具在 Docker 環境中壞掉
+
+### 問題根因
+
+```python
+# statistics/propensity_tools.py:70
+from .stats_worker_tasks import estimate_propensity_scores as _estimate_ps
+```
+
+`stats_worker_tasks.py` 嘗試：
+```python
+stats_worker_path = os.path.join(..., 'stats-worker', 'src')
+sys.path.insert(0, os.path.abspath(stats_worker_path))
+from tasks.propensity_score import ...  # ❌ 在 Docker 中失敗
+```
+
+### 正確的架構應該是
+
+```
+Agent → MCP Tool → stats_client.py → HTTP → stats-service API → Redis Queue → stats-worker
+```
+
+而不是：
+```
+Agent → MCP Tool → stats_worker_tasks.py (直接 import) ❌
+```
+
+---
+
 ## ✅ 開始執行
 
 準備好後，請告訴我：
