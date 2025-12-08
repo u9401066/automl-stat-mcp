@@ -108,30 +108,43 @@ Add to `claude_desktop_config.json`:
 | Tool | Description |
 |------|-------------|
 | `list_available_files` | List files in mounted directories |
-| `upload_dataset` | Upload dataset (local file or MinIO) |
+| `upload_dataset` | Upload dataset with storage mode selection |
 | `get_upload_help` | Get upload instructions |
+
+**Two Storage Modes:**
+
+| Mode | Storage | Lifetime | Use Case | Returns |
+|------|---------|----------|----------|---------|
+| `temporary` | Redis | Expires with job | One-time analysis | `job_id` |
+| `permanent` | MinIO | Until deleted | ML training, repeated analysis | `dataset_id` |
 
 **Upload Workflow:**
 ```
-Agent: "I'll help you upload a dataset. Which method would you like?"
-       1. 📁 Local file (from sample_data or uploads folder)
-       2. ☁️ MinIO path (file already in MinIO storage)
+Agent: "我來幫你上傳資料。請回答兩個問題："
 
-User: "Local file"
+Q1: "資料來源？"
+    1. 📁 本地檔案 (sample_data, uploads)
+    2. ☁️ MinIO 路徑
+
+User: "本地檔案"
 
 Agent: list_available_files()
-       → Shows: breast_cancer.csv, iris.csv, ...
+       → breast_cancer.csv, iris.csv, ...
 
-Agent: "Which file would you like to use?"
+Q2: "儲存方式？"
+    1. 🔄 暫存 (一次性分析)
+    2. 💾 永久存檔 (ML 訓練用)
 
-User: "breast_cancer.csv"
+User: "永久存檔"
 
 Agent: upload_dataset(
          name="breast_cancer",
          source_type="local",
-         source_path="/data/sample_data/breast_cancer.csv"
+         source_path="/data/sample_data/breast_cancer.csv",
+         storage_mode="permanent"  # or "temporary"
        )
-       → {"dataset_id": "abc123", "columns": [...], "next_steps": [...]}
+       → permanent: {"dataset_id": "abc123", ...}
+       → temporary: {"job_id": "job456", ...}
 ```
 
 > ⚠️ **Important**: Copilot does NOT read file content. MCP Server reads files 

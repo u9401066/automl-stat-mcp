@@ -77,3 +77,14 @@
 - get_upload_help(): 取得上傳說明
 
 關鍵改變：Copilot 只傳「檔案路徑」，不經手檔案內容 |
+| 2025-12-08 | Dataset Upload 支援兩種儲存模式: Temporary (Redis) vs Permanent (MinIO) | 需求：不是所有上傳都需要永久保存
+- Temporary (Redis): 一次性分析，存在 Redis 隨 job 過期，適合快速探索
+- Permanent (MinIO): 永久存檔，可重複使用，適合 ML 訓練
+
+上傳前必須詢問使用者：
+1. 資料來源：local file 或 MinIO path
+2. 儲存方式：暫存 (temporary) 或 永久存檔 (permanent)
+
+工具回傳：
+- temporary → job_id (用於 get_stats_job_result)
+- permanent → dataset_id (用於 submit_automl_job 或 auto_analyze) |
