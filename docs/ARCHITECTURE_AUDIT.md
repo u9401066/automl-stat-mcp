@@ -88,13 +88,18 @@
 - ✅ 新增：`await stats_client.submit_*_job(...)` (HTTP API 調用)
 - ✅ 保留：所有 docstrings 維護人員文件
 
-### Phase 4: stats-worker Job 處理 ⏳ 待完成
+### Phase 4: stats-worker Job 處理 ✅ 完成
 
-**需新增 Job Types：**
-- [ ] `propensity_estimate`, `propensity_match`, `propensity_effect`, `propensity_balance`, `propensity_full`
-- [ ] `kaplan_meier`, `cox_regression`, `survival_compare`, `survival_summary`
-- [ ] `roc_compute`, `roc_compare`, `roc_threshold`, `roc_calibration`, `roc_full_eval`
-- [ ] Power calculations (可能不需要 worker，直接在 API 計算)
+**已新增 Job Types：**
+- [x] `propensity_estimate`, `propensity_match`, `propensity_effect`, `propensity_balance`, `propensity_full`
+- [x] `kaplan_meier`, `cox_regression`, `survival_compare`, `survival_summary`
+- [x] `roc_compute`, `roc_compare`, `roc_threshold`, `roc_calibration`, `roc_full_eval`, `roc_compare_multiple`, `roc_threshold_analysis`, `roc_publication_report`
+- [x] Power calculations (同步 API，不需要 worker queue)
+
+**Worker 修改摘要：**
+- `stats-worker/src/worker.py`: 新增 20+ job handler methods
+- 修復 ROC function signature 問題 (y_scores vs y_score)
+- 新增 `numpy` import for balance assessment
 
 ---
 

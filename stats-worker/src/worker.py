@@ -17,6 +17,7 @@ from datetime import datetime
 from io import BytesIO
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import redis
 from minio import Minio
@@ -456,6 +457,605 @@ class StatsWorker:
         )
         
         logger.info(f"Direct auto-analyze job {job_id} completed")
+
+    # =========================================================================
+    # Propensity Score Analysis Jobs
+    # =========================================================================
+    
+    def process_propensity_estimate_job(self, job: dict):
+        """Process propensity score estimation job"""
+        from .tasks.propensity_score import estimate_propensity_scores
+        
+        job_id = job["job_id"]
+        params = job["params"]
+        
+        logger.info(f"Processing propensity estimate job {job_id}")
+        self.update_job_status(job_id, "running", progress=0.1, message="Loading dataset...")
+        
+        df = self._load_dataset_from_job(job)
+        
+        self.update_job_status(job_id, "running", progress=0.4, message="Estimating propensity scores...")
+        
+        result = estimate_propensity_scores(
+            df=df,
+            treatment_col=params["treatment_col"],
+            covariates=params["covariates"],
+            regularization=params.get("regularization", 0.0),
+        )
+        
+        self.update_job_status(job_id, "running", progress=0.8, message="Saving results...")
+        
+        result_path = self.save_report(job_id, result.to_dict() if hasattr(result, 'to_dict') else result, format="json")
+        
+        self.update_job_status(job_id, "completed", progress=1.0, message="Propensity score estimation completed", result_path=result_path)
+        logger.info(f"Propensity estimate job {job_id} completed")
+    
+    def process_propensity_match_job(self, job: dict):
+        """Process propensity score matching job"""
+        from .tasks.propensity_score import match_propensity_scores
+        
+        job_id = job["job_id"]
+        params = job["params"]
+        
+        logger.info(f"Processing propensity match job {job_id}")
+        self.update_job_status(job_id, "running", progress=0.1, message="Loading dataset...")
+        
+        df = self._load_dataset_from_job(job)
+        
+        self.update_job_status(job_id, "running", progress=0.4, message="Matching propensity scores...")
+        
+        result = match_propensity_scores(
+            df=df,
+            treatment_col=params["treatment_col"],
+            score_col=params.get("score_col"),
+            covariates=params.get("covariates"),
+            method=params.get("method", "nearest"),
+            caliper=params.get("caliper", 0.2),
+            caliper_scale=params.get("caliper_scale", "std"),
+            replacement=params.get("replacement", False),
+        )
+        
+        self.update_job_status(job_id, "running", progress=0.8, message="Saving results...")
+        
+        result_path = self.save_report(job_id, result.to_dict() if hasattr(result, 'to_dict') else result, format="json")
+        
+        self.update_job_status(job_id, "completed", progress=1.0, message="Propensity score matching completed", result_path=result_path)
+        logger.info(f"Propensity match job {job_id} completed")
+    
+    def process_propensity_effect_job(self, job: dict):
+        """Process treatment effect estimation job"""
+        from .tasks.propensity_score import estimate_treatment_effect
+        
+        job_id = job["job_id"]
+        params = job["params"]
+        
+        logger.info(f"Processing propensity effect job {job_id}")
+        self.update_job_status(job_id, "running", progress=0.1, message="Loading dataset...")
+        
+        df = self._load_dataset_from_job(job)
+        
+        self.update_job_status(job_id, "running", progress=0.4, message="Estimating treatment effect...")
+        
+        result = estimate_treatment_effect(
+            df=df,
+            outcome_col=params["outcome_col"],
+            treatment_col=params["treatment_col"],
+            score_col=params.get("score_col"),
+            covariates=params.get("covariates"),
+            method=params.get("method", "ipw"),
+            target=params.get("target", "ate"),
+            stabilized=params.get("stabilized", True),
+        )
+        
+        self.update_job_status(job_id, "running", progress=0.8, message="Saving results...")
+        
+        result_path = self.save_report(job_id, result.to_dict() if hasattr(result, 'to_dict') else result, format="json")
+        
+        self.update_job_status(job_id, "completed", progress=1.0, message="Treatment effect estimation completed", result_path=result_path)
+        logger.info(f"Propensity effect job {job_id} completed")
+    
+    def process_propensity_balance_job(self, job: dict):
+        """Process covariate balance assessment job"""
+        from .tasks.propensity_score import assess_balance
+        
+        job_id = job["job_id"]
+        params = job["params"]
+        
+        logger.info(f"Processing propensity balance job {job_id}")
+        self.update_job_status(job_id, "running", progress=0.1, message="Loading dataset...")
+        
+        df = self._load_dataset_from_job(job)
+        
+        self.update_job_status(job_id, "running", progress=0.4, message="Assessing covariate balance...")
+        
+        weights = np.array(params["weights"]) if params.get("weights") else None
+        
+        result = assess_balance(
+            df=df,
+            treatment_col=params["treatment_col"],
+            covariates=params["covariates"],
+            weights=weights,
+            smd_threshold=params.get("smd_threshold", 0.1),
+        )
+        
+        self.update_job_status(job_id, "running", progress=0.8, message="Saving results...")
+        
+        result_path = self.save_report(job_id, result.to_dict() if hasattr(result, 'to_dict') else result, format="json")
+        
+        self.update_job_status(job_id, "completed", progress=1.0, message="Balance assessment completed", result_path=result_path)
+        logger.info(f"Propensity balance job {job_id} completed")
+    
+    def process_propensity_full_job(self, job: dict):
+        """Process complete propensity score analysis job"""
+        from .tasks.propensity_score import propensity_score_analysis
+        
+        job_id = job["job_id"]
+        params = job["params"]
+        
+        logger.info(f"Processing propensity full analysis job {job_id}")
+        self.update_job_status(job_id, "running", progress=0.1, message="Loading dataset...")
+        
+        df = self._load_dataset_from_job(job)
+        
+        self.update_job_status(job_id, "running", progress=0.3, message="Running full propensity score analysis...")
+        
+        result = propensity_score_analysis(
+            df=df,
+            outcome_col=params["outcome_col"],
+            treatment_col=params["treatment_col"],
+            covariates=params["covariates"],
+            method=params.get("method", "matching"),
+            target=params.get("target", "ate"),
+            caliper=params.get("caliper", 0.2),
+        )
+        
+        self.update_job_status(job_id, "running", progress=0.8, message="Saving results...")
+        
+        result_path = self.save_report(job_id, result if isinstance(result, dict) else result.to_dict(), format="json")
+        
+        self.update_job_status(job_id, "completed", progress=1.0, message="Propensity score analysis completed", result_path=result_path)
+        logger.info(f"Propensity full job {job_id} completed")
+
+    # =========================================================================
+    # Survival Analysis Jobs
+    # =========================================================================
+    
+    def process_kaplan_meier_job(self, job: dict):
+        """Process Kaplan-Meier survival analysis job"""
+        from .tasks.survival_analysis import kaplan_meier_analysis, survival_summary
+        
+        job_id = job["job_id"]
+        params = job["params"]
+        
+        logger.info(f"Processing Kaplan-Meier job {job_id}")
+        self.update_job_status(job_id, "running", progress=0.1, message="Loading dataset...")
+        
+        df = self._load_dataset_from_job(job)
+        
+        self.update_job_status(job_id, "running", progress=0.4, message="Computing Kaplan-Meier curves...")
+        
+        km_result = kaplan_meier_analysis(
+            df=df,
+            time_col=params["time_col"],
+            event_col=params["event_col"],
+            group_col=params.get("group_col"),
+            alpha=params.get("alpha", 0.05),
+        )
+        
+        summary = survival_summary(
+            df=df,
+            time_col=params["time_col"],
+            event_col=params["event_col"],
+            group_col=params.get("group_col"),
+            time_points=params.get("time_points"),
+        )
+        
+        result = {
+            "status": "success",
+            **km_result,
+            "summary": summary,
+        }
+        
+        self.update_job_status(job_id, "running", progress=0.8, message="Saving results...")
+        
+        result_path = self.save_report(job_id, result, format="json")
+        
+        self.update_job_status(job_id, "completed", progress=1.0, message="Kaplan-Meier analysis completed", result_path=result_path)
+        logger.info(f"Kaplan-Meier job {job_id} completed")
+    
+    def process_cox_regression_job(self, job: dict):
+        """Process Cox proportional hazards regression job"""
+        from .tasks.survival_analysis import cox_regression
+        
+        job_id = job["job_id"]
+        params = job["params"]
+        
+        logger.info(f"Processing Cox regression job {job_id}")
+        self.update_job_status(job_id, "running", progress=0.1, message="Loading dataset...")
+        
+        df = self._load_dataset_from_job(job)
+        
+        self.update_job_status(job_id, "running", progress=0.4, message="Fitting Cox model...")
+        
+        result = cox_regression(
+            df=df,
+            time_col=params["time_col"],
+            event_col=params["event_col"],
+            covariates=params.get("covariates"),
+            alpha=params.get("alpha", 0.05),
+        )
+        
+        self.update_job_status(job_id, "running", progress=0.8, message="Saving results...")
+        
+        result_path = self.save_report(job_id, {"status": "success", **result}, format="json")
+        
+        self.update_job_status(job_id, "completed", progress=1.0, message="Cox regression completed", result_path=result_path)
+        logger.info(f"Cox regression job {job_id} completed")
+    
+    def process_survival_compare_job(self, job: dict):
+        """Process survival curves comparison job"""
+        from .tasks.survival_analysis import compare_survival_curves
+        
+        job_id = job["job_id"]
+        params = job["params"]
+        
+        logger.info(f"Processing survival compare job {job_id}")
+        self.update_job_status(job_id, "running", progress=0.1, message="Loading dataset...")
+        
+        df = self._load_dataset_from_job(job)
+        
+        self.update_job_status(job_id, "running", progress=0.4, message="Comparing survival curves...")
+        
+        result = compare_survival_curves(
+            df=df,
+            time_col=params["time_col"],
+            event_col=params["event_col"],
+            group_col=params["group_col"],
+        )
+        
+        self.update_job_status(job_id, "running", progress=0.8, message="Saving results...")
+        
+        result_path = self.save_report(job_id, {"status": "success", **result}, format="json")
+        
+        self.update_job_status(job_id, "completed", progress=1.0, message="Survival comparison completed", result_path=result_path)
+        logger.info(f"Survival compare job {job_id} completed")
+    
+    def process_survival_summary_job(self, job: dict):
+        """Process survival data summary job"""
+        from .tasks.survival_analysis import survival_summary
+        
+        job_id = job["job_id"]
+        params = job["params"]
+        
+        logger.info(f"Processing survival summary job {job_id}")
+        self.update_job_status(job_id, "running", progress=0.1, message="Loading dataset...")
+        
+        df = self._load_dataset_from_job(job)
+        
+        self.update_job_status(job_id, "running", progress=0.4, message="Summarizing survival data...")
+        
+        result = survival_summary(
+            df=df,
+            time_col=params["time_col"],
+            event_col=params["event_col"],
+            group_col=params.get("group_col"),
+            time_points=params.get("time_points"),
+        )
+        
+        self.update_job_status(job_id, "running", progress=0.8, message="Saving results...")
+        
+        result_path = self.save_report(job_id, {"status": "success", **result}, format="json")
+        
+        self.update_job_status(job_id, "completed", progress=1.0, message="Survival summary completed", result_path=result_path)
+        logger.info(f"Survival summary job {job_id} completed")
+
+    # =========================================================================
+    # ROC Analysis Jobs
+    # =========================================================================
+    
+    def process_roc_compute_job(self, job: dict):
+        """Process ROC curve computation job"""
+        from .tasks.roc_analysis import compute_roc_curve
+        
+        job_id = job["job_id"]
+        params = job["params"]
+        
+        logger.info(f"Processing ROC compute job {job_id}")
+        self.update_job_status(job_id, "running", progress=0.1, message="Loading dataset...")
+        
+        df = self._load_dataset_from_job(job)
+        
+        self.update_job_status(job_id, "running", progress=0.4, message="Computing ROC curve...")
+        
+        y_true = df[params["y_true_col"]].values
+        y_scores = df[params["y_score_col"]].values
+        
+        # Convert confidence_level to alpha (e.g., 0.95 -> 0.05)
+        confidence_level = params.get("confidence_level", 0.95)
+        alpha = 1.0 - confidence_level
+        
+        result = compute_roc_curve(
+            y_true=y_true,
+            y_scores=y_scores,
+            threshold_method=params.get("threshold_method", "youden"),
+            alpha=alpha,
+        )
+        
+        self.update_job_status(job_id, "running", progress=0.8, message="Saving results...")
+        
+        result_path = self.save_report(job_id, result, format="json")
+        
+        self.update_job_status(job_id, "completed", progress=1.0, message="ROC curve computed", result_path=result_path)
+        logger.info(f"ROC compute job {job_id} completed")
+    
+    def process_roc_compare_job(self, job: dict):
+        """Process ROC curves comparison job (two models)"""
+        from .tasks.roc_analysis import compare_roc_curves
+        
+        job_id = job["job_id"]
+        params = job["params"]
+        
+        logger.info(f"Processing ROC compare job {job_id}")
+        self.update_job_status(job_id, "running", progress=0.1, message="Loading dataset...")
+        
+        df = self._load_dataset_from_job(job)
+        
+        self.update_job_status(job_id, "running", progress=0.4, message="Comparing ROC curves...")
+        
+        y_true = df[params["y_true_col"]].values
+        model_score_cols = params["model_score_cols"]
+        model_names = params.get("model_names") or model_score_cols
+        
+        # compare_roc_curves takes two models at a time
+        if len(model_score_cols) != 2:
+            raise ValueError("compare_roc_curves requires exactly 2 models. Use compare_multiple_models for 3+ models.")
+        
+        scores1 = df[model_score_cols[0]].values
+        scores2 = df[model_score_cols[1]].values
+        
+        result = compare_roc_curves(
+            y_true=y_true,
+            scores1=scores1,
+            scores2=scores2,
+            model1_name=model_names[0],
+            model2_name=model_names[1],
+            alpha=params.get("alpha", 0.05),
+        )
+        
+        self.update_job_status(job_id, "running", progress=0.8, message="Saving results...")
+        
+        result_path = self.save_report(job_id, result, format="json")
+        
+        self.update_job_status(job_id, "completed", progress=1.0, message="ROC comparison completed", result_path=result_path)
+        logger.info(f"ROC compare job {job_id} completed")
+    
+    def process_roc_threshold_job(self, job: dict):
+        """Process optimal threshold finding job"""
+        from .tasks.roc_analysis import find_optimal_threshold
+        
+        job_id = job["job_id"]
+        params = job["params"]
+        
+        logger.info(f"Processing ROC threshold job {job_id}")
+        self.update_job_status(job_id, "running", progress=0.1, message="Loading dataset...")
+        
+        df = self._load_dataset_from_job(job)
+        
+        self.update_job_status(job_id, "running", progress=0.4, message="Finding optimal threshold...")
+        
+        y_true = df[params["y_true_col"]].values
+        y_scores = df[params["y_score_col"]].values
+        
+        # Map target_sensitivity/target_specificity to target_metric/target_value
+        method = params.get("method", "youden")
+        target_metric = None
+        target_value = None
+        
+        if params.get("target_sensitivity"):
+            method = "target_sensitivity"
+            target_metric = "sensitivity"
+            target_value = params["target_sensitivity"]
+        elif params.get("target_specificity"):
+            method = "target_specificity"
+            target_metric = "specificity"
+            target_value = params["target_specificity"]
+        
+        result = find_optimal_threshold(
+            y_true=y_true,
+            y_scores=y_scores,
+            method=method,
+            target_metric=target_metric,
+            target_value=target_value,
+        )
+        
+        self.update_job_status(job_id, "running", progress=0.8, message="Saving results...")
+        
+        result_path = self.save_report(job_id, result, format="json")
+        
+        self.update_job_status(job_id, "completed", progress=1.0, message="Threshold analysis completed", result_path=result_path)
+        logger.info(f"ROC threshold job {job_id} completed")
+    
+    def process_roc_calibration_job(self, job: dict):
+        """Process calibration analysis job"""
+        from .tasks.roc_analysis import analyze_calibration
+        
+        job_id = job["job_id"]
+        params = job["params"]
+        
+        logger.info(f"Processing ROC calibration job {job_id}")
+        self.update_job_status(job_id, "running", progress=0.1, message="Loading dataset...")
+        
+        df = self._load_dataset_from_job(job)
+        
+        self.update_job_status(job_id, "running", progress=0.4, message="Analyzing calibration...")
+        
+        y_true = df[params["y_true_col"]].values
+        y_prob = df[params["y_score_col"]].values
+        
+        result = analyze_calibration(
+            y_true=y_true,
+            y_prob=y_prob,
+            n_bins=params.get("n_bins", 10),
+        )
+        
+        self.update_job_status(job_id, "running", progress=0.8, message="Saving results...")
+        
+        result_path = self.save_report(job_id, result, format="json")
+        
+        self.update_job_status(job_id, "completed", progress=1.0, message="Calibration analysis completed", result_path=result_path)
+        logger.info(f"ROC calibration job {job_id} completed")
+    
+    def process_roc_full_eval_job(self, job: dict):
+        """Process full classifier evaluation job"""
+        from .tasks.roc_analysis import full_classifier_evaluation
+        
+        job_id = job["job_id"]
+        params = job["params"]
+        
+        logger.info(f"Processing ROC full eval job {job_id}")
+        self.update_job_status(job_id, "running", progress=0.1, message="Loading dataset...")
+        
+        df = self._load_dataset_from_job(job)
+        
+        self.update_job_status(job_id, "running", progress=0.3, message="Running full classifier evaluation...")
+        
+        y_true = df[params["y_true_col"]].values
+        y_scores = df[params["y_score_col"]].values
+        
+        result = full_classifier_evaluation(
+            y_true=y_true,
+            y_scores=y_scores,
+            model_name=params.get("model_name", "Model"),
+        )
+        
+        self.update_job_status(job_id, "running", progress=0.8, message="Saving results...")
+        
+        result_path = self.save_report(job_id, result, format="json")
+        
+        self.update_job_status(job_id, "completed", progress=1.0, message="Full evaluation completed", result_path=result_path)
+        logger.info(f"ROC full eval job {job_id} completed")
+    
+    def process_roc_compare_multiple_job(self, job: dict):
+        """Process multiple models comparison job"""
+        from .tasks.roc_analysis import compare_multiple_models
+        
+        job_id = job["job_id"]
+        params = job["params"]
+        
+        logger.info(f"Processing ROC compare multiple job {job_id}")
+        self.update_job_status(job_id, "running", progress=0.1, message="Loading dataset...")
+        
+        df = self._load_dataset_from_job(job)
+        
+        self.update_job_status(job_id, "running", progress=0.4, message="Comparing multiple models...")
+        
+        y_true = df[params["y_true_col"]].values
+        model_columns = params["model_columns"]
+        models = {name: df[col].values for name, col in model_columns.items()}
+        
+        result = compare_multiple_models(
+            y_true=y_true,
+            models=models,
+            correction=params.get("correction", "bonferroni"),
+            alpha=params.get("alpha", 0.05),
+        )
+        
+        self.update_job_status(job_id, "running", progress=0.8, message="Saving results...")
+        
+        result_path = self.save_report(job_id, result, format="json")
+        
+        self.update_job_status(job_id, "completed", progress=1.0, message="Multi-model comparison completed", result_path=result_path)
+        logger.info(f"ROC compare multiple job {job_id} completed")
+    
+    def process_roc_threshold_analysis_job(self, job: dict):
+        """Process interactive threshold analysis job"""
+        from .tasks.roc_analysis import threshold_analysis
+        
+        job_id = job["job_id"]
+        params = job["params"]
+        
+        logger.info(f"Processing ROC threshold analysis job {job_id}")
+        self.update_job_status(job_id, "running", progress=0.1, message="Loading dataset...")
+        
+        df = self._load_dataset_from_job(job)
+        
+        self.update_job_status(job_id, "running", progress=0.4, message="Analyzing thresholds...")
+        
+        y_true = df[params["y_true_col"]].values
+        y_scores = df[params["y_score_col"]].values
+        
+        result = threshold_analysis(
+            y_true=y_true,
+            y_scores=y_scores,
+            target_metric=params.get("target_metric"),
+            target_value=params.get("target_value"),
+            n_thresholds=params.get("n_thresholds", 21),
+        )
+        
+        self.update_job_status(job_id, "running", progress=0.8, message="Saving results...")
+        
+        result_path = self.save_report(job_id, result, format="json")
+        
+        self.update_job_status(job_id, "completed", progress=1.0, message="Threshold analysis completed", result_path=result_path)
+        logger.info(f"ROC threshold analysis job {job_id} completed")
+    
+    def process_roc_publication_report_job(self, job: dict):
+        """Process publication report generation job"""
+        from .tasks.roc_analysis import generate_publication_report
+        
+        job_id = job["job_id"]
+        params = job["params"]
+        
+        logger.info(f"Processing ROC publication report job {job_id}")
+        self.update_job_status(job_id, "running", progress=0.1, message="Loading dataset...")
+        
+        df = self._load_dataset_from_job(job)
+        
+        self.update_job_status(job_id, "running", progress=0.4, message="Generating publication report...")
+        
+        y_true = df[params["y_true_col"]].values
+        y_scores = df[params["y_score_col"]].values
+        
+        result = generate_publication_report(
+            y_true=y_true,
+            y_scores=y_scores,
+            model_name=params.get("model_name", "The prediction model"),
+            outcome_name=params.get("outcome_name", "the outcome"),
+            threshold_method=params.get("threshold_method", "youden"),
+            decimal_places=params.get("decimal_places", 2),
+        )
+        
+        self.update_job_status(job_id, "running", progress=0.8, message="Saving results...")
+        
+        result_path = self.save_report(job_id, result, format="json")
+        
+        self.update_job_status(job_id, "completed", progress=1.0, message="Publication report generated", result_path=result_path)
+        logger.info(f"ROC publication report job {job_id} completed")
+
+    # =========================================================================
+    # Helper Methods
+    # =========================================================================
+    
+    def _load_dataset_from_job(self, job: dict) -> pd.DataFrame:
+        """Load dataset from job - handles CSV content or MinIO path"""
+        params = job.get("params", {})
+        
+        # Check for direct CSV content first
+        csv_content = params.get("csv_content")
+        if csv_content:
+            return pd.read_csv(BytesIO(csv_content.encode('utf-8')))
+        
+        # Then check for MinIO path
+        minio_path = job.get("minio_path") or params.get("minio_path")
+        if minio_path:
+            return self.load_dataset_by_path(minio_path)
+        
+        # Finally check for dataset_id
+        dataset_id = job.get("dataset_id") or params.get("dataset_id")
+        if dataset_id:
+            return self.load_dataset(dataset_id)
+        
+        raise ValueError("No csv_content, minio_path, or dataset_id provided")
     
     def process_job(self, job: dict):
         """Process a single job"""
@@ -463,6 +1063,7 @@ class StatsWorker:
         job_id = job.get("job_id")
         
         try:
+            # Core analysis jobs
             if job_type == "eda":
                 self.process_eda_job(job)
             elif job_type == "tableone":
@@ -471,6 +1072,47 @@ class StatsWorker:
                 self.process_auto_analyze_job(job)
             elif job_type == "auto_analyze_direct":
                 self.process_auto_analyze_direct_job(job)
+            
+            # Propensity score analysis jobs
+            elif job_type == "propensity_estimate":
+                self.process_propensity_estimate_job(job)
+            elif job_type == "propensity_match":
+                self.process_propensity_match_job(job)
+            elif job_type == "propensity_effect":
+                self.process_propensity_effect_job(job)
+            elif job_type == "propensity_balance":
+                self.process_propensity_balance_job(job)
+            elif job_type == "propensity_full":
+                self.process_propensity_full_job(job)
+            
+            # Survival analysis jobs
+            elif job_type == "kaplan_meier":
+                self.process_kaplan_meier_job(job)
+            elif job_type == "cox_regression":
+                self.process_cox_regression_job(job)
+            elif job_type == "survival_compare":
+                self.process_survival_compare_job(job)
+            elif job_type == "survival_summary":
+                self.process_survival_summary_job(job)
+            
+            # ROC analysis jobs
+            elif job_type == "roc_compute":
+                self.process_roc_compute_job(job)
+            elif job_type == "roc_compare":
+                self.process_roc_compare_job(job)
+            elif job_type == "roc_threshold":
+                self.process_roc_threshold_job(job)
+            elif job_type == "roc_calibration":
+                self.process_roc_calibration_job(job)
+            elif job_type == "roc_full_eval":
+                self.process_roc_full_eval_job(job)
+            elif job_type == "roc_compare_multiple":
+                self.process_roc_compare_multiple_job(job)
+            elif job_type == "roc_threshold_analysis":
+                self.process_roc_threshold_analysis_job(job)
+            elif job_type == "roc_publication_report":
+                self.process_roc_publication_report_job(job)
+            
             else:
                 raise ValueError(f"Unknown job type: {job_type}")
                 
