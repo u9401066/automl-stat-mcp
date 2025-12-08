@@ -1,53 +1,81 @@
 # Product Context
 
-Describe the product.
-
 ## Overview
 
-Provide a high-level overview of the project.
+AutoML MCP System - 透過 MCP 讓 AI Agent 使用的自動機器學習與統計分析系統。
+
+## 🎯 核心設計原則
+
+**Agent 只負責四件事：**
+1. **傳入檔案路徑** - 告訴系統資料在哪裡
+2. **建立工單** - 設定要做什麼任務（含參數）
+3. **查詢狀態** - 檢查工單執行進度
+4. **取得結果連結** - 獲取輸出（模型/報告/圖片）
+
+**系統內部負責所有其他事情：**
+- ❌ Agent 不需要讀取檔案內容
+- ❌ Agent 不需要計算統計數值
+- ❌ Agent 不需要處理資料清理
+- ❌ Agent 不需要管理模型訓練過程
 
 ## Core Features
 
-- Feature 1
-- Feature 2
+- 🤖 AutoML 訓練 - 自動模型選擇 (AutoGluon)
+- 📊 統計分析 - TableOne、EDA、自動分析
+- 📁 檔案參考 - Agent 只傳路徑，系統處理一切
+- 🔌 MCP 整合 - AI Agent 直接呼叫
 
 ## Technical Stack
 
-- Tech 1
-- Tech 2
+- **Backend**: FastAPI, Redis, MinIO
+- **ML Engine**: AutoGluon 1.3.1
+- **Stats**: tableone, scipy, statsmodels, ydata-profiling
+- **MCP**: FastMCP (SSE transport)
+- **Deployment**: Docker Compose
 
-## Project Description
+## 標準工作流程
 
-Multi-user AutoML and Statistical Analysis system with 83 MCP tools accessible via AI Agents
+```
+User: "用 titanic.csv 預測 survived"
 
+Agent:
+1. list_available_files() → 確認檔案存在
+2. upload_dataset(file_path, name) → 取得 dataset_id
+3. submit_automl_job(dataset_id, target) → 取得 job_id
+4. get_job_status(job_id) → 等待完成
+5. get_job_result(job_id) → 取得結果連結
 
+Agent: "訓練完成！最佳模型達到 87% AUC。"
+```
 
-AutoML MCP Server - 基於 DDD 架構的自動化機器學習平台，透過 MCP 提供 AI 助手整合介面，包含 20 個工具 (15 個基礎 + 5 個智能 Orchestration)
+## 精簡工具清單
 
+| 工具 | 用途 |
+|------|------|
+| `health_check` | 服務健康檢查 |
+| `list_available_files` | 列出可用檔案 |
+| `upload_dataset` | 註冊資料集 → dataset_id |
+| `submit_automl_job` | ML 訓練工單 → job_id |
+| `submit_tableone_job` | 統計分析工單 → job_id |
+| `get_job_status` | 查詢工單狀態 |
+| `get_stats_job_result` | 取得統計結果 |
+| `get_model_leaderboard` | 取得模型排行 |
 
+## 架構
 
-AutoML MCP Server - \u57fa\u65bc DDD \u67b6\u69cb\u7684\u81ea\u52d5\u5316\u6a5f\u5668\u5b78\u7fd2\u5e73\u53f0\uff0c\u900f\u904e MCP (Model Context Protocol) \u63d0\u4f9b AI \u52a9\u624b\u6574\u5408\u4ecb\u9762
-
-
-
-Multi-user AutoML system accessible via AI Agents through MCP. Users can submit ML training jobs, compare algorithms, and make predictions through natural language with AI agents.
-
-
-
-多用戶 AutoML + 統計分析服務系統。
-- AutoML：使用 AutoGluon（Python），支援自動搜索、指定算法、比較算法
-- 統計分析：使用 tableone + pingouin + ydata-profiling
-- 兩個獨立 Docker 服務 + 兩個 MCP Server
-- Agent 上傳檔案到 MinIO，MCP Server 驗證並轉發請求
-- 非同步任務 + WebSocket 推送結果
-- User/Session 資源隔離
-
-
-
-多用戶 AutoML 服務系統。Agent 上傳檔案到 MinIO，透過 MCP Server 呼叫 AutoML 訓練和預測。支援非同步訓練 + WebSocket 進度推送，User/Session 資源隔離。
-
-
-
+```
+AI Agent
+   │
+   ▼ (只傳路徑+建工單+查狀態+拿結果)
+MCP Server (8002)
+   │
+   ├─→ AutoML Service (8001) → AutoML Worker
+   │
+   └─→ Stats Service (8003) → Stats Worker
+                │
+                ▼
+        Redis + MinIO
+```
 多用戶 AutoML 服務系統，透過 MCP Server 暴露 AutoML 功能給 AI Agents 使用。Agents 代表用戶上傳資料、訓練模型、執行預測，並將結果返回給用戶進行討論。
 
 

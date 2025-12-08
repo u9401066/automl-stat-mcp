@@ -1,50 +1,63 @@
 # Active Context
 
-## Current Status (2025-12-08)
+## Current Status (2025-01-13)
 
-### 🎯 平台狀態: v1.1 Production Ready
+### 🎯 平台狀態: v2.0 架構重構中
 
-**已完成:**
-- ✅ AutoML 核心平台 (26 MCP 工具)
-- ✅ 統計分析服務 (57 MCP 工具)
-- ✅ 智能工作流 (3 MCP 工具)
-- ✅ 檔案上傳工具 (3 MCP 工具) - NEW
-- ✅ Phase 1-6 統計分析
-- ✅ 企業級 HTTPS 部署
-- ✅ E2E 測試全部通過 (5/5)
+**核心設計原則 (重要!):**
 
-### 📋 最近完成項目 (2025-12-08)
+> **Agent 只負責四件事：**
+> 1. 傳入檔案路徑
+> 2. 建立工單（含參數設定）
+> 3. 查詢工單狀態
+> 4. 取得輸出連結
+>
+> **所有資料處理、計算、轉換都是 AutoML 系統內部的事！**
 
-1. **MCP 檔案上傳架構重構**
-   - Volume Mount：本地檔案直接掛載到容器
-   - 雙儲存模式：temporary (Redis) / permanent (MinIO)
-   - 新增 `upload_tools.py` (list_available_files, upload_dataset, get_upload_help)
+### ✅ 已完成
 
-2. **Bug Fixes**
-   - stats-worker dataset_id KeyError 修復
-   - TableOne tuple key JSON 序列化修復
+1. **架構文件重構** (2025-01-13)
+   - `docs/AGENT_WORKFLOW.md` - Agent 工作流設計
+   - `docs/MCP_TOOLS_INVENTORY.md` - 工具盤點
+   - `README.md` - 簡化為 18 核心工具
+   - `memory-bank/productContext.md` - 架構原則
 
-### 📋 下一步優先項目
+2. **核心功能**
+   - AutoML 訓練（提交 → 等待 → 取結果）
+   - 統計分析（TableOne, EDA, Auto-Analyze）
+   - E2E 測試全部通過 (5/5)
 
-1. **Upload Tools 完善**
-   - MinIO 直接上傳整合
-   - 大檔案分片上傳
+### ⚠️ 已知問題
 
-2. **Design Issue #001 待決策**
-   - Data Cleaning Workflow
-   - PII 處理策略
+**MCP 工具架構問題：**
+- ~30 個工具返回 "Module not available"
+- 原因：MCP 容器無法 import stats-worker 的模組
+- 影響：Propensity、Survival、ROC、Power Analysis
+- 解決方案：新增 stats-service API endpoints
+
+### 📋 下一步
+
+1. **修復 stats-service API**
+   - 新增 `/propensity/*` endpoints
+   - 新增 `/survival/*` endpoints
+   - 新增 `/roc/*` endpoints
+   - 新增 `/power/*` endpoints
+
+2. **簡化 MCP 工具註冊**
+   - 移除無法運作的工具
+   - 只保留 18 核心工具
 
 ## Current Goals
 
-建立完整的臨床研究統計分析能力，讓 AI Agent 能夠：
-1. 一鍵完成資料分析到模型訓練
-2. 生成發表品質的統計報告
-3. 提供臨床決策支援 (閾值選擇、模型比較)
-4. 透過 Volume Mount 高效處理本地檔案
+精簡 Agent 職責，確保 Agent 只做：
+1. 傳檔案路徑
+2. 建工單
+3. 查狀態
+4. 拿結果
 
 ## Current Blockers
 
-- 無阻塞問題
+- stats-service 缺少部分 API endpoints
 
 ## References
 
