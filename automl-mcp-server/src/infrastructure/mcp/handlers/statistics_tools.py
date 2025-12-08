@@ -9,7 +9,7 @@ Provides statistical analysis capabilities through the Stats Service:
 """
 import logging
 import time
-from typing import Optional, List
+from typing import Any, Dict, Optional, List
 
 from mcp.server.fastmcp import FastMCP
 
@@ -3119,7 +3119,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
     
     # ==================== PHASE 6.3: SURVIVAL ANALYSIS POWER ====================
     
-    @server.tool()
+    @mcp.tool()
     async def calculate_survival_events(
         hazard_ratio: float,
         alpha: float = 0.05,
@@ -3171,7 +3171,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         except Exception as e:
             return {"status": "error", "error": str(e)}
     
-    @server.tool()
+    @mcp.tool()
     async def calculate_survival_sample_size(
         hazard_ratio: float,
         alpha: float = 0.05,
@@ -3236,7 +3236,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         except Exception as e:
             return {"status": "error", "error": str(e)}
     
-    @server.tool()
+    @mcp.tool()
     async def calculate_survival_power(
         hazard_ratio: float,
         n_events: int = None,
@@ -3292,7 +3292,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         except Exception as e:
             return {"status": "error", "error": str(e)}
     
-    @server.tool()
+    @mcp.tool()
     async def calculate_survival_from_medians(
         median_control: float,
         median_treatment: float,
@@ -3361,7 +3361,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         except Exception as e:
             return {"status": "error", "error": str(e)}
     
-    @server.tool()
+    @mcp.tool()
     async def convert_hazard_ratio_to_log(
         hazard_ratio: float,
     ) -> Dict[str, Any]:
