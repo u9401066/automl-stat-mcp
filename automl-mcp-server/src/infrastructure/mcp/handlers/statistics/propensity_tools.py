@@ -11,12 +11,7 @@ Tools:
     - assess_covariate_balance: Check balance after adjustment
     - run_propensity_analysis: Complete PS analysis workflow
 """
-import base64
-from io import StringIO
 from typing import List, Optional
-
-import numpy as np
-import pandas as pd
 
 from .base import logger
 
@@ -63,20 +58,15 @@ def register_propensity_tools(mcp, stats_client):
             overlap_region: Common support range
         """
         try:
-            if is_base64:
-                csv_content = base64.b64decode(csv_content).decode('utf-8')
-            df = pd.read_csv(StringIO(csv_content))
-            
-            from .stats_worker_tasks import estimate_propensity_scores as _estimate_ps
-            
-            result = _estimate_ps(
-                df, treatment_col, covariates, regularization
+            # Submit job to stats-service API
+            result = await stats_client.submit_propensity_estimate_job(
+                csv_content=csv_content,
+                treatment_col=treatment_col,
+                covariates=covariates,
+                regularization=regularization,
+                is_base64=is_base64,
             )
-            
             return result
-            
-        except ImportError:
-            return {"status": "error", "error": "Propensity score module not available"}
         except Exception as e:
             logger.error(f"estimate_propensity_scores error: {e}")
             return {"status": "error", "error": str(e)}
@@ -122,21 +112,19 @@ def register_propensity_tools(mcp, stats_client):
             matched_control_indices: Row indices of matched controls
         """
         try:
-            if is_base64:
-                csv_content = base64.b64decode(csv_content).decode('utf-8')
-            df = pd.read_csv(StringIO(csv_content))
-            
-            from .stats_worker_tasks import match_propensity_scores as _match_ps
-            
-            result = _match_ps(
-                df, treatment_col, score_col, covariates,
-                method, caliper, caliper_scale, replacement
+            # Submit job to stats-service API
+            result = await stats_client.submit_propensity_match_job(
+                csv_content=csv_content,
+                treatment_col=treatment_col,
+                covariates=covariates,
+                score_col=score_col,
+                method=method,
+                caliper=caliper,
+                caliper_scale=caliper_scale,
+                replacement=replacement,
+                is_base64=is_base64,
             )
-            
             return result
-            
-        except ImportError:
-            return {"status": "error", "error": "Propensity score module not available"}
         except Exception as e:
             logger.error(f"match_propensity_scores error: {e}")
             return {"status": "error", "error": str(e)}
@@ -183,21 +171,19 @@ def register_propensity_tools(mcp, stats_client):
             significant: Whether effect is significant at α=0.05
         """
         try:
-            if is_base64:
-                csv_content = base64.b64decode(csv_content).decode('utf-8')
-            df = pd.read_csv(StringIO(csv_content))
-            
-            from .stats_worker_tasks import estimate_treatment_effect as _estimate_te
-            
-            result = _estimate_te(
-                df, outcome_col, treatment_col, score_col,
-                covariates, method, target, stabilized
+            # Submit job to stats-service API
+            result = await stats_client.submit_propensity_effect_job(
+                csv_content=csv_content,
+                outcome_col=outcome_col,
+                treatment_col=treatment_col,
+                covariates=covariates,
+                score_col=score_col,
+                method=method,
+                target=target,
+                stabilized=stabilized,
+                is_base64=is_base64,
             )
-            
             return result
-            
-        except ImportError:
-            return {"status": "error", "error": "Propensity score module not available"}
         except Exception as e:
             logger.error(f"estimate_treatment_effect error: {e}")
             return {"status": "error", "error": str(e)}
@@ -237,22 +223,16 @@ def register_propensity_tools(mcp, stats_client):
             balance_achieved: Whether all covariates balanced
         """
         try:
-            if is_base64:
-                csv_content = base64.b64decode(csv_content).decode('utf-8')
-            df = pd.read_csv(StringIO(csv_content))
-            
-            from .stats_worker_tasks import assess_balance
-            
-            weights_arr = np.array(weights) if weights else None
-            
-            result = assess_balance(
-                df, treatment_col, covariates, weights_arr, smd_threshold
+            # Submit job to stats-service API
+            result = await stats_client.submit_propensity_balance_job(
+                csv_content=csv_content,
+                treatment_col=treatment_col,
+                covariates=covariates,
+                weights=weights,
+                smd_threshold=smd_threshold,
+                is_base64=is_base64,
             )
-            
             return result
-            
-        except ImportError:
-            return {"status": "error", "error": "Propensity score module not available"}
         except Exception as e:
             logger.error(f"assess_covariate_balance error: {e}")
             return {"status": "error", "error": str(e)}
@@ -300,21 +280,18 @@ def register_propensity_tools(mcp, stats_client):
             treatment_effect: Effect estimate with CI and p-value
         """
         try:
-            if is_base64:
-                csv_content = base64.b64decode(csv_content).decode('utf-8')
-            df = pd.read_csv(StringIO(csv_content))
-            
-            from .stats_worker_tasks import propensity_score_analysis
-            
-            result = propensity_score_analysis(
-                df, outcome_col, treatment_col, covariates,
-                method, target, caliper
+            # Submit job to stats-service API
+            result = await stats_client.submit_propensity_full_job(
+                csv_content=csv_content,
+                outcome_col=outcome_col,
+                treatment_col=treatment_col,
+                covariates=covariates,
+                method=method,
+                target=target,
+                caliper=caliper,
+                is_base64=is_base64,
             )
-            
             return result
-            
-        except ImportError:
-            return {"status": "error", "error": "Propensity score module not available"}
         except Exception as e:
             logger.error(f"run_propensity_analysis error: {e}")
             return {"status": "error", "error": str(e)}

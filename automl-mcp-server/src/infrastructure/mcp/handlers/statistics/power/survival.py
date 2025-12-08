@@ -47,16 +47,16 @@ def register_survival_power_tools(mcp, stats_client):
             calculate_survival_events(hazard_ratio=0.7, power=0.80)
         """
         try:
-            from ..stats_worker_tasks import calculate_survival_events as _calc
-            return _calc(
+            # Submit job to stats-service API
+            result = await stats_client.calculate_survival_power(
+                calculation_type="events",
                 hazard_ratio=hazard_ratio,
                 alpha=alpha,
                 power=power,
                 allocation_ratio=allocation_ratio,
                 alternative=alternative,
             )
-        except ImportError:
-            return {"status": "error", "error": "Survival power analysis module not available"}
+            return result
         except Exception as e:
             logger.error(f"calculate_survival_events error: {e}")
             return {"status": "error", "error": str(e)}
@@ -95,8 +95,9 @@ def register_survival_power_tools(mcp, stats_client):
             calculate_survival_sample_size(hazard_ratio=0.65, prob_event=0.70)
         """
         try:
-            from ..stats_worker_tasks import calculate_survival_sample_size as _calc
-            return _calc(
+            # Submit job to stats-service API
+            result = await stats_client.calculate_survival_power(
+                calculation_type="sample_size",
                 hazard_ratio=hazard_ratio,
                 alpha=alpha,
                 power=power,
@@ -106,8 +107,7 @@ def register_survival_power_tools(mcp, stats_client):
                 accrual_time=accrual_time,
                 follow_up_time=follow_up_time,
             )
-        except ImportError:
-            return {"status": "error", "error": "Survival power analysis module not available"}
+            return result
         except Exception as e:
             logger.error(f"calculate_survival_sample_size error: {e}")
             return {"status": "error", "error": str(e)}
@@ -143,8 +143,9 @@ def register_survival_power_tools(mcp, stats_client):
             calculate_survival_power(hazard_ratio=0.75, n_events=200)
         """
         try:
-            from ..stats_worker_tasks import calculate_survival_power as _calc
-            return _calc(
+            # Submit job to stats-service API
+            result = await stats_client.calculate_survival_power(
+                calculation_type="power",
                 hazard_ratio=hazard_ratio,
                 n_events=n_events,
                 total_n=total_n,
@@ -153,8 +154,7 @@ def register_survival_power_tools(mcp, stats_client):
                 allocation_ratio=allocation_ratio,
                 alternative=alternative,
             )
-        except ImportError:
-            return {"status": "error", "error": "Survival power analysis module not available"}
+            return result
         except Exception as e:
             logger.error(f"calculate_survival_power error: {e}")
             return {"status": "error", "error": str(e)}
@@ -200,8 +200,9 @@ def register_survival_power_tools(mcp, stats_client):
             )
         """
         try:
-            from ..stats_worker_tasks import calculate_survival_from_medians as _calc
-            return _calc(
+            # Submit job to stats-service API
+            result = await stats_client.calculate_survival_power(
+                calculation_type="from_medians",
                 median_control=median_control,
                 median_treatment=median_treatment,
                 alpha=alpha,
@@ -211,8 +212,7 @@ def register_survival_power_tools(mcp, stats_client):
                 allocation_ratio=allocation_ratio,
                 alternative=alternative,
             )
-        except ImportError:
-            return {"status": "error", "error": "Survival power analysis module not available"}
+            return result
         except Exception as e:
             logger.error(f"calculate_survival_from_medians error: {e}")
             return {"status": "error", "error": str(e)}

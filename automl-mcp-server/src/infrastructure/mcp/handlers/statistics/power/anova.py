@@ -55,10 +55,10 @@ def register_anova_power_tools(mcp, stats_client):
             calculate_anova_sample_size(effect_size=0.25, k_groups=3)
             # Returns: n_per_group=52, total=156
         """
-        from ..stats_worker_tasks import ANOVAPowerAnalysis
-        
         try:
-            result = ANOVAPowerAnalysis.calculate_sample_size(
+            # Submit job to stats-service API
+            result = await stats_client.calculate_anova_power(
+                calculation_type="sample_size",
                 effect_size=effect_size,
                 k_groups=k_groups,
                 alpha=alpha,
@@ -67,9 +67,7 @@ def register_anova_power_tools(mcp, stats_client):
                 pooled_sd=pooled_sd,
                 eta_squared=eta_squared,
             )
-            return result.to_dict()
-        except ImportError:
-            return {"status": "error", "error": "ANOVA power analysis module not available"}
+            return result
         except Exception as e:
             logger.error(f"calculate_anova_sample_size error: {e}")
             return {"status": "error", "error": str(e)}
@@ -101,10 +99,10 @@ def register_anova_power_tools(mcp, stats_client):
             interpretation: Adequacy assessment
             recommendations: Suggestions if underpowered
         """
-        from ..stats_worker_tasks import ANOVAPowerAnalysis
-        
         try:
-            result = ANOVAPowerAnalysis.calculate_power(
+            # Submit job to stats-service API
+            result = await stats_client.calculate_anova_power(
+                calculation_type="power",
                 n_per_group=n_per_group,
                 effect_size=effect_size,
                 k_groups=k_groups,
@@ -113,9 +111,7 @@ def register_anova_power_tools(mcp, stats_client):
                 pooled_sd=pooled_sd,
                 eta_squared=eta_squared,
             )
-            return result.to_dict()
-        except ImportError:
-            return {"status": "error", "error": "ANOVA power analysis module not available"}
+            return result
         except Exception as e:
             logger.error(f"calculate_anova_power error: {e}")
             return {"status": "error", "error": str(e)}
@@ -144,33 +140,16 @@ def register_anova_power_tools(mcp, stats_client):
         Example:
             calculate_anova_effect_size(group_means=[10, 12, 15], pooled_sd=5)
         """
-        from ..stats_worker_tasks import (
-            cohens_f_from_means,
-            cohens_f_from_eta_squared,
-            eta_squared_from_cohens_f,
-            interpret_effect_size,
-        )
-        
         try:
-            if eta_squared is not None:
-                f = cohens_f_from_eta_squared(eta_squared)
-                eta_sq = eta_squared
-            elif group_means is not None:
-                f = cohens_f_from_means(group_means, group_sds, pooled_sd)
-                eta_sq = eta_squared_from_cohens_f(f)
-            else:
-                return {"status": "error", "error": "Provide group_means or eta_squared"}
-            
-            interp = interpret_effect_size(f, "cohens_f")
-            
-            return {
-                "cohens_f": round(f, 4),
-                "eta_squared": round(eta_sq, 4),
-                "interpretation": interp,
-                "variance_explained": f"{eta_sq*100:.1f}%",
-            }
-        except ImportError:
-            return {"status": "error", "error": "Power analysis module not available"}
+            # Submit job to stats-service API
+            result = await stats_client.calculate_anova_power(
+                calculation_type="effect_size",
+                group_means=group_means,
+                pooled_sd=pooled_sd,
+                group_sds=group_sds,
+                eta_squared=eta_squared,
+            )
+            return result
         except Exception as e:
             logger.error(f"calculate_anova_effect_size error: {e}")
             return {"status": "error", "error": str(e)}
@@ -209,10 +188,10 @@ def register_anova_power_tools(mcp, stats_client):
         Example:
             calculate_chisquare_sample_size(effect_size=0.3, n_bins=4)
         """
-        from ..stats_worker_tasks import ChiSquarePowerAnalysis
-        
         try:
-            result = ChiSquarePowerAnalysis.calculate_sample_size(
+            # Submit job to stats-service API
+            result = await stats_client.calculate_chisquare_power(
+                calculation_type="sample_size",
                 effect_size=effect_size,
                 alpha=alpha,
                 power=power,
@@ -221,9 +200,7 @@ def register_anova_power_tools(mcp, stats_client):
                 n_rows=n_rows,
                 n_cols=n_cols,
             )
-            return result.to_dict()
-        except ImportError:
-            return {"status": "error", "error": "Chi-square power analysis module not available"}
+            return result
         except Exception as e:
             logger.error(f"calculate_chisquare_sample_size error: {e}")
             return {"status": "error", "error": str(e)}
@@ -254,10 +231,10 @@ def register_anova_power_tools(mcp, stats_client):
             power: Statistical power
             recommendations: Suggestions if underpowered
         """
-        from ..stats_worker_tasks import ChiSquarePowerAnalysis
-        
         try:
-            result = ChiSquarePowerAnalysis.calculate_power(
+            # Submit job to stats-service API
+            result = await stats_client.calculate_chisquare_power(
+                calculation_type="power",
                 n=n,
                 effect_size=effect_size,
                 alpha=alpha,
@@ -266,9 +243,7 @@ def register_anova_power_tools(mcp, stats_client):
                 n_rows=n_rows,
                 n_cols=n_cols,
             )
-            return result.to_dict()
-        except ImportError:
-            return {"status": "error", "error": "Chi-square power analysis module not available"}
+            return result
         except Exception as e:
             logger.error(f"calculate_chisquare_power error: {e}")
             return {"status": "error", "error": str(e)}
@@ -294,30 +269,14 @@ def register_anova_power_tools(mcp, stats_client):
                 observed_proportions=[0.10, 0.20, 0.30, 0.40]
             )
         """
-        from ..stats_worker_tasks import effect_size_w_from_proportions
-        
         try:
-            w = effect_size_w_from_proportions(observed_proportions, expected_proportions)
-            
-            if w < 0.1:
-                interp = "negligible"
-            elif w < 0.3:
-                interp = "small"
-            elif w < 0.5:
-                interp = "medium"
-            else:
-                interp = "large"
-            
-            return {
-                "cohens_w": round(w, 4),
-                "interpretation": interp,
-                "observed": observed_proportions,
-                "expected": expected_proportions or [1/len(observed_proportions)] * len(observed_proportions),
-                "n_categories": len(observed_proportions),
-                "df": len(observed_proportions) - 1,
-            }
-        except ImportError:
-            return {"status": "error", "error": "Power analysis module not available"}
+            # Submit job to stats-service API
+            result = await stats_client.calculate_chisquare_power(
+                calculation_type="effect_size",
+                observed_proportions=observed_proportions,
+                expected_proportions=expected_proportions,
+            )
+            return result
         except Exception as e:
             logger.error(f"calculate_chisquare_effect_size error: {e}")
             return {"status": "error", "error": str(e)}

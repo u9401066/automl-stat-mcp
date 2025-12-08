@@ -14,12 +14,8 @@ Tools:
     - interactive_threshold_analysis: Clinical threshold analysis
     - generate_roc_publication_report: Publication-ready report
 """
-import base64
 import json
-from io import StringIO
 from typing import List, Optional
-
-import pandas as pd
 
 from .base import logger
 
@@ -73,28 +69,18 @@ def register_roc_tools(mcp, stats_client):
             interpretation: Text description of model performance
         """
         try:
-            if is_base64:
-                csv_content = base64.b64decode(csv_content).decode('utf-8')
-            df = pd.read_csv(StringIO(csv_content))
-            
-            from .stats_worker_tasks import compute_roc_curve as _compute_roc
-            
-            y_true = df[y_true_col].values
-            y_score = df[y_score_col].values
-            
-            result = _compute_roc(
-                y_true=y_true,
-                y_score=y_score,
+            # Submit job to stats-service API
+            result = await stats_client.submit_roc_compute_job(
+                csv_content=csv_content,
+                y_true_col=y_true_col,
+                y_score_col=y_score_col,
                 pos_label=pos_label,
                 confidence_level=confidence_level,
                 n_bootstrap=n_bootstrap,
                 threshold_method=threshold_method,
+                is_base64=is_base64,
             )
-            
             return result
-            
-        except ImportError:
-            return {"status": "error", "error": "ROC analysis module not available"}
         except Exception as e:
             logger.error(f"compute_roc_curve error: {e}")
             return {"status": "error", "error": str(e)}
@@ -143,31 +129,16 @@ def register_roc_tools(mcp, stats_client):
             recommendation: Statistical interpretation
         """
         try:
-            if is_base64:
-                csv_content = base64.b64decode(csv_content).decode('utf-8')
-            df = pd.read_csv(StringIO(csv_content))
-            
-            from .stats_worker_tasks import compare_roc_curves as _compare_roc
-            
-            y_true = df[y_true_col].values
-            predictions = {
-                name: df[col].values 
-                for name, col in zip(
-                    model_names or model_score_cols, 
-                    model_score_cols
-                )
-            }
-            
-            result = _compare_roc(
-                y_true=y_true,
-                predictions=predictions,
+            # Submit job to stats-service API
+            result = await stats_client.submit_roc_compare_job(
+                csv_content=csv_content,
+                y_true_col=y_true_col,
+                model_score_cols=model_score_cols,
+                model_names=model_names,
                 method=method,
+                is_base64=is_base64,
             )
-            
             return result
-            
-        except ImportError:
-            return {"status": "error", "error": "ROC analysis module not available"}
         except Exception as e:
             logger.error(f"compare_roc_curves error: {e}")
             return {"status": "error", "error": str(e)}
@@ -223,30 +194,20 @@ def register_roc_tools(mcp, stats_client):
             threshold_range: Nearby thresholds and their metrics
         """
         try:
-            if is_base64:
-                csv_content = base64.b64decode(csv_content).decode('utf-8')
-            df = pd.read_csv(StringIO(csv_content))
-            
-            from .stats_worker_tasks import find_optimal_threshold as _find_threshold
-            
-            y_true = df[y_true_col].values
-            y_score = df[y_score_col].values
-            
-            result = _find_threshold(
-                y_true=y_true,
-                y_score=y_score,
+            # Submit job to stats-service API
+            result = await stats_client.submit_roc_threshold_job(
+                csv_content=csv_content,
+                y_true_col=y_true_col,
+                y_score_col=y_score_col,
                 method=method,
                 fp_cost=fp_cost,
                 fn_cost=fn_cost,
                 target_sensitivity=target_sensitivity,
                 target_specificity=target_specificity,
                 prevalence=prevalence,
+                is_base64=is_base64,
             )
-            
             return result
-            
-        except ImportError:
-            return {"status": "error", "error": "ROC analysis module not available"}
         except Exception as e:
             logger.error(f"find_optimal_threshold error: {e}")
             return {"status": "error", "error": str(e)}
@@ -300,26 +261,16 @@ def register_roc_tools(mcp, stats_client):
             recommendations: Calibration improvement suggestions
         """
         try:
-            if is_base64:
-                csv_content = base64.b64decode(csv_content).decode('utf-8')
-            df = pd.read_csv(StringIO(csv_content))
-            
-            from .stats_worker_tasks import analyze_calibration as _analyze_cal
-            
-            y_true = df[y_true_col].values
-            y_score = df[y_score_col].values
-            
-            result = _analyze_cal(
-                y_true=y_true,
-                y_score=y_score,
+            # Submit job to stats-service API
+            result = await stats_client.submit_roc_calibration_job(
+                csv_content=csv_content,
+                y_true_col=y_true_col,
+                y_score_col=y_score_col,
                 n_bins=n_bins,
                 strategy=strategy,
+                is_base64=is_base64,
             )
-            
             return result
-            
-        except ImportError:
-            return {"status": "error", "error": "ROC analysis module not available"}
         except Exception as e:
             logger.error(f"analyze_calibration error: {e}")
             return {"status": "error", "error": str(e)}
@@ -372,25 +323,15 @@ def register_roc_tools(mcp, stats_client):
             publication_text: Ready-to-use results paragraph
         """
         try:
-            if is_base64:
-                csv_content = base64.b64decode(csv_content).decode('utf-8')
-            df = pd.read_csv(StringIO(csv_content))
-            
-            from .stats_worker_tasks import full_classifier_evaluation as _full_eval
-            
-            y_true = df[y_true_col].values
-            y_score = df[y_score_col].values
-            
-            result = _full_eval(
-                y_true=y_true,
-                y_score=y_score,
+            # Submit job to stats-service API
+            result = await stats_client.submit_roc_full_eval_job(
+                csv_content=csv_content,
+                y_true_col=y_true_col,
+                y_score_col=y_score_col,
                 threshold=threshold,
+                is_base64=is_base64,
             )
-            
             return result
-            
-        except ImportError:
-            return {"status": "error", "error": "ROC analysis module not available"}
         except Exception as e:
             logger.error(f"full_classifier_evaluation error: {e}")
             return {"status": "error", "error": str(e)}
@@ -445,29 +386,19 @@ def register_roc_tools(mcp, stats_client):
             interpretation: Human-readable summary
         """
         try:
-            if is_base64:
-                csv_content = base64.b64decode(csv_content).decode('utf-8')
-            df = pd.read_csv(StringIO(csv_content))
-            
             # Parse model columns
             model_cols = json.loads(model_columns)
             
-            from .stats_worker_tasks import compare_multiple_models as _compare_multi
-            
-            y_true = df[y_true_col].values
-            models = {name: df[col].values for name, col in model_cols.items()}
-            
-            result = _compare_multi(
-                y_true=y_true,
-                models=models,
+            # Submit job to stats-service API
+            result = await stats_client.submit_roc_compare_multiple_job(
+                csv_content=csv_content,
+                y_true_col=y_true_col,
+                model_columns=model_cols,
                 correction=correction,
                 alpha=alpha,
+                is_base64=is_base64,
             )
-            
             return result
-            
-        except ImportError:
-            return {"status": "error", "error": "ROC analysis module not available"}
         except json.JSONDecodeError as e:
             return {"status": "error", "error": f"Invalid JSON for model_columns: {e}"}
         except Exception as e:
@@ -522,27 +453,17 @@ def register_roc_tools(mcp, stats_client):
             clinical_interpretation: Decision support text
         """
         try:
-            if is_base64:
-                csv_content = base64.b64decode(csv_content).decode('utf-8')
-            df = pd.read_csv(StringIO(csv_content))
-            
-            from .stats_worker_tasks import threshold_analysis as _threshold_analysis
-            
-            y_true = df[y_true_col].values
-            y_scores = df[y_score_col].values
-            
-            result = _threshold_analysis(
-                y_true=y_true,
-                y_scores=y_scores,
+            # Submit job to stats-service API
+            result = await stats_client.submit_roc_threshold_analysis_job(
+                csv_content=csv_content,
+                y_true_col=y_true_col,
+                y_score_col=y_score_col,
                 target_metric=target_metric,
                 target_value=target_value,
                 n_thresholds=n_thresholds,
+                is_base64=is_base64,
             )
-            
             return result
-            
-        except ImportError:
-            return {"status": "error", "error": "ROC analysis module not available"}
         except Exception as e:
             logger.error(f"interactive_threshold_analysis error: {e}")
             return {"status": "error", "error": str(e)}
@@ -602,28 +523,18 @@ def register_roc_tools(mcp, stats_client):
             all_metrics: Complete metrics dictionary
         """
         try:
-            if is_base64:
-                csv_content = base64.b64decode(csv_content).decode('utf-8')
-            df = pd.read_csv(StringIO(csv_content))
-            
-            from .stats_worker_tasks import generate_publication_report as _gen_report
-            
-            y_true = df[y_true_col].values
-            y_scores = df[y_score_col].values
-            
-            result = _gen_report(
-                y_true=y_true,
-                y_scores=y_scores,
+            # Submit job to stats-service API
+            result = await stats_client.submit_roc_publication_report_job(
+                csv_content=csv_content,
+                y_true_col=y_true_col,
+                y_score_col=y_score_col,
                 model_name=model_name,
                 outcome_name=outcome_name,
                 threshold_method=threshold_method,
                 decimal_places=decimal_places,
+                is_base64=is_base64,
             )
-            
             return result
-            
-        except ImportError:
-            return {"status": "error", "error": "ROC analysis module not available"}
         except Exception as e:
             logger.error(f"generate_roc_publication_report error: {e}")
             return {"status": "error", "error": str(e)}

@@ -10,11 +10,7 @@ Tools:
     - compare_survival: Compare survival curves
     - survival_data_summary: Summary statistics for survival data
 """
-import base64
-from io import StringIO
 from typing import List, Optional
-
-import pandas as pd
 
 from .base import logger
 
@@ -57,30 +53,17 @@ def register_survival_tools(mcp, stats_client):
             survival_at_times: Survival probability at specified times
         """
         try:
-            if is_base64:
-                csv_content = base64.b64decode(csv_content).decode('utf-8')
-            df = pd.read_csv(StringIO(csv_content))
-            
-            from .stats_worker_tasks import kaplan_meier_analysis, survival_summary
-            
-            # Get KM analysis
-            km_result = kaplan_meier_analysis(
-                df, time_col, event_col, group_col, alpha
+            # Submit job to stats-service API
+            result = await stats_client.submit_kaplan_meier_job(
+                csv_content=csv_content,
+                time_col=time_col,
+                event_col=event_col,
+                group_col=group_col,
+                time_points=time_points,
+                alpha=alpha,
+                is_base64=is_base64,
             )
-            
-            # Get summary with time points
-            summary = survival_summary(
-                df, time_col, event_col, group_col, time_points
-            )
-            
-            return {
-                "status": "success",
-                **km_result,
-                "summary": summary,
-            }
-            
-        except ImportError:
-            return {"status": "error", "error": "Survival analysis module not available"}
+            return result
         except Exception as e:
             logger.error(f"kaplan_meier_survival error: {e}")
             return {"status": "error", "error": str(e)}
@@ -121,20 +104,16 @@ def register_survival_tools(mcp, stats_client):
             global_tests: Wald test, likelihood ratio test
         """
         try:
-            if is_base64:
-                csv_content = base64.b64decode(csv_content).decode('utf-8')
-            df = pd.read_csv(StringIO(csv_content))
-            
-            from .stats_worker_tasks import cox_regression
-            
-            result = cox_regression(
-                df, time_col, event_col, covariates, alpha
+            # Submit job to stats-service API
+            result = await stats_client.submit_cox_regression_job(
+                csv_content=csv_content,
+                time_col=time_col,
+                event_col=event_col,
+                covariates=covariates,
+                alpha=alpha,
+                is_base64=is_base64,
             )
-            
-            return {"status": "success", **result}
-            
-        except ImportError:
-            return {"status": "error", "error": "Survival analysis module not available"}
+            return result
         except Exception as e:
             logger.error(f"cox_proportional_hazards error: {e}")
             return {"status": "error", "error": str(e)}
@@ -175,20 +154,15 @@ def register_survival_tools(mcp, stats_client):
             conclusion: Interpretation of results
         """
         try:
-            if is_base64:
-                csv_content = base64.b64decode(csv_content).decode('utf-8')
-            df = pd.read_csv(StringIO(csv_content))
-            
-            from .stats_worker_tasks import compare_survival_curves
-            
-            result = compare_survival_curves(
-                df, time_col, event_col, group_col
+            # Submit job to stats-service API
+            result = await stats_client.submit_survival_compare_job(
+                csv_content=csv_content,
+                time_col=time_col,
+                event_col=event_col,
+                group_col=group_col,
+                is_base64=is_base64,
             )
-            
-            return {"status": "success", **result}
-            
-        except ImportError:
-            return {"status": "error", "error": "Survival analysis module not available"}
+            return result
         except Exception as e:
             logger.error(f"compare_survival error: {e}")
             return {"status": "error", "error": str(e)}
@@ -227,20 +201,16 @@ def register_survival_tools(mcp, stats_client):
             by_group: Statistics per group (if grouped)
         """
         try:
-            if is_base64:
-                csv_content = base64.b64decode(csv_content).decode('utf-8')
-            df = pd.read_csv(StringIO(csv_content))
-            
-            from .stats_worker_tasks import survival_summary
-            
-            result = survival_summary(
-                df, time_col, event_col, group_col, time_points
+            # Submit job to stats-service API
+            result = await stats_client.submit_survival_summary_job(
+                csv_content=csv_content,
+                time_col=time_col,
+                event_col=event_col,
+                group_col=group_col,
+                time_points=time_points,
+                is_base64=is_base64,
             )
-            
-            return {"status": "success", **result}
-            
-        except ImportError:
-            return {"status": "error", "error": "Survival analysis module not available"}
+            return result
         except Exception as e:
             logger.error(f"survival_data_summary error: {e}")
             return {"status": "error", "error": str(e)}
