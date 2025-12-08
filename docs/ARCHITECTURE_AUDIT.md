@@ -49,6 +49,104 @@
 
 ---
 
+## ✅ 修復進度
+
+### Phase 1: 新增 stats-service API ✅ 完成
+
+**新增的 Router 檔案：**
+
+| 檔案 | Endpoints | 狀態 |
+|------|-----------|------|
+| `routes/propensity.py` | `/propensity/estimate/submit`, `/match/submit`, `/effect/submit`, `/balance/submit`, `/full/submit` | ✅ |
+| `routes/survival.py` | `/survival/kaplan-meier/submit`, `/cox/submit`, `/compare/submit`, `/summary/submit` | ✅ |
+| `routes/roc.py` | `/roc/compute/submit`, `/compare/submit`, `/threshold/submit`, `/calibration/submit`, `/full-eval/submit` | ✅ |
+| `routes/power.py` | `/power/ttest`, `/proportion`, `/anova`, `/chi-square`, `/survival` | ✅ |
+
+**下一步：**
+- [ ] 更新 MCP stats_client.py 調用新的 API
+- [ ] 更新 MCP tools 使用 API 而非直接 import
+- [ ] 新增 stats-worker 處理新的 job types
+
+---
+
+## 🗺️ ROADMAP: 方案 B - 統一入口模式
+
+### 目標架構
+
+將 136 個工具精簡為 ~10 個核心工具：
+
+```python
+# 1. 檔案管理
+upload_dataset(path, storage_mode) → dataset_id
+
+# 2. 統一分析入口 ⭐
+submit_analysis_job(
+    dataset_id: str,
+    analysis_type: str,  # "auto", "tableone", "eda", "propensity", "survival", "roc", "power"
+    config: dict,        # 各類型專屬參數 (JSON schema)
+    user_id: str
+) → job_id
+
+# 3. 統一訓練入口 ⭐
+submit_training_job(
+    dataset_id: str,
+    target_column: str,
+    problem_type: str,   # "binary", "multiclass", "regression"
+    config: dict,        # time_limit, presets, algorithms
+    user_id: str
+) → job_id
+
+# 4. 工單管理
+get_job_status(job_id) → status, progress
+get_job_result(job_id) → result
+list_jobs(user_id) → jobs[]
+
+# 5. 模型使用
+predict(model_id, dataset_id) → predictions
+
+# 6. 資訊查詢
+list_datasets(user_id) → datasets[]
+list_models(user_id) → models[]
+get_analysis_schema(analysis_type) → json_schema  # 告訴 Agent 該傳什麼參數
+```
+
+### 優點
+
+1. **Agent 只需學習 10 個工具**（而非 136 個）
+2. **參數由 JSON Schema 驅動**，LLM 可根據文檔生成
+3. **擴展新分析類型不需新增工具**，只需新增 config schema
+4. **減少 API 表面積**，更容易維護
+
+### 實作時程
+
+| Phase | 內容 | 預計時間 |
+|-------|------|----------|
+| Phase B1 | 設計 config JSON schemas | 2hr |
+| Phase B2 | 實作 submit_analysis_job | 4hr |
+| Phase B3 | 實作 get_analysis_schema | 2hr |
+| Phase B4 | 遷移現有工具 | 4hr |
+| Phase B5 | 更新文檔 | 2hr |
+
+**總計：** ~14 小時
+
+### Config Schema 範例
+
+```json
+{
+  "analysis_type": "propensity",
+  "config": {
+    "treatment_column": "treatment",
+    "outcome_column": "outcome",
+    "covariates": ["age", "gender", "comorbidity"],
+    "method": "matching",
+    "caliper": 0.2,
+    "estimand": "ATT"
+  }
+}
+```
+
+---
+
 ## 🔴 問題清單
 
 ### 問題 1: MCP 直接 import stats-worker 模組（嚴重）

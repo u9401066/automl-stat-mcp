@@ -1,0 +1,357 @@
+"""
+Stats Service - ROC/AUC Analysis Routes
+
+Routes for classifier evaluation:
+- ROC curve computation
+- AUC comparison (DeLong test)
+- Optimal threshold selection
+- Calibration analysis
+- Full classifier evaluation
+"""
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field
+from typing import Optional, List
+
+from ..infrastructure.redis_dataset_store import redis_dataset_store
+from ..infrastructure.repositories import get_job_repository, get_job_queue
+
+router = APIRouter(prefix="/roc", tags=["ROC/AUC Analysis"])
+
+
+# =============================================================================
+# Request/Response Models
+# =============================================================================
+
+class ROCComputeRequest(BaseModel):
+    """Request for ROC curve computation"""
+    dataset_id: str = Field(..., description="Dataset ID")
+    user_id: str = Field(..., description="User ID")
+    true_column: str = Field(..., description="True binary labels (0/1)")
+    score_column: str = Field(..., description="Predicted probabilities or scores")
+    pos_label: int = Field(default=1, description="Positive class label")
+    n_bootstrap: int = Field(default=1000, description="Bootstrap iterations for CI")
+    confidence_level: float = Field(default=0.95, description="Confidence level")
+
+
+class ROCCompareRequest(BaseModel):
+    """Request for ROC curve comparison"""
+    dataset_id: str = Field(..., description="Dataset ID")
+    user_id: str = Field(..., description="User ID")
+    true_column: str = Field(..., description="True binary labels")
+    score_columns: List[str] = Field(..., description="Multiple score columns to compare")
+    model_names: Optional[List[str]] = Field(None, description="Names for each model")
+    method: str = Field(default="delong", description="Comparison method: delong, bootstrap")
+
+
+class ThresholdRequest(BaseModel):
+    """Request for optimal threshold analysis"""
+    dataset_id: str = Field(..., description="Dataset ID")
+    user_id: str = Field(..., description="User ID")
+    true_column: str = Field(..., description="True binary labels")
+    score_column: str = Field(..., description="Predicted probabilities")
+    method: str = Field(default="youden", description="Method: youden, f1, cost, sensitivity, specificity")
+    cost_fp: float = Field(default=1.0, description="Cost of false positive (for cost method)")
+    cost_fn: float = Field(default=1.0, description="Cost of false negative (for cost method)")
+    min_sensitivity: Optional[float] = Field(None, description="Minimum sensitivity constraint")
+    min_specificity: Optional[float] = Field(None, description="Minimum specificity constraint")
+
+
+class CalibrationRequest(BaseModel):
+    """Request for calibration analysis"""
+    dataset_id: str = Field(..., description="Dataset ID")
+    user_id: str = Field(..., description="User ID")
+    true_column: str = Field(..., description="True binary labels")
+    score_column: str = Field(..., description="Predicted probabilities")
+    n_bins: int = Field(default=10, description="Number of calibration bins")
+    strategy: str = Field(default="uniform", description="Binning strategy: uniform, quantile")
+
+
+class FullEvalRequest(BaseModel):
+    """Request for full classifier evaluation"""
+    dataset_id: str = Field(..., description="Dataset ID")
+    user_id: str = Field(..., description="User ID")
+    true_column: str = Field(..., description="True binary labels")
+    score_column: str = Field(..., description="Predicted probabilities")
+    threshold: Optional[float] = Field(None, description="Classification threshold (default: find optimal)")
+    include_calibration: bool = Field(default=True, description="Include calibration analysis")
+    include_precision_recall: bool = Field(default=True, description="Include PR curve")
+
+
+class JobResponse(BaseModel):
+    """Standard job submission response"""
+    job_id: str
+    job_type: str
+    status: str
+    message: str
+
+
+# =============================================================================
+# Helper Functions
+# =============================================================================
+
+async def _submit_roc_job(
+    job_type: str,
+    dataset_id: str,
+    user_id: str,
+    config: dict,
+) -> JobResponse:
+    """Submit a ROC analysis job to the queue"""
+    import uuid
+    
+    job_repo = get_job_repository()
+    job_queue = get_job_queue()
+    
+    # Verify dataset exists
+    dataset = await redis_dataset_store.get_dataset(dataset_id)
+    if not dataset:
+        raise HTTPException(status_code=404, detail=f"Dataset {dataset_id} not found")
+    
+    # Create job
+    job_id = f"roc-{uuid.uuid4().hex[:12]}"
+    
+    job_data = {
+        "job_id": job_id,
+        "job_type": job_type,
+        "user_id": user_id,
+        "dataset_id": dataset_id,
+        "config": config,
+        "status": "pending",
+    }
+    
+    # Save to repository
+    await job_repo.create(job_data)
+    
+    # Queue for processing
+    await job_queue.enqueue(job_data)
+    
+    return JobResponse(
+        job_id=job_id,
+        job_type=job_type,
+        status="pending",
+        message=f"ROC {job_type} job submitted successfully",
+    )
+
+
+# =============================================================================
+# Endpoints
+# =============================================================================
+
+@router.post("/compute/submit", response_model=JobResponse)
+async def submit_roc_compute_job(request: ROCComputeRequest):
+    """
+    📈 Submit ROC curve computation job.
+    
+    Computes ROC curve and related metrics:
+    - FPR, TPR at multiple thresholds
+    - AUC with confidence interval (bootstrap or DeLong)
+    - Partial AUC at specific FPR ranges
+    
+    Args:
+        true_column: Binary true labels (0/1)
+        score_column: Predicted probabilities
+        n_bootstrap: Iterations for CI estimation
+        confidence_level: CI level (default 0.95)
+    
+    Returns:
+        ROC curve points, AUC, CI, optimal threshold
+    """
+    config = {
+        "true_column": request.true_column,
+        "score_column": request.score_column,
+        "pos_label": request.pos_label,
+        "n_bootstrap": request.n_bootstrap,
+        "confidence_level": request.confidence_level,
+    }
+    
+    return await _submit_roc_job(
+        job_type="roc_compute",
+        dataset_id=request.dataset_id,
+        user_id=request.user_id,
+        config=config,
+    )
+
+
+@router.post("/compare/submit", response_model=JobResponse)
+async def submit_roc_compare_job(request: ROCCompareRequest):
+    """
+    🔬 Submit ROC curves comparison job.
+    
+    Compares AUC between multiple models using:
+    - DeLong test: Non-parametric, accounts for correlation
+    - Bootstrap: More flexible, handles complex cases
+    
+    Output includes:
+    - AUC for each model
+    - Pairwise AUC differences with CI
+    - P-values for statistical significance
+    - Overlay plot data
+    """
+    config = {
+        "true_column": request.true_column,
+        "score_columns": request.score_columns,
+        "model_names": request.model_names or [f"Model_{i+1}" for i in range(len(request.score_columns))],
+        "method": request.method,
+    }
+    
+    return await _submit_roc_job(
+        job_type="roc_compare",
+        dataset_id=request.dataset_id,
+        user_id=request.user_id,
+        config=config,
+    )
+
+
+@router.post("/threshold/submit", response_model=JobResponse)
+async def submit_threshold_analysis_job(request: ThresholdRequest):
+    """
+    🎯 Submit optimal threshold analysis job.
+    
+    Finds best classification threshold based on criterion:
+    
+    Methods:
+    - youden: Maximize Sensitivity + Specificity - 1
+    - f1: Maximize F1 score
+    - cost: Minimize FP×cost_fp + FN×cost_fn
+    - sensitivity: Highest threshold meeting min_sensitivity
+    - specificity: Lowest threshold meeting min_specificity
+    
+    Output includes:
+    - Optimal threshold
+    - Metrics at optimal threshold
+    - Sensitivity vs specificity plot data
+    - Threshold vs metric curves
+    """
+    config = {
+        "true_column": request.true_column,
+        "score_column": request.score_column,
+        "method": request.method,
+        "cost_fp": request.cost_fp,
+        "cost_fn": request.cost_fn,
+        "min_sensitivity": request.min_sensitivity,
+        "min_specificity": request.min_specificity,
+    }
+    
+    return await _submit_roc_job(
+        job_type="roc_threshold",
+        dataset_id=request.dataset_id,
+        user_id=request.user_id,
+        config=config,
+    )
+
+
+@router.post("/calibration/submit", response_model=JobResponse)
+async def submit_calibration_job(request: CalibrationRequest):
+    """
+    📊 Submit calibration analysis job.
+    
+    Assesses how well predicted probabilities match actual frequencies.
+    
+    Metrics:
+    - Brier score (lower is better)
+    - Expected Calibration Error (ECE)
+    - Maximum Calibration Error (MCE)
+    - Hosmer-Lemeshow test
+    
+    Output includes:
+    - Calibration curve data
+    - Reliability diagram
+    - Bin-wise statistics
+    """
+    config = {
+        "true_column": request.true_column,
+        "score_column": request.score_column,
+        "n_bins": request.n_bins,
+        "strategy": request.strategy,
+    }
+    
+    return await _submit_roc_job(
+        job_type="roc_calibration",
+        dataset_id=request.dataset_id,
+        user_id=request.user_id,
+        config=config,
+    )
+
+
+@router.post("/full-eval/submit", response_model=JobResponse)
+async def submit_full_evaluation_job(request: FullEvalRequest):
+    """
+    🚀 Submit comprehensive classifier evaluation job.
+    
+    Complete evaluation including:
+    1. ROC curve and AUC with CI
+    2. Optimal threshold selection
+    3. Confusion matrix and derived metrics
+    4. Precision-Recall curve and AUPRC
+    5. Calibration analysis (optional)
+    6. Lift and gain charts
+    
+    Perfect for final model assessment and reporting.
+    """
+    config = {
+        "true_column": request.true_column,
+        "score_column": request.score_column,
+        "threshold": request.threshold,
+        "include_calibration": request.include_calibration,
+        "include_precision_recall": request.include_precision_recall,
+    }
+    
+    return await _submit_roc_job(
+        job_type="roc_full_eval",
+        dataset_id=request.dataset_id,
+        user_id=request.user_id,
+        config=config,
+    )
+
+
+@router.get("/methods")
+async def get_roc_methods():
+    """
+    📋 Get available ROC/AUC methods and their descriptions.
+    """
+    return {
+        "threshold_methods": {
+            "youden": {
+                "name": "Youden's J statistic",
+                "formula": "J = Sensitivity + Specificity - 1",
+                "best_for": "Balanced sensitivity/specificity",
+            },
+            "f1": {
+                "name": "F1 Score",
+                "formula": "F1 = 2 × (Precision × Recall) / (Precision + Recall)",
+                "best_for": "Imbalanced classes, focus on positive class",
+            },
+            "cost": {
+                "name": "Cost-based",
+                "formula": "Minimize: FP × cost_fp + FN × cost_fn",
+                "best_for": "When misclassification costs differ",
+            },
+            "sensitivity": {
+                "name": "Sensitivity constrained",
+                "description": "Highest threshold meeting minimum sensitivity",
+                "best_for": "When missing positives is critical (e.g., disease screening)",
+            },
+            "specificity": {
+                "name": "Specificity constrained",
+                "description": "Lowest threshold meeting minimum specificity",
+                "best_for": "When false alarms are costly (e.g., confirmatory tests)",
+            },
+        },
+        "comparison_methods": {
+            "delong": {
+                "name": "DeLong Test",
+                "description": "Non-parametric comparison of correlated AUCs",
+                "reference": "DeLong et al., 1988",
+            },
+            "bootstrap": {
+                "name": "Bootstrap",
+                "description": "Resampling-based comparison",
+                "pros": "More flexible, handles complex scenarios",
+            },
+        },
+        "calibration_metrics": {
+            "brier_score": "Mean squared error of probability estimates",
+            "ece": "Expected Calibration Error - weighted average calibration gap",
+            "mce": "Maximum Calibration Error - worst bin calibration gap",
+            "hosmer_lemeshow": "Chi-square test for calibration",
+        },
+    }

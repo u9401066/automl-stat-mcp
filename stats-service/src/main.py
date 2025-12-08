@@ -17,7 +17,7 @@ from pydantic import BaseModel
 from .config import SERVICE_HOST, SERVICE_PORT
 from .infrastructure.redis_client import redis_client
 from .infrastructure.minio_client import minio_client
-from .routes import eda, tableone, jobs, auto_analyze, direct
+from .routes import eda, tableone, jobs, auto_analyze, direct, propensity, survival, roc, power
 
 # Configure logging
 log_level = os.environ.get("LOG_LEVEL", "INFO")
@@ -124,6 +124,10 @@ app.include_router(direct.router)  # Direct analysis (no MinIO)
 app.include_router(eda.router)
 app.include_router(tableone.router)
 app.include_router(jobs.router)
+app.include_router(propensity.router)  # Propensity Score Analysis
+app.include_router(survival.router)    # Survival Analysis
+app.include_router(roc.router)         # ROC/AUC Analysis
+app.include_router(power.router)       # Power Analysis
 
 
 # =============================================================================
