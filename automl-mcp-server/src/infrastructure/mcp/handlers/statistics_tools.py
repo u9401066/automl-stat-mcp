@@ -661,6 +661,8 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         import pandas as pd
         import base64
         from io import StringIO
+        from scipy import stats as scipy_stats
+        import numpy as np
         
         try:
             # Parse CSV
@@ -668,16 +670,54 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
                 csv_content = base64.b64decode(csv_content).decode('utf-8')
             df = pd.read_csv(StringIO(csv_content))
             
-            # Import and run analysis
-            from .stats_worker_tasks import compute_enhanced_correlation
-            result = compute_enhanced_correlation(
-                df, columns=columns, method=method, min_correlation=min_correlation
-            )
-            return {"status": "success", **result.to_dict()}
+            # Get numeric columns
+            if columns:
+                numeric_cols = [c for c in columns if c in df.columns and df[c].dtype in ['int64', 'float64']]
+            else:
+                numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
             
-        except ImportError:
-            # Fallback: Direct computation
-            return await _compute_correlation_fallback(csv_content, columns, is_base64)
+            if len(numeric_cols) < 2:
+                return {"status": "error", "error": "Need at least 2 numeric columns"}
+            
+            # Compute correlations
+            result = {
+                "status": "success",
+                "columns": numeric_cols,
+            }
+            
+            # Pearson correlation
+            if method in ["pearson", "all"]:
+                pearson_corr = df[numeric_cols].corr(method='pearson')
+                result["pearson_matrix"] = pearson_corr.to_dict()
+            
+            # Spearman correlation
+            if method in ["spearman", "all"]:
+                spearman_corr = df[numeric_cols].corr(method='spearman')
+                result["spearman_matrix"] = spearman_corr.to_dict()
+            
+            # Find significant pairs
+            significant_pairs = []
+            corr_matrix = df[numeric_cols].corr()
+            for i, col1 in enumerate(numeric_cols):
+                for j, col2 in enumerate(numeric_cols):
+                    if i < j:  # Upper triangle only
+                        r = corr_matrix.loc[col1, col2]
+                        if abs(r) >= min_correlation:
+                            significant_pairs.append({
+                                "var1": col1,
+                                "var2": col2,
+                                "correlation": round(r, 4),
+                            })
+            
+            result["significant_pairs"] = significant_pairs
+            result["summary"] = {
+                "n_variables": len(numeric_cols),
+                "n_significant_pairs": len(significant_pairs),
+                "min_correlation_threshold": min_correlation,
+            }
+            
+            return result
+            
         except Exception as e:
             return {"status": "error", "error": str(e)}
     
@@ -718,15 +758,53 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         import pandas as pd
         import base64
         from io import StringIO
+        from scipy import stats as scipy_stats
+        import numpy as np
         
         try:
             if is_base64:
                 csv_content = base64.b64decode(csv_content).decode('utf-8')
             df = pd.read_csv(StringIO(csv_content))
             
-            from .stats_worker_tasks import compare_distributions
-            result = compare_distributions(df, numeric_column, group_column)
-            return {"status": "success", **result.to_dict()}
+            groups = df[group_column].dropna().unique().tolist()
+            n_groups = len(groups)
+            
+            # Group statistics
+            group_stats = {}
+            group_data = {}
+            for g in groups:
+                data = df[df[group_column] == g][numeric_column].dropna()
+                group_data[g] = data.values
+                group_stats[str(g)] = {
+                    "n": len(data),
+                    "mean": round(float(data.mean()), 4),
+                    "std": round(float(data.std()), 4),
+                    "median": round(float(data.median()), 4),
+                }
+            
+            # Main test
+            if n_groups == 2:
+                # Independent t-test
+                g1, g2 = groups[:2]
+                stat, pval = scipy_stats.ttest_ind(group_data[g1], group_data[g2])
+                test_name = "Independent t-test"
+            else:
+                # One-way ANOVA
+                stat, pval = scipy_stats.f_oneway(*[group_data[g] for g in groups])
+                test_name = "One-way ANOVA"
+            
+            return {
+                "status": "success",
+                "groups": groups,
+                "n_groups": n_groups,
+                "group_statistics": group_stats,
+                "main_test": {
+                    "test": test_name,
+                    "statistic": round(float(stat), 4),
+                    "p_value": round(float(pval), 4),
+                    "significant": pval < 0.05,
+                },
+            }
             
         except Exception as e:
             return {"status": "error", "error": str(e)}
@@ -770,9 +848,42 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
                 csv_content = base64.b64decode(csv_content).decode('utf-8')
             df = pd.read_csv(StringIO(csv_content))
             
-            from .stats_worker_tasks import analyze_missing_values as analyze_mv
-            result = analyze_mv(df)
-            return {"status": "success", **result.to_dict()}
+            # Calculate missing statistics
+            total_cells = df.shape[0] * df.shape[1]
+            total_missing = int(df.isna().sum().sum())
+            
+            # Per-column analysis
+            columns_analysis = {}
+            for col in df.columns:
+                missing_count = int(df[col].isna().sum())
+                columns_analysis[col] = {
+                    "missing_count": missing_count,
+                    "missing_pct": round(missing_count / len(df) * 100, 2),
+                    "dtype": str(df[col].dtype),
+                }
+            
+            # Recommendations
+            recommendations = []
+            high_missing_cols = [c for c, v in columns_analysis.items() if v["missing_pct"] > 20]
+            if high_missing_cols:
+                recommendations.append(f"Consider dropping columns with >20% missing: {high_missing_cols}")
+            if total_missing / total_cells < 0.05:
+                recommendations.append("Missing rate <5%: Consider listwise deletion or simple imputation")
+            else:
+                recommendations.append("Consider multiple imputation or model-based approaches")
+            
+            return {
+                "status": "success",
+                "summary": {
+                    "total_rows": len(df),
+                    "total_columns": len(df.columns),
+                    "total_missing": total_missing,
+                    "overall_missing_pct": round(total_missing / total_cells * 100, 2),
+                },
+                "columns": columns_analysis,
+                "pattern": "Unable to determine (MCAR test requires advanced statistics)",
+                "recommendations": recommendations,
+            }
             
         except Exception as e:
             return {"status": "error", "error": str(e)}
@@ -811,15 +922,65 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         import pandas as pd
         import base64
         from io import StringIO
+        import numpy as np
         
         try:
             if is_base64:
                 csv_content = base64.b64decode(csv_content).decode('utf-8')
             df = pd.read_csv(StringIO(csv_content))
             
-            from .stats_worker_tasks import compute_vif
-            result = compute_vif(df, columns=columns, vif_threshold=vif_threshold)
-            return {"status": "success", **result.to_dict()}
+            # Get numeric columns
+            if columns:
+                numeric_cols = [c for c in columns if c in df.columns and df[c].dtype in ['int64', 'float64']]
+            else:
+                numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+            
+            if len(numeric_cols) < 2:
+                return {"status": "error", "error": "Need at least 2 numeric columns"}
+            
+            # Calculate VIF using correlation matrix method
+            corr_matrix = df[numeric_cols].corr()
+            
+            # Simple VIF approximation: VIF_i = 1 / (1 - R^2_i)
+            vif_results = {}
+            problematic = []
+            
+            for col in numeric_cols:
+                other_cols = [c for c in numeric_cols if c != col]
+                if len(other_cols) > 0:
+                    # R^2 from correlation with other variables
+                    r_squared = corr_matrix.loc[col, other_cols].pow(2).max()
+                    if r_squared < 1:
+                        vif = 1 / (1 - r_squared)
+                    else:
+                        vif = float('inf')
+                    vif_results[col] = round(float(vif), 2)
+                    if vif >= vif_threshold:
+                        problematic.append(col)
+            
+            # Condition number
+            try:
+                cond = np.linalg.cond(df[numeric_cols].dropna().values)
+            except:
+                cond = None
+            
+            # Recommendations
+            recommendations = []
+            if problematic:
+                recommendations.append(f"Consider removing or combining variables: {problematic}")
+            if cond and cond > 30:
+                recommendations.append("High condition number suggests multicollinearity")
+            if not problematic:
+                recommendations.append("No severe multicollinearity detected")
+            
+            return {
+                "status": "success",
+                "vif_results": vif_results,
+                "condition_number": round(float(cond), 2) if cond else None,
+                "problematic_columns": problematic,
+                "vif_threshold": vif_threshold,
+                "recommendations": recommendations,
+            }
             
         except Exception as e:
             return {"status": "error", "error": str(e)}
@@ -853,19 +1014,13 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             multicollinearity: VIF analysis
             group_comparisons: Comparisons by target (if applicable)
         """
-        import pandas as pd
-        import base64
-        from io import StringIO
-        
         try:
-            if is_base64:
-                csv_content = base64.b64decode(csv_content).decode('utf-8')
-            df = pd.read_csv(StringIO(csv_content))
-            
-            from .stats_worker_tasks import run_enhanced_analysis
-            result = run_enhanced_analysis(
-                df, target_column=target_column,
-                include_vif=True, include_missing_analysis=True
+            # Use stats_client direct_analyze for comprehensive analysis
+            result = await stats_client.direct_analyze(
+                csv_content=csv_content,
+                user_id="mcp_user",
+                target_column=target_column,
+                is_base64=is_base64,
             )
             return {"status": "success", **result}
             
@@ -946,6 +1101,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         import pandas as pd
         import base64
         from io import StringIO
+        import numpy as np
         
         try:
             # Parse CSV
@@ -953,48 +1109,92 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
                 csv_content = base64.b64decode(csv_content).decode('utf-8')
             df = pd.read_csv(StringIO(csv_content))
             
-            # Import and run TableOne generation
-            from .stats_worker_tasks import generate_tableone
-            result = generate_tableone(
-                df=df,
-                groupby=groupby,
-                categorical=categorical,
-                continuous=continuous,
-                nonnormal=nonnormal,
-                include_pval=pval,
-            )
+            # Auto-detect column types if not provided
+            if categorical is None:
+                categorical = []
+                for col in df.columns:
+                    if df[col].dtype == 'object' or df[col].nunique() <= 10:
+                        categorical.append(col)
             
-            # Format output
+            if continuous is None:
+                continuous = [c for c in df.select_dtypes(include=['number']).columns 
+                              if c not in categorical and c != groupby]
+            
+            # Generate table data
+            table_data = {}
+            tests_used = {}
+            
+            # Overall statistics
+            n_total = len(df)
+            n_groups = {}
+            groups = []
+            
+            if groupby and groupby in df.columns:
+                groups = df[groupby].dropna().unique().tolist()
+                n_groups = {str(g): int((df[groupby] == g).sum()) for g in groups}
+            
+            # Process continuous variables
+            for col in continuous:
+                if col not in df.columns:
+                    continue
+                    
+                col_data = {}
+                
+                if groupby and groups:
+                    for g in groups:
+                        data = df[df[groupby] == g][col].dropna()
+                        if col in (nonnormal or []):
+                            col_data[str(g)] = f"{data.median():.2f} [{data.quantile(0.25):.2f}-{data.quantile(0.75):.2f}]"
+                        else:
+                            col_data[str(g)] = f"{data.mean():.2f} ± {data.std():.2f}"
+                else:
+                    data = df[col].dropna()
+                    if col in (nonnormal or []):
+                        col_data["Overall"] = f"{data.median():.2f} [{data.quantile(0.25):.2f}-{data.quantile(0.75):.2f}]"
+                    else:
+                        col_data["Overall"] = f"{data.mean():.2f} ± {data.std():.2f}"
+                
+                table_data[col] = col_data
+                tests_used[col] = "Mann-Whitney U" if col in (nonnormal or []) else "t-test"
+            
+            # Process categorical variables
+            for col in categorical:
+                if col not in df.columns or col == groupby:
+                    continue
+                    
+                col_data = {}
+                categories = df[col].dropna().unique()
+                
+                for cat in categories:
+                    cat_data = {}
+                    if groupby and groups:
+                        for g in groups:
+                            n = int(((df[groupby] == g) & (df[col] == cat)).sum())
+                            total = int((df[groupby] == g).sum())
+                            pct = (n / total * 100) if total > 0 else 0
+                            cat_data[str(g)] = f"{n} ({pct:.1f}%)"
+                    else:
+                        n = int((df[col] == cat).sum())
+                        pct = (n / n_total * 100) if n_total > 0 else 0
+                        cat_data["Overall"] = f"{n} ({pct:.1f}%)"
+                    
+                    col_data[f"{col}={cat}"] = cat_data
+                
+                table_data.update(col_data)
+                tests_used[col] = "Chi-square"
+            
             response = {
                 "status": "success",
-                "n_total": result.get("n_total", len(df)),
-                "n_groups": result.get("n_groups", {}),
-                "variables_analyzed": result.get("variables_analyzed", []),
-                "tests_used": result.get("tests_used", {}),
+                "n_total": n_total,
+                "n_groups": n_groups,
+                "variables_analyzed": continuous + categorical,
+                "tests_used": tests_used,
                 "format": output_format,
+                "table_data": table_data,
             }
-            
-            # Add formatted output based on format
-            if output_format == "dict":
-                response["table_data"] = result.get("table_data", {})
-            elif output_format == "markdown":
-                response["markdown"] = result.get("markdown", "")
-                response["table_data"] = result.get("table_data", {})
-            elif output_format == "html":
-                response["html"] = result.get("html", "")
-                response["table_data"] = result.get("table_data", {})
-            elif output_format == "latex":
-                response["latex"] = result.get("latex", "")
-                response["table_data"] = result.get("table_data", {})
-            else:
-                response["table_data"] = result.get("table_data", {})
             
             return response
             
-        except ImportError:
-            return await _generate_tableone_fallback(
-                csv_content, groupby, categorical, nonnormal, pval, is_base64
-            )
         except Exception as e:
             return {"status": "error", "error": str(e)}
     
@@ -1183,35 +1383,34 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             log_rank_test: Test for difference between groups (if grouped)
             survival_at_times: Survival probability at specified times
         """
-        import pandas as pd
-        import base64
-        from io import StringIO
-        
         try:
-            if is_base64:
-                csv_content = base64.b64decode(csv_content).decode('utf-8')
-            df = pd.read_csv(StringIO(csv_content))
-            
-            from .stats_worker_tasks import kaplan_meier_analysis, survival_summary
-            
-            # Get KM analysis
-            km_result = kaplan_meier_analysis(
-                df, time_col, event_col, group_col, alpha
+            result = await stats_client.submit_survival_kaplan_meier_job(
+                csv_content=csv_content,
+                is_base64=is_base64,
+                user_id="mcp_user",
+                time_column=time_col,
+                event_column=event_col,
+                group_column=group_col,
+                time_points=time_points,
+                alpha=alpha,
             )
             
-            # Get summary with time points
-            summary = survival_summary(
-                df, time_col, event_col, group_col, time_points
-            )
+            job_id = result.get("job_id")
+            if not job_id:
+                return {"status": "error", "error": "Failed to submit job"}
             
-            return {
-                "status": "success",
-                **km_result,
-                "summary": summary,
-            }
+            # Poll for job completion
+            import asyncio
+            for _ in range(60):  # 2 min timeout
+                status = await stats_client.get_job_status(job_id)
+                if status.get("status") == "completed":
+                    return await stats_client.get_job_result(job_id)
+                elif status.get("status") == "failed":
+                    return {"status": "error", "error": status.get("error", "Job failed")}
+                await asyncio.sleep(2)
             
-        except ImportError:
-            return {"status": "error", "error": "Survival analysis module not available"}
+            return {"status": "error", "error": "Job timed out", "job_id": job_id}
+            
         except Exception as e:
             return {"status": "error", "error": str(e)}
     
@@ -1250,25 +1449,33 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             model_fit: Log-likelihood, concordance index
             global_tests: Wald test, likelihood ratio test
         """
-        import pandas as pd
-        import base64
-        from io import StringIO
-        
         try:
-            if is_base64:
-                csv_content = base64.b64decode(csv_content).decode('utf-8')
-            df = pd.read_csv(StringIO(csv_content))
-            
-            from .stats_worker_tasks import cox_regression
-            
-            result = cox_regression(
-                df, time_col, event_col, covariates, alpha
+            result = await stats_client.submit_survival_cox_job(
+                csv_content=csv_content,
+                is_base64=is_base64,
+                user_id="mcp_user",
+                time_column=time_col,
+                event_column=event_col,
+                covariates=covariates,
+                alpha=alpha,
             )
             
-            return {"status": "success", **result}
+            job_id = result.get("job_id")
+            if not job_id:
+                return {"status": "error", "error": "Failed to submit job"}
             
-        except ImportError:
-            return {"status": "error", "error": "Survival analysis module not available"}
+            # Poll for job completion
+            import asyncio
+            for _ in range(60):  # 2 min timeout
+                status = await stats_client.get_job_status(job_id)
+                if status.get("status") == "completed":
+                    return await stats_client.get_job_result(job_id)
+                elif status.get("status") == "failed":
+                    return {"status": "error", "error": status.get("error", "Job failed")}
+                await asyncio.sleep(2)
+            
+            return {"status": "error", "error": "Job timed out", "job_id": job_id}
+            
         except Exception as e:
             return {"status": "error", "error": str(e)}
     
@@ -1307,25 +1514,32 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             pairwise_comparisons: Tests between each pair (if >2 groups)
             conclusion: Interpretation of results
         """
-        import pandas as pd
-        import base64
-        from io import StringIO
-        
         try:
-            if is_base64:
-                csv_content = base64.b64decode(csv_content).decode('utf-8')
-            df = pd.read_csv(StringIO(csv_content))
-            
-            from .stats_worker_tasks import compare_survival_curves
-            
-            result = compare_survival_curves(
-                df, time_col, event_col, group_col
+            result = await stats_client.submit_survival_compare_job(
+                csv_content=csv_content,
+                is_base64=is_base64,
+                user_id="mcp_user",
+                time_column=time_col,
+                event_column=event_col,
+                group_column=group_col,
             )
             
-            return {"status": "success", **result}
+            job_id = result.get("job_id")
+            if not job_id:
+                return {"status": "error", "error": "Failed to submit job"}
             
-        except ImportError:
-            return {"status": "error", "error": "Survival analysis module not available"}
+            # Poll for job completion
+            import asyncio
+            for _ in range(60):  # 2 min timeout
+                status = await stats_client.get_job_status(job_id)
+                if status.get("status") == "completed":
+                    return await stats_client.get_job_result(job_id)
+                elif status.get("status") == "failed":
+                    return {"status": "error", "error": status.get("error", "Job failed")}
+                await asyncio.sleep(2)
+            
+            return {"status": "error", "error": "Job timed out", "job_id": job_id}
+            
         except Exception as e:
             return {"status": "error", "error": str(e)}
     
@@ -1362,25 +1576,33 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             follow_up: Follow-up time statistics
             by_group: Statistics per group (if grouped)
         """
-        import pandas as pd
-        import base64
-        from io import StringIO
-        
         try:
-            if is_base64:
-                csv_content = base64.b64decode(csv_content).decode('utf-8')
-            df = pd.read_csv(StringIO(csv_content))
-            
-            from .stats_worker_tasks import survival_summary
-            
-            result = survival_summary(
-                df, time_col, event_col, group_col, time_points
+            result = await stats_client.submit_survival_summary_job(
+                csv_content=csv_content,
+                is_base64=is_base64,
+                user_id="mcp_user",
+                time_column=time_col,
+                event_column=event_col,
+                group_column=group_col,
+                time_points=time_points,
             )
             
-            return {"status": "success", **result}
+            job_id = result.get("job_id")
+            if not job_id:
+                return {"status": "error", "error": "Failed to submit job"}
             
-        except ImportError:
-            return {"status": "error", "error": "Survival analysis module not available"}
+            # Poll for job completion
+            import asyncio
+            for _ in range(60):  # 2 min timeout
+                status = await stats_client.get_job_status(job_id)
+                if status.get("status") == "completed":
+                    return await stats_client.get_job_result(job_id)
+                elif status.get("status") == "failed":
+                    return {"status": "error", "error": status.get("error", "Job failed")}
+                await asyncio.sleep(2)
+            
+            return {"status": "error", "error": "Job timed out", "job_id": job_id}
+            
         except Exception as e:
             return {"status": "error", "error": str(e)}
     
@@ -1424,25 +1646,24 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             score_distribution: Stats for treated vs control
             overlap_region: Common support range
         """
-        import pandas as pd
-        import base64
-        from io import StringIO
-        
         try:
-            if is_base64:
-                csv_content = base64.b64decode(csv_content).decode('utf-8')
-            df = pd.read_csv(StringIO(csv_content))
-            
-            from .stats_worker_tasks import estimate_propensity_scores as _estimate_ps
-            
-            result = _estimate_ps(
-                df, treatment_col, covariates, regularization
+            # Submit job via stats_client (which calls stats-service API)
+            job_result = await stats_client.submit_propensity_estimate_job(
+                user_id="mcp_user",
+                treatment_column=treatment_col,
+                covariates=covariates,
+                csv_content=csv_content,
+                is_base64=is_base64,
+                regularization=regularization,
             )
             
-            return result
+            return {
+                "status": "success",
+                "job_id": job_result.get("job_id"),
+                "message": "Job submitted. Use get_stats_job_status to check progress.",
+                **job_result
+            }
             
-        except ImportError:
-            return {"status": "error", "error": "Propensity score module not available"}
         except Exception as e:
             return {"status": "error", "error": str(e)}
     
@@ -1486,26 +1707,28 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             matched_treated_indices: Row indices of matched treated
             matched_control_indices: Row indices of matched controls
         """
-        import pandas as pd
-        import base64
-        from io import StringIO
-        
         try:
-            if is_base64:
-                csv_content = base64.b64decode(csv_content).decode('utf-8')
-            df = pd.read_csv(StringIO(csv_content))
-            
-            from .stats_worker_tasks import match_propensity_scores as _match_ps
-            
-            result = _match_ps(
-                df, treatment_col, score_col, covariates,
-                method, caliper, caliper_scale, replacement
+            # Submit job via stats_client (which calls stats-service API)
+            job_result = await stats_client.submit_propensity_match_job(
+                user_id="mcp_user",
+                treatment_column=treatment_col,
+                csv_content=csv_content,
+                is_base64=is_base64,
+                covariates=covariates,
+                score_column=score_col,
+                method=method,
+                caliper=caliper,
+                caliper_scale=caliper_scale,
+                replacement=replacement,
             )
             
-            return result
+            return {
+                "status": "success",
+                "job_id": job_result.get("job_id"),
+                "message": "Job submitted. Use get_stats_job_status to check progress.",
+                **job_result
+            }
             
-        except ImportError:
-            return {"status": "error", "error": "Propensity score module not available"}
         except Exception as e:
             return {"status": "error", "error": str(e)}
     
@@ -1550,26 +1773,27 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             p_value: Two-sided p-value
             significant: Whether effect is significant at α=0.05
         """
-        import pandas as pd
-        import base64
-        from io import StringIO
-        
         try:
-            if is_base64:
-                csv_content = base64.b64decode(csv_content).decode('utf-8')
-            df = pd.read_csv(StringIO(csv_content))
-            
-            from .stats_worker_tasks import estimate_treatment_effect as _estimate_te
-            
-            result = _estimate_te(
-                df, outcome_col, treatment_col, score_col,
-                covariates, method, target, stabilized
+            # Submit job via stats_client (which calls stats-service API)
+            job_result = await stats_client.submit_treatment_effect_job(
+                user_id="mcp_user",
+                treatment_column=treatment_col,
+                outcome_column=outcome_col,
+                csv_content=csv_content,
+                is_base64=is_base64,
+                covariates=covariates,
+                score_column=score_col,
+                method=method,
+                estimand=target.upper(),
             )
             
-            return result
+            return {
+                "status": "success",
+                "job_id": job_result.get("job_id"),
+                "message": "Job submitted. Use get_stats_job_status to check progress.",
+                **job_result
+            }
             
-        except ImportError:
-            return {"status": "error", "error": "Propensity score module not available"}
         except Exception as e:
             return {"status": "error", "error": str(e)}
     
@@ -1607,28 +1831,24 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             summary: Overall balance summary
             balance_achieved: Whether all covariates balanced
         """
-        import pandas as pd
-        import numpy as np
-        import base64
-        from io import StringIO
-        
         try:
-            if is_base64:
-                csv_content = base64.b64decode(csv_content).decode('utf-8')
-            df = pd.read_csv(StringIO(csv_content))
-            
-            from .stats_worker_tasks import assess_balance
-            
-            weights_arr = np.array(weights) if weights else None
-            
-            result = assess_balance(
-                df, treatment_col, covariates, weights_arr, smd_threshold
+            # Submit job via stats_client (which calls stats-service API)
+            job_result = await stats_client.submit_balance_check_job(
+                user_id="mcp_user",
+                treatment_column=treatment_col,
+                covariates=covariates,
+                csv_content=csv_content,
+                is_base64=is_base64,
+                threshold=smd_threshold,
             )
             
-            return result
+            return {
+                "status": "success",
+                "job_id": job_result.get("job_id"),
+                "message": "Job submitted. Use get_stats_job_status to check progress.",
+                **job_result
+            }
             
-        except ImportError:
-            return {"status": "error", "error": "Propensity score module not available"}
         except Exception as e:
             return {"status": "error", "error": str(e)}
     
@@ -1674,26 +1894,35 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             method_details: Matching/weighting specifics
             treatment_effect: Effect estimate with CI and p-value
         """
-        import pandas as pd
-        import base64
-        from io import StringIO
-        
         try:
-            if is_base64:
-                csv_content = base64.b64decode(csv_content).decode('utf-8')
-            df = pd.read_csv(StringIO(csv_content))
-            
-            from .stats_worker_tasks import propensity_score_analysis
-            
-            result = propensity_score_analysis(
-                df, outcome_col, treatment_col, covariates,
-                method, target, caliper
+            result = await stats_client.submit_full_propensity_job(
+                csv_content=csv_content,
+                is_base64=is_base64,
+                user_id="mcp_user",
+                outcome_column=outcome_col,
+                treatment_column=treatment_col,
+                covariates=covariates,
+                method=method,
+                target=target,
+                caliper=caliper,
             )
             
-            return result
+            job_id = result.get("job_id")
+            if not job_id:
+                return {"status": "error", "error": "Failed to submit job"}
             
-        except ImportError:
-            return {"status": "error", "error": "Propensity score module not available"}
+            # Poll for job completion
+            import asyncio
+            for _ in range(90):  # 3 min timeout for full analysis
+                status = await stats_client.get_job_status(job_id)
+                if status.get("status") == "completed":
+                    return await stats_client.get_job_result(job_id)
+                elif status.get("status") == "failed":
+                    return {"status": "error", "error": status.get("error", "Job failed")}
+                await asyncio.sleep(2)
+            
+            return {"status": "error", "error": "Job timed out", "job_id": job_id}
+            
         except Exception as e:
             return {"status": "error", "error": str(e)}
     
@@ -1744,33 +1973,35 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             curve: List of ROC points (threshold, fpr, tpr, sens, spec)
             interpretation: Text description of model performance
         """
-        import pandas as pd
-        import base64
-        from io import StringIO
-        
         try:
-            if is_base64:
-                csv_content = base64.b64decode(csv_content).decode('utf-8')
-            df = pd.read_csv(StringIO(csv_content))
-            
-            from .stats_worker_tasks import compute_roc_curve as _compute_roc
-            
-            y_true = df[y_true_col].values
-            y_score = df[y_score_col].values
-            
-            result = _compute_roc(
-                y_true=y_true,
-                y_score=y_score,
+            result = await stats_client.submit_roc_compute_job(
+                csv_content=csv_content,
+                is_base64=is_base64,
+                user_id="mcp_user",
+                y_true_column=y_true_col,
+                y_score_column=y_score_col,
                 pos_label=pos_label,
                 confidence_level=confidence_level,
                 n_bootstrap=n_bootstrap,
                 threshold_method=threshold_method,
             )
             
-            return result
+            job_id = result.get("job_id")
+            if not job_id:
+                return {"status": "error", "error": "Failed to submit job"}
             
-        except ImportError:
-            return {"status": "error", "error": "ROC analysis module not available"}
+            # Poll for job completion
+            import asyncio
+            for _ in range(60):  # 2 min timeout
+                status = await stats_client.get_job_status(job_id)
+                if status.get("status") == "completed":
+                    return await stats_client.get_job_result(job_id)
+                elif status.get("status") == "failed":
+                    return {"status": "error", "error": status.get("error", "Job failed")}
+                await asyncio.sleep(2)
+            
+            return {"status": "error", "error": "Job timed out", "job_id": job_id}
+            
         except Exception as e:
             return {"status": "error", "error": str(e)}
     
@@ -1817,36 +2048,33 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             best_model: Model with highest AUC
             recommendation: Statistical interpretation
         """
-        import pandas as pd
-        import base64
-        from io import StringIO
-        
         try:
-            if is_base64:
-                csv_content = base64.b64decode(csv_content).decode('utf-8')
-            df = pd.read_csv(StringIO(csv_content))
-            
-            from .stats_worker_tasks import compare_roc_curves as _compare_roc
-            
-            y_true = df[y_true_col].values
-            predictions = {
-                name: df[col].values 
-                for name, col in zip(
-                    model_names or model_score_cols, 
-                    model_score_cols
-                )
-            }
-            
-            result = _compare_roc(
-                y_true=y_true,
-                predictions=predictions,
+            result = await stats_client.submit_roc_compare_job(
+                csv_content=csv_content,
+                is_base64=is_base64,
+                user_id="mcp_user",
+                y_true_column=y_true_col,
+                model_score_columns=model_score_cols,
+                model_names=model_names,
                 method=method,
             )
             
-            return result
+            job_id = result.get("job_id")
+            if not job_id:
+                return {"status": "error", "error": "Failed to submit job"}
             
-        except ImportError:
-            return {"status": "error", "error": "ROC analysis module not available"}
+            # Poll for job completion
+            import asyncio
+            for _ in range(60):  # 2 min timeout
+                status = await stats_client.get_job_status(job_id)
+                if status.get("status") == "completed":
+                    return await stats_client.get_job_result(job_id)
+                elif status.get("status") == "failed":
+                    return {"status": "error", "error": status.get("error", "Job failed")}
+                await asyncio.sleep(2)
+            
+            return {"status": "error", "error": "Job timed out", "job_id": job_id}
+            
         except Exception as e:
             return {"status": "error", "error": str(e)}
     
@@ -1900,23 +2128,13 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             explanation: Why this threshold was selected
             threshold_range: Nearby thresholds and their metrics
         """
-        import pandas as pd
-        import base64
-        from io import StringIO
-        
         try:
-            if is_base64:
-                csv_content = base64.b64decode(csv_content).decode('utf-8')
-            df = pd.read_csv(StringIO(csv_content))
-            
-            from .stats_worker_tasks import find_optimal_threshold as _find_threshold
-            
-            y_true = df[y_true_col].values
-            y_score = df[y_score_col].values
-            
-            result = _find_threshold(
-                y_true=y_true,
-                y_score=y_score,
+            result = await stats_client.submit_roc_threshold_job(
+                csv_content=csv_content,
+                is_base64=is_base64,
+                user_id="mcp_user",
+                y_true_column=y_true_col,
+                y_score_column=y_score_col,
                 method=method,
                 fp_cost=fp_cost,
                 fn_cost=fn_cost,
@@ -1925,10 +2143,22 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
                 prevalence=prevalence,
             )
             
-            return result
+            job_id = result.get("job_id")
+            if not job_id:
+                return {"status": "error", "error": "Failed to submit job"}
             
-        except ImportError:
-            return {"status": "error", "error": "ROC analysis module not available"}
+            # Poll for job completion
+            import asyncio
+            for _ in range(60):  # 2 min timeout
+                status = await stats_client.get_job_status(job_id)
+                if status.get("status") == "completed":
+                    return await stats_client.get_job_result(job_id)
+                elif status.get("status") == "failed":
+                    return {"status": "error", "error": status.get("error", "Job failed")}
+                await asyncio.sleep(2)
+            
+            return {"status": "error", "error": "Job timed out", "job_id": job_id}
+            
         except Exception as e:
             return {"status": "error", "error": str(e)}
     
@@ -1980,31 +2210,33 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             reliability_diagram_data: Data for plotting
             recommendations: Calibration improvement suggestions
         """
-        import pandas as pd
-        import base64
-        from io import StringIO
-        
         try:
-            if is_base64:
-                csv_content = base64.b64decode(csv_content).decode('utf-8')
-            df = pd.read_csv(StringIO(csv_content))
-            
-            from .stats_worker_tasks import analyze_calibration as _analyze_cal
-            
-            y_true = df[y_true_col].values
-            y_score = df[y_score_col].values
-            
-            result = _analyze_cal(
-                y_true=y_true,
-                y_score=y_score,
+            result = await stats_client.submit_roc_calibration_job(
+                csv_content=csv_content,
+                is_base64=is_base64,
+                user_id="mcp_user",
+                y_true_column=y_true_col,
+                y_score_column=y_score_col,
                 n_bins=n_bins,
                 strategy=strategy,
             )
             
-            return result
+            job_id = result.get("job_id")
+            if not job_id:
+                return {"status": "error", "error": "Failed to submit job"}
             
-        except ImportError:
-            return {"status": "error", "error": "ROC analysis module not available"}
+            # Poll for job completion
+            import asyncio
+            for _ in range(60):  # 2 min timeout
+                status = await stats_client.get_job_status(job_id)
+                if status.get("status") == "completed":
+                    return await stats_client.get_job_result(job_id)
+                elif status.get("status") == "failed":
+                    return {"status": "error", "error": status.get("error", "Job failed")}
+                await asyncio.sleep(2)
+            
+            return {"status": "error", "error": "Job timed out", "job_id": job_id}
+            
         except Exception as e:
             return {"status": "error", "error": str(e)}
     
@@ -2055,30 +2287,32 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             summary: Executive summary text
             publication_text: Ready-to-use results paragraph
         """
-        import pandas as pd
-        import base64
-        from io import StringIO
-        
         try:
-            if is_base64:
-                csv_content = base64.b64decode(csv_content).decode('utf-8')
-            df = pd.read_csv(StringIO(csv_content))
-            
-            from .stats_worker_tasks import full_classifier_evaluation as _full_eval
-            
-            y_true = df[y_true_col].values
-            y_score = df[y_score_col].values
-            
-            result = _full_eval(
-                y_true=y_true,
-                y_score=y_score,
+            result = await stats_client.submit_roc_full_eval_job(
+                csv_content=csv_content,
+                is_base64=is_base64,
+                user_id="mcp_user",
+                y_true_column=y_true_col,
+                y_score_column=y_score_col,
                 threshold=threshold,
             )
             
-            return result
+            job_id = result.get("job_id")
+            if not job_id:
+                return {"status": "error", "error": "Failed to submit job"}
             
-        except ImportError:
-            return {"status": "error", "error": "ROC analysis module not available"}
+            # Poll for job completion
+            import asyncio
+            for _ in range(90):  # 3 min timeout for full eval
+                status = await stats_client.get_job_status(job_id)
+                if status.get("status") == "completed":
+                    return await stats_client.get_job_result(job_id)
+                elif status.get("status") == "failed":
+                    return {"status": "error", "error": status.get("error", "Job failed")}
+                await asyncio.sleep(2)
+            
+            return {"status": "error", "error": "Job timed out", "job_id": job_id}
+            
         except Exception as e:
             return {"status": "error", "error": str(e)}
     
@@ -2143,35 +2377,40 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             ... )
             >>> print(result["interpretation"])
         """
-        import pandas as pd
-        import base64
         import json
-        from io import StringIO
         
         try:
-            if is_base64:
-                csv_content = base64.b64decode(csv_content).decode('utf-8')
-            df = pd.read_csv(StringIO(csv_content))
-            
-            # Parse model columns
+            # Parse model columns JSON
             model_cols = json.loads(model_columns)
             
-            from .stats_worker_tasks import compare_multiple_models as _compare_multi
-            
-            y_true = df[y_true_col].values
-            models = {name: df[col].values for name, col in model_cols.items()}
-            
-            result = _compare_multi(
-                y_true=y_true,
-                models=models,
+            result = await stats_client.submit_roc_compare_job(
+                csv_content=csv_content,
+                is_base64=is_base64,
+                user_id="mcp_user",
+                y_true_column=y_true_col,
+                model_score_columns=list(model_cols.values()),
+                model_names=list(model_cols.keys()),
+                method="delong",
                 correction=correction,
                 alpha=alpha,
             )
             
-            return result
+            job_id = result.get("job_id")
+            if not job_id:
+                return {"status": "error", "error": "Failed to submit job"}
             
-        except ImportError:
-            return {"status": "error", "error": "ROC analysis module not available"}
+            # Poll for job completion
+            import asyncio
+            for _ in range(60):  # 2 min timeout
+                status = await stats_client.get_job_status(job_id)
+                if status.get("status") == "completed":
+                    return await stats_client.get_job_result(job_id)
+                elif status.get("status") == "failed":
+                    return {"status": "error", "error": status.get("error", "Job failed")}
+                await asyncio.sleep(2)
+            
+            return {"status": "error", "error": "Job timed out", "job_id": job_id}
+            
         except json.JSONDecodeError as e:
             return {"status": "error", "error": f"Invalid JSON for model_columns: {e}"}
         except Exception as e:
@@ -2238,32 +2477,35 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             ... )
             >>> print(result["target_threshold"])
         """
-        import pandas as pd
-        import base64
-        from io import StringIO
-        
         try:
-            if is_base64:
-                csv_content = base64.b64decode(csv_content).decode('utf-8')
-            df = pd.read_csv(StringIO(csv_content))
-            
-            from .stats_worker_tasks import threshold_analysis as _threshold_analysis
-            
-            y_true = df[y_true_col].values
-            y_scores = df[y_score_col].values
-            
-            result = _threshold_analysis(
-                y_true=y_true,
-                y_scores=y_scores,
+            result = await stats_client.submit_roc_threshold_job(
+                csv_content=csv_content,
+                is_base64=is_base64,
+                user_id="mcp_user",
+                y_true_column=y_true_col,
+                y_score_column=y_score_col,
+                method="interactive",
                 target_metric=target_metric,
                 target_value=target_value,
                 n_thresholds=n_thresholds,
             )
             
-            return result
+            job_id = result.get("job_id")
+            if not job_id:
+                return {"status": "error", "error": "Failed to submit job"}
             
-        except ImportError:
-            return {"status": "error", "error": "ROC analysis module not available"}
+            # Poll for job completion
+            import asyncio
+            for _ in range(60):  # 2 min timeout
+                status = await stats_client.get_job_status(job_id)
+                if status.get("status") == "completed":
+                    return await stats_client.get_job_result(job_id)
+                elif status.get("status") == "failed":
+                    return {"status": "error", "error": status.get("error", "Job failed")}
+                await asyncio.sleep(2)
+            
+            return {"status": "error", "error": "Job timed out", "job_id": job_id}
+            
         except Exception as e:
             return {"status": "error", "error": str(e)}
     
@@ -2336,33 +2578,36 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             ... )
             >>> print(report["results_text"])
         """
-        import pandas as pd
-        import base64
-        from io import StringIO
-        
         try:
-            if is_base64:
-                csv_content = base64.b64decode(csv_content).decode('utf-8')
-            df = pd.read_csv(StringIO(csv_content))
-            
-            from .stats_worker_tasks import generate_publication_report as _gen_report
-            
-            y_true = df[y_true_col].values
-            y_scores = df[y_score_col].values
-            
-            result = _gen_report(
-                y_true=y_true,
-                y_scores=y_scores,
+            result = await stats_client.submit_roc_full_eval_job(
+                csv_content=csv_content,
+                is_base64=is_base64,
+                user_id="mcp_user",
+                y_true_column=y_true_col,
+                y_score_column=y_score_col,
                 model_name=model_name,
                 outcome_name=outcome_name,
                 threshold_method=threshold_method,
                 decimal_places=decimal_places,
+                report_type="publication",
             )
             
-            return result
+            job_id = result.get("job_id")
+            if not job_id:
+                return {"status": "error", "error": "Failed to submit job"}
             
-        except ImportError:
-            return {"status": "error", "error": "ROC analysis module not available"}
+            # Poll for job completion
+            import asyncio
+            for _ in range(90):  # 3 min timeout for publication report
+                status = await stats_client.get_job_status(job_id)
+                if status.get("status") == "completed":
+                    return await stats_client.get_job_result(job_id)
+                elif status.get("status") == "failed":
+                    return {"status": "error", "error": status.get("error", "Job failed")}
+                await asyncio.sleep(2)
+            
+            return {"status": "error", "error": "Job timed out", "job_id": job_id}
+            
         except Exception as e:
             return {"status": "error", "error": str(e)}
     
@@ -2409,21 +2654,16 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             calculate_ttest_sample_size(effect_size=0.5)
             # Returns: n1=64, n2=64, total=128
         """
-        from .stats_worker_tasks import TTestPowerAnalysis
-        
         try:
-            analyzer = TTestPowerAnalysis()
-            result = analyzer.calculate_sample_size(
+            result = await stats_client.calculate_ttest_power(
                 effect_size=effect_size,
                 alpha=alpha,
                 power=power,
+                n=None,  # Calculating sample size, not power
                 ratio=ratio,
-                test_type=test_type,
                 alternative=alternative,
             )
-            return result.to_dict()
-        except ImportError:
-            return {"status": "error", "error": "Power analysis module not available"}
+            return result
         except Exception as e:
             return {"status": "error", "error": str(e)}
     
@@ -2461,21 +2701,16 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             calculate_ttest_power(effect_size=0.5, n1=50, n2=50)
             # Returns: power=0.697 (underpowered!)
         """
-        from .stats_worker_tasks import TTestPowerAnalysis
-        
         try:
-            analyzer = TTestPowerAnalysis()
-            result = analyzer.calculate_power(
+            result = await stats_client.calculate_ttest_power(
                 effect_size=effect_size,
-                n1=n1,
-                n2=n2,
                 alpha=alpha,
-                test_type=test_type,
+                power=None,  # Calculating power, not sample size
+                n=n1,  # Use n1 as sample size per group
+                ratio=1.0 if n2 is None or n2 == n1 else n2 / n1,
                 alternative=alternative,
             )
-            return result.to_dict()
-        except ImportError:
-            return {"status": "error", "error": "Power analysis module not available"}
+            return result
         except Exception as e:
             return {"status": "error", "error": str(e)}
     
@@ -2515,21 +2750,17 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             calculate_proportion_sample_size(p1=0.30, p2=0.45)
             # Returns: n1=152, n2=152, total=304
         """
-        from .stats_worker_tasks import ProportionPowerAnalysis
-        
         try:
-            analyzer = ProportionPowerAnalysis()
-            result = analyzer.calculate_sample_size(
+            result = await stats_client.calculate_proportion_power(
                 p1=p1,
                 p2=p2,
                 alpha=alpha,
                 power=power,
+                n=None,  # Calculating sample size
                 ratio=ratio,
                 alternative=alternative,
             )
-            return result.to_dict()
-        except ImportError:
-            return {"status": "error", "error": "Power analysis module not available"}
+            return result
         except Exception as e:
             return {"status": "error", "error": str(e)}
     
@@ -2564,21 +2795,17 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             calculate_proportion_power(p1=0.30, p2=0.45, n1=100)
             # Returns: power=0.647 (underpowered)
         """
-        from .stats_worker_tasks import ProportionPowerAnalysis
-        
         try:
-            analyzer = ProportionPowerAnalysis()
-            result = analyzer.calculate_power(
+            result = await stats_client.calculate_proportion_power(
                 p1=p1,
                 p2=p2,
-                n1=n1,
-                n2=n2,
                 alpha=alpha,
+                power=None,  # Calculating power
+                n=n1,
+                ratio=1.0 if n2 is None or n2 == n1 else n2 / n1,
                 alternative=alternative,
             )
-            return result.to_dict()
-        except ImportError:
-            return {"status": "error", "error": "Power analysis module not available"}
+            return result
         except Exception as e:
             return {"status": "error", "error": str(e)}
     
@@ -2614,20 +2841,31 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             # See sample size requirements for different power levels
             ttest_sensitivity_analysis(effect_size=0.5)
         """
-        from .stats_worker_tasks import TTestPowerAnalysis
-        
         try:
-            analyzer = TTestPowerAnalysis()
-            result = analyzer.sensitivity_analysis(
-                effect_size=effect_size,
-                alpha=alpha,
-                power_range=power_range,
-                ratio=ratio,
-                test_type=test_type,
-            )
-            return result
-        except ImportError:
-            return {"status": "error", "error": "Power analysis module not available"}
+            # Generate sensitivity analysis by calling API for each power level
+            power_levels = power_range or [0.70, 0.75, 0.80, 0.85, 0.90, 0.95]
+            sensitivity_table = []
+            
+            for pwr in power_levels:
+                result = await stats_client.calculate_ttest_power(
+                    effect_size=effect_size,
+                    alpha=alpha,
+                    power=pwr,
+                    n=None,
+                    ratio=ratio,
+                    alternative="two-sided",
+                )
+                sensitivity_table.append({
+                    "power": pwr,
+                    "sample_size": result.get("result", 0),
+                })
+            
+            return {
+                "effect_size": effect_size,
+                "alpha": alpha,
+                "sensitivity_table": sensitivity_table,
+                "recommendations": "80% power is standard for most studies. Consider 90% for confirmatory trials.",
+            }
         except Exception as e:
             return {"status": "error", "error": str(e)}
     
@@ -2655,20 +2893,37 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             effect_size_h: Cohen's h
             recommendations: Guidance
         """
-        from .stats_worker_tasks import ProportionPowerAnalysis
-        
         try:
-            analyzer = ProportionPowerAnalysis()
-            result = analyzer.sensitivity_analysis(
-                p1=p1,
-                p2=p2,
-                alpha=alpha,
-                power_range=power_range,
-                ratio=ratio,
-            )
-            return result
-        except ImportError:
-            return {"status": "error", "error": "Power analysis module not available"}
+            import math
+            # Calculate Cohen's h
+            h = abs(2 * (math.asin(math.sqrt(p1)) - math.asin(math.sqrt(p2))))
+            
+            power_levels = power_range or [0.70, 0.75, 0.80, 0.85, 0.90, 0.95]
+            sensitivity_table = []
+            
+            for pwr in power_levels:
+                result = await stats_client.calculate_proportion_power(
+                    p1=p1,
+                    p2=p2,
+                    alpha=alpha,
+                    power=pwr,
+                    n=None,
+                    ratio=ratio,
+                    alternative="two-sided",
+                )
+                sensitivity_table.append({
+                    "power": pwr,
+                    "sample_size": result.get("result", 0),
+                })
+            
+            return {
+                "p1": p1,
+                "p2": p2,
+                "effect_size_h": round(h, 4),
+                "alpha": alpha,
+                "sensitivity_table": sensitivity_table,
+                "recommendations": "Consider clinical significance of the absolute difference, not just statistical significance.",
+            }
         except Exception as e:
             return {"status": "error", "error": str(e)}
     
@@ -2718,54 +2973,54 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             calculate_effect_size(p1=0.30, p2=0.45)
             # Returns: Cohen's h = 0.31 (small-medium effect)
         """
-        from .stats_worker_tasks import (
-            cohens_d_from_means,
-            cohens_h_from_proportions,
-            interpret_effect_size,
-        )
-        
         try:
-            # Calculate Cohen's d from means
+            # Use stats_client for effect size calculation
             if mean1 is not None and mean2 is not None:
-                if pooled_sd is not None:
-                    d = cohens_d_from_means(mean1, mean2, pooled_sd=pooled_sd)
-                elif sd1 is not None and sd2 is not None:
-                    d = cohens_d_from_means(mean1, mean2, sd1=sd1, sd2=sd2)
-                else:
+                result = await stats_client.calculate_effect_size(
+                    test_type="ttest",
+                    mean1=mean1,
+                    mean2=mean2,
+                    std=pooled_sd or (((sd1 or 1)**2 + (sd2 or 1)**2) / 2)**0.5 if sd1 and sd2 else pooled_sd,
+                )
+                if "effect_size" in result:
+                    d = result["effect_size"].get("cohens_d", 0)
+                    interp = result["effect_size"].get("interpretation", "unknown")
                     return {
-                        "status": "error",
-                        "error": "Need pooled_sd or both sd1 and sd2"
+                        "effect_size": round(d, 4),
+                        "effect_type": "Cohen's d",
+                        "interpretation": interp,
+                        "formula_used": "(mean1 - mean2) / pooled_sd",
+                        "parameters": {
+                            "mean1": mean1,
+                            "mean2": mean2,
+                            "sd1": sd1,
+                            "sd2": sd2,
+                            "pooled_sd": pooled_sd,
+                        }
                     }
-                
-                interpretation = interpret_effect_size(d, "cohens_d")
-                return {
-                    "effect_size": round(d, 4),
-                    "effect_type": "Cohen's d",
-                    "interpretation": interpretation,
-                    "formula_used": "(mean1 - mean2) / pooled_sd",
-                    "parameters": {
-                        "mean1": mean1,
-                        "mean2": mean2,
-                        "sd1": sd1,
-                        "sd2": sd2,
-                        "pooled_sd": pooled_sd,
-                    }
-                }
+                return result
             
             # Calculate Cohen's h from proportions
             elif p1 is not None and p2 is not None:
-                h = cohens_h_from_proportions(p1, p2)
-                interpretation = interpret_effect_size(h, "cohens_h")
-                return {
-                    "effect_size": round(h, 4),
-                    "effect_type": "Cohen's h",
-                    "interpretation": interpretation,
-                    "formula_used": "2 * arcsin(√p1) - 2 * arcsin(√p2)",
-                    "parameters": {
-                        "p1": p1,
-                        "p2": p2,
+                result = await stats_client.calculate_effect_size(
+                    test_type="proportion",
+                    p1=p1,
+                    p2=p2,
+                )
+                if "effect_size" in result:
+                    h = result["effect_size"].get("cohens_h", 0)
+                    interp = result["effect_size"].get("interpretation", "unknown")
+                    return {
+                        "effect_size": round(h, 4),
+                        "effect_type": "Cohen's h",
+                        "interpretation": interp,
+                        "formula_used": "2 * arcsin(√p1) - 2 * arcsin(√p2)",
+                        "parameters": {
+                            "p1": p1,
+                            "p2": p2,
+                        }
                     }
-                }
+                return result
             
             else:
                 return {
@@ -2773,8 +3028,6 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
                     "error": "Provide (mean1, mean2, sd) for Cohen's d or (p1, p2) for Cohen's h"
                 }
                 
-        except ImportError:
-            return {"status": "error", "error": "Power analysis module not available"}
         except Exception as e:
             return {"status": "error", "error": str(e)}
     
@@ -2823,21 +3076,17 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             # From group means: [10, 12, 15] with SD=5
             calculate_anova_sample_size(group_means=[10, 12, 15], pooled_sd=5)
         """
-        from .stats_worker_tasks import ANOVAPowerAnalysis
-        
         try:
-            result = ANOVAPowerAnalysis.calculate_sample_size(
+            result = await stats_client.calculate_anova_power(
+                k=k_groups,
                 effect_size=effect_size,
-                k_groups=k_groups,
+                means=group_means,
+                std=pooled_sd,
                 alpha=alpha,
                 power=power,
-                group_means=group_means,
-                pooled_sd=pooled_sd,
-                eta_squared=eta_squared,
+                n=None,  # Calculating sample size
             )
-            return result.to_dict()
-        except ImportError:
-            return {"status": "error", "error": "ANOVA power analysis module not available"}
+            return result
         except Exception as e:
             return {"status": "error", "error": str(e)}
     
@@ -2872,21 +3121,17 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             # Check if 30 per group is enough for medium effect
             calculate_anova_power(n_per_group=30, effect_size=0.25, k_groups=3)
         """
-        from .stats_worker_tasks import ANOVAPowerAnalysis
-        
         try:
-            result = ANOVAPowerAnalysis.calculate_power(
-                n_per_group=n_per_group,
+            result = await stats_client.calculate_anova_power(
+                k=k_groups,
                 effect_size=effect_size,
-                k_groups=k_groups,
+                means=group_means,
+                std=pooled_sd,
                 alpha=alpha,
-                group_means=group_means,
-                pooled_sd=pooled_sd,
-                eta_squared=eta_squared,
+                power=None,  # Calculating power
+                n=n_per_group,
             )
-            return result.to_dict()
-        except ImportError:
-            return {"status": "error", "error": "ANOVA power analysis module not available"}
+            return result
         except Exception as e:
             return {"status": "error", "error": str(e)}
     
@@ -2917,28 +3162,47 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             # From means: groups have means [10, 12, 15] with SD=5
             calculate_anova_effect_size(group_means=[10, 12, 15], pooled_sd=5)
         """
-        from .stats_worker_tasks import (
-            cohens_f_from_means,
-            cohens_f_from_eta_squared,
-            eta_squared_from_cohens_f,
-            interpret_effect_size,
-        )
-        
         try:
+            import numpy as np
+            
+            # Calculate Cohen's f from group means
             if eta_squared is not None:
-                f = cohens_f_from_eta_squared(eta_squared)
+                # f = sqrt(eta^2 / (1 - eta^2))
+                f = (eta_squared / (1 - eta_squared)) ** 0.5
                 eta_sq = eta_squared
             elif group_means is not None:
-                f = cohens_f_from_means(group_means, group_sds, pooled_sd)
-                eta_sq = eta_squared_from_cohens_f(f)
+                means = np.array(group_means)
+                grand_mean = np.mean(means)
+                
+                # Calculate between-group variance
+                between_var = np.var(means, ddof=0)
+                
+                # Get SD
+                if pooled_sd:
+                    sd = pooled_sd
+                elif group_sds:
+                    sd = np.mean(group_sds)  # Simple average of group SDs
+                else:
+                    return {"status": "error", "error": "Provide pooled_sd or group_sds"}
+                
+                f = np.sqrt(between_var) / sd
+                eta_sq = f**2 / (1 + f**2)
             else:
                 return {"status": "error", "error": "Provide group_means or eta_squared"}
             
-            interp = interpret_effect_size(f, "cohens_f")
+            # Interpretation
+            if f < 0.1:
+                interp = "negligible"
+            elif f < 0.25:
+                interp = "small"
+            elif f < 0.40:
+                interp = "medium"
+            else:
+                interp = "large"
             
             return {
-                "cohens_f": round(f, 4),
-                "eta_squared": round(eta_sq, 4),
+                "cohens_f": round(float(f), 4),
+                "eta_squared": round(float(eta_sq), 4),
                 "interpretation": interp,
                 "variance_explained": f"{eta_sq*100:.1f}%",
                 "parameters": {
@@ -2947,8 +3211,6 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
                     "k_groups": len(group_means) if group_means else None,
                 }
             }
-        except ImportError:
-            return {"status": "error", "error": "Power analysis module not available"}
         except Exception as e:
             return {"status": "error", "error": str(e)}
     
@@ -2995,21 +3257,23 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             # Independence test: 2x3 table
             calculate_chisquare_sample_size(effect_size=0.3, n_rows=2, n_cols=3)
         """
-        from .stats_worker_tasks import ChiSquarePowerAnalysis
-        
         try:
-            result = ChiSquarePowerAnalysis.calculate_sample_size(
+            # Calculate df if not provided
+            calculated_df = df
+            if calculated_df is None:
+                if n_bins is not None:
+                    calculated_df = n_bins - 1  # Goodness of fit
+                elif n_rows is not None and n_cols is not None:
+                    calculated_df = (n_rows - 1) * (n_cols - 1)  # Independence test
+            
+            result = await stats_client.calculate_chisquare_power(
                 effect_size=effect_size,
+                df=calculated_df,
                 alpha=alpha,
                 power=power,
-                df=df,
-                n_bins=n_bins,
-                n_rows=n_rows,
-                n_cols=n_cols,
+                n=None,  # Calculating sample size
             )
-            return result.to_dict()
-        except ImportError:
-            return {"status": "error", "error": "Chi-square power analysis module not available"}
+            return result
         except Exception as e:
             return {"status": "error", "error": str(e)}
     
@@ -3043,21 +3307,23 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             # Check if n=100 is enough for 2x3 table
             calculate_chisquare_power(n=100, effect_size=0.3, n_rows=2, n_cols=3)
         """
-        from .stats_worker_tasks import ChiSquarePowerAnalysis
-        
         try:
-            result = ChiSquarePowerAnalysis.calculate_power(
-                n=n,
+            # Calculate df if not provided
+            calculated_df = df
+            if calculated_df is None:
+                if n_bins is not None:
+                    calculated_df = n_bins - 1
+                elif n_rows is not None and n_cols is not None:
+                    calculated_df = (n_rows - 1) * (n_cols - 1)
+            
+            result = await stats_client.calculate_chisquare_power(
                 effect_size=effect_size,
+                df=calculated_df,
                 alpha=alpha,
-                df=df,
-                n_bins=n_bins,
-                n_rows=n_rows,
-                n_cols=n_cols,
+                power=None,  # Calculating power
+                n=n,
             )
-            return result.to_dict()
-        except ImportError:
-            return {"status": "error", "error": "Chi-square power analysis module not available"}
+            return result
         except Exception as e:
             return {"status": "error", "error": str(e)}
     
@@ -3089,10 +3355,18 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
                 expected_proportions=[0.25, 0.25, 0.25, 0.25]
             )
         """
-        from .stats_worker_tasks import effect_size_w_from_proportions
-        
         try:
-            w = effect_size_w_from_proportions(observed_proportions, expected_proportions)
+            # Calculate Cohen's w locally (simple formula)
+            import numpy as np
+            
+            obs = np.array(observed_proportions)
+            if expected_proportions is None:
+                exp = np.ones(len(obs)) / len(obs)  # Uniform distribution
+            else:
+                exp = np.array(expected_proportions)
+            
+            # Cohen's w = sqrt(sum((observed - expected)^2 / expected))
+            w = np.sqrt(np.sum((obs - exp)**2 / exp))
             
             # Interpretation
             if w < 0.1:
@@ -3105,15 +3379,13 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
                 interp = "large"
             
             return {
-                "cohens_w": round(w, 4),
+                "cohens_w": round(float(w), 4),
                 "interpretation": interp,
                 "observed": observed_proportions,
-                "expected": expected_proportions or [1/len(observed_proportions)] * len(observed_proportions),
+                "expected": exp.tolist(),
                 "n_categories": len(observed_proportions),
                 "df": len(observed_proportions) - 1,
             }
-        except ImportError:
-            return {"status": "error", "error": "Power analysis module not available"}
         except Exception as e:
             return {"status": "error", "error": str(e)}
     
@@ -3158,16 +3430,14 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             calculate_survival_events(hazard_ratio=0.5, alternative="one-sided")
         """
         try:
-            from .stats_worker_tasks import calculate_survival_events as _calc
-            return _calc(
+            result = await stats_client.calculate_survival_power(
                 hazard_ratio=hazard_ratio,
+                p1=0.7,  # Default event probability for events calculation
                 alpha=alpha,
                 power=power,
-                allocation_ratio=allocation_ratio,
-                alternative=alternative,
+                ratio=allocation_ratio,
             )
-        except ImportError:
-            return {"status": "error", "error": "Survival power analysis module not available"}
+            return result
         except Exception as e:
             return {"status": "error", "error": str(e)}
     
@@ -3220,19 +3490,16 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             )
         """
         try:
-            from .stats_worker_tasks import calculate_survival_sample_size as _calc
-            return _calc(
+            result = await stats_client.calculate_survival_power(
                 hazard_ratio=hazard_ratio,
+                p1=prob_event,
                 alpha=alpha,
                 power=power,
-                prob_event=prob_event,
-                allocation_ratio=allocation_ratio,
-                alternative=alternative,
+                ratio=allocation_ratio,
                 accrual_time=accrual_time,
-                follow_up_time=follow_up_time,
+                followup_time=follow_up_time,
             )
-        except ImportError:
-            return {"status": "error", "error": "Survival power analysis module not available"}
+            return result
         except Exception as e:
             return {"status": "error", "error": str(e)}
     
@@ -3277,18 +3544,15 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             calculate_survival_power(hazard_ratio=0.70, total_n=400, prob_event=0.65)
         """
         try:
-            from .stats_worker_tasks import calculate_survival_power as _calc
-            return _calc(
+            result = await stats_client.calculate_survival_power(
                 hazard_ratio=hazard_ratio,
-                n_events=n_events,
-                total_n=total_n,
+                p1=prob_event,
                 alpha=alpha,
-                prob_event=prob_event,
-                allocation_ratio=allocation_ratio,
-                alternative=alternative,
+                power=None,  # Calculating power
+                n_events=n_events,
+                ratio=allocation_ratio,
             )
-        except ImportError:
-            return {"status": "error", "error": "Survival power analysis module not available"}
+            return result
         except Exception as e:
             return {"status": "error", "error": str(e)}
     
@@ -3345,19 +3609,28 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             )
         """
         try:
-            from .stats_worker_tasks import calculate_survival_from_medians as _calc
-            return _calc(
-                median_control=median_control,
-                median_treatment=median_treatment,
+            import math
+            # Convert medians to hazard ratio
+            # Under exponential assumption: HR = median_control / median_treatment
+            hazard_ratio = median_control / median_treatment
+            
+            result = await stats_client.calculate_survival_power(
+                hazard_ratio=hazard_ratio,
+                p1=0.7,  # Default event probability
                 alpha=alpha,
                 power=power,
+                ratio=allocation_ratio,
                 accrual_time=accrual_time,
-                follow_up_time=follow_up_time,
-                allocation_ratio=allocation_ratio,
-                alternative=alternative,
+                followup_time=follow_up_time,
             )
-        except ImportError:
-            return {"status": "error", "error": "Survival power analysis module not available"}
+            
+            # Add median information to result
+            result["median_control"] = median_control
+            result["median_treatment"] = median_treatment
+            result["implied_hazard_ratio"] = round(hazard_ratio, 4)
+            result["improvement"] = f"{(1 - hazard_ratio) * 100:.1f}% reduction in hazard"
+            
+            return result
         except Exception as e:
             return {"status": "error", "error": str(e)}
     

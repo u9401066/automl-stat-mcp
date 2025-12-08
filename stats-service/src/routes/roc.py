@@ -244,8 +244,8 @@ async def submit_roc_compute_job(request: ROCComputeRequest):
         ROC curve points, AUC, CI, optimal threshold
     """
     config = {
-        "true_column": request.true_column,
-        "score_column": request.score_column,
+        "y_true_col": request.true_column,
+        "y_score_col": request.score_column,
         "pos_label": request.pos_label,
         "n_bootstrap": request.n_bootstrap,
         "confidence_level": request.confidence_level,
@@ -277,8 +277,8 @@ async def submit_roc_compare_job(request: ROCCompareRequest):
     - Overlay plot data
     """
     config = {
-        "true_column": request.true_column,
-        "score_columns": request.score_columns,
+        "y_true_col": request.true_column,
+        "model_score_cols": request.score_columns,
         "model_names": request.model_names or [f"Model_{i+1}" for i in range(len(request.score_columns))],
         "method": request.method,
     }
@@ -314,8 +314,8 @@ async def submit_threshold_analysis_job(request: ThresholdRequest):
     - Threshold vs metric curves
     """
     config = {
-        "true_column": request.true_column,
-        "score_column": request.score_column,
+        "y_true_col": request.true_column,
+        "y_score_col": request.score_column,
         "method": request.method,
         "cost_fp": request.cost_fp,
         "cost_fn": request.cost_fn,
@@ -352,8 +352,8 @@ async def submit_calibration_job(request: CalibrationRequest):
     - Bin-wise statistics
     """
     config = {
-        "true_column": request.true_column,
-        "score_column": request.score_column,
+        "y_true_col": request.true_column,
+        "y_score_col": request.score_column,
         "n_bins": request.n_bins,
         "strategy": request.strategy,
     }
@@ -384,8 +384,8 @@ async def submit_full_evaluation_job(request: FullEvalRequest):
     Perfect for final model assessment and reporting.
     """
     config = {
-        "true_column": request.true_column,
-        "score_column": request.score_column,
+        "y_true_col": request.true_column,
+        "y_score_col": request.score_column,
         "threshold": request.threshold,
         "include_calibration": request.include_calibration,
         "include_precision_recall": request.include_precision_recall,

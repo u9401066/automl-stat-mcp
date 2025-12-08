@@ -226,9 +226,9 @@ async def submit_kaplan_meier_job(request: KaplanMeierRequest):
         time_points: Specific times for survival estimates
     """
     config = {
-        "time_column": request.time_column,
-        "event_column": request.event_column,
-        "group_column": request.group_column,
+        "time_col": request.time_column,
+        "event_col": request.event_column,
+        "group_col": request.group_column,
         "confidence_level": request.confidence_level,
         "time_points": request.time_points,
     }
@@ -267,8 +267,8 @@ async def submit_cox_regression_job(request: CoxRegressionRequest):
         penalizer: L2 regularization strength
     """
     config = {
-        "time_column": request.time_column,
-        "event_column": request.event_column,
+        "time_col": request.time_column,
+        "event_col": request.event_column,
         "covariates": request.covariates,
         "strata": request.strata,
         "ties": request.ties,
@@ -305,9 +305,9 @@ async def submit_survival_comparison_job(request: SurvivalCompareRequest):
     - KM plot data for visualization
     """
     config = {
-        "time_column": request.time_column,
-        "event_column": request.event_column,
-        "group_column": request.group_column,
+        "time_col": request.time_column,
+        "event_col": request.event_column,
+        "group_col": request.group_column,
         "test": request.test,
         "confidence_level": request.confidence_level,
     }
@@ -336,9 +336,9 @@ async def submit_survival_summary_job(request: SurvivalSummaryRequest):
     Useful before running detailed analyses.
     """
     config = {
-        "time_column": request.time_column,
-        "event_column": request.event_column,
-        "group_column": request.group_column,
+        "time_col": request.time_column,
+        "event_col": request.event_column,
+        "group_col": request.group_column,
     }
     
     return await _submit_survival_job(

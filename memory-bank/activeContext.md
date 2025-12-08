@@ -1,8 +1,8 @@
 # Active Context
 
-## Current Status (2025-01-13)
+## Current Status (2025-12-08)
 
-### 🎯 平台狀態: v2.0 架構重構中
+### 🎯 平台狀態: v1.1 穩定運行 ✅
 
 **核心設計原則 (重要!):**
 
@@ -16,36 +16,31 @@
 
 ### ✅ 已完成
 
-1. **架構文件重構** (2025-01-13)
-   - `docs/AGENT_WORKFLOW.md` - Agent 工作流設計
-   - `docs/MCP_TOOLS_INVENTORY.md` - 工具盤點
-   - `README.md` - 簡化為 18 核心工具
-   - `memory-bank/productContext.md` - 架構原則
+1. **Phase 6: MCP 統計工具修復** (2025-12-08)
+   - 修復 23 個損壞的 `stats_worker_tasks` imports
+   - Power Analysis Tools (17個) 改用 stats_client API
+   - EDA/TableOne Tools (6個) 使用本地 fallback
+   - **57 統計工具全部正常運作**
 
 2. **核心功能**
    - AutoML 訓練（提交 → 等待 → 取結果）
    - 統計分析（TableOne, EDA, Auto-Analyze）
+   - Power Analysis (T-test, Proportion, ANOVA, Chi-square, Survival)
    - E2E 測試全部通過 (5/5)
 
-### ⚠️ 已知問題
+### ✅ 已解決問題
 
-**MCP 工具架構問題：**
-- ~30 個工具返回 "Module not available"
-- 原因：MCP 容器無法 import stats-worker 的模組
-- 影響：Propensity、Survival、ROC、Power Analysis
-- 解決方案：新增 stats-service API endpoints
+**MCP 工具架構問題 (已修復):**
+- ~~30 個工具返回 "Module not available"~~ → 全部修復
+- Power Analysis: 改用 stats_client → stats-service API
+- EDA Tools: 使用本地 pandas/scipy fallback
+- stats-service power.py: 使用 statsmodels 計算
 
 ### 📋 下一步
 
-1. **修復 stats-service API**
-   - 新增 `/propensity/*` endpoints
-   - 新增 `/survival/*` endpoints
-   - 新增 `/roc/*` endpoints
-   - 新增 `/power/*` endpoints
-
-2. **簡化 MCP 工具註冊**
-   - 移除無法運作的工具
-   - 只保留 18 核心工具
+1. **執行完整測試套件** 確認所有功能正常
+2. **完善文檔** 更新 MCP 工具清單
+3. **考慮 Phase 7** Meta-Analysis 功能
 
 ## Current Goals
 

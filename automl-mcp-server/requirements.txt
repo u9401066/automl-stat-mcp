@@ -9,5 +9,6 @@ httpx>=0.25.0
 # Type validation
 pydantic>=2.0.0
 
-# Data processing (for data validation layer)
+# Data processing (for data validation layer and local fallback tools)
 pandas>=2.0.0
+scipy>=1.11.0

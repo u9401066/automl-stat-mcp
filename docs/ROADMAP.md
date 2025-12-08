@@ -27,9 +27,15 @@
 | **Phase 6** | Power Analysis (T-test, Proportion, ANOVA, Chi-square, Survival) | 19 | ✅ |
 | **DDD Refactoring** | 代碼重構 (statistics_tools, power_analysis, roc_analysis, advanced_analysis) | - | ✅ |
 
-**總計: 89 MCP 工具 (26 AutoML + 3 Upload + 57 Stats + 3 Workflow), E2E 5/5 通過**
+**總計: 89 MCP 工具 (26 AutoML + 3 Upload + 57 Stats + 3 Workflow), E2E 5/5 通過, 所有工具正常運作 ✅**
 
 ### 🆕 2025-12-08 更新
+- **Phase 6 完成: MCP 統計工具修復**
+  - 修復 23 個損壞的 `stats_worker_tasks` imports
+  - Power Analysis (17 工具) → stats_client API 呼叫
+  - EDA Tools (6 工具) → 本地 pandas/scipy fallback
+  - stats-service power.py → 實際 statsmodels 計算
+  - 加入 scipy 到 MCP 容器
 - MCP 檔案上傳架構重構 (Volume Mount + 雙儲存模式)
 - stats-worker dataset_id bug 修復
 - TableOne tuple key 序列化修復

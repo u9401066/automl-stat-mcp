@@ -123,7 +123,9 @@ async def calculate_ttest_power(request: TTestPowerRequest):
     - 0.5: Medium effect
     - 0.8: Large effect
     """
-    from stats_power import ttest_power_analysis  # Will be implemented in worker
+    from statsmodels.stats.power import TTestIndPower
+    
+    analysis = TTestIndPower()
     
     # Calculate effect size if means provided
     effect_size = request.effect_size
@@ -134,7 +136,7 @@ async def calculate_ttest_power(request: TTestPowerRequest):
         return PowerResponse(
             calculation_type="error",
             result=0,
-            parameters=request.dict(),
+            parameters=request.model_dump(),
             interpretation="Please provide either effect_size or (mean1, mean2, std)",
             assumptions=[],
         )
@@ -143,13 +145,23 @@ async def calculate_ttest_power(request: TTestPowerRequest):
     if request.n is not None:
         # Calculate power
         calc_type = "power"
-        # result = ttest_power_analysis.calculate_power(...)
-        result = 0.8  # Placeholder
+        result = analysis.solve_power(
+            effect_size=effect_size,
+            nobs1=request.n,
+            alpha=request.alpha,
+            ratio=request.ratio,
+            alternative=request.alternative,
+        )
     else:
         # Calculate sample size
         calc_type = "sample_size"
-        # result = ttest_power_analysis.calculate_sample_size(...)
-        result = 64  # Placeholder
+        result = analysis.solve_power(
+            effect_size=effect_size,
+            power=request.power,
+            alpha=request.alpha,
+            ratio=request.ratio,
+            alternative=request.alternative,
+        )
     
     return PowerResponse(
         calculation_type=calc_type,
@@ -193,18 +205,33 @@ async def calculate_proportion_power(request: ProportionPowerRequest):
     - 0.8: Large effect
     """
     import math
+    from statsmodels.stats.power import NormalIndPower
+    
+    analysis = NormalIndPower()
     
     # Calculate Cohen's h
     h = 2 * (math.asin(math.sqrt(request.p1)) - math.asin(math.sqrt(request.p2)))
     effect_size = abs(h)
     
-    # Placeholder calculations
+    # Calculate
     if request.n is not None:
         calc_type = "power"
-        result = 0.85
+        result = analysis.solve_power(
+            effect_size=effect_size,
+            nobs1=request.n,
+            alpha=request.alpha,
+            ratio=request.ratio,
+            alternative=request.alternative,
+        )
     else:
         calc_type = "sample_size"
-        result = 100
+        result = analysis.solve_power(
+            effect_size=effect_size,
+            power=request.power,
+            alpha=request.alpha,
+            ratio=request.ratio,
+            alternative=request.alternative,
+        )
     
     return PowerResponse(
         calculation_type=calc_type,
@@ -242,22 +269,38 @@ async def calculate_anova_power(request: ANOVAPowerRequest):
     
     Cohen's f = sqrt(η²/(1-η²)) where η² is eta-squared
     """
+    from statsmodels.stats.power import FTestAnovaPower
+    import numpy as np
+    
+    analysis = FTestAnovaPower()
+    
     # Calculate effect size if means provided
     effect_size = request.effect_size
     if effect_size is None and request.means and request.std:
-        import numpy as np
         means = np.array(request.means)
-        grand_mean = np.mean(means)
         between_var = np.var(means, ddof=0)
         effect_size = np.sqrt(between_var) / request.std
     
-    # Placeholder
+    if effect_size is None:
+        effect_size = 0.25  # Default to medium effect
+    
+    # Calculate
     if request.n is not None:
         calc_type = "power"
-        result = 0.82
+        result = analysis.solve_power(
+            effect_size=effect_size,
+            nobs=request.n,
+            alpha=request.alpha,
+            k_groups=request.k,
+        )
     else:
         calc_type = "sample_size"
-        result = 25
+        result = analysis.solve_power(
+            effect_size=effect_size,
+            power=request.power,
+            alpha=request.alpha,
+            k_groups=request.k,
+        )
     
     return PowerResponse(
         calculation_type=calc_type,
@@ -291,15 +334,33 @@ async def calculate_chisquare_power(request: ChiSquarePowerRequest):
     - 0.30: Medium effect
     - 0.50: Large effect
     """
+    from statsmodels.stats.power import GofChisquarePower
+    
+    analysis = GofChisquarePower()
     effect_size = request.effect_size or 0.3  # Default medium effect
     
-    # Placeholder
+    # Calculate df
+    df = request.df
+    if df is None:
+        df = 1  # Default
+    
+    # Calculate
     if request.n is not None:
         calc_type = "power"
-        result = 0.79
+        result = analysis.solve_power(
+            effect_size=effect_size,
+            nobs=request.n,
+            alpha=request.alpha,
+            n_bins=df + 1,  # n_bins = df + 1
+        )
     else:
         calc_type = "sample_size"
-        result = 88
+        result = analysis.solve_power(
+            effect_size=effect_size,
+            power=request.power,
+            alpha=request.alpha,
+            n_bins=df + 1,
+        )
     
     return PowerResponse(
         calculation_type=calc_type,
@@ -335,38 +396,62 @@ async def calculate_survival_power(request: SurvivalPowerRequest):
         hazard_ratio: Expected HR (treatment vs control)
         p1: Event probability in control group
         alpha: Significance level
-        power: Desired power
+        power: Desired power (if calculating sample size)
+        n_events: Number of events (if calculating power)
         ratio: Allocation ratio (n_treatment / n_control)
     """
     import math
-    
-    # Schoenfeld formula
-    z_alpha = 1.96 if request.alpha == 0.05 else 2.576  # Simplified
-    z_beta = 0.84 if request.power == 0.8 else 1.28
+    from scipy import stats
     
     log_hr = math.log(request.hazard_ratio)
-    events_needed = 4 * (z_alpha + z_beta)**2 / log_hr**2
-    
-    # Account for allocation ratio
     r = request.ratio
-    events_needed = events_needed * (1 + r)**2 / (4 * r)
     
-    # Convert to sample size
-    sample_size = events_needed / request.p1
+    # Get z_alpha
+    z_alpha = stats.norm.ppf(1 - request.alpha / 2)
+    
+    if request.n_events is not None:
+        # Calculate power given number of events
+        calc_type = "power"
+        # Solve for z_beta from: events = (z_alpha + z_beta)^2 * (1+r)^2 / (r * log_hr^2)
+        # z_beta = sqrt(events * r * log_hr^2 / (1+r)^2) - z_alpha
+        z_beta = math.sqrt(request.n_events * r * log_hr**2 / (1 + r)**2) - z_alpha
+        result = stats.norm.cdf(z_beta)  # Convert z to power
+        result = max(0, min(1, result))  # Clamp to [0, 1]
+        
+        interpretation = (
+            f"With {request.n_events} events and HR={request.hazard_ratio:.2f}, "
+            f"you have {result*100:.1f}% power to detect a significant difference."
+        )
+    else:
+        # Calculate sample size given power
+        calc_type = "sample_size"
+        power = request.power if request.power is not None else 0.8
+        z_beta = stats.norm.ppf(power)
+        
+        # Schoenfeld formula for events
+        events_needed = (z_alpha + z_beta)**2 * (1 + r)**2 / (r * log_hr**2)
+        
+        # Convert to sample size
+        sample_size = events_needed / request.p1
+        result = sample_size
+        
+        interpretation = (
+            f"To detect HR={request.hazard_ratio:.2f} with {power*100:.0f}% power, "
+            f"you need {int(events_needed)} events "
+            f"({int(sample_size)} total subjects assuming {request.p1*100:.0f}% event rate)."
+        )
     
     return PowerResponse(
-        calculation_type="sample_size",
-        result=sample_size,
+        calculation_type=calc_type,
+        result=result,
         parameters={
             "hazard_ratio": request.hazard_ratio,
             "p1": request.p1,
             "alpha": request.alpha,
             "power": request.power,
-            "events_needed": int(events_needed),
+            "n_events": request.n_events,
         },
-        interpretation=f"To detect HR={request.hazard_ratio:.2f} with {request.power*100:.0f}% power, "
-                       f"you need {int(events_needed)} events "
-                       f"({int(sample_size)} total subjects assuming {request.p1*100:.0f}% event rate).",
+        interpretation=interpretation,
         assumptions=[
             "Proportional hazards",
             "Non-informative censoring",
