@@ -6,13 +6,23 @@ Routes for time-to-event analysis:
 - Cox proportional hazards regression
 - Log-rank test for group comparison
 - Survival curves comparison
+
+Supports two modes:
+1. Dataset mode: Provide dataset_id (pre-uploaded to MinIO)
+2. Direct mode: Provide csv_content inline (no storage)
 """
+import base64
+import json
+import uuid
+from datetime import datetime
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from typing import Optional, List
 
+import redis.asyncio as redis
+
 from ..infrastructure.redis_dataset_store import redis_dataset_store
-from ..infrastructure.repositories import get_job_repository, get_job_queue
+from ..config import REDIS_HOST, REDIS_PORT, REDIS_DB, STATS_JOBS_PENDING, STATS_JOBS_PREFIX
 
 router = APIRouter(prefix="/survival", tags=["Survival Analysis"])
 
@@ -22,8 +32,15 @@ router = APIRouter(prefix="/survival", tags=["Survival Analysis"])
 # =============================================================================
 
 class KaplanMeierRequest(BaseModel):
-    """Request for Kaplan-Meier analysis"""
-    dataset_id: str = Field(..., description="Dataset ID")
+    """Request for Kaplan-Meier analysis
+    
+    Supports dual-mode:
+    - Dataset mode: Provide dataset_id (pre-uploaded data)
+    - Direct mode: Provide csv_content (inline data)
+    """
+    dataset_id: Optional[str] = Field(None, description="Dataset ID (for dataset mode)")
+    csv_content: Optional[str] = Field(None, description="CSV data content (for direct mode)")
+    is_base64: bool = Field(default=False, description="Whether csv_content is base64 encoded")
     user_id: str = Field(..., description="User ID")
     time_column: str = Field(..., description="Time-to-event column")
     event_column: str = Field(..., description="Event indicator (1=event, 0=censored)")
@@ -33,8 +50,15 @@ class KaplanMeierRequest(BaseModel):
 
 
 class CoxRegressionRequest(BaseModel):
-    """Request for Cox proportional hazards regression"""
-    dataset_id: str = Field(..., description="Dataset ID")
+    """Request for Cox proportional hazards regression
+    
+    Supports dual-mode:
+    - Dataset mode: Provide dataset_id (pre-uploaded data)
+    - Direct mode: Provide csv_content (inline data)
+    """
+    dataset_id: Optional[str] = Field(None, description="Dataset ID (for dataset mode)")
+    csv_content: Optional[str] = Field(None, description="CSV data content (for direct mode)")
+    is_base64: bool = Field(default=False, description="Whether csv_content is base64 encoded")
     user_id: str = Field(..., description="User ID")
     time_column: str = Field(..., description="Time-to-event column")
     event_column: str = Field(..., description="Event indicator")
@@ -45,8 +69,15 @@ class CoxRegressionRequest(BaseModel):
 
 
 class SurvivalCompareRequest(BaseModel):
-    """Request for survival curve comparison"""
-    dataset_id: str = Field(..., description="Dataset ID")
+    """Request for survival curve comparison
+    
+    Supports dual-mode:
+    - Dataset mode: Provide dataset_id (pre-uploaded data)
+    - Direct mode: Provide csv_content (inline data)
+    """
+    dataset_id: Optional[str] = Field(None, description="Dataset ID (for dataset mode)")
+    csv_content: Optional[str] = Field(None, description="CSV data content (for direct mode)")
+    is_base64: bool = Field(default=False, description="Whether csv_content is base64 encoded")
     user_id: str = Field(..., description="User ID")
     time_column: str = Field(..., description="Time-to-event column")
     event_column: str = Field(..., description="Event indicator")
@@ -56,8 +87,15 @@ class SurvivalCompareRequest(BaseModel):
 
 
 class SurvivalSummaryRequest(BaseModel):
-    """Request for survival data summary"""
-    dataset_id: str = Field(..., description="Dataset ID")
+    """Request for survival data summary
+    
+    Supports dual-mode:
+    - Dataset mode: Provide dataset_id (pre-uploaded data)
+    - Direct mode: Provide csv_content (inline data)
+    """
+    dataset_id: Optional[str] = Field(None, description="Dataset ID (for dataset mode)")
+    csv_content: Optional[str] = Field(None, description="CSV data content (for direct mode)")
+    is_base64: bool = Field(default=False, description="Whether csv_content is base64 encoded")
     user_id: str = Field(..., description="User ID")
     time_column: str = Field(..., description="Time-to-event column")
     event_column: str = Field(..., description="Event indicator")
@@ -76,40 +114,83 @@ class JobResponse(BaseModel):
 # Helper Functions
 # =============================================================================
 
+# Redis connection pool for async operations
+_redis_pool = None
+
+async def _get_redis() -> redis.Redis:
+    """Get async Redis client"""
+    global _redis_pool
+    if _redis_pool is None:
+        _redis_pool = redis.ConnectionPool.from_url(
+            f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}",
+            decode_responses=True
+        )
+    return redis.Redis(connection_pool=_redis_pool)
+
+
 async def _submit_survival_job(
     job_type: str,
-    dataset_id: str,
     user_id: str,
     config: dict,
+    dataset_id: Optional[str] = None,
+    csv_content: Optional[str] = None,
+    is_base64: bool = False,
 ) -> JobResponse:
-    """Submit a survival analysis job to the queue"""
-    import uuid
+    """Submit a survival analysis job to the queue
     
-    job_repo = get_job_repository()
-    job_queue = get_job_queue()
+    Supports dual-mode:
+    - Dataset mode: Provide dataset_id (pre-uploaded data)
+    - Direct mode: Provide csv_content (inline data)
+    """
+    # Validate: must provide either dataset_id OR csv_content
+    if not dataset_id and not csv_content:
+        raise HTTPException(
+            status_code=400, 
+            detail="Must provide either dataset_id or csv_content"
+        )
     
-    # Verify dataset exists
-    dataset = await redis_dataset_store.get_dataset(dataset_id)
-    if not dataset:
-        raise HTTPException(status_code=404, detail=f"Dataset {dataset_id} not found")
+    # Dataset mode: verify dataset exists
+    minio_path = None
+    if dataset_id:
+        dataset = await redis_dataset_store.get_dataset(dataset_id)
+        if not dataset:
+            raise HTTPException(status_code=404, detail=f"Dataset {dataset_id} not found")
+        minio_path = dataset.get("minio_path")
     
     # Create job
     job_id = f"survival-{uuid.uuid4().hex[:12]}"
+    
+    # Prepare params for worker
+    params = {**config}
+    if csv_content:
+        # Decode base64 if needed
+        if is_base64:
+            csv_content = base64.b64decode(csv_content).decode('utf-8')
+        params["csv_content"] = csv_content
     
     job_data = {
         "job_id": job_id,
         "job_type": job_type,
         "user_id": user_id,
         "dataset_id": dataset_id,
-        "config": config,
+        "minio_path": minio_path,
+        "params": params,
         "status": "pending",
+        "created_at": datetime.utcnow().isoformat(),
     }
     
-    # Save to repository
-    await job_repo.create(job_data)
+    # Get Redis client
+    client = await _get_redis()
+    
+    # Save job metadata
+    await client.set(
+        f"{STATS_JOBS_PREFIX}{job_id}",
+        json.dumps(job_data),
+        ex=86400 * 7  # 7 days TTL
+    )
     
     # Queue for processing
-    await job_queue.enqueue(job_data)
+    await client.lpush(STATS_JOBS_PENDING, json.dumps(job_data))
     
     return JobResponse(
         job_id=job_id,
@@ -154,9 +235,11 @@ async def submit_kaplan_meier_job(request: KaplanMeierRequest):
     
     return await _submit_survival_job(
         job_type="kaplan_meier",
-        dataset_id=request.dataset_id,
         user_id=request.user_id,
         config=config,
+        dataset_id=request.dataset_id,
+        csv_content=request.csv_content,
+        is_base64=request.is_base64,
     )
 
 
@@ -194,9 +277,11 @@ async def submit_cox_regression_job(request: CoxRegressionRequest):
     
     return await _submit_survival_job(
         job_type="cox_regression",
-        dataset_id=request.dataset_id,
         user_id=request.user_id,
         config=config,
+        dataset_id=request.dataset_id,
+        csv_content=request.csv_content,
+        is_base64=request.is_base64,
     )
 
 
@@ -229,9 +314,11 @@ async def submit_survival_comparison_job(request: SurvivalCompareRequest):
     
     return await _submit_survival_job(
         job_type="survival_compare",
-        dataset_id=request.dataset_id,
         user_id=request.user_id,
         config=config,
+        dataset_id=request.dataset_id,
+        csv_content=request.csv_content,
+        is_base64=request.is_base64,
     )
 
 
@@ -256,9 +343,11 @@ async def submit_survival_summary_job(request: SurvivalSummaryRequest):
     
     return await _submit_survival_job(
         job_type="survival_summary",
-        dataset_id=request.dataset_id,
         user_id=request.user_id,
         config=config,
+        dataset_id=request.dataset_id,
+        csv_content=request.csv_content,
+        is_base64=request.is_base64,
     )
 
 

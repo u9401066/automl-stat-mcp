@@ -6,13 +6,23 @@ Routes for causal inference using propensity score methods:
 - Propensity score matching
 - Treatment effect estimation
 - Balance diagnostics
+
+Supports two modes:
+1. Dataset mode: Provide dataset_id (pre-uploaded to MinIO)
+2. Direct mode: Provide csv_content inline (no storage)
 """
+import base64
+import json
+import uuid
+from datetime import datetime
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List
 
+import redis.asyncio as redis
+
 from ..infrastructure.redis_dataset_store import redis_dataset_store
-from ..infrastructure.repositories import get_job_repository, get_job_queue
+from ..config import REDIS_HOST, REDIS_PORT, REDIS_DB, STATS_JOBS_PENDING, STATS_JOBS_PREFIX
 
 router = APIRouter(prefix="/propensity", tags=["Propensity Score Analysis"])
 
@@ -22,18 +32,30 @@ router = APIRouter(prefix="/propensity", tags=["Propensity Score Analysis"])
 # =============================================================================
 
 class PropensityEstimateRequest(BaseModel):
-    """Request for propensity score estimation"""
-    dataset_id: str = Field(..., description="Dataset ID")
+    """Request for propensity score estimation
+    
+    Provide EITHER dataset_id OR csv_content, not both.
+    """
+    dataset_id: Optional[str] = Field(None, description="Dataset ID (if using pre-uploaded data)")
+    csv_content: Optional[str] = Field(None, description="CSV data as string (if using direct mode)")
+    is_base64: bool = Field(default=False, description="Whether csv_content is base64 encoded")
     user_id: str = Field(..., description="User ID")
     treatment_column: str = Field(..., description="Binary treatment column (0/1)")
     covariates: List[str] = Field(..., description="List of covariate columns")
     method: str = Field(default="logistic", description="Estimation method: logistic, gbm, random_forest")
     regularization: float = Field(default=0.0, description="L2 regularization strength")
+    
+    @field_validator('dataset_id', 'csv_content')
+    @classmethod
+    def check_data_source(cls, v, info):
+        return v  # Validation done in model_validator
 
 
 class PropensityMatchRequest(BaseModel):
     """Request for propensity score matching"""
-    dataset_id: str = Field(..., description="Dataset ID")
+    dataset_id: Optional[str] = Field(None, description="Dataset ID")
+    csv_content: Optional[str] = Field(None, description="CSV data as string")
+    is_base64: bool = Field(default=False, description="Whether csv_content is base64 encoded")
     user_id: str = Field(..., description="User ID")
     treatment_column: str = Field(..., description="Binary treatment column")
     covariates: Optional[List[str]] = Field(None, description="Covariates for PS estimation (if score_column not provided)")
@@ -47,7 +69,9 @@ class PropensityMatchRequest(BaseModel):
 
 class TreatmentEffectRequest(BaseModel):
     """Request for treatment effect estimation"""
-    dataset_id: str = Field(..., description="Dataset ID")
+    dataset_id: Optional[str] = Field(None, description="Dataset ID")
+    csv_content: Optional[str] = Field(None, description="CSV data as string")
+    is_base64: bool = Field(default=False, description="Whether csv_content is base64 encoded")
     user_id: str = Field(..., description="User ID")
     treatment_column: str = Field(..., description="Binary treatment column")
     outcome_column: str = Field(..., description="Outcome variable column")
@@ -59,7 +83,9 @@ class TreatmentEffectRequest(BaseModel):
 
 class BalanceCheckRequest(BaseModel):
     """Request for covariate balance assessment"""
-    dataset_id: str = Field(..., description="Dataset ID")
+    dataset_id: Optional[str] = Field(None, description="Dataset ID")
+    csv_content: Optional[str] = Field(None, description="CSV data as string")
+    is_base64: bool = Field(default=False, description="Whether csv_content is base64 encoded")
     user_id: str = Field(..., description="User ID")
     treatment_column: str = Field(..., description="Binary treatment column")
     covariates: List[str] = Field(..., description="Covariates to check balance")
@@ -70,7 +96,9 @@ class BalanceCheckRequest(BaseModel):
 
 class PropensityFullRequest(BaseModel):
     """Request for full propensity score analysis workflow"""
-    dataset_id: str = Field(..., description="Dataset ID")
+    dataset_id: Optional[str] = Field(None, description="Dataset ID")
+    csv_content: Optional[str] = Field(None, description="CSV data as string")
+    is_base64: bool = Field(default=False, description="Whether csv_content is base64 encoded")
     user_id: str = Field(..., description="User ID")
     treatment_column: str = Field(..., description="Binary treatment column")
     outcome_column: str = Field(..., description="Outcome variable column")
@@ -91,40 +119,82 @@ class JobResponse(BaseModel):
 # Helper Functions
 # =============================================================================
 
+# Redis connection pool for async operations
+_redis_pool = None
+
+async def _get_redis() -> redis.Redis:
+    """Get async Redis client"""
+    global _redis_pool
+    if _redis_pool is None:
+        _redis_pool = redis.ConnectionPool.from_url(
+            f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}",
+            decode_responses=True
+        )
+    return redis.Redis(connection_pool=_redis_pool)
+
+
 async def _submit_propensity_job(
     job_type: str,
-    dataset_id: str,
     user_id: str,
     config: dict,
+    dataset_id: Optional[str] = None,
+    csv_content: Optional[str] = None,
+    is_base64: bool = False,
 ) -> JobResponse:
-    """Submit a propensity score analysis job to the queue"""
-    import uuid
+    """Submit a propensity score analysis job to the queue
     
-    job_repo = get_job_repository()
-    job_queue = get_job_queue()
+    Supports two modes:
+    1. Dataset mode: dataset_id provided, data loaded from MinIO
+    2. Direct mode: csv_content provided, data embedded in job
+    """
+    if not dataset_id and not csv_content:
+        raise HTTPException(status_code=400, detail="Must provide either dataset_id or csv_content")
     
-    # Verify dataset exists
-    dataset = await redis_dataset_store.get_dataset(dataset_id)
-    if not dataset:
-        raise HTTPException(status_code=404, detail=f"Dataset {dataset_id} not found")
+    if dataset_id and csv_content:
+        raise HTTPException(status_code=400, detail="Provide either dataset_id or csv_content, not both")
+    
+    # Verify dataset exists (if using dataset mode)
+    minio_path = None
+    if dataset_id:
+        dataset = await redis_dataset_store.get_dataset(dataset_id)
+        if not dataset:
+            raise HTTPException(status_code=404, detail=f"Dataset {dataset_id} not found")
+        minio_path = dataset.get("minio_path")
     
     # Create job
     job_id = f"propensity-{uuid.uuid4().hex[:12]}"
+    
+    # Prepare params for worker
+    params = {**config}
+    if csv_content:
+        # Decode base64 if needed
+        if is_base64:
+            csv_content = base64.b64decode(csv_content).decode('utf-8')
+        params["csv_content"] = csv_content
     
     job_data = {
         "job_id": job_id,
         "job_type": job_type,
         "user_id": user_id,
         "dataset_id": dataset_id,
-        "config": config,
+        "minio_path": minio_path,
+        "params": params,
         "status": "pending",
+        "created_at": datetime.utcnow().isoformat(),
     }
     
-    # Save to repository
-    await job_repo.create(job_data)
+    # Get Redis client
+    client = await _get_redis()
+    
+    # Save job metadata
+    await client.set(
+        f"{STATS_JOBS_PREFIX}{job_id}",
+        json.dumps(job_data),
+        ex=86400 * 7  # 7 days TTL
+    )
     
     # Queue for processing
-    await job_queue.enqueue(job_data)
+    await client.lpush(STATS_JOBS_PENDING, json.dumps(job_data))
     
     return JobResponse(
         job_id=job_id,
@@ -145,6 +215,10 @@ async def submit_propensity_estimate_job(request: PropensityEstimateRequest):
     
     Estimates P(Treatment=1 | Covariates) using specified method.
     
+    Supports two modes:
+    - Dataset mode: Provide dataset_id for pre-uploaded data
+    - Direct mode: Provide csv_content inline
+    
     Model diagnostics include:
     - Pseudo R² (McFadden's)
     - C-statistic (AUC)
@@ -152,7 +226,8 @@ async def submit_propensity_estimate_job(request: PropensityEstimateRequest):
     - Score overlap between groups
     
     Args:
-        dataset_id: Dataset to analyze
+        dataset_id: Dataset ID (optional, for pre-uploaded data)
+        csv_content: CSV data as string (optional, for direct mode)
         treatment_column: Binary treatment (0/1)
         covariates: Variables to include in model
         method: logistic, gbm, or random_forest
@@ -162,7 +237,7 @@ async def submit_propensity_estimate_job(request: PropensityEstimateRequest):
         job_id for tracking
     """
     config = {
-        "treatment_column": request.treatment_column,
+        "treatment_col": request.treatment_column,
         "covariates": request.covariates,
         "method": request.method,
         "regularization": request.regularization,
@@ -170,9 +245,11 @@ async def submit_propensity_estimate_job(request: PropensityEstimateRequest):
     
     return await _submit_propensity_job(
         job_type="propensity_estimate",
-        dataset_id=request.dataset_id,
         user_id=request.user_id,
         config=config,
+        dataset_id=request.dataset_id,
+        csv_content=request.csv_content,
+        is_base64=request.is_base64,
     )
 
 
@@ -189,7 +266,8 @@ async def submit_propensity_match_job(request: PropensityMatchRequest):
     - caliper: Nearest within caliper distance
     
     Args:
-        dataset_id: Dataset to analyze
+        dataset_id: Dataset ID (optional, for pre-uploaded data)
+        csv_content: CSV data as string (optional, for direct mode)
         treatment_column: Binary treatment
         covariates: For PS estimation (or provide score_column)
         score_column: Pre-computed PS column
@@ -201,9 +279,9 @@ async def submit_propensity_match_job(request: PropensityMatchRequest):
         job_id for tracking
     """
     config = {
-        "treatment_column": request.treatment_column,
+        "treatment_col": request.treatment_column,
         "covariates": request.covariates,
-        "score_column": request.score_column,
+        "score_col": request.score_column,
         "method": request.method,
         "caliper": request.caliper,
         "caliper_scale": request.caliper_scale,
@@ -213,9 +291,11 @@ async def submit_propensity_match_job(request: PropensityMatchRequest):
     
     return await _submit_propensity_job(
         job_type="propensity_match",
-        dataset_id=request.dataset_id,
         user_id=request.user_id,
         config=config,
+        dataset_id=request.dataset_id,
+        csv_content=request.csv_content,
+        is_base64=request.is_base64,
     )
 
 
@@ -240,19 +320,21 @@ async def submit_treatment_effect_job(request: TreatmentEffectRequest):
         Point estimate, confidence interval, p-value
     """
     config = {
-        "treatment_column": request.treatment_column,
-        "outcome_column": request.outcome_column,
+        "treatment_col": request.treatment_column,
+        "outcome_col": request.outcome_column,
         "covariates": request.covariates,
-        "score_column": request.score_column,
+        "score_col": request.score_column,
         "method": request.method,
-        "estimand": request.estimand,
+        "target": request.estimand.lower(),  # Worker uses 'target' not 'estimand'
     }
     
     return await _submit_propensity_job(
         job_type="propensity_effect",
-        dataset_id=request.dataset_id,
         user_id=request.user_id,
         config=config,
+        dataset_id=request.dataset_id,
+        csv_content=request.csv_content,
+        is_base64=request.is_base64,
     )
 
 
@@ -274,18 +356,20 @@ async def submit_balance_check_job(request: BalanceCheckRequest):
         Balance table with before/after comparison
     """
     config = {
-        "treatment_column": request.treatment_column,
+        "treatment_col": request.treatment_column,
         "covariates": request.covariates,
         "weights_column": request.weights_column,
         "matched_column": request.matched_column,
-        "threshold": request.threshold,
+        "smd_threshold": request.threshold,
     }
     
     return await _submit_propensity_job(
         job_type="propensity_balance",
-        dataset_id=request.dataset_id,
         user_id=request.user_id,
         config=config,
+        dataset_id=request.dataset_id,
+        csv_content=request.csv_content,
+        is_base64=request.is_base64,
     )
 
 
@@ -304,8 +388,8 @@ async def submit_full_propensity_analysis(request: PropensityFullRequest):
     Returns comprehensive report with all diagnostics.
     """
     config = {
-        "treatment_column": request.treatment_column,
-        "outcome_column": request.outcome_column,
+        "treatment_col": request.treatment_column,
+        "outcome_col": request.outcome_column,
         "covariates": request.covariates,
         "method": request.method,
         "caliper": request.caliper,
@@ -313,9 +397,11 @@ async def submit_full_propensity_analysis(request: PropensityFullRequest):
     
     return await _submit_propensity_job(
         job_type="propensity_full",
-        dataset_id=request.dataset_id,
         user_id=request.user_id,
         config=config,
+        dataset_id=request.dataset_id,
+        csv_content=request.csv_content,
+        is_base64=request.is_base64,
     )
 
 

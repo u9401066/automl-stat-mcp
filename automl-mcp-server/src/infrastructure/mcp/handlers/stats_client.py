@@ -235,19 +235,28 @@ class StatsClient:
     
     async def submit_propensity_estimate_job(
         self,
-        dataset_id: str,
         user_id: str,
         treatment_column: str,
         covariates: List[str],
+        dataset_id: Optional[str] = None,
+        csv_content: Optional[str] = None,
+        is_base64: bool = False,
         method: str = "logistic",
         regularization: float = 0.0,
     ) -> Dict[str, Any]:
-        """Submit propensity score estimation job"""
+        """Submit propensity score estimation job
+        
+        Supports two modes:
+        - Dataset mode: Provide dataset_id
+        - Direct mode: Provide csv_content
+        """
         return await self._request(
             "POST",
             "/propensity/estimate/submit",
             json={
                 "dataset_id": dataset_id,
+                "csv_content": csv_content,
+                "is_base64": is_base64,
                 "user_id": user_id,
                 "treatment_column": treatment_column,
                 "covariates": covariates,
@@ -258,9 +267,11 @@ class StatsClient:
     
     async def submit_propensity_match_job(
         self,
-        dataset_id: str,
         user_id: str,
         treatment_column: str,
+        dataset_id: Optional[str] = None,
+        csv_content: Optional[str] = None,
+        is_base64: bool = False,
         covariates: Optional[List[str]] = None,
         score_column: Optional[str] = None,
         method: str = "nearest",
@@ -275,6 +286,8 @@ class StatsClient:
             "/propensity/match/submit",
             json={
                 "dataset_id": dataset_id,
+                "csv_content": csv_content,
+                "is_base64": is_base64,
                 "user_id": user_id,
                 "treatment_column": treatment_column,
                 "covariates": covariates,
@@ -289,10 +302,12 @@ class StatsClient:
     
     async def submit_treatment_effect_job(
         self,
-        dataset_id: str,
         user_id: str,
         treatment_column: str,
         outcome_column: str,
+        dataset_id: Optional[str] = None,
+        csv_content: Optional[str] = None,
+        is_base64: bool = False,
         covariates: Optional[List[str]] = None,
         score_column: Optional[str] = None,
         method: str = "ipw",
@@ -304,6 +319,8 @@ class StatsClient:
             "/propensity/effect/submit",
             json={
                 "dataset_id": dataset_id,
+                "csv_content": csv_content,
+                "is_base64": is_base64,
                 "user_id": user_id,
                 "treatment_column": treatment_column,
                 "outcome_column": outcome_column,
@@ -316,20 +333,29 @@ class StatsClient:
     
     async def submit_balance_check_job(
         self,
-        dataset_id: str,
         user_id: str,
         treatment_column: str,
         covariates: List[str],
+        dataset_id: Optional[str] = None,
+        csv_content: Optional[str] = None,
+        is_base64: bool = False,
         weights_column: Optional[str] = None,
         matched_column: Optional[str] = None,
         threshold: float = 0.1,
     ) -> Dict[str, Any]:
-        """Submit covariate balance assessment job"""
+        """Submit covariate balance assessment job
+        
+        Supports dual-mode:
+        - Dataset mode: Provide dataset_id
+        - Direct mode: Provide csv_content
+        """
         return await self._request(
             "POST",
             "/propensity/balance/submit",
             json={
                 "dataset_id": dataset_id,
+                "csv_content": csv_content,
+                "is_base64": is_base64,
                 "user_id": user_id,
                 "treatment_column": treatment_column,
                 "covariates": covariates,
@@ -341,20 +367,29 @@ class StatsClient:
     
     async def submit_full_propensity_job(
         self,
-        dataset_id: str,
         user_id: str,
         treatment_column: str,
         outcome_column: str,
         covariates: List[str],
+        dataset_id: Optional[str] = None,
+        csv_content: Optional[str] = None,
+        is_base64: bool = False,
         method: str = "matching",
         caliper: float = 0.2,
     ) -> Dict[str, Any]:
-        """Submit full propensity score analysis job"""
+        """Submit full propensity score analysis job
+        
+        Supports dual-mode:
+        - Dataset mode: Provide dataset_id
+        - Direct mode: Provide csv_content
+        """
         return await self._request(
             "POST",
             "/propensity/full/submit",
             json={
                 "dataset_id": dataset_id,
+                "csv_content": csv_content,
+                "is_base64": is_base64,
                 "user_id": user_id,
                 "treatment_column": treatment_column,
                 "outcome_column": outcome_column,
@@ -372,20 +407,29 @@ class StatsClient:
     
     async def submit_kaplan_meier_job(
         self,
-        dataset_id: str,
         user_id: str,
         time_column: str,
         event_column: str,
+        dataset_id: Optional[str] = None,
+        csv_content: Optional[str] = None,
+        is_base64: bool = False,
         group_column: Optional[str] = None,
         confidence_level: float = 0.95,
         time_points: Optional[List[float]] = None,
     ) -> Dict[str, Any]:
-        """Submit Kaplan-Meier analysis job"""
+        """Submit Kaplan-Meier analysis job
+        
+        Supports dual-mode:
+        - Dataset mode: Provide dataset_id
+        - Direct mode: Provide csv_content
+        """
         return await self._request(
             "POST",
             "/survival/kaplan-meier/submit",
             json={
                 "dataset_id": dataset_id,
+                "csv_content": csv_content,
+                "is_base64": is_base64,
                 "user_id": user_id,
                 "time_column": time_column,
                 "event_column": event_column,
@@ -397,21 +441,30 @@ class StatsClient:
     
     async def submit_cox_regression_job(
         self,
-        dataset_id: str,
         user_id: str,
         time_column: str,
         event_column: str,
         covariates: List[str],
+        dataset_id: Optional[str] = None,
+        csv_content: Optional[str] = None,
+        is_base64: bool = False,
         strata: Optional[List[str]] = None,
         ties: str = "efron",
         penalizer: float = 0.0,
     ) -> Dict[str, Any]:
-        """Submit Cox proportional hazards regression job"""
+        """Submit Cox proportional hazards regression job
+        
+        Supports dual-mode:
+        - Dataset mode: Provide dataset_id
+        - Direct mode: Provide csv_content
+        """
         return await self._request(
             "POST",
             "/survival/cox/submit",
             json={
                 "dataset_id": dataset_id,
+                "csv_content": csv_content,
+                "is_base64": is_base64,
                 "user_id": user_id,
                 "time_column": time_column,
                 "event_column": event_column,
@@ -424,20 +477,29 @@ class StatsClient:
     
     async def submit_survival_compare_job(
         self,
-        dataset_id: str,
         user_id: str,
         time_column: str,
         event_column: str,
         group_column: str,
+        dataset_id: Optional[str] = None,
+        csv_content: Optional[str] = None,
+        is_base64: bool = False,
         test: str = "logrank",
         confidence_level: float = 0.95,
     ) -> Dict[str, Any]:
-        """Submit survival curve comparison job"""
+        """Submit survival curve comparison job
+        
+        Supports dual-mode:
+        - Dataset mode: Provide dataset_id
+        - Direct mode: Provide csv_content
+        """
         return await self._request(
             "POST",
             "/survival/compare/submit",
             json={
                 "dataset_id": dataset_id,
+                "csv_content": csv_content,
+                "is_base64": is_base64,
                 "user_id": user_id,
                 "time_column": time_column,
                 "event_column": event_column,
@@ -449,18 +511,27 @@ class StatsClient:
     
     async def submit_survival_summary_job(
         self,
-        dataset_id: str,
         user_id: str,
         time_column: str,
         event_column: str,
+        dataset_id: Optional[str] = None,
+        csv_content: Optional[str] = None,
+        is_base64: bool = False,
         group_column: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """Submit survival data summary job"""
+        """Submit survival data summary job
+        
+        Supports dual-mode:
+        - Dataset mode: Provide dataset_id
+        - Direct mode: Provide csv_content
+        """
         return await self._request(
             "POST",
             "/survival/summary/submit",
             json={
                 "dataset_id": dataset_id,
+                "csv_content": csv_content,
+                "is_base64": is_base64,
                 "user_id": user_id,
                 "time_column": time_column,
                 "event_column": event_column,
@@ -476,20 +547,29 @@ class StatsClient:
     
     async def submit_roc_compute_job(
         self,
-        dataset_id: str,
         user_id: str,
         true_column: str,
         score_column: str,
+        dataset_id: Optional[str] = None,
+        csv_content: Optional[str] = None,
+        is_base64: bool = False,
         pos_label: int = 1,
         n_bootstrap: int = 1000,
         confidence_level: float = 0.95,
     ) -> Dict[str, Any]:
-        """Submit ROC curve computation job"""
+        """Submit ROC curve computation job
+        
+        Supports dual-mode:
+        - Dataset mode: Provide dataset_id
+        - Direct mode: Provide csv_content
+        """
         return await self._request(
             "POST",
             "/roc/compute/submit",
             json={
                 "dataset_id": dataset_id,
+                "csv_content": csv_content,
+                "is_base64": is_base64,
                 "user_id": user_id,
                 "true_column": true_column,
                 "score_column": score_column,
@@ -501,19 +581,28 @@ class StatsClient:
     
     async def submit_roc_compare_job(
         self,
-        dataset_id: str,
         user_id: str,
         true_column: str,
         score_columns: List[str],
+        dataset_id: Optional[str] = None,
+        csv_content: Optional[str] = None,
+        is_base64: bool = False,
         model_names: Optional[List[str]] = None,
         method: str = "delong",
     ) -> Dict[str, Any]:
-        """Submit ROC curves comparison job"""
+        """Submit ROC curves comparison job
+        
+        Supports dual-mode:
+        - Dataset mode: Provide dataset_id
+        - Direct mode: Provide csv_content
+        """
         return await self._request(
             "POST",
             "/roc/compare/submit",
             json={
                 "dataset_id": dataset_id,
+                "csv_content": csv_content,
+                "is_base64": is_base64,
                 "user_id": user_id,
                 "true_column": true_column,
                 "score_columns": score_columns,
@@ -524,22 +613,31 @@ class StatsClient:
     
     async def submit_threshold_analysis_job(
         self,
-        dataset_id: str,
         user_id: str,
         true_column: str,
         score_column: str,
+        dataset_id: Optional[str] = None,
+        csv_content: Optional[str] = None,
+        is_base64: bool = False,
         method: str = "youden",
         cost_fp: float = 1.0,
         cost_fn: float = 1.0,
         min_sensitivity: Optional[float] = None,
         min_specificity: Optional[float] = None,
     ) -> Dict[str, Any]:
-        """Submit optimal threshold analysis job"""
+        """Submit optimal threshold analysis job
+        
+        Supports dual-mode:
+        - Dataset mode: Provide dataset_id
+        - Direct mode: Provide csv_content
+        """
         return await self._request(
             "POST",
             "/roc/threshold/submit",
             json={
                 "dataset_id": dataset_id,
+                "csv_content": csv_content,
+                "is_base64": is_base64,
                 "user_id": user_id,
                 "true_column": true_column,
                 "score_column": score_column,
@@ -553,19 +651,28 @@ class StatsClient:
     
     async def submit_calibration_job(
         self,
-        dataset_id: str,
         user_id: str,
         true_column: str,
         score_column: str,
+        dataset_id: Optional[str] = None,
+        csv_content: Optional[str] = None,
+        is_base64: bool = False,
         n_bins: int = 10,
         strategy: str = "uniform",
     ) -> Dict[str, Any]:
-        """Submit calibration analysis job"""
+        """Submit calibration analysis job
+        
+        Supports dual-mode:
+        - Dataset mode: Provide dataset_id
+        - Direct mode: Provide csv_content
+        """
         return await self._request(
             "POST",
             "/roc/calibration/submit",
             json={
                 "dataset_id": dataset_id,
+                "csv_content": csv_content,
+                "is_base64": is_base64,
                 "user_id": user_id,
                 "true_column": true_column,
                 "score_column": score_column,
@@ -576,20 +683,29 @@ class StatsClient:
     
     async def submit_full_evaluation_job(
         self,
-        dataset_id: str,
         user_id: str,
         true_column: str,
         score_column: str,
+        dataset_id: Optional[str] = None,
+        csv_content: Optional[str] = None,
+        is_base64: bool = False,
         threshold: Optional[float] = None,
         include_calibration: bool = True,
         include_precision_recall: bool = True,
     ) -> Dict[str, Any]:
-        """Submit full classifier evaluation job"""
+        """Submit full classifier evaluation job
+        
+        Supports dual-mode:
+        - Dataset mode: Provide dataset_id
+        - Direct mode: Provide csv_content
+        """
         return await self._request(
             "POST",
             "/roc/full-eval/submit",
             json={
                 "dataset_id": dataset_id,
+                "csv_content": csv_content,
+                "is_base64": is_base64,
                 "user_id": user_id,
                 "true_column": true_column,
                 "score_column": score_column,
