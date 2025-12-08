@@ -1,21 +1,16 @@
-# Progress (Updated: 2025-12-04)
+# Progress (Updated: 2025-12-08)
 
 ## Done
 
-- Phase 6.1: T-test/Proportion Power Analysis - 55 tests
-- Phase 6.2: ANOVA/Chi-square Power Analysis - 42 tests
-- Phase 6.3: Survival Analysis Power - 45 tests
-- Total Phase 6: 142 tests passing
-- Code Quality Audit - identified 11 files >500 lines
-- Created DDD_Refactoring_Plan.md
-- Updated README with 83 MCP tools documentation
+- 建立 test_public_datasets.py - 16 個測試驗證統計功能
+- 測試涵蓋: Survival (KM, Cox, Log-Rank), ROC (curve, comparison, calibration), TableOne, Power Analysis, Propensity Score, Correlation, Distribution, VIF
+- 保留所有維護人員文檔的政策已記錄到 Memory Bank
 
 ## Doing
 
-- Code quality analysis and DDD refactoring planning
+
 
 ## Next
 
-- Phase R1: statistics_tools.py refactoring (3407 lines → 8 files)
-- Phase R2: power_analysis.py refactoring (2827 lines → 6 files)
-- Phase 6.4: Regression/Correlation Power Analysis
+- 執行完整測試套件確認覆蓋率
+- 考慮增加更多邊界案例測試

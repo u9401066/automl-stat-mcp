@@ -88,6 +88,32 @@ class AutoMLClient:
             user_id=user_id,
         )
 
+    async def upload_csv_content(
+        self,
+        name: str,
+        csv_content: str,
+        user_id: str,
+        session_id: Optional[str] = None,
+        description: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Upload CSV content directly.
+        
+        MCP Server reads the file and passes content to AutoML service.
+        This avoids Copilot handling file content (saves tokens).
+        """
+        return await self._request(
+            "POST",
+            "/datasets/upload",
+            user_id=user_id,
+            session_id=session_id,
+            json={
+                "name": name,
+                "csv_content": csv_content,
+                "description": description,
+            },
+        )
+
     # ============== Training Operations ==============
     
     async def submit_automl_job(

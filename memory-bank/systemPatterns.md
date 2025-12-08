@@ -174,3 +174,74 @@ Support for analyzing CSV data without MinIO storage. CSV content is passed dire
 - stats-service/src/routes/direct.py
 - analyze_csv_directly MCP tool
 - get_quick_stats MCP tool
+
+
+## Documentation Preservation Policy
+
+因為專案太複雜（多微服務、82 MCP tools、DDD 架構），所有程式碼中給維護人員看的註解和文檔必須保留：
+1. 檔案頂部的 docstring（說明用途、用法、執行方式）
+2. 分區註解（如 # ===== Section Name ===== ）
+3. 類別和函數的 docstring
+4. 參數說明和回傳值說明
+5. 使用範例和 Run 指令
+這些文檔可以更新內容，但不能刪除。確保新進維護人員能快速理解程式碼。
+
+### Examples
+
+- stats-worker/tests/test_public_datasets.py - 頂部完整說明測試目的、資料集、執行方式
+- 每個 test class 有 docstring 說明測試對象
+- 分區用 # ======= 區分不同功能區塊
+
+
+## Docker Container Conflict Resolution
+
+Docker Compose 啟動時處理 container 名稱衝突的策略：
+
+1. **檢查現有 container 狀態**:
+   - `running`: 直接複用，跳過該服務
+   - `exited/created`: 移除後重建
+   - 不存在: 正常建立
+
+2. **共用基礎服務**: Redis 等常被多專案共用，若已運行且健康就直接連接
+
+3. **啟動腳本**: `scripts/docker-start.sh`
+   - `./scripts/docker-start.sh` - 智慧啟動（複用健康服務）
+   - `./scripts/docker-start.sh --clean` - 清理後重啟
+   - `./scripts/docker-start.sh --status` - 只檢查狀態
+
+4. **健康檢查端點**:
+   - stats-service: http://localhost:8003/health
+   - automl-api: http://localhost:8001/health
+   - automl-mcp: http://localhost:8002/health
+   - Redis: `docker exec automl-redis redis-cli ping`
+
+### Examples
+
+- scripts/docker-start.sh - 智慧啟動腳本
+- docker ps -a --filter 'name=automl' 檢查狀態
+- docker rm container_name 移除停止的 container
+
+
+## MCP File Upload Workflow
+
+檔案上傳採用「路徑傳遞」模式，避免 Copilot 經手檔案內容：
+
+流程：
+1. Agent 呼叫 list_available_files() 查看可用檔案
+2. Agent 詢問使用者選擇上傳方式：
+   - local: 從掛載目錄上傳 (/data/sample_data, /data/uploads)
+   - minio: 引用現有 MinIO 檔案
+3. Agent 呼叫 upload_dataset(source_type, source_path)
+4. MCP Server 讀取檔案、上傳到 MinIO、驗證成功
+5. 回傳 dataset_id 和後續步驟提示
+
+Volume Mounts (docker-compose.yml):
+- ./sample_data:/data/sample_data:ro
+- ./uploads:/data/uploads:ro
+- ./datasets:/data/datasets:ro
+
+### Examples
+
+- upload_tools.py - list_available_files(), upload_dataset(), get_upload_help()
+- docker-compose.yml - automl-mcp volumes section
+- automl-service datasets.py - /datasets/upload endpoint

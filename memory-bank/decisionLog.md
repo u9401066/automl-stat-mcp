@@ -55,3 +55,25 @@
 | 2025-12-04 | 統計分析套件架構：保持 ydata-profiling + tableone + scipy + statsmodels + lifelines 的組合，各司其職 | 每個套件有不可替代的功能：ydata-profiling (EDA報告)、tableone (臨床Table 1)、scipy (基礎檢定)、statsmodels (Power Analysis + 進階迴歸，無替代方案)、lifelines (存活分析)。臨床研究 AutoML 系統必須具備這些能力。 |
 | 2025-12-04 | Phase 6.3 Survival Power Analysis implemented using Schoenfeld formula with anti-recursion pattern | 1. Schoenfeld (1981) formula is the standard for log-rank test power calculation. 2. Added _include_sensitivity parameter to prevent infinite recursion between calculate_events/sample_size and their sensitivity methods. 3. Supports hazard ratio, median survival, event-based calculations for comprehensive clinical trial planning. 4. 45 tests covering formula verification, clinical scenarios, and edge cases. |
 | 2025-12-04 | Identified 11 Python files exceeding 500 lines requiring DDD refactoring | statistics_tools.py (3407 lines) and power_analysis.py (2827 lines) are the highest priority for refactoring. Both violate Single Responsibility Principle with multiple unrelated functionalities. Plan: split into domain-specific modules following DDD patterns. Target: max 800 lines per file. |
+| 2025-12-04 | 所有程式碼檔案中給維護人員看的註解和文檔（docstring, 用法說明, 結構分區等）必須保留，只能更新不能刪除 | 因為這個專案太複雜了，包含多個微服務（automl-service, stats-service, automl-worker, stats-worker, mcp-server）、82 個 MCP tools、DDD 架構、多種統計分析功能，維護人員需要這些文檔來理解程式碼結構和用法 |
+| 2025-12-08 | Docker Compose 啟動時若遇到 container 名稱衝突，應先檢查現有 container 狀態：若已運行且健康則直接複用，若停止則移除後重建，而非直接報錯退出 | 開發環境中常有多個專案共用 Redis 等基礎服務，或上次異常關閉留下的 container。智慧處理衝突可提升開發體驗，避免手動清理的繁瑣步驟。 |
+| 2025-12-08 | MCP File Upload Architecture: Local Volume Mount + Interactive Workflow | 問題：原本設計讓 Copilot 讀取檔案內容再傳給 MCP，這會：
+1. 浪費大量 token（CSV 可能很大）
+2. 大檔案會被截斷，資料不完整
+3. 增加不必要的複雜度
+
+解決方案：
+1. Volume Mount：MCP Server 掛載本地資料夾 (sample_data, uploads, datasets)
+2. Interactive Workflow：
+   - Agent 呼叫 upload_dataset
+   - MCP 提示使用者選擇方式（local file 或 MinIO path）
+   - 使用者選完後 Agent 傳給 MCP
+   - MCP 直接讀取檔案並上傳
+   - 回傳 dataset_id 和後續步驟提示
+
+新增 Tools：
+- list_available_files(): 列出可用檔案
+- upload_dataset(): 上傳資料集（支援 local 和 minio 兩種模式）
+- get_upload_help(): 取得上傳說明
+
+關鍵改變：Copilot 只傳「檔案路徑」，不經手檔案內容 |

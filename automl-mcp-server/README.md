@@ -104,6 +104,39 @@ Add to `claude_desktop_config.json`:
 
 ## MCP Tools
 
+### Dataset Upload (NEW! 📤)
+| Tool | Description |
+|------|-------------|
+| `list_available_files` | List files in mounted directories |
+| `upload_dataset` | Upload dataset (local file or MinIO) |
+| `get_upload_help` | Get upload instructions |
+
+**Upload Workflow:**
+```
+Agent: "I'll help you upload a dataset. Which method would you like?"
+       1. 📁 Local file (from sample_data or uploads folder)
+       2. ☁️ MinIO path (file already in MinIO storage)
+
+User: "Local file"
+
+Agent: list_available_files()
+       → Shows: breast_cancer.csv, iris.csv, ...
+
+Agent: "Which file would you like to use?"
+
+User: "breast_cancer.csv"
+
+Agent: upload_dataset(
+         name="breast_cancer",
+         source_type="local",
+         source_path="/data/sample_data/breast_cancer.csv"
+       )
+       → {"dataset_id": "abc123", "columns": [...], "next_steps": [...]}
+```
+
+> ⚠️ **Important**: Copilot does NOT read file content. MCP Server reads files 
+> directly from mounted volumes. This saves tokens and prevents truncation.
+
 ### Dataset Management
 | Tool | Description |
 |------|-------------|

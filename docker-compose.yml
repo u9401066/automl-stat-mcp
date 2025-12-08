@@ -128,6 +128,12 @@ services:
       - MCP_MODE=sse
       - MCP_PORT=8002
       - LOG_LEVEL=INFO
+    volumes:
+      # Data directories for file upload (MCP reads files directly)
+      # This avoids Copilot handling file content (saves tokens, no truncation)
+      - ./sample_data:/data/sample_data:ro    # Sample datasets (read-only)
+      - ./uploads:/data/uploads:ro            # User uploaded files (read-only)
+      - ./datasets:/data/datasets:ro          # Additional datasets (read-only)
     networks:
       - automl-network
     depends_on:

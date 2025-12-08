@@ -14,6 +14,13 @@ class RegisterDatasetRequest(BaseModel):
     description: Optional[str] = Field(None, description="Dataset description")
 
 
+class UploadDatasetRequest(BaseModel):
+    """Request to upload CSV content directly"""
+    name: str = Field(..., description="Dataset name")
+    csv_content: str = Field(..., description="CSV content as string")
+    description: Optional[str] = Field(None, description="Dataset description")
+
+
 class AutoMLTrainRequest(BaseModel):
     """Request for AutoML training"""
     dataset_id: str = Field(..., description="Dataset ID")

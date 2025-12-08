@@ -13,6 +13,7 @@ from ...infrastructure.repositories import (
 )
 from ...infrastructure.file_storage import MinIOStorageService
 from ...infrastructure.queue.redis_queue import RedisJobQueue, get_job_queue
+from ...config import MINIO_BUCKET
 
 
 class Container:
@@ -60,6 +61,11 @@ class Container:
         if self._job_queue is None:
             self._job_queue = get_job_queue()
         return self._job_queue
+
+    @property
+    def dataset_bucket(self) -> str:
+        """MinIO bucket for datasets"""
+        return MINIO_BUCKET
 
 
 def get_container() -> Container:

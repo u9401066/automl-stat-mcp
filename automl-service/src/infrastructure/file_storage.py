@@ -122,6 +122,43 @@ class MinIOStorageService(FileStorageService):
         except Exception as e:
             return False, [], 0
 
+    async def upload_content(
+        self, 
+        path: str, 
+        content: io.BytesIO, 
+        content_type: str = "application/octet-stream"
+    ) -> None:
+        """
+        Upload content to MinIO.
+        
+        Args:
+            path: Destination path (bucket/object_name)
+            content: BytesIO content to upload
+            content_type: MIME type of content
+        """
+        bucket, object_name = self._parse_path(path)
+        
+        # Ensure bucket exists
+        try:
+            if not self.client.bucket_exists(bucket):
+                self.client.make_bucket(bucket)
+        except S3Error:
+            pass
+        
+        # Get content size
+        content.seek(0, 2)  # Seek to end
+        size = content.tell()
+        content.seek(0)  # Seek back to start
+        
+        # Upload
+        self.client.put_object(
+            bucket,
+            object_name,
+            content,
+            size,
+            content_type=content_type,
+        )
+
 
 class LocalFileStorageService(FileStorageService):
     """

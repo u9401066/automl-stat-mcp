@@ -11,6 +11,7 @@ from mcp.server.fastmcp import FastMCP
 from ..client import get_client
 from .info_tools import register_info_tools
 from .dataset_tools import register_dataset_tools
+from .upload_tools import register_upload_tools
 from .training_tools import register_training_tools
 from .job_tools import register_job_tools
 from .model_tools import register_model_tools
@@ -56,19 +57,20 @@ class AutoMLHandler:
     - analyze_dataset: Get recommendations before training
     - get_training_summary: Overview of all resources
     
-    Total: 38 tools (23 AutoML + 12 Statistics + 3 Smart Workflow)
+    Total: 41 tools (23 AutoML + 12 Statistics + 3 Smart Workflow + 3 Upload)
     """
 
     def __init__(self, mcp: FastMCP):
         self._mcp = mcp
         self._client = get_client()
         self._register_all_tools()
-        logger.info("AutoML Handler initialized with 38 tools")
+        logger.info("AutoML Handler initialized with 41 tools")
 
     def _register_all_tools(self) -> None:
         """Register all tool categories"""
         register_info_tools(self._mcp, self._client)
         register_dataset_tools(self._mcp, self._client)
+        register_upload_tools(self._mcp, self._client)  # NEW: Upload workflow
         register_training_tools(self._mcp, self._client)
         register_job_tools(self._mcp, self._client)
         register_model_tools(self._mcp, self._client)
