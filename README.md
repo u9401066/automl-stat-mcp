@@ -5,6 +5,7 @@ Multi-user AutoML system accessible via AI Agents through MCP (Model Context Pro
 **Features:**
 - 🤖 **AutoML Training** - Automatic model selection with AutoGluon
 - 📊 **Smart Statistical Analysis** - Intelligent auto-analysis with automatic method selection
+- 📁 **File Upload** - Volume mount + MinIO dual storage modes
 - 🔌 **MCP Integration** - Direct access from AI Agents (Claude, Copilot)
 - 🔒 **Enterprise Ready** - HTTPS, POST-only API, multi-user isolation
 
@@ -13,6 +14,7 @@ Multi-user AutoML system accessible via AI Agents through MCP (Model Context Pro
 | Document | Description |
 |----------|-------------|
 | [Deployment Guide](docs/deployment-guide.md) | 完整部署教學（開發/生產/企業HTTPS） |
+| [ROADMAP](docs/ROADMAP.md) | 開發藍圖與進度追蹤 |
 | [README.md](README.md) | 快速入門與架構說明 |
 
 ## Architecture
@@ -21,13 +23,13 @@ Multi-user AutoML system accessible via AI Agents through MCP (Model Context Pro
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                              MCP Server (8002)                               │
 │  ┌─────────────────────────────────┐  ┌─────────────────────────────────┐   │
-│  │      AutoML Tools (26)          │  │      Stats Tools (56)           │   │
+│  │      AutoML Tools (26)          │  │      Stats Tools (57)           │   │
 │  │  register_dataset, train, ...   │  │  auto_analyze, eda, tableone    │   │
 │  └───────────────┬─────────────────┘  └───────────────┬─────────────────┘   │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │              🎯 Smart Workflow Tools (included in AutoML)            │   │
-│  │  start_data_analysis, execute_analysis_ticket, check_progress       │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────┐  ┌─────────────────────────────────┐   │
+│  │      Upload Tools (3)           │  │      Workflow Tools (3)         │   │
+│  │  list_files, upload_dataset     │  │  start_analysis, execute_ticket │   │
+│  └─────────────────────────────────┘  └─────────────────────────────────┘   │
 └──────────────────┼────────────────────────────────────┼─────────────────────┘
                    │                                    │
                    ▼                                    ▼
@@ -87,6 +89,19 @@ AI:   auto_analyze(dataset_id) → Complete statistical report with recommendati
 | **Power Analysis - Chi-square** | 3 | Contingency tables |
 | **Power Analysis - Survival** | 5 | Log-rank test, hazard ratio |
 | **Utility** | 14 | Data validation, cleaning, preview |
+
+## 📁 Upload Tools (3 MCP Tools)
+
+| Tool | Description |
+|------|-------------|
+| `list_available_files` | 列出 Volume Mount 中的可用 CSV 檔案 |
+| `upload_dataset` | 上傳資料集 (temporary/permanent 模式) |
+| `get_upload_help` | 取得上傳說明文件 |
+
+### 儲存模式
+
+- **Temporary (Redis)**: 資料暫存於 Redis，適合一次性分析
+- **Permanent (MinIO)**: 資料存入 MinIO，可重複使用
 
 ### Power Analysis Example
 

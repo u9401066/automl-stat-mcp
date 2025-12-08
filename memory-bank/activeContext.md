@@ -1,29 +1,36 @@
 # Active Context
 
-## Current Status (2025-12-04)
+## Current Status (2025-12-08)
 
-### 🎯 平台狀態: v1.0 Production Ready
+### 🎯 平台狀態: v1.1 Production Ready
 
 **已完成:**
-- ✅ AutoML 核心平台 (23 MCP 工具)
-- ✅ 統計分析服務 (12 MCP 工具)
+- ✅ AutoML 核心平台 (26 MCP 工具)
+- ✅ 統計分析服務 (57 MCP 工具)
 - ✅ 智能工作流 (3 MCP 工具)
-- ✅ Phase 1-5 統計分析 (188 tests)
+- ✅ 檔案上傳工具 (3 MCP 工具) - NEW
+- ✅ Phase 1-6 統計分析
 - ✅ 企業級 HTTPS 部署
-- ✅ Agent 檔案遷移 (.github/agents/*.agent.md)
+- ✅ E2E 測試全部通過 (5/5)
+
+### 📋 最近完成項目 (2025-12-08)
+
+1. **MCP 檔案上傳架構重構**
+   - Volume Mount：本地檔案直接掛載到容器
+   - 雙儲存模式：temporary (Redis) / permanent (MinIO)
+   - 新增 `upload_tools.py` (list_available_files, upload_dataset, get_upload_help)
+
+2. **Bug Fixes**
+   - stats-worker dataset_id KeyError 修復
+   - TableOne tuple key JSON 序列化修復
 
 ### 📋 下一步優先項目
 
-1. **Phase 5+ ROC 增強** (High Priority)
-   - 批量模型比較
-   - 交互式閾值調整
-   - 發表品質報告
+1. **Upload Tools 完善**
+   - MinIO 直接上傳整合
+   - 大檔案分片上傳
 
-2. **Phase 6 Power Analysis**
-   - 樣本量計算
-   - 事後功效分析
-
-3. **Design Issue #001 待決策**
+2. **Design Issue #001 待決策**
    - Data Cleaning Workflow
    - PII 處理策略
 
@@ -33,6 +40,7 @@
 1. 一鍵完成資料分析到模型訓練
 2. 生成發表品質的統計報告
 3. 提供臨床決策支援 (閾值選擇、模型比較)
+4. 透過 Volume Mount 高效處理本地檔案
 
 ## Current Blockers
 

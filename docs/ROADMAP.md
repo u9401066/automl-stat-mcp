@@ -1,6 +1,6 @@
 # AutoML MCP System - Roadmap
 
-> Last Updated: 2025-12-04
+> Last Updated: 2025-12-08
 
 ## 🎯 Vision
 
@@ -17,6 +17,7 @@
 | **AutoML Core** | 資料集管理、模型訓練、預測 | 23 | ✅ |
 | **Statistics Core** | EDA、TableOne、智能分析 | 12 | ✅ |
 | **Smart Workflow** | 引導式分析流程 | 3 | ✅ |
+| **Upload Tools** | 檔案上傳 (Volume/MinIO) | 3 | ✅ NEW |
 | **Phase 1** | 增強統計分析 (相關性、分布、VIF) | 4 | ✅ |
 | **Phase 2** | TableOne 生成器 | 3 | ✅ |
 | **Phase 3** | 存活分析 (Kaplan-Meier, Cox) | 4 | ✅ |
@@ -26,7 +27,12 @@
 | **Phase 6** | Power Analysis (T-test, Proportion, ANOVA, Chi-square, Survival) | 19 | ✅ |
 | **DDD Refactoring** | 代碼重構 (statistics_tools, power_analysis, roc_analysis, advanced_analysis) | - | ✅ |
 
-**總計: 82 MCP 工具 (26 AutoML + 56 Stats), 297 項測試通過**
+**總計: 89 MCP 工具 (26 AutoML + 3 Upload + 57 Stats + 3 Workflow), E2E 5/5 通過**
+
+### 🆕 2025-12-08 更新
+- MCP 檔案上傳架構重構 (Volume Mount + 雙儲存模式)
+- stats-worker dataset_id bug 修復
+- TableOne tuple key 序列化修復
 
 ---
 

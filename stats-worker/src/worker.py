@@ -196,8 +196,16 @@ class StatsWorker:
         
         self.update_job_status(job_id, "running", progress=0.1, message="Loading dataset...")
         
-        # Load dataset
-        df = self.load_dataset(params["dataset_id"])
+        # Load dataset - prefer minio_path, then dataset_id from job level
+        minio_path = job.get("minio_path") or params.get("minio_path")
+        dataset_id = job.get("dataset_id") or params.get("dataset_id")
+        
+        if minio_path:
+            df = self.load_dataset_by_path(minio_path)
+        elif dataset_id:
+            df = self.load_dataset(dataset_id)
+        else:
+            raise ValueError("No dataset_id or minio_path provided")
         logger.info(f"Loaded dataset with shape {df.shape}")
         
         self.update_job_status(job_id, "running", progress=0.3, message="Generating profile...")
@@ -243,8 +251,16 @@ class StatsWorker:
         
         self.update_job_status(job_id, "running", progress=0.1, message="Loading dataset...")
         
-        # Load dataset
-        df = self.load_dataset(params["dataset_id"])
+        # Load dataset - prefer minio_path, then dataset_id from job level
+        minio_path = job.get("minio_path") or params.get("minio_path")
+        dataset_id = job.get("dataset_id") or params.get("dataset_id")
+        
+        if minio_path:
+            df = self.load_dataset_by_path(minio_path)
+        elif dataset_id:
+            df = self.load_dataset(dataset_id)
+        else:
+            raise ValueError("No dataset_id or minio_path provided")
         logger.info(f"Loaded dataset with shape {df.shape}")
         
         self.update_job_status(job_id, "running", progress=0.3, message="Generating Table 1...")
@@ -272,9 +288,19 @@ class StatsWorker:
         
         self.update_job_status(job_id, "running", progress=0.7, message="Saving report...")
         
-        # Get outputs
+        # Get outputs - handle tuple keys in tableone dict
+        tableone_dict = table.tableone.to_dict()
+        # Convert tuple keys to strings for JSON serialization
+        tableone_serializable = {}
+        for col_key, col_data in tableone_dict.items():
+            col_key_str = str(col_key) if isinstance(col_key, tuple) else col_key
+            tableone_serializable[col_key_str] = {
+                str(k) if isinstance(k, tuple) else k: v 
+                for k, v in col_data.items()
+            }
+        
         report = {
-            "tableone": table.tableone.to_dict(),
+            "tableone": tableone_serializable,
             "tabulate_text": table.tabulate(tablefmt="grid"),
             "tabulate_html": table.tabulate(tablefmt="html"),
             "tabulate_latex": table.tabulate(tablefmt="latex"),
@@ -306,12 +332,16 @@ class StatsWorker:
         
         self.update_job_status(job_id, "running", progress=0.1, message="Loading dataset...")
         
-        # Load dataset - prefer minio_path if available
-        minio_path = params.get("minio_path")
+        # Load dataset - prefer minio_path, then dataset_id from job level
+        minio_path = job.get("minio_path") or params.get("minio_path")
+        dataset_id = job.get("dataset_id") or params.get("dataset_id")
+        
         if minio_path:
             df = self.load_dataset_by_path(minio_path)
+        elif dataset_id:
+            df = self.load_dataset(dataset_id)
         else:
-            df = self.load_dataset(params["dataset_id"])
+            raise ValueError("No dataset_id or minio_path provided")
         logger.info(f"Loaded dataset with shape {df.shape}")
         
         self.update_job_status(job_id, "running", progress=0.2, message="Analyzing data quality...")
