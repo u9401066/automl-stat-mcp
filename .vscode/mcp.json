@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "automl": {
+      "type": "sse", 
+      "url": "http://192.168.1.203:8002/sse"
+    }
+  }
+}
