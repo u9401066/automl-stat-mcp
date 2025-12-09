@@ -47,6 +47,172 @@ MAX_PREVIEW_VALUE_LENGTH = 50  # Truncate cell values longer than this
 MAX_PREVIEW_ROWS = 2  # Only show 2 sample rows
 MAX_PREVIEW_COLUMNS = 10  # Only show first N columns in sample rows
 
+# Directory for processed files and metadata
+PROCESSED_DATA_DIR = Path("/data/processed")
+
+
+def _sanitize_column_name(name: str) -> str:
+    """
+    Sanitize column name for safe usage in analysis.
+    
+    Rules:
+    1. Replace special chars with underscore
+    2. Remove leading/trailing whitespace
+    3. Replace multiple spaces/underscores with single underscore
+    4. Handle Chinese characters (keep them)
+    5. Remove problematic chars: ()[]{}:;,./\\|!@#$%^&*+=
+    6. Handle Excel duplicate suffixes like .1, .2
+    """
+    import re
+    
+    if not name or not isinstance(name, str):
+        return "unnamed"
+    
+    original = name.strip()
+    
+    # Handle "Unnamed: X" from Excel
+    if original.lower().startswith("unnamed:"):
+        return f"col_{original.split(':')[-1].strip()}"
+    
+    # Replace special characters with underscore (keep Chinese, alphanumeric)
+    # Pattern: keep Chinese (\u4e00-\u9fff), letters, numbers, underscore
+    sanitized = re.sub(r'[^\w\u4e00-\u9fff]', '_', original)
+    
+    # Replace multiple underscores with single
+    sanitized = re.sub(r'_+', '_', sanitized)
+    
+    # Remove leading/trailing underscores
+    sanitized = sanitized.strip('_')
+    
+    # If empty after sanitization, use hash of original
+    if not sanitized:
+        sanitized = f"col_{abs(hash(original)) % 10000}"
+    
+    return sanitized
+
+
+def _create_column_mapping(original_columns: List[str]) -> Dict[str, Any]:
+    """
+    Create mapping from original column names to sanitized names.
+    
+    Returns:
+        {
+            "mapping": {original: sanitized, ...},
+            "reverse_mapping": {sanitized: original, ...},
+            "changed_columns": [(original, sanitized), ...],  # only changed ones
+            "unchanged_columns": [name, ...],
+        }
+    """
+    mapping = {}
+    reverse_mapping = {}
+    changed = []
+    unchanged = []
+    
+    # Track used names to handle duplicates
+    used_names = {}
+    
+    for orig in original_columns:
+        sanitized = _sanitize_column_name(orig)
+        
+        # Handle duplicates by adding suffix
+        if sanitized in used_names:
+            used_names[sanitized] += 1
+            sanitized = f"{sanitized}_{used_names[sanitized]}"
+        else:
+            used_names[sanitized] = 0
+        
+        mapping[orig] = sanitized
+        reverse_mapping[sanitized] = orig
+        
+        if orig != sanitized:
+            changed.append((orig, sanitized))
+        else:
+            unchanged.append(orig)
+    
+    return {
+        "mapping": mapping,
+        "reverse_mapping": reverse_mapping,
+        "changed_columns": changed,
+        "unchanged_columns": unchanged,
+        "total_columns": len(original_columns),
+        "columns_renamed": len(changed),
+    }
+
+
+def _save_processed_csv_and_metadata(
+    csv_content: str,
+    original_name: str,
+    user_id: str,
+) -> Dict[str, Any]:
+    """
+    Process CSV: sanitize column names, save processed file + metadata.
+    
+    Returns:
+        {
+            "processed_path": path to cleaned CSV,
+            "metadata_path": path to metadata JSON,
+            "column_mapping": mapping dict,
+            "original_path": original file info,
+        }
+    """
+    import pandas as pd
+    import json
+    from datetime import datetime
+    from io import StringIO
+    
+    # Ensure processed directory exists
+    PROCESSED_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    user_dir = PROCESSED_DATA_DIR / user_id
+    user_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Read original CSV
+    df = pd.read_csv(StringIO(csv_content))
+    original_columns = list(df.columns)
+    
+    # Create column mapping
+    column_mapping = _create_column_mapping(original_columns)
+    
+    # Rename columns
+    df.columns = [column_mapping["mapping"][col] for col in original_columns]
+    
+    # Generate unique filename
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    base_name = _sanitize_column_name(Path(original_name).stem)
+    
+    processed_filename = f"{base_name}_{timestamp}.csv"
+    metadata_filename = f"{base_name}_{timestamp}_metadata.json"
+    
+    processed_path = user_dir / processed_filename
+    metadata_path = user_dir / metadata_filename
+    
+    # Save processed CSV
+    df.to_csv(processed_path, index=False)
+    
+    # Save metadata
+    metadata = {
+        "original_name": original_name,
+        "processed_name": processed_filename,
+        "processed_path": str(processed_path),
+        "created_at": datetime.now().isoformat(),
+        "user_id": user_id,
+        "row_count": len(df),
+        "column_count": len(df.columns),
+        "column_mapping": column_mapping["mapping"],
+        "reverse_mapping": column_mapping["reverse_mapping"],
+        "changed_columns": column_mapping["changed_columns"],
+        "sanitized_columns": list(df.columns),
+    }
+    
+    with open(metadata_path, "w", encoding="utf-8") as f:
+        json.dump(metadata, f, ensure_ascii=False, indent=2)
+    
+    return {
+        "processed_path": str(processed_path),
+        "metadata_path": str(metadata_path),
+        "column_mapping": column_mapping,
+        "sanitized_columns": list(df.columns),
+    }
+
 
 def _truncate_value(value: Any, max_length: int = MAX_PREVIEW_VALUE_LENGTH) -> Any:
     """Truncate string values that exceed max_length"""
@@ -406,37 +572,73 @@ async def _upload_temporary(
     session_id: Optional[str],
     source_path: str,
 ) -> Dict[str, Any]:
-    """Upload to Redis for temporary/one-time analysis"""
+    """Upload to Redis for temporary/one-time analysis with column sanitization"""
     
-    # Call stats-service direct analyze endpoint
-    # Note: session_id not supported in direct_analyze
-    result = await stats_client.direct_analyze(
-        csv_content=csv_content,
-        user_id=user_id,
-    )
-    
-    # Create minimal preview (full column_names + 2 truncated sample rows)
-    data_preview = _create_data_preview(result.get("data_preview", {}))
-    
-    return {
-        "success": True,
-        "storage_mode": "temporary",
-        "job_id": result.get("job_id"),
-        "job_type": result.get("job_type"),
-        "status": result.get("status"),
-        "data_preview": data_preview,
-        "source": {
-            "type": "local",
-            "path": source_path,
-            "name": name,
-        },
-        "next_steps": [
-            f"Job submitted with ID: {result.get('job_id')}",
-            "Check status: get_stats_job_status(job_id)",
-            "Get results: get_stats_job_result(job_id)",
-            "⚠️ Data is temporary - will be cleared after job completion",
-        ],
-    }
+    try:
+        # Process CSV: sanitize columns, save processed file + metadata
+        processed = _save_processed_csv_and_metadata(
+            csv_content=csv_content,
+            original_name=name,
+            user_id=user_id,
+        )
+        
+        # Read processed CSV for analysis
+        processed_content = Path(processed["processed_path"]).read_text(encoding="utf-8")
+        
+        # Call stats-service with processed (clean) data
+        result = await stats_client.direct_analyze(
+            csv_content=processed_content,
+            user_id=user_id,
+        )
+        
+        # Create minimal preview (full column_names + 2 truncated sample rows)
+        data_preview = _create_data_preview(result.get("data_preview", {}))
+        
+        # Build column rename summary for Agent
+        column_mapping = processed["column_mapping"]
+        rename_summary = []
+        for orig, new in column_mapping["changed_columns"][:10]:  # Show first 10
+            rename_summary.append(f"'{orig}' → '{new}'")
+        if len(column_mapping["changed_columns"]) > 10:
+            rename_summary.append(f"... (+{len(column_mapping['changed_columns']) - 10} more)")
+        
+        return {
+            "success": True,
+            "storage_mode": "temporary",
+            "job_id": result.get("job_id"),
+            "job_type": result.get("job_type"),
+            "status": result.get("status"),
+            "data_preview": data_preview,
+            # Column processing info
+            "column_processing": {
+                "processed_file": processed["processed_path"],
+                "metadata_file": processed["metadata_path"],
+                "columns_renamed": column_mapping["columns_renamed"],
+                "total_columns": column_mapping["total_columns"],
+                "rename_examples": rename_summary if rename_summary else None,
+                "sanitized_columns": processed["sanitized_columns"],
+            },
+            "source": {
+                "type": "local",
+                "path": source_path,
+                "name": name,
+            },
+            "next_steps": [
+                f"Job submitted with ID: {result.get('job_id')}",
+                "Check status: get_stats_job_status(job_id)",
+                "Get results: get_stats_job_result(job_id)",
+                f"📋 Metadata saved: {processed['metadata_path']}",
+                f"📊 Use sanitized column names for analysis (see column_processing.sanitized_columns)",
+                "⚠️ Data is temporary - will be cleared after job completion",
+            ],
+        }
+    except Exception as e:
+        logger.error(f"Error in _upload_temporary: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "hint": "Failed to process CSV. Check file format and encoding.",
+        }
 
 
 async def _upload_permanent(
@@ -448,40 +650,72 @@ async def _upload_permanent(
     description: Optional[str],
     source_path: str,
 ) -> Dict[str, Any]:
-    """Upload to MinIO for permanent storage"""
+    """Upload to MinIO for permanent storage with column sanitization"""
     
-    result = await client.upload_csv_content(
-        name=name,
-        csv_content=csv_content,
-        user_id=user_id,
-        session_id=session_id,
-        description=description or f"Uploaded from {Path(source_path).name}",
-    )
-    
-    # Return full column list + count (Agent needs column names for analysis)
-    columns = result.get("columns", [])
-    
-    return {
-        "success": True,
-        "storage_mode": "permanent",
-        "dataset_id": result.get("dataset_id"),
-        "name": result.get("name"),
-        "minio_path": result.get("minio_path"),
-        "row_count": result.get("row_count"),
-        "column_count": len(columns),
-        "column_names": columns,  # FULL list for Agent to select target/features
-        "source": {
-            "type": "local",
-            "path": source_path,
-        },
-        "next_steps": [
-            f"Dataset registered with ID: {result.get('dataset_id')}",
-            "For ML training: submit_automl_job(dataset_id=..., target_column='...')",
-            "For statistics: auto_analyze(dataset_id=...) or submit_tableone_job(...)",
-            "For preview: preview_dataset_stats(dataset_id=...)",
-            "💾 Data saved permanently in MinIO",
-        ],
-    }
+    try:
+        # Process CSV: sanitize columns, save processed file + metadata
+        processed = _save_processed_csv_and_metadata(
+            csv_content=csv_content,
+            original_name=name,
+            user_id=user_id,
+        )
+        
+        # Read processed CSV for upload
+        processed_content = Path(processed["processed_path"]).read_text(encoding="utf-8")
+        
+        # Upload processed (clean) data to MinIO
+        result = await client.upload_csv_content(
+            name=name,
+            csv_content=processed_content,
+            user_id=user_id,
+            session_id=session_id,
+            description=description or f"Uploaded from {Path(source_path).name} (columns sanitized)",
+        )
+        
+        # Build column rename summary for Agent
+        column_mapping = processed["column_mapping"]
+        rename_summary = []
+        for orig, new in column_mapping["changed_columns"][:10]:  # Show first 10
+            rename_summary.append(f"'{orig}' → '{new}'")
+        if len(column_mapping["changed_columns"]) > 10:
+            rename_summary.append(f"... (+{len(column_mapping['changed_columns']) - 10} more)")
+        
+        return {
+            "success": True,
+            "storage_mode": "permanent",
+            "dataset_id": result.get("dataset_id"),
+            "name": result.get("name"),
+            "minio_path": result.get("minio_path"),
+            "row_count": result.get("row_count"),
+            "column_count": len(processed["sanitized_columns"]),
+            "column_names": processed["sanitized_columns"],  # Sanitized names
+            # Column processing info
+            "column_processing": {
+                "metadata_file": processed["metadata_path"],
+                "columns_renamed": column_mapping["columns_renamed"],
+                "total_columns": column_mapping["total_columns"],
+                "rename_examples": rename_summary if rename_summary else None,
+            },
+            "source": {
+                "type": "local",
+                "path": source_path,
+            },
+            "next_steps": [
+                f"Dataset registered with ID: {result.get('dataset_id')}",
+                "For ML training: submit_automl_job(dataset_id=..., target_column='...')",
+                "For statistics: auto_analyze(dataset_id=...) or submit_tableone_job(...)",
+                f"📋 Column mapping saved: {processed['metadata_path']}",
+                f"📊 Use sanitized column names (see column_names)",
+                "💾 Data saved permanently in MinIO",
+            ],
+        }
+    except Exception as e:
+        logger.error(f"Error in _upload_permanent: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "hint": "Failed to process CSV. Check file format and encoding.",
+        }
 
 
 async def _register_minio_dataset(

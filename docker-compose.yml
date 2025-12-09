@@ -134,6 +134,7 @@ services:
       - ./sample_data:/data/sample_data:ro    # Sample datasets (read-only)
       - ./uploads:/data/uploads:ro            # User uploaded files (read-only)
       - ./datasets:/data/datasets:ro          # Additional datasets (read-only)
+      - ./processed:/data/processed           # Processed files with sanitized columns (read-write)
     networks:
       - automl-network
     depends_on:
