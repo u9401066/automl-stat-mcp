@@ -1,6 +1,21 @@
-# Progress (Updated: 2025-12-08)
+# Progress (Updated: 2025-12-09)
 
 ## Done
+
+### 2025-12-09 (CSV Path Refactoring)
+- ✅ **所有 statistics tools 改用 csv_path（檔案路徑）**
+  - 新增 `_read_csv_from_path_or_reject()` helper function
+  - 修改 20+ direct tools 從 `csv_content` 改為 `csv_path`
+  - 如果 Agent 誤傳資料內容，會返回友善錯誤訊息指導使用正確方式
+  - 完全符合 E2E 設計原則：Agent 只傳路徑，MCP 讀取檔案
+  - 文檔：`docs/design-issues/002-csv-path-refactoring.md`
+
+- ✅ **E2E 測試框架建立**
+  - 建立 `sample_results/` 目錄結構
+  - Iris dataset: upload, auto_analyze, tableone, power_analysis, ML training 全部成功
+  - Rossi dataset: upload, auto_analyze 成功
+  - 修復 upload_tools.py session_id bug
+  - 修復 survival_data_summary 參數名不一致 bug
 
 ### 2025-12-08 (Phase 6 完成)
 - ✅ **Phase 6: MCP 統計工具修復**
@@ -30,7 +45,7 @@
 
 ## Next
 
+- 完成更多資料集的 E2E 測試（titanic, heart_disease, breast_cancer）
+- Git commit 推送所有變更
 - 執行完整測試套件確認覆蓋率
-- 完善 upload_tools 實際上傳功能
-- 考慮增加更多邊界案例測試
 

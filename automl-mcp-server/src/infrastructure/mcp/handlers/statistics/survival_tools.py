@@ -204,10 +204,10 @@ def register_survival_tools(mcp, stats_client):
             # Submit job to stats-service API
             result = await stats_client.submit_survival_summary_job(
                 csv_content=csv_content,
-                time_col=time_col,
-                event_col=event_col,
-                group_col=group_col,
-                time_points=time_points,
+                time_column=time_col,
+                event_column=event_col,
+                group_column=group_col,
+                user_id="mcp_user",
                 is_base64=is_base64,
             )
             return result

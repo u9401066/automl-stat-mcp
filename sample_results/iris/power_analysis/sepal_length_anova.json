@@ -1,0 +1,54 @@
+{
+  "dataset": "iris",
+  "test_type": "power_analysis",
+  "description": "Power analysis for sepal_length ANOVA (3 species groups)",
+  "mcp_tools_used": [
+    "mcp_automl_calculate_anova_sample_size",
+    "mcp_automl_calculate_anova_power"
+  ],
+  "timestamp": "2025-12-09",
+  "context": {
+    "variable": "sepal_length",
+    "groups": ["setosa", "versicolor", "virginica"],
+    "observed_means": [5.0, 5.9, 6.6],
+    "pooled_sd": 0.5,
+    "actual_n_per_group": 50
+  },
+  "sample_size_calculation": {
+    "tool": "calculate_anova_sample_size",
+    "input": {
+      "group_means": [5.0, 5.9, 6.6],
+      "pooled_sd": 0.5,
+      "k_groups": 3,
+      "alpha": 0.05,
+      "power": 0.8
+    },
+    "result": {
+      "effect_size_f": 1.31,
+      "n_per_group_needed": 9,
+      "total_n_needed": 27,
+      "interpretation": "For 3-group ANOVA with f=1.31, you need 9 subjects per group"
+    }
+  },
+  "power_calculation": {
+    "tool": "calculate_anova_power",
+    "input": {
+      "group_means": [5.0, 5.9, 6.6],
+      "pooled_sd": 0.5,
+      "k_groups": 3,
+      "n_per_group": 50,
+      "alpha": 0.05
+    },
+    "result": {
+      "power": 1.0,
+      "interpretation": "With n=50 per group, power is 100%"
+    }
+  },
+  "conclusions": {
+    "effect_size": "Very large (f=1.31, large is typically f≥0.40)",
+    "adequacy": "Iris dataset is significantly overpowered for detecting sepal_length differences",
+    "minimum_needed": "Only 9 per group (27 total) needed for 80% power",
+    "actual_sample": "150 total provides essentially 100% power"
+  },
+  "e2e_verified": true
+}

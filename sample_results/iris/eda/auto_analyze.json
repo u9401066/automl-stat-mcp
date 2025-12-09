@@ -1,0 +1,51 @@
+{
+  "dataset": "iris",
+  "dataset_file": "/data/sample_data/iris.csv",
+  "test_type": "eda/auto_analyze",
+  "mcp_tools_used": [
+    "mcp_automl_upload_dataset",
+    "mcp_automl_get_stats_job_result"
+  ],
+  "description": "E2E test - Complete auto-analysis via file path only",
+  "timestamp": "2025-12-09",
+  "workflow": {
+    "step1": {
+      "tool": "upload_dataset",
+      "input": {
+        "name": "iris_e2e",
+        "source_path": "/data/sample_data/iris.csv",
+        "source_type": "local",
+        "storage_mode": "temporary",
+        "user_id": "e2e_test"
+      },
+      "output": "job_id: ab1aea98-f84c-4ae2-baa8-b9a5e42bcd4a"
+    },
+    "step2": {
+      "tool": "get_stats_job_result",
+      "input": {"job_id": "ab1aea98-f84c-4ae2-baa8-b9a5e42bcd4a"},
+      "output": "Full EDA report"
+    }
+  },
+  "result_summary": {
+    "metadata": {"n_rows": 150, "n_cols": 6, "data_quality_score": 100.0},
+    "column_summary": {
+      "numeric": ["sepal_length", "sepal_width", "petal_length", "petal_width"],
+      "categorical": ["species", "target"]
+    },
+    "key_findings": {
+      "high_correlations": [
+        {"var1": "petal_length", "var2": "petal_width", "r": 0.9629},
+        {"var1": "sepal_length", "var2": "petal_length", "r": 0.8718}
+      ],
+      "multicollinearity": {
+        "problematic_columns": ["sepal_length", "petal_length", "petal_width", "target"],
+        "highest_vif": {"column": "petal_length", "vif": 34.75}
+      }
+    },
+    "recommendations": [
+      "Consider removing or combining highly correlated features"
+    ]
+  },
+  "e2e_verified": true,
+  "note": "Agent only provides PATH, system handles everything internally"
+}

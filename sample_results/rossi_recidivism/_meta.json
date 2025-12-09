@@ -1,0 +1,12 @@
+{
+  "dataset": "rossi_recidivism",
+  "source_file": "/data/sample_data/rossi_recidivism.csv",
+  "description": "Rossi recidivism dataset - Survival analysis of time to re-arrest (432 convicts)",
+  "columns": {
+    "time_col": "week",
+    "event_col": "arrest",
+    "covariates": ["fin", "age", "race", "wexp", "mar", "paro", "prio"]
+  },
+  "test_types": ["eda", "survival", "tableone"],
+  "created": "2025-12-09"
+}

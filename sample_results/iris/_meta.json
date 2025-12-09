@@ -1,0 +1,11 @@
+{
+  "dataset_name": "iris",
+  "source_file": "/home/eric/workspace251204/sample_data/iris.csv",
+  "description": "Classic Iris flower dataset - 3-class classification",
+  "n_rows": 150,
+  "n_cols": 6,
+  "columns": ["sepal_length", "sepal_width", "petal_length", "petal_width", "species", "target"],
+  "target_column": "target",
+  "task_type": "multiclass_classification",
+  "created": "2025-12-09"
+}

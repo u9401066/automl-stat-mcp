@@ -358,10 +358,10 @@ async def _upload_temporary(
     """Upload to Redis for temporary/one-time analysis"""
     
     # Call stats-service direct analyze endpoint
+    # Note: session_id not supported in direct_analyze
     result = await stats_client.direct_analyze(
         csv_content=csv_content,
         user_id=user_id,
-        session_id=session_id,
     )
     
     return {

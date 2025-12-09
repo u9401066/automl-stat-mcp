@@ -8,12 +8,118 @@ Provides statistical analysis capabilities through the Stats Service:
 - Advanced Analysis: Correlation, VIF, Missing patterns, Group comparisons
 """
 import logging
+import os
 import time
-from typing import Any, Dict, Optional, List
+from pathlib import Path
+from typing import Any, Dict, Optional, List, Tuple, Union
 
 from mcp.server.fastmcp import FastMCP
 
 logger = logging.getLogger(__name__)
+
+# Data directories mounted in container
+DATA_MOUNT_PATHS = [
+    "/data/sample_data",
+    "/data/uploads", 
+    "/data/datasets",
+]
+
+
+def _read_csv_from_path_or_reject(csv_path_or_content: str) -> Tuple[bool, Union[str, Dict]]:
+    """
+    Helper function to validate input and read CSV from path.
+    
+    Design principle:
+    - Agent should pass FILE PATH, not raw CSV content
+    - If raw content is passed, reject and guide Agent to use upload_dataset
+    
+    Args:
+        csv_path_or_content: Should be a file path like "/data/sample_data/iris.csv"
+        
+    Returns:
+        Tuple of (success: bool, result: str | dict)
+        - If success=True: result is the CSV content string
+        - If success=False: result is an error dict to return to Agent
+    """
+    # Check if it looks like a file path
+    looks_like_path = (
+        csv_path_or_content.startswith("/data/") or
+        csv_path_or_content.startswith("/home/") or
+        csv_path_or_content.startswith("./") or
+        (csv_path_or_content.endswith(".csv") and "/" in csv_path_or_content) or
+        any(csv_path_or_content.startswith(p) for p in DATA_MOUNT_PATHS)
+    )
+    
+    # Check if it looks like raw CSV content (has newlines, commas, typical CSV patterns)
+    looks_like_csv_content = (
+        "\n" in csv_path_or_content and 
+        "," in csv_path_or_content and
+        not csv_path_or_content.startswith("/")
+    )
+    
+    # If it looks like raw CSV content, reject it
+    if looks_like_csv_content and not looks_like_path:
+        return False, {
+            "status": "error",
+            "error": "INVALID_INPUT: You passed raw CSV content instead of a file path.",
+            "guidance": {
+                "problem": "This tool expects a FILE PATH, not raw CSV data.",
+                "solution": "Use the upload_dataset tool first to upload/register your data.",
+                "correct_workflow": [
+                    "1. Call upload_dataset(source_path='/data/sample_data/your_file.csv', ...)",
+                    "2. Get job_id or dataset_id from the response",
+                    "3. Use that ID with analysis tools, OR",
+                    "4. Pass the file PATH directly: csv_path='/data/sample_data/your_file.csv'"
+                ],
+                "example": {
+                    "wrong": "csv_content='name,age\\nAlice,30\\nBob,25'",
+                    "correct": "csv_path='/data/sample_data/iris.csv'"
+                }
+            }
+        }
+    
+    # Try to read the file
+    file_path = Path(csv_path_or_content)
+    
+    # Handle relative paths - try to resolve against data mount paths
+    if not file_path.is_absolute():
+        for mount_path in DATA_MOUNT_PATHS:
+            potential_path = Path(mount_path) / csv_path_or_content
+            if potential_path.exists():
+                file_path = potential_path
+                break
+    
+    if not file_path.exists():
+        return False, {
+            "status": "error", 
+            "error": f"FILE_NOT_FOUND: The file '{csv_path_or_content}' does not exist.",
+            "guidance": {
+                "available_directories": DATA_MOUNT_PATHS,
+                "suggestion": "Use list_available_files() to see available files.",
+                "example_paths": [
+                    "/data/sample_data/iris.csv",
+                    "/data/sample_data/titanic.csv",
+                    "/data/uploads/your_file.csv"
+                ]
+            }
+        }
+    
+    if not file_path.is_file():
+        return False, {
+            "status": "error",
+            "error": f"NOT_A_FILE: '{csv_path_or_content}' is not a file (might be a directory)."
+        }
+    
+    # Read the file
+    try:
+        csv_content = file_path.read_text(encoding='utf-8')
+        logger.info(f"Successfully read CSV from path: {file_path}")
+        return True, csv_content
+    except Exception as e:
+        return False, {
+            "status": "error",
+            "error": f"READ_ERROR: Failed to read file '{file_path}': {str(e)}"
+        }
 
 
 def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
@@ -554,64 +660,64 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
     
     @mcp.tool()
     async def analyze_csv_directly(
-        csv_content: str,
+        csv_path: str,
         user_id: str,
         target_column: Optional[str] = None,
-        is_base64: bool = False,
     ) -> dict:
         """
         📊 Analyze CSV data directly without storing in MinIO.
+        
+        ⚠️ Pass FILE PATH, not raw CSV content!
         
         This is useful for:
         - One-time analysis of temporary data
         - Quick data exploration without permanent storage
         - Testing with small datasets
         
-        The CSV content is passed directly and processed without being 
-        saved to MinIO. Results are stored temporarily for retrieval.
-        
-        ⚠️ For large datasets, use register_dataset + auto_analyze instead.
-        
         Args:
-            csv_content: CSV data as string (or base64 if is_base64=True)
+            csv_path: Path to CSV file (e.g., '/data/sample_data/iris.csv')
             user_id: User ID
             target_column: Optional target for association analysis
-            is_base64: Set True if csv_content is base64 encoded
         
         Returns:
             job_id: Job ID for tracking
             data_preview: Preview of parsed data (rows, columns, sample)
             
         Example:
-            # Analyze temporary data
             analyze_csv_directly(
-                csv_content="name,age,score\\nAlice,30,85\\nBob,25,90",
+                csv_path="/data/sample_data/iris.csv",
                 user_id="user1",
-                target_column="score"
+                target_column="species"
             )
         """
+        # Validate input - must be file path, not raw CSV content
+        success, result = _read_csv_from_path_or_reject(csv_path)
+        if not success:
+            return result
+        csv_content = result
+        
         result = await stats_client.direct_analyze(
             csv_content=csv_content,
             user_id=user_id,
             target_column=target_column,
-            is_base64=is_base64,
+            is_base64=False,
         )
         return result
     
     @mcp.tool()
     async def get_quick_stats(
-        csv_content: str,
-        is_base64: bool = False,
+        csv_path: str,
     ) -> dict:
         """
         ⚡ Get quick statistics synchronously (instant results).
+        
+        ⚠️ Pass FILE PATH, not raw CSV content!
         
         Returns immediately with basic statistics without job queue.
         For full analysis, use analyze_csv_directly instead.
         
         Args:
-            csv_content: CSV data as string
-            is_base64: Set True if csv_content is base64 encoded
+            csv_path: Path to CSV file (e.g., '/data/sample_data/iris.csv')
         
         Returns:
             rows: Number of rows
@@ -620,9 +726,15 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             missing_summary: Missing value statistics
             numeric_summary: Basic stats for numeric columns
         """
+        # Validate input - must be file path, not raw CSV content
+        success, result = _read_csv_from_path_or_reject(csv_path)
+        if not success:
+            return result
+        csv_content = result
+        
         result = await stats_client.quick_stats(
             csv_content=csv_content,
-            is_base64=is_base64,
+            is_base64=False,
         )
         return result
     
@@ -630,14 +742,15 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
     
     @mcp.tool()
     async def analyze_correlations(
-        csv_content: str,
+        csv_path: str,
         columns: Optional[List[str]] = None,
         method: str = "all",
         min_correlation: float = 0.3,
-        is_base64: bool = False,
     ) -> dict:
         """
         📈 Enhanced correlation analysis with multiple methods.
+        
+        ⚠️ Pass FILE PATH, not raw CSV content!
         
         Computes Pearson, Spearman, and Kendall correlations with:
         - Full correlation matrices
@@ -646,11 +759,10 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         - Significant pairs highlighted
         
         Args:
-            csv_content: CSV data as string
+            csv_path: Path to CSV file (e.g., '/data/sample_data/iris.csv')
             columns: Columns to analyze (default: all numeric)
             method: "pearson", "spearman", "kendall", or "all"
             min_correlation: Minimum |r| to flag (default: 0.3)
-            is_base64: Set True if csv_content is base64 encoded
         
         Returns:
             matrices: Pearson/Spearman correlation and p-value matrices
@@ -659,15 +771,17 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             summary: Overall statistics
         """
         import pandas as pd
-        import base64
         from io import StringIO
         from scipy import stats as scipy_stats
         import numpy as np
         
+        # Validate input - must be file path, not raw CSV content
+        success, file_result = _read_csv_from_path_or_reject(csv_path)
+        if not success:
+            return file_result
+        csv_content = file_result
+        
         try:
-            # Parse CSV
-            if is_base64:
-                csv_content = base64.b64decode(csv_content).decode('utf-8')
             df = pd.read_csv(StringIO(csv_content))
             
             # Get numeric columns
@@ -723,13 +837,14 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
     
     @mcp.tool()
     async def compare_groups(
-        csv_content: str,
+        csv_path: str,
         numeric_column: str,
         group_column: str,
-        is_base64: bool = False,
     ) -> dict:
         """
         🔬 Compare distributions of a numeric variable across groups.
+        
+        ⚠️ Pass FILE PATH, not raw CSV content!
         
         Automatically selects appropriate tests:
         - 2 groups: t-test or Mann-Whitney U
@@ -742,10 +857,9 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         - Post-hoc pairwise comparisons with Bonferroni correction
         
         Args:
-            csv_content: CSV data as string
+            csv_path: Path to CSV file (e.g., '/data/sample_data/iris.csv')
             numeric_column: Column with numeric values to compare
             group_column: Column with group labels
-            is_base64: Set True if csv_content is base64 encoded
         
         Returns:
             groups: Group labels
@@ -756,14 +870,17 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             group_statistics: Descriptive stats per group
         """
         import pandas as pd
-        import base64
         from io import StringIO
         from scipy import stats as scipy_stats
         import numpy as np
         
+        # Validate input - must be file path, not raw CSV content
+        success, file_result = _read_csv_from_path_or_reject(csv_path)
+        if not success:
+            return file_result
+        csv_content = file_result
+        
         try:
-            if is_base64:
-                csv_content = base64.b64decode(csv_content).decode('utf-8')
             df = pd.read_csv(StringIO(csv_content))
             
             groups = df[group_column].dropna().unique().tolist()
@@ -811,8 +928,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
     
     @mcp.tool()
     async def analyze_missing_values(
-        csv_content: str,
-        is_base64: bool = False,
+        csv_path: str,
     ) -> dict:
         """
         🔍 Comprehensive missing value analysis.
@@ -829,8 +945,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         - Imputation recommendations
         
         Args:
-            csv_content: CSV data as string
-            is_base64: Set True if csv_content is base64 encoded
+            csv_path: Path to CSV file (e.g., /data/sample_data/file.csv)
         
         Returns:
             summary: Overall missing statistics
@@ -840,12 +955,14 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             recommendations: Handling suggestions
         """
         import pandas as pd
-        import base64
         from io import StringIO
         
         try:
-            if is_base64:
-                csv_content = base64.b64decode(csv_content).decode('utf-8')
+            # Read CSV from path
+            success, result = _read_csv_from_path_or_reject(csv_path)
+            if not success:
+                return result
+            csv_content = result
             df = pd.read_csv(StringIO(csv_content))
             
             # Calculate missing statistics
@@ -890,10 +1007,9 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
     
     @mcp.tool()
     async def check_multicollinearity(
-        csv_content: str,
+        csv_path: str,
         columns: Optional[List[str]] = None,
         vif_threshold: float = 5.0,
-        is_base64: bool = False,
     ) -> dict:
         """
         📊 Check multicollinearity using VIF (Variance Inflation Factor).
@@ -908,10 +1024,9 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         other variables, which can cause problems in regression models.
         
         Args:
-            csv_content: CSV data as string
+            csv_path: Path to CSV file (e.g., /data/sample_data/file.csv)
             columns: Columns to analyze (default: all numeric)
             vif_threshold: VIF threshold for flagging (default: 5.0)
-            is_base64: Set True if csv_content is base64 encoded
         
         Returns:
             vif_results: VIF for each column
@@ -920,13 +1035,15 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             recommendations: Action suggestions
         """
         import pandas as pd
-        import base64
         from io import StringIO
         import numpy as np
         
         try:
-            if is_base64:
-                csv_content = base64.b64decode(csv_content).decode('utf-8')
+            # Read CSV from path
+            success, result = _read_csv_from_path_or_reject(csv_path)
+            if not success:
+                return result
+            csv_content = result
             df = pd.read_csv(StringIO(csv_content))
             
             # Get numeric columns
@@ -987,9 +1104,8 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
     
     @mcp.tool()
     async def run_full_statistical_analysis(
-        csv_content: str,
+        csv_path: str,
         target_column: Optional[str] = None,
-        is_base64: bool = False,
     ) -> dict:
         """
         🚀 Run complete statistical analysis including all advanced features.
@@ -1004,9 +1120,8 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         Use this for a complete overview of your dataset.
         
         Args:
-            csv_content: CSV data as string
+            csv_path: Path to CSV file (e.g., /data/sample_data/file.csv)
             target_column: Optional target for group analysis
-            is_base64: Set True if csv_content is base64 encoded
         
         Returns:
             correlation_analysis: Full correlation results
@@ -1015,12 +1130,18 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             group_comparisons: Comparisons by target (if applicable)
         """
         try:
+            # Read CSV from path
+            success, result = _read_csv_from_path_or_reject(csv_path)
+            if not success:
+                return result
+            csv_content = result
+            
             # Use stats_client direct_analyze for comprehensive analysis
             result = await stats_client.direct_analyze(
                 csv_content=csv_content,
                 user_id="mcp_user",
                 target_column=target_column,
-                is_base64=is_base64,
+                is_base64=False,
             )
             return {"status": "success", **result}
             
@@ -1059,14 +1180,13 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
     
     @mcp.tool()
     async def generate_tableone_directly(
-        csv_content: str,
+        csv_path: str,
         groupby: Optional[str] = None,
         categorical: Optional[List[str]] = None,
         continuous: Optional[List[str]] = None,
         nonnormal: Optional[List[str]] = None,
         pval: bool = True,
         output_format: str = "dict",
-        is_base64: bool = False,
     ) -> dict:
         """
         📊 Generate Table 1 (baseline characteristics) directly from CSV.
@@ -1080,14 +1200,13 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         - Continuous non-normal: Mann-Whitney U (2) or Kruskal-Wallis (3+)
         
         Args:
-            csv_content: CSV data as string
+            csv_path: Path to CSV file (e.g., /data/sample_data/file.csv)
             groupby: Column to stratify by (e.g., "treatment_group")
             categorical: Columns to treat as categorical (auto-detect if not specified)
             continuous: Columns to treat as continuous (auto-detect if not specified)
             nonnormal: Columns to report as median[IQR] instead of mean±SD
             pval: Include p-values for group comparisons (default: True)
             output_format: "dict", "markdown", "html", or "latex"
-            is_base64: Set True if csv_content is base64 encoded
         
         Returns:
             status: "success" or "error"
@@ -1099,14 +1218,17 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             tests_used: Statistical tests applied
         """
         import pandas as pd
-        import base64
         from io import StringIO
         import numpy as np
         
         try:
+            # Read CSV from path
+            success, result = _read_csv_from_path_or_reject(csv_path)
+            if not success:
+                return result
+            csv_content = result
+            
             # Parse CSV
-            if is_base64:
-                csv_content = base64.b64decode(csv_content).decode('utf-8')
             df = pd.read_csv(StringIO(csv_content))
             
             # Auto-detect column types if not provided
@@ -1200,9 +1322,8 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
     
     @mcp.tool()
     async def get_tableone_preview(
-        csv_content: str,
+        csv_path: str,
         groupby: Optional[str] = None,
-        is_base64: bool = False,
     ) -> dict:
         """
         🔍 Preview Table 1 configuration and column type suggestions.
@@ -1215,9 +1336,8 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         Use this before generate_tableone_directly to optimize parameters.
         
         Args:
-            csv_content: CSV data as string
+            csv_path: Path to CSV file (e.g., /data/sample_data/file.csv)
             groupby: Proposed groupby column (optional)
-            is_base64: Set True if csv_content is base64 encoded
         
         Returns:
             shape: Dataset dimensions
@@ -1228,13 +1348,15 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             groupby_info: Info about proposed groupby (if provided)
         """
         import pandas as pd
-        import base64
         from io import StringIO
         import numpy as np
         
         try:
-            if is_base64:
-                csv_content = base64.b64decode(csv_content).decode('utf-8')
+            # Read CSV from path
+            success, result = _read_csv_from_path_or_reject(csv_path)
+            if not success:
+                return result
+            csv_content = result
             df = pd.read_csv(StringIO(csv_content))
             
             # Detect column types
@@ -1351,13 +1473,12 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
     
     @mcp.tool()
     async def kaplan_meier_survival(
-        csv_content: str,
+        csv_path: str,
         time_col: str,
         event_col: str,
         group_col: Optional[str] = None,
         time_points: Optional[List[float]] = None,
         alpha: float = 0.05,
-        is_base64: bool = False,
     ) -> dict:
         """
         📈 Kaplan-Meier survival analysis with log-rank test.
@@ -1369,13 +1490,12 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         - Survival probability at specified time points
         
         Args:
-            csv_content: CSV data as string
+            csv_path: Path to CSV file (e.g., /data/sample_data/file.csv)
             time_col: Column name for time-to-event (e.g., "survival_months")
             event_col: Column name for event indicator (1=event occurred, 0=censored)
             group_col: Optional column for stratification (e.g., "treatment")
             time_points: Specific times to report survival (e.g., [12, 24, 36])
             alpha: Significance level for CI (default: 0.05 for 95% CI)
-            is_base64: Set True if csv_content is base64 encoded
         
         Returns:
             survival_curves: KM curves for each group
@@ -1384,9 +1504,15 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             survival_at_times: Survival probability at specified times
         """
         try:
+            # Read CSV from path
+            success, result = _read_csv_from_path_or_reject(csv_path)
+            if not success:
+                return result
+            csv_content = result
+            
             result = await stats_client.submit_survival_kaplan_meier_job(
                 csv_content=csv_content,
-                is_base64=is_base64,
+                is_base64=False,
                 user_id="mcp_user",
                 time_column=time_col,
                 event_column=event_col,
@@ -1416,12 +1542,11 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
     
     @mcp.tool()
     async def cox_proportional_hazards(
-        csv_content: str,
+        csv_path: str,
         time_col: str,
         event_col: str,
         covariates: Optional[List[str]] = None,
         alpha: float = 0.05,
-        is_base64: bool = False,
     ) -> dict:
         """
         🔬 Cox Proportional Hazards regression for survival analysis.
@@ -1437,12 +1562,11 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         - HR = 1: No effect
         
         Args:
-            csv_content: CSV data as string
+            csv_path: Path to CSV file (e.g., /data/sample_data/file.csv)
             time_col: Column name for time-to-event
             event_col: Column name for event indicator
             covariates: List of covariate columns (default: all numeric)
             alpha: Significance level for CI
-            is_base64: Set True if csv_content is base64 encoded
         
         Returns:
             coefficients: Beta coefficients with SE, HR, CI, p-value
@@ -1450,9 +1574,15 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             global_tests: Wald test, likelihood ratio test
         """
         try:
+            # Read CSV from path
+            success, result = _read_csv_from_path_or_reject(csv_path)
+            if not success:
+                return result
+            csv_content = result
+            
             result = await stats_client.submit_survival_cox_job(
                 csv_content=csv_content,
-                is_base64=is_base64,
+                is_base64=False,
                 user_id="mcp_user",
                 time_column=time_col,
                 event_column=event_col,
@@ -1481,11 +1611,10 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
     
     @mcp.tool()
     async def compare_survival(
-        csv_content: str,
+        csv_path: str,
         time_col: str,
         event_col: str,
         group_col: str,
-        is_base64: bool = False,
     ) -> dict:
         """
         ⚖️ Compare survival curves between groups.
@@ -1502,11 +1631,10 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         - Prognostic factor evaluation
         
         Args:
-            csv_content: CSV data as string
+            csv_path: Path to CSV file (e.g., /data/sample_data/file.csv)
             time_col: Column name for time-to-event
             event_col: Column name for event indicator
             group_col: Column for group stratification
-            is_base64: Set True if csv_content is base64 encoded
         
         Returns:
             groups: Survival statistics per group
@@ -1515,9 +1643,15 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             conclusion: Interpretation of results
         """
         try:
+            # Read CSV from path
+            success, result = _read_csv_from_path_or_reject(csv_path)
+            if not success:
+                return result
+            csv_content = result
+            
             result = await stats_client.submit_survival_compare_job(
                 csv_content=csv_content,
-                is_base64=is_base64,
+                is_base64=False,
                 user_id="mcp_user",
                 time_column=time_col,
                 event_column=event_col,
@@ -1545,12 +1679,10 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
     
     @mcp.tool()
     async def survival_data_summary(
-        csv_content: str,
+        csv_path: str,
         time_col: str,
         event_col: str,
         group_col: Optional[str] = None,
-        time_points: Optional[List[float]] = None,
-        is_base64: bool = False,
     ) -> dict:
         """
         📋 Get summary statistics for survival data.
@@ -1562,12 +1694,10 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         - Event rates
         
         Args:
-            csv_content: CSV data as string
+            csv_path: Path to CSV file (e.g., /data/sample_data/file.csv)
             time_col: Column name for time-to-event
             event_col: Column name for event indicator
             group_col: Optional grouping column
-            time_points: Times to report survival (e.g., [12, 24, 36])
-            is_base64: Set True if csv_content is base64 encoded
         
         Returns:
             n_subjects: Total sample size
@@ -1577,14 +1707,19 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             by_group: Statistics per group (if grouped)
         """
         try:
+            # Read CSV from path
+            success, result = _read_csv_from_path_or_reject(csv_path)
+            if not success:
+                return result
+            csv_content = result
+            
             result = await stats_client.submit_survival_summary_job(
                 csv_content=csv_content,
-                is_base64=is_base64,
+                is_base64=False,
                 user_id="mcp_user",
                 time_column=time_col,
                 event_column=event_col,
                 group_column=group_col,
-                time_points=time_points,
             )
             
             job_id = result.get("job_id")
@@ -1610,11 +1745,10 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
     
     @mcp.tool()
     async def estimate_propensity_scores(
-        csv_content: str,
+        csv_path: str,
         treatment_col: str,
         covariates: List[str],
         regularization: float = 0.0,
-        is_base64: bool = False,
     ) -> dict:
         """
         📊 Estimate propensity scores using logistic regression.
@@ -1633,11 +1767,10 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         - Score overlap between groups
         
         Args:
-            csv_content: CSV data as string
+            csv_path: Path to CSV file (e.g., /data/sample_data/file.csv)
             treatment_col: Binary treatment column (0/1)
             covariates: List of covariate columns
             regularization: L2 regularization strength (0=none)
-            is_base64: Set True if csv_content is base64 encoded
         
         Returns:
             scores: Propensity score for each observation
@@ -1647,13 +1780,19 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             overlap_region: Common support range
         """
         try:
+            # Read CSV from path
+            success, result = _read_csv_from_path_or_reject(csv_path)
+            if not success:
+                return result
+            csv_content = result
+            
             # Submit job via stats_client (which calls stats-service API)
             job_result = await stats_client.submit_propensity_estimate_job(
                 user_id="mcp_user",
                 treatment_column=treatment_col,
                 covariates=covariates,
                 csv_content=csv_content,
-                is_base64=is_base64,
+                is_base64=False,
                 regularization=regularization,
             )
             
@@ -1669,7 +1808,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
     
     @mcp.tool()
     async def match_propensity_scores(
-        csv_content: str,
+        csv_path: str,
         treatment_col: str,
         covariates: Optional[List[str]] = None,
         score_col: Optional[str] = None,
@@ -1677,7 +1816,6 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         caliper: Optional[float] = 0.2,
         caliper_scale: str = "std",
         replacement: bool = False,
-        is_base64: bool = False,
     ) -> dict:
         """
         🔗 Match treated and control units by propensity score.
@@ -1689,7 +1827,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         - optimal: Minimizes total distance (for small datasets)
         
         Args:
-            csv_content: CSV data as string
+            csv_path: Path to CSV file (e.g., /data/sample_data/file.csv)
             treatment_col: Binary treatment column
             covariates: Covariates for PS estimation (if score_col not provided)
             score_col: Pre-computed propensity score column
@@ -1697,7 +1835,6 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             caliper: Max distance for match (in std devs or absolute)
             caliper_scale: 'std' (standard deviations) or 'absolute'
             replacement: Allow control to match multiple treated
-            is_base64: Set True if csv_content is base64 encoded
         
         Returns:
             n_matched_pairs: Number of successful matches
@@ -1708,12 +1845,18 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             matched_control_indices: Row indices of matched controls
         """
         try:
+            # Read CSV from path
+            success, result = _read_csv_from_path_or_reject(csv_path)
+            if not success:
+                return result
+            csv_content = result
+            
             # Submit job via stats_client (which calls stats-service API)
             job_result = await stats_client.submit_propensity_match_job(
                 user_id="mcp_user",
                 treatment_column=treatment_col,
                 csv_content=csv_content,
-                is_base64=is_base64,
+                is_base64=False,
                 covariates=covariates,
                 score_column=score_col,
                 method=method,
@@ -1734,7 +1877,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
     
     @mcp.tool()
     async def estimate_treatment_effect(
-        csv_content: str,
+        csv_path: str,
         outcome_col: str,
         treatment_col: str,
         covariates: Optional[List[str]] = None,
@@ -1742,7 +1885,6 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         method: str = "ipw",
         target: str = "ate",
         stabilized: bool = True,
-        is_base64: bool = False,
     ) -> dict:
         """
         💊 Estimate causal treatment effect using IPW.
@@ -1755,7 +1897,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         Uses inverse probability weighting to adjust for confounding.
         
         Args:
-            csv_content: CSV data as string
+            csv_path: Path to CSV file (e.g., /data/sample_data/file.csv)
             outcome_col: Outcome variable column
             treatment_col: Binary treatment column
             covariates: Covariates for PS estimation
@@ -1763,7 +1905,6 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             method: 'ipw' or 'iptw'
             target: 'ate', 'att', or 'atu'
             stabilized: Use stabilized weights (recommended)
-            is_base64: Set True if csv_content is base64 encoded
         
         Returns:
             effect_type: ATE, ATT, or ATU
@@ -1774,13 +1915,19 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             significant: Whether effect is significant at α=0.05
         """
         try:
+            # Read CSV from path
+            success, result = _read_csv_from_path_or_reject(csv_path)
+            if not success:
+                return result
+            csv_content = result
+            
             # Submit job via stats_client (which calls stats-service API)
             job_result = await stats_client.submit_treatment_effect_job(
                 user_id="mcp_user",
                 treatment_column=treatment_col,
                 outcome_column=outcome_col,
                 csv_content=csv_content,
-                is_base64=is_base64,
+                is_base64=False,
                 covariates=covariates,
                 score_column=score_col,
                 method=method,
@@ -1799,12 +1946,11 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
     
     @mcp.tool()
     async def assess_covariate_balance(
-        csv_content: str,
+        csv_path: str,
         treatment_col: str,
         covariates: List[str],
         weights: Optional[List[float]] = None,
         smd_threshold: float = 0.1,
-        is_base64: bool = False,
     ) -> dict:
         """
         ⚖️ Assess covariate balance between treatment groups.
@@ -1817,12 +1963,11 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         Use after matching or weighting to verify balance.
         
         Args:
-            csv_content: CSV data as string
+            csv_path: Path to CSV file (e.g., /data/sample_data/file.csv)
             treatment_col: Binary treatment column
             covariates: List of covariate columns
             weights: Optional IPW weights (as list)
             smd_threshold: Threshold for acceptable SMD
-            is_base64: Set True if csv_content is base64 encoded
         
         Returns:
             standardized_mean_differences: SMD per covariate
@@ -1832,13 +1977,19 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             balance_achieved: Whether all covariates balanced
         """
         try:
+            # Read CSV from path
+            success, result = _read_csv_from_path_or_reject(csv_path)
+            if not success:
+                return result
+            csv_content = result
+            
             # Submit job via stats_client (which calls stats-service API)
             job_result = await stats_client.submit_balance_check_job(
                 user_id="mcp_user",
                 treatment_column=treatment_col,
                 covariates=covariates,
                 csv_content=csv_content,
-                is_base64=is_base64,
+                is_base64=False,
                 threshold=smd_threshold,
             )
             
@@ -1854,14 +2005,13 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
     
     @mcp.tool()
     async def run_propensity_analysis(
-        csv_content: str,
+        csv_path: str,
         outcome_col: str,
         treatment_col: str,
         covariates: List[str],
         method: str = "matching",
         target: str = "ate",
         caliper: Optional[float] = 0.2,
-        is_base64: bool = False,
     ) -> dict:
         """
         🎯 Complete propensity score analysis workflow.
@@ -1878,14 +2028,13 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         - ipw: Use weights (keeps all data)
         
         Args:
-            csv_content: CSV data as string
+            csv_path: Path to CSV file (e.g., /data/sample_data/file.csv)
             outcome_col: Outcome variable column
             treatment_col: Binary treatment column (0/1)
             covariates: List of confounding variables
             method: 'matching' or 'ipw'
             target: 'ate' (population), 'att' (treated), 'atu' (untreated)
             caliper: For matching, max distance in std devs
-            is_base64: Set True if csv_content is base64 encoded
         
         Returns:
             propensity_model: PS estimation results
@@ -1895,9 +2044,15 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             treatment_effect: Effect estimate with CI and p-value
         """
         try:
+            # Read CSV from path
+            success, result = _read_csv_from_path_or_reject(csv_path)
+            if not success:
+                return result
+            csv_content = result
+            
             result = await stats_client.submit_full_propensity_job(
                 csv_content=csv_content,
-                is_base64=is_base64,
+                is_base64=False,
                 user_id="mcp_user",
                 outcome_column=outcome_col,
                 treatment_column=treatment_col,
@@ -1930,14 +2085,13 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
     
     @mcp.tool()
     async def compute_roc_curve(
-        csv_content: str,
+        csv_path: str,
         y_true_col: str,
         y_score_col: str,
         pos_label: int = 1,
         confidence_level: float = 0.95,
         n_bootstrap: int = 1000,
         threshold_method: str = "youden",
-        is_base64: bool = False,
     ) -> dict:
         """
         📈 Compute ROC curve with AUC and confidence intervals.
@@ -1955,14 +2109,13 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         - specificity: Target minimum specificity
         
         Args:
-            csv_content: CSV data as string
+            csv_path: Path to CSV file (e.g., /data/sample_data/file.csv)
             y_true_col: Column with true binary labels (0/1)
             y_score_col: Column with predicted probabilities
             pos_label: Value representing positive class (default 1)
             confidence_level: CI level (default 0.95 for 95% CI)
             n_bootstrap: Bootstrap samples for CI (default 1000)
             threshold_method: How to select optimal threshold
-            is_base64: Set True if csv_content is base64 encoded
         
         Returns:
             auc: Area Under the ROC Curve
@@ -1974,9 +2127,15 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             interpretation: Text description of model performance
         """
         try:
+            # Read CSV from path
+            success, result = _read_csv_from_path_or_reject(csv_path)
+            if not success:
+                return result
+            csv_content = result
+            
             result = await stats_client.submit_roc_compute_job(
                 csv_content=csv_content,
-                is_base64=is_base64,
+                is_base64=False,
                 user_id="mcp_user",
                 y_true_column=y_true_col,
                 y_score_column=y_score_col,
@@ -2007,12 +2166,11 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
     
     @mcp.tool()
     async def compare_roc_curves(
-        csv_content: str,
+        csv_path: str,
         y_true_col: str,
         model_score_cols: List[str],
         model_names: Optional[List[str]] = None,
         method: str = "delong",
-        is_base64: bool = False,
     ) -> dict:
         """
         🔬 Compare ROC curves from multiple models using DeLong test.
@@ -2030,12 +2188,11 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         - Model selection with statistical evidence
         
         Args:
-            csv_content: CSV data as string
+            csv_path: Path to CSV file (e.g., /data/sample_data/file.csv)
             y_true_col: Column with true binary labels
             model_score_cols: List of columns with predicted probabilities
             model_names: Optional names for models (for output clarity)
             method: 'delong' (recommended) or 'bootstrap'
-            is_base64: Set True if csv_content is base64 encoded
         
         Returns:
             models: Per-model results (AUC, CI, SE)
@@ -2049,9 +2206,15 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             recommendation: Statistical interpretation
         """
         try:
+            # Read CSV from path
+            success, result = _read_csv_from_path_or_reject(csv_path)
+            if not success:
+                return result
+            csv_content = result
+            
             result = await stats_client.submit_roc_compare_job(
                 csv_content=csv_content,
-                is_base64=is_base64,
+                is_base64=False,
                 user_id="mcp_user",
                 y_true_column=y_true_col,
                 model_score_columns=model_score_cols,
@@ -2080,7 +2243,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
     
     @mcp.tool()
     async def find_optimal_threshold(
-        csv_content: str,
+        csv_path: str,
         y_true_col: str,
         y_score_col: str,
         method: str = "youden",
@@ -2089,7 +2252,6 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         target_sensitivity: Optional[float] = None,
         target_specificity: Optional[float] = None,
         prevalence: Optional[float] = None,
-        is_base64: bool = False,
     ) -> dict:
         """
         🎯 Find optimal classification threshold using various methods.
@@ -2110,7 +2272,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         - Cost-sensitive: Different costs for FP vs FN errors
         
         Args:
-            csv_content: CSV data as string
+            csv_path: Path to CSV file (e.g., /data/sample_data/file.csv)
             y_true_col: Column with true binary labels
             y_score_col: Column with predicted probabilities
             method: Threshold selection method
@@ -2119,7 +2281,6 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             target_sensitivity: Minimum sensitivity (for sensitivity method)
             target_specificity: Minimum specificity (for specificity method)
             prevalence: Disease prevalence (for prevalence_adjusted method)
-            is_base64: Set True if csv_content is base64 encoded
         
         Returns:
             optimal_threshold: Selected threshold value
@@ -2129,9 +2290,15 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             threshold_range: Nearby thresholds and their metrics
         """
         try:
+            # Read CSV from path
+            success, result = _read_csv_from_path_or_reject(csv_path)
+            if not success:
+                return result
+            csv_content = result
+            
             result = await stats_client.submit_roc_threshold_job(
                 csv_content=csv_content,
-                is_base64=is_base64,
+                is_base64=False,
                 user_id="mcp_user",
                 y_true_column=y_true_col,
                 y_score_column=y_score_col,
@@ -2164,12 +2331,11 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
     
     @mcp.tool()
     async def analyze_calibration(
-        csv_content: str,
+        csv_path: str,
         y_true_col: str,
         y_score_col: str,
         n_bins: int = 10,
         strategy: str = "uniform",
-        is_base64: bool = False,
     ) -> dict:
         """
         📊 Analyze model calibration (predicted vs actual probabilities).
@@ -2195,12 +2361,11 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         - For medical risk prediction models
         
         Args:
-            csv_content: CSV data as string
+            csv_path: Path to CSV file (e.g., /data/sample_data/file.csv)
             y_true_col: Column with true binary labels
             y_score_col: Column with predicted probabilities
             n_bins: Number of bins for calibration curve
             strategy: 'uniform' (equal width) or 'quantile' (equal count)
-            is_base64: Set True if csv_content is base64 encoded
         
         Returns:
             brier_score: Probability accuracy measure
@@ -2211,9 +2376,15 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             recommendations: Calibration improvement suggestions
         """
         try:
+            # Read CSV from path
+            success, result = _read_csv_from_path_or_reject(csv_path)
+            if not success:
+                return result
+            csv_content = result
+            
             result = await stats_client.submit_roc_calibration_job(
                 csv_content=csv_content,
-                is_base64=is_base64,
+                is_base64=False,
                 user_id="mcp_user",
                 y_true_column=y_true_col,
                 y_score_column=y_score_col,
@@ -2242,11 +2413,10 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
     
     @mcp.tool()
     async def full_classifier_evaluation(
-        csv_content: str,
+        csv_path: str,
         y_true_col: str,
         y_score_col: str,
         threshold: Optional[float] = None,
-        is_base64: bool = False,
     ) -> dict:
         """
         🏆 Complete classifier evaluation report.
@@ -2274,11 +2444,10 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         Perfect for publication-ready classifier assessment.
         
         Args:
-            csv_content: CSV data as string
+            csv_path: Path to CSV file (e.g., /data/sample_data/file.csv)
             y_true_col: Column with true binary labels
             y_score_col: Column with predicted probabilities
             threshold: Classification threshold (default: optimal)
-            is_base64: Set True if csv_content is base64 encoded
         
         Returns:
             roc_analysis: Full ROC curve results
@@ -2288,9 +2457,15 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             publication_text: Ready-to-use results paragraph
         """
         try:
+            # Read CSV from path
+            success, result = _read_csv_from_path_or_reject(csv_path)
+            if not success:
+                return result
+            csv_content = result
+            
             result = await stats_client.submit_roc_full_eval_job(
                 csv_content=csv_content,
-                is_base64=is_base64,
+                is_base64=False,
                 user_id="mcp_user",
                 y_true_column=y_true_col,
                 y_score_column=y_score_col,
@@ -2322,12 +2497,11 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
     
     @mcp.tool()
     async def compare_multiple_roc_curves(
-        csv_content: str,
+        csv_path: str,
         y_true_col: str,
         model_columns: str,  # JSON string: {"Model A": "score_a", "Model B": "score_b", ...}
         correction: str = "bonferroni",
         alpha: float = 0.05,
-        is_base64: bool = False,
     ) -> dict:
         """
         📊 Compare 3+ classification models simultaneously.
@@ -2354,13 +2528,12 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         - "none": No correction (not recommended)
         
         Args:
-            csv_content: CSV data as string
+            csv_path: Path to CSV file (e.g., /data/sample_data/file.csv)
             y_true_col: Column with true binary labels
             model_columns: JSON mapping model names to score columns
                 Example: '{"Logistic": "lr_prob", "XGBoost": "xgb_prob", "RF": "rf_prob"}'
             correction: Multiple comparison correction method
             alpha: Significance level (default: 0.05)
-            is_base64: Set True if csv_content is base64 encoded
         
         Returns:
             model_rankings: Models ranked by AUC
@@ -2371,7 +2544,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         
         Example:
             >>> result = await compare_multiple_roc_curves(
-            ...     csv_content,
+            ...     csv_path="/data/sample_data/predictions.csv",
             ...     y_true_col="outcome",
             ...     model_columns='{"LR": "lr_probs", "XGB": "xgb_probs", "RF": "rf_probs"}'
             ... )
@@ -2380,12 +2553,18 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         import json
         
         try:
+            # Read CSV from path
+            success, result = _read_csv_from_path_or_reject(csv_path)
+            if not success:
+                return result
+            csv_content = result
+            
             # Parse model columns JSON
             model_cols = json.loads(model_columns)
             
             result = await stats_client.submit_roc_compare_job(
                 csv_content=csv_content,
-                is_base64=is_base64,
+                is_base64=False,
                 user_id="mcp_user",
                 y_true_column=y_true_col,
                 model_score_columns=list(model_cols.values()),
@@ -2418,13 +2597,12 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
     
     @mcp.tool()
     async def interactive_threshold_analysis(
-        csv_content: str,
+        csv_path: str,
         y_true_col: str,
         y_score_col: str,
         target_metric: Optional[str] = None,
         target_value: Optional[float] = None,
         n_thresholds: int = 21,
-        is_base64: bool = False,
     ) -> dict:
         """
         🎯 Interactive threshold analysis for clinical decision support.
@@ -2454,13 +2632,12 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         - Cost analysis: "What threshold minimizes false negatives?"
         
         Args:
-            csv_content: CSV data as string
+            csv_path: Path to CSV file (e.g., /data/sample_data/file.csv)
             y_true_col: Column with true binary labels
             y_score_col: Column with predicted probabilities
             target_metric: Metric to optimize ('sensitivity', 'specificity', 'ppv', 'npv', 'f1')
             target_value: Target value (e.g., 0.95 for 95% sensitivity)
             n_thresholds: Number of thresholds to evaluate (default: 21)
-            is_base64: Set True if csv_content is base64 encoded
         
         Returns:
             threshold_table: Complete metrics at each threshold
@@ -2471,16 +2648,23 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         Example:
             >>> # Find threshold for 95% sensitivity
             >>> result = await interactive_threshold_analysis(
-            ...     csv_content, "outcome", "pred_prob",
+            ...     csv_path="/data/sample_data/predictions.csv",
+            ...     y_true_col="outcome", y_score_col="pred_prob",
             ...     target_metric="sensitivity",
             ...     target_value=0.95
             ... )
             >>> print(result["target_threshold"])
         """
         try:
+            # Read CSV from path
+            success, result = _read_csv_from_path_or_reject(csv_path)
+            if not success:
+                return result
+            csv_content = result
+            
             result = await stats_client.submit_roc_threshold_job(
                 csv_content=csv_content,
-                is_base64=is_base64,
+                is_base64=False,
                 user_id="mcp_user",
                 y_true_column=y_true_col,
                 y_score_column=y_score_col,
@@ -2511,14 +2695,13 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
     
     @mcp.tool()
     async def generate_roc_publication_report(
-        csv_content: str,
+        csv_path: str,
         y_true_col: str,
         y_score_col: str,
         model_name: str = "The prediction model",
         outcome_name: str = "the outcome",
         threshold_method: str = "youden",
         decimal_places: int = 2,
-        is_base64: bool = False,
     ) -> dict:
         """
         📝 Generate publication-ready ROC analysis report.
@@ -2548,18 +2731,17 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         
         **Follows Guidelines:**
         - TRIPOD reporting guidelines
-        - PROBAST assessment criteria
+           - PROBAST assessment criteria
         - Standard journal formatting
         
         Args:
-            csv_content: CSV data as string
+            csv_path: Path to CSV file (e.g., /data/sample_data/file.csv)
             y_true_col: Column with true binary labels
             y_score_col: Column with predicted probabilities
             model_name: Name for text (e.g., "The XGBoost classifier")
             outcome_name: Outcome for text (e.g., "30-day mortality")
             threshold_method: Method for optimal threshold ('youden', 'f1')
             decimal_places: Decimal places for reporting (default: 2)
-            is_base64: Set True if csv_content is base64 encoded
         
         Returns:
             results_text: Main results paragraph
@@ -2570,7 +2752,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         
         Example:
             >>> report = await generate_roc_publication_report(
-            ...     csv_content,
+            ...     csv_path="/data/sample_data/predictions.csv",
             ...     y_true_col="mortality_30d",
             ...     y_score_col="risk_score",
             ...     model_name="The gradient boosting model",
@@ -2579,9 +2761,15 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             >>> print(report["results_text"])
         """
         try:
+            # Read CSV from path
+            success, result = _read_csv_from_path_or_reject(csv_path)
+            if not success:
+                return result
+            csv_content = result
+            
             result = await stats_client.submit_roc_full_eval_job(
                 csv_content=csv_content,
-                is_base64=is_base64,
+                is_base64=False,
                 user_id="mcp_user",
                 y_true_column=y_true_col,
                 y_score_column=y_score_col,

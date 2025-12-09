@@ -1,0 +1,31 @@
+{
+  "dataset": "iris",
+  "dataset_file": "/sample_data/iris.csv",
+  "test_type": "eda/quick_stats",
+  "mcp_tool": "mcp_automl_get_quick_stats",
+  "description": "Quick statistics via MCP tool",
+  "timestamp": "2025-12-09",
+  "input": {
+    "csv_content": "iris.csv (20 rows sample)"
+  },
+  "result": {
+    "rows": 20,
+    "columns": 6,
+    "column_info": [
+      {"name": "sepal_length", "dtype": "float64", "non_null": 20, "null": 0, "unique": 11},
+      {"name": "sepal_width", "dtype": "float64", "non_null": 20, "null": 0, "unique": 12},
+      {"name": "petal_length", "dtype": "float64", "non_null": 20, "null": 0, "unique": 7},
+      {"name": "petal_width", "dtype": "float64", "non_null": 20, "null": 0, "unique": 4},
+      {"name": "species", "dtype": "object", "non_null": 20, "null": 0, "unique": 1},
+      {"name": "target", "dtype": "int64", "non_null": 20, "null": 0, "unique": 1}
+    ],
+    "missing_summary": {"total_missing": 0, "columns_with_missing": 0},
+    "numeric_summary": {
+      "sepal_length": {"mean": 5.035, "std": 0.427, "min": 4.3, "max": 5.8},
+      "sepal_width": {"mean": 3.48, "std": 0.407, "min": 2.9, "max": 4.4},
+      "petal_length": {"mean": 1.435, "std": 0.146, "min": 1.1, "max": 1.7},
+      "petal_width": {"mean": 0.235, "std": 0.093, "min": 0.1, "max": 0.4}
+    }
+  },
+  "status": "success"
+}

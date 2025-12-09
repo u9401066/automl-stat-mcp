@@ -1,0 +1,34 @@
+{
+  "dataset": "rossi_recidivism",
+  "test_type": "eda/auto_analyze",
+  "timestamp": "2025-12-09",
+  "source_path": "/data/sample_data/rossi_recidivism.csv",
+  "mcp_tools_used": ["mcp_automl_upload_dataset", "mcp_automl_get_stats_job_result"],
+  "workflow": {
+    "step1": {
+      "tool": "upload_dataset",
+      "input": {
+        "source_path": "/data/sample_data/rossi_recidivism.csv",
+        "storage_mode": "temporary"
+      },
+      "output": "job_id: eae8abfd-6691-461c-a6f3-d68ee59df4cd"
+    }
+  },
+  "result_summary": {
+    "n_rows": 432,
+    "n_cols": 9,
+    "data_quality_score": 90.0,
+    "column_types": {
+      "numeric": ["week", "age", "prio"],
+      "categorical": ["arrest", "fin", "race", "wexp", "mar", "paro"]
+    },
+    "event_rate": "26.39% (114/432 re-arrested)",
+    "key_correlations": {
+      "week_vs_arrest": -0.81,
+      "age_vs_wexp": 0.35
+    },
+    "no_multicollinearity": true,
+    "no_missing_values": true
+  },
+  "e2e_verified": true
+}

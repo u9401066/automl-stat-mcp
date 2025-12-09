@@ -1,0 +1,40 @@
+{
+  "dataset": "iris",
+  "dataset_file": "/data/sample_data/iris.csv",
+  "test_type": "upload_dataset",
+  "mcp_tool": "mcp_automl_upload_dataset",
+  "description": "E2E test - Agent provides file PATH, system reads data automatically",
+  "timestamp": "2025-12-09",
+  "input": {
+    "name": "iris_e2e",
+    "source_path": "/data/sample_data/iris.csv",
+    "source_type": "local",
+    "storage_mode": "temporary",
+    "user_id": "e2e_test"
+  },
+  "result": {
+    "success": true,
+    "storage_mode": "temporary",
+    "job_id": "ab1aea98-f84c-4ae2-baa8-b9a5e42bcd4a",
+    "job_type": "auto_analyze_direct",
+    "status": "pending",
+    "data_preview": {
+      "rows": 150,
+      "columns": 6,
+      "column_names": ["sepal_length", "sepal_width", "petal_length", "petal_width", "species", "target"],
+      "sample_rows": [
+        {"sepal_length": 5.1, "sepal_width": 3.5, "petal_length": 1.4, "petal_width": 0.2, "species": "setosa", "target": 0}
+      ],
+      "dtypes": {
+        "sepal_length": "float64",
+        "sepal_width": "float64",
+        "petal_length": "float64",
+        "petal_width": "float64",
+        "species": "object",
+        "target": "int64"
+      }
+    }
+  },
+  "e2e_verified": true,
+  "note": "Agent only provides PATH, system handles data reading internally"
+}

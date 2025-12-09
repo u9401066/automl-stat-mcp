@@ -1,0 +1,57 @@
+{
+  "dataset": "iris",
+  "dataset_id": "f7408a41-8750-4fac-b96b-6639384c8cef",
+  "test_type": "ml/automl",
+  "mcp_tools_used": [
+    "mcp_automl_submit_automl_job",
+    "mcp_automl_get_job_status"
+  ],
+  "timestamp": "2025-12-09",
+  "workflow": {
+    "step1": {
+      "tool": "submit_automl_job",
+      "input": {
+        "dataset_id": "f7408a41-8750-4fac-b96b-6639384c8cef",
+        "target_column": "species",
+        "problem_type": "multiclass",
+        "metric": "accuracy",
+        "presets": "medium_quality",
+        "time_limit": 60
+      },
+      "output": "job_id: 8322ef13-2cc6-4388-948c-fcb6a8bd8fc0"
+    },
+    "step2": {
+      "tool": "get_job_status",
+      "output": "Training completed with model leaderboard"
+    }
+  },
+  "result": {
+    "status": "completed",
+    "best_model": "WeightedEnsemble_L2",
+    "best_accuracy": 1.0,
+    "model_minio_path": "automl-models/models/8322ef13-2cc6-4388-948c-fcb6a8bd8fc0/model.tar.gz",
+    "training_time_seconds": 2.76
+  },
+  "leaderboard": [
+    {"rank": 1, "model": "LightGBMLarge", "accuracy": 1.0, "fit_time": 0.12},
+    {"rank": 2, "model": "LightGBM", "accuracy": 1.0, "fit_time": 0.10},
+    {"rank": 3, "model": "LightGBMXT", "accuracy": 1.0, "fit_time": 0.14},
+    {"rank": 4, "model": "CatBoost", "accuracy": 1.0, "fit_time": 0.09},
+    {"rank": 5, "model": "XGBoost", "accuracy": 1.0, "fit_time": 0.05},
+    {"rank": 6, "model": "WeightedEnsemble_L2", "accuracy": 1.0, "fit_time": 0.12},
+    {"rank": 7, "model": "NeuralNetTorch", "accuracy": 1.0, "fit_time": 0.24},
+    {"rank": 8, "model": "NeuralNetFastAI", "accuracy": 1.0, "fit_time": 0.53},
+    {"rank": 9, "model": "KNeighborsDist", "accuracy": 1.0, "fit_time": 0.001},
+    {"rank": 10, "model": "KNeighborsUnif", "accuracy": 1.0, "fit_time": 0.002},
+    {"rank": 11, "model": "ExtraTreesEntr", "accuracy": 1.0, "fit_time": 0.28},
+    {"rank": 12, "model": "RandomForestGini", "accuracy": 1.0, "fit_time": 0.28},
+    {"rank": 13, "model": "RandomForestEntr", "accuracy": 1.0, "fit_time": 0.27},
+    {"rank": 14, "model": "ExtraTreesGini", "accuracy": 1.0, "fit_time": 0.26}
+  ],
+  "interpretation": {
+    "note": "All models achieved 100% accuracy on validation set",
+    "best_speed": "XGBoost (0.05s fit time)",
+    "ensemble": "WeightedEnsemble_L2 selected as best model for deployment"
+  },
+  "e2e_verified": true
+}
