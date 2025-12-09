@@ -18,7 +18,7 @@
 | **Statistics Core** | EDA、TableOne、智能分析 | 12 | ✅ |
 | **Smart Workflow** | 引導式分析流程 | 3 | ✅ |
 | **Upload Tools** | 檔案上傳 (Volume/MinIO) + 欄位自動清理 | 3 | ✅ |
-| **Data Cleaning** | 資料清理工具 (NEW) | 7 | 🔄 開發中 |
+| **Data Cleaning** | 資料清理工具 | 9 | ✅ |
 | **Phase 1** | 增強統計分析 (相關性、分布、VIF) | 4 | ✅ |
 | **Phase 2** | TableOne 生成器 | 3 | ✅ |
 | **Phase 3** | 存活分析 (Kaplan-Meier, Cox) | 4 | ✅ |
@@ -28,17 +28,23 @@
 | **Phase 6** | Power Analysis (T-test, Proportion, ANOVA, Chi-square, Survival) | 19 | ✅ |
 | **DDD Refactoring** | 代碼重構 (statistics_tools, power_analysis, roc_analysis, advanced_analysis) | - | ✅ |
 
-**總計: 96+ MCP 工具 (26 AutoML + 3 Upload + 7 Cleaning + 57 Stats + 3 Workflow)**
+**總計: 98+ MCP 工具 (26 AutoML + 3 Upload + 9 Cleaning + 57 Stats + 3 Workflow)**
 
 ### 🆕 2025-12-09 更新
-- **Data Cleaning Tools 開發中**
-  - `convert_to_binary` - 轉換欄位為 0/1（傾向分數分析必需）
-  - `encode_categorical` - 類別編碼 (Label/OneHot)
-  - `handle_missing_values` - 缺失值處理
-  - `remove_columns` - 移除欄位
-  - `filter_rows` - 篩選資料列
-  - `rename_columns` - 重新命名欄位
-  - `get_column_info` - 取得欄位資訊
+- **Data Cleaning Tools 完成 (Phase 7)**
+  - `convert_to_binary` - 轉換欄位為 0/1（傾向分數分析必需）✅
+  - `encode_categorical` - 類別編碼 (Label/OneHot) ✅
+  - `handle_missing_values` - 缺失值處理 ✅
+  - `remove_columns` - 移除欄位 ✅
+  - `filter_rows` - 篩選資料列 ✅
+  - `rename_columns` - 重新命名欄位 ✅
+  - `get_column_info` - 取得欄位資訊 ✅
+  - `auto_clean` - 自動清理 (新) ✅
+  - Stats Service 9 個 API endpoints 實作完成
+- **Worker 結果優化**
+  - Propensity score 結果改為統計摘要（不再儲存完整分數陣列）
+  - 新增 JSON sanitization 處理 NaN/Infinity 值
+  - 減少 MinIO 存儲空間使用
 - **上傳功能增強**
   - 欄位名稱自動清理（Excel 特殊符號處理）
   - Metadata JSON 生成（原始↔清理後欄位對照）
@@ -59,16 +65,17 @@
 
 ## 🗺️ Roadmap
 
-### 🔥 Phase 7: Data Cleaning Service (進行中)
+### ✅ Phase 7: Data Cleaning Service (完成)
 
-> 設計文件: [docs/design-issues/002-data-cleaning-service.md](design-issues/002-data-cleaning-service.md)
+> 設計文件: [docs/design-issues/001-data-cleaning-workflow.md](design-issues/001-data-cleaning-workflow.md)
 
 | 功能 | 描述 | 狀態 |
 |------|------|------|
-| Stats Service 擴充 | 新增 cleaning routes | 🔄 |
-| MCP Tools 更新 | 呼叫 Stats Service API | 🔄 |
-| Binary 轉換 | 支援傾向分數分析 | 🔄 |
-| 自動清理 | 一鍵處理常見問題 | ⬜ |
+| Stats Service 擴充 | 新增 9 個 cleaning routes | ✅ |
+| MCP Tools 更新 | 呼叫 Stats Service API | ✅ |
+| Binary 轉換 | 支援傾向分數分析 | ✅ |
+| 自動清理 | 一鍵處理常見問題 | ✅ |
+| Worker 優化 | 結果存統計摘要，不存原始陣列 | ✅ |
 
 ### Q1 2026 - 進階分析能力
 

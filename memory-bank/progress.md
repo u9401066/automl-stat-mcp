@@ -2,7 +2,29 @@
 
 ## Done
 
-### 2025-12-09 (Data Cleaning + Upload Enhancement)
+### 2025-12-09 (Phase 7 Data Cleaning + Worker Optimization)
+- ✅ **Phase 7 Data Cleaning Service 完成**
+  - Stats Service 新增 9 個 cleaning API endpoints
+  - MCP cleaning tools 全部可用（9 個工具）
+  - convert-binary: 轉換欄位為 0/1（傾向分數分析必需）
+  - encode-categorical: Label/OneHot 編碼
+  - handle-missing: 缺失值處理
+  - remove-columns/filter-rows/rename-columns: 資料操作
+  - column-info: 欄位資訊查詢
+  - auto-clean: 一鍵自動清理
+
+- ✅ **Worker 結果存儲優化**
+  - `estimate_propensity_scores()` 改為只存統計摘要（不存完整分數陣列）
+  - `match_propensity_scores()` 改為只存配對摘要（不存索引陣列）
+  - 新增 `sanitize_for_json()` 處理 NaN/Infinity JSON 序列化
+  - 大幅減少 MinIO 存儲空間使用
+
+- ✅ **Stats Service Bug Fixes**
+  - StatsJobType enum 補齊 propensity/survival/ROC/power 工作類型
+  - StatsJobId 改為 string 支援 "propensity-xxx" 格式
+  - Redis async client 正確初始化 (from_url)
+
+### 2025-12-09 (Data Cleaning + Upload Enhancement - Earlier)
 - ✅ **Upload Tools 增強**
   - 欄位名稱自動清理（Excel 特殊符號 → 底線）
   - 保留中文字元，移除 `Unnamed:` Excel 殘留
@@ -59,16 +81,13 @@
 
 ## Doing
 
-- 🔄 **Phase 7: Data Cleaning Service 開發**
-  - [ ] Stats Service 新增 `/cleaning/*` API endpoints
-  - [ ] MCP cleaning_tools.py 改為呼叫 Stats Service API
-  - [ ] 測試完整工作流程：upload → clean → analyze
+- 🔄 **E2E 測試完善**
+  - [ ] 傾向分數分析完整工作流測試
+  - [ ] 更多資料集測試 (titanic, heart_disease)
 
 ## Next
 
-- 完成 Data Cleaning Service 整合
-- 傾向分數分析：測試 binary 轉換後的分析
-- 完成更多資料集的 E2E 測試（titanic, heart_disease, breast_cancer）
-- Git commit 推送所有變更
-- 執行完整測試套件確認覆蓋率
+- Phase 8: Meta-Analysis (固定效應、隨機效應、森林圖)
+- 監控儀表板 (Grafana)
+- 日誌集中化
 

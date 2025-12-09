@@ -114,3 +114,4 @@ C) 整合到 Stats Service（選擇）- 邏輯相關，共用環境
 - MCP cleaning_tools.py 呼叫 Stats Service API
 - 清理後檔案存到 /data/processed/{user_id}/ |
 
+| 2025-12-09 | Worker 結果存儲只保留統計摘要，不存儲原始資料陣列 | Propensity score 分析原本會將完整的分數陣列（數千個值）存到 MinIO。這既浪費存儲空間，對使用者也沒有意義。改為只存儲統計摘要（mean, std, min, max, percentiles）。如果需要完整分數用於後續分析，可透過 include_scores=True 參數在內部流程中取得。 |

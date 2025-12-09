@@ -44,11 +44,31 @@
 
 ## Current Goals
 
-精簡 Agent 職責，確保 Agent 只做：
-1. 傳檔案路徑
-2. 建工單
-3. 查狀態
-4. 拿結果
+- ## Current Focus (2025-12-09)
+- ### ✅ Just Completed: Phase 7 Data Cleaning + Worker Optimization
+- **Stats Service Cleaning API (9 endpoints):**
+- - `/cleaning/convert-binary` - 轉換欄位為 0/1
+- - `/cleaning/encode-categorical` - 類別編碼 (Label/OneHot)
+- - `/cleaning/handle-missing` - 缺失值處理
+- - `/cleaning/remove-columns` - 移除欄位
+- - `/cleaning/filter-rows` - 篩選資料列
+- - `/cleaning/rename-columns` - 重新命名欄位
+- - `/cleaning/column-info` - 取得欄位資訊
+- - `/cleaning/auto-clean` - 自動清理
+- - `/cleaning/health` - 健康檢查
+- **Worker Result Optimization:**
+- - 修改 `estimate_propensity_scores()` 不再回傳完整分數陣列，改為統計摘要
+- - 修改 `match_propensity_scores()` 不再回傳完整索引陣列，改為配對摘要
+- - 新增 `sanitize_for_json()` 處理 NaN/Infinity JSON 序列化問題
+- - 大幅減少 MinIO 存儲空間使用
+- **Key Bug Fixes:**
+- - StatsJobType enum 補齊所有工作類型
+- - StatsJobId 改為 string 支援 "propensity-xxx" 格式
+- - Redis async client 正確初始化
+- ### Next Actions
+- - 完整 E2E 測試（傾向分數分析工作流）
+- - 更多資料集測試
+- - 考慮 Meta-Analysis (Phase 8) 或其他進階功能
 
 ## Current Blockers
 

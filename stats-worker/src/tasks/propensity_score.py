@@ -941,6 +941,7 @@ def estimate_propensity_scores(
     treatment_col: str,
     covariates: List[str],
     regularization: float = 0.0,
+    include_scores: bool = False,
 ) -> Dict[str, Any]:
     """
     Estimate propensity scores using logistic regression.
@@ -950,9 +951,10 @@ def estimate_propensity_scores(
         treatment_col: Name of binary treatment column
         covariates: List of covariate column names
         regularization: L2 regularization strength
+        include_scores: If True, include full scores array (for internal use)
         
     Returns:
-        Dictionary with scores, coefficients, and diagnostics
+        Dictionary with coefficients, diagnostics, and optionally scores
     """
     X = df[covariates].copy()
     treatment = df[treatment_col].values
@@ -960,14 +962,30 @@ def estimate_propensity_scores(
     estimator = PropensityScoreEstimator(regularization=regularization)
     result = estimator.fit(X, treatment)
     
-    return {
+    # Build response with meaningful statistics (not raw scores)
+    response = {
         "status": "success",
         "analysis_type": "propensity_score_estimation",
         "treatment_column": treatment_col,
         "covariates": covariates,
-        "scores": result.scores.tolist(),
         **result.to_dict(),
+        # Add score summary statistics instead of full array
+        "score_summary": {
+            "min": float(np.nanmin(result.scores)),
+            "max": float(np.nanmax(result.scores)),
+            "mean": float(np.nanmean(result.scores)),
+            "std": float(np.nanstd(result.scores)),
+            "median": float(np.nanmedian(result.scores)),
+            "q25": float(np.nanpercentile(result.scores, 25)),
+            "q75": float(np.nanpercentile(result.scores, 75)),
+        },
     }
+    
+    # Only include full scores if explicitly requested (for internal pipeline use)
+    if include_scores:
+        response["_scores"] = result.scores.tolist()
+    
+    return response
 
 
 def match_propensity_scores(
@@ -992,9 +1010,10 @@ def match_propensity_scores(
         caliper: Maximum distance for matching
         caliper_scale: 'std' or 'absolute'
         replacement: Allow matching with replacement
+        include_indices: If True, include full matched indices (for internal use)
         
     Returns:
-        Dictionary with matching results and matched indices
+        Dictionary with matching results and summary statistics
     """
     treatment = df[treatment_col].values
     
@@ -1024,8 +1043,14 @@ def match_propensity_scores(
         "treatment_column": treatment_col,
         "method": method,
         **match_result.to_dict(),
-        "matched_treated_indices": match_result.matched_treated_idx.tolist(),
-        "matched_control_indices": match_result.matched_control_idx.tolist(),
+        # Include summary of matched indices instead of full arrays
+        "matching_summary": {
+            "total_treated": int(np.sum(treatment)),
+            "total_control": int(np.sum(1 - treatment)),
+            "matched_pairs": match_result.n_matched,
+            "unmatched_treated": match_result.n_unmatched_treated,
+            "unmatched_control": match_result.n_unmatched_control,
+        },
     }
     
     if ps_result is not None:

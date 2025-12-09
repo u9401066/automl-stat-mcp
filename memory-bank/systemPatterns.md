@@ -317,3 +317,13 @@ Metadata JSON 輸出：
 - upload_tools.py - _sanitize_column_name(), _create_column_mapping()
 - /data/processed/{user_id}/*_metadata.json - 對照表
 
+
+
+## JSON Sanitization for Statistical Results
+
+統計計算結果可能包含 NaN、Infinity 等 Python/NumPy 特殊值，這些無法直接 JSON 序列化。使用 sanitize_for_json() 遞迴處理所有資料：NaN → null, Infinity → "Infinity", np.floating → float。此函數在 save_report() 儲存到 MinIO 前調用。
+
+### Examples
+
+- stats-worker/src/worker.py: sanitize_for_json()
+- stats-worker/src/worker.py: save_report() 使用 sanitize_for_json

@@ -8,6 +8,7 @@ Processes statistical analysis jobs from Redis queue:
 """
 import json
 import logging
+import math
 import os
 import signal
 import sys
@@ -37,6 +38,38 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
+
+
+def sanitize_for_json(obj):
+    """
+    Recursively sanitize object for JSON serialization.
+    Handles NaN, Infinity, -Infinity which are not valid JSON.
+    """
+    if isinstance(obj, dict):
+        return {k: sanitize_for_json(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [sanitize_for_json(item) for item in obj]
+    elif isinstance(obj, tuple):
+        return [sanitize_for_json(item) for item in obj]
+    elif isinstance(obj, float):
+        if math.isnan(obj):
+            return None
+        elif math.isinf(obj):
+            return "Infinity" if obj > 0 else "-Infinity"
+        return obj
+    elif isinstance(obj, (np.floating, np.integer)):
+        if np.isnan(obj):
+            return None
+        elif np.isinf(obj):
+            return "Infinity" if obj > 0 else "-Infinity"
+        return float(obj) if isinstance(obj, np.floating) else int(obj)
+    elif isinstance(obj, np.ndarray):
+        return sanitize_for_json(obj.tolist())
+    elif isinstance(obj, (np.bool_, bool)):
+        return bool(obj)
+    elif pd.isna(obj):
+        return None
+    return obj
 
 # Global flag for graceful shutdown
 running = True
@@ -161,7 +194,9 @@ class StatsWorker:
     def save_report(self, job_id: str, report_data: dict, format: str = "json") -> str:
         """Save report to MinIO"""
         if format == "json":
-            content = json.dumps(report_data, indent=2, default=str)
+            # Sanitize data to handle NaN, Infinity values
+            sanitized_data = sanitize_for_json(report_data)
+            content = json.dumps(sanitized_data, indent=2, default=str)
             content_type = "application/json"
             ext = "json"
         elif format == "html":
