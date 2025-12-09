@@ -239,9 +239,81 @@ Volume Mounts (docker-compose.yml):
 - ./sample_data:/data/sample_data:ro
 - ./uploads:/data/uploads:ro
 - ./datasets:/data/datasets:ro
+- ./processed:/data/processed (可寫，存放清理後檔案)
 
 ### Examples
 
 - upload_tools.py - list_available_files(), upload_dataset(), get_upload_help()
 - docker-compose.yml - automl-mcp volumes section
 - automl-service datasets.py - /datasets/upload endpoint
+
+
+## Data Cleaning Integration Pattern
+
+資料清理整合到 Stats Service，而非獨立服務：
+
+設計決策理由：
+1. 資料清理是統計分析的前置步驟，邏輯上相關
+2. 避免服務過度拆分
+3. Stats Service 已有 pandas 環境
+4. 可共用 Redis + MinIO 基礎設施
+
+架構：
+```
+MCP Server (cleaning_tools.py)
+    │
+    ├─→ 同步清理 → Stats Service /cleaning/* API
+    │               ├─ /cleaning/convert-binary
+    │               ├─ /cleaning/encode-categorical
+    │               ├─ /cleaning/handle-missing
+    │               └─ /cleaning/column-info
+    │
+    └─→ 處理過的檔案存到 /data/processed/{user_id}/
+```
+
+MCP Tools:
+- convert_to_binary: 轉換欄位為 0/1（傾向分數分析必需）
+- encode_categorical: 類別編碼 (Label/OneHot)
+- handle_missing_values: 缺失值處理
+- remove_columns: 移除欄位
+- filter_rows: 篩選資料列
+- get_column_info: 取得欄位資訊
+
+### Examples
+
+- automl-mcp-server/handlers/cleaning_tools.py - MCP 工具定義
+- stats-service/routes/cleaning.py - Stats Service API（待實作）
+- /data/processed/{user_id}/*.csv - 處理後檔案存放位置
+
+
+## Column Name Sanitization Pattern
+
+上傳時自動清理 Excel 來源的欄位名稱：
+
+規則：
+1. 特殊符號替換為底線：空格、括號、斜線、加號、減號等
+2. 保留中文字元（常見於研究資料）
+3. 移除 Excel 殘留的 `Unnamed:` 前綴
+4. 連續底線合併為單一底線
+5. 移除首尾底線
+
+Metadata JSON 輸出：
+```json
+{
+  "original_file": "...",
+  "processed_file": "...",
+  "timestamp": "...",
+  "column_mapping": {
+    "changed": {"Ropica(ML)": "Ropica_ML", ...},
+    "unchanged": ["年齡", "性別", ...]
+  },
+  "total_columns": 142,
+  "columns_renamed": 84
+}
+```
+
+### Examples
+
+- upload_tools.py - _sanitize_column_name(), _create_column_mapping()
+- /data/processed/{user_id}/*_metadata.json - 對照表
+

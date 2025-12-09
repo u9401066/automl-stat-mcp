@@ -2,6 +2,24 @@
 
 ## Done
 
+### 2025-12-09 (Data Cleaning + Upload Enhancement)
+- ✅ **Upload Tools 增強**
+  - 欄位名稱自動清理（Excel 特殊符號 → 底線）
+  - 保留中文字元，移除 `Unnamed:` Excel 殘留
+  - Metadata JSON 生成（原始↔清理後欄位對照）
+  - 預覽截斷（2 rows, 10 columns）避免 response 過大
+  - Volume mount `/data/processed` 存放處理後檔案
+
+- ✅ **統計功能測試**
+  - 樣本數計算：t-test, proportion, effect_size, sensitivity 全部正常
+  - TableOne 生成：painless 資料集 Ropica 200 vs 400 比較成功
+  - 傾向分數分析：偵測到問題（treatment 需為 binary 0/1）
+
+- 🔄 **Data Cleaning Tools 架構規劃**
+  - 設計決策：整合到 Stats Service（而非獨立服務）
+  - 新增設計文件：`docs/design-issues/002-data-cleaning-service.md`
+  - 新增工具模組：`cleaning_tools.py`（MCP 端，待完成 Stats Service API）
+
 ### 2025-12-09 (CSV Path Refactoring)
 - ✅ **所有 statistics tools 改用 csv_path（檔案路徑）**
   - 新增 `_read_csv_from_path_or_reject()` helper function
@@ -41,10 +59,15 @@
 
 ## Doing
 
-- 無進行中任務
+- 🔄 **Phase 7: Data Cleaning Service 開發**
+  - [ ] Stats Service 新增 `/cleaning/*` API endpoints
+  - [ ] MCP cleaning_tools.py 改為呼叫 Stats Service API
+  - [ ] 測試完整工作流程：upload → clean → analyze
 
 ## Next
 
+- 完成 Data Cleaning Service 整合
+- 傾向分數分析：測試 binary 轉換後的分析
 - 完成更多資料集的 E2E 測試（titanic, heart_disease, breast_cancer）
 - Git commit 推送所有變更
 - 執行完整測試套件確認覆蓋率

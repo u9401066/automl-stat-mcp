@@ -88,3 +88,29 @@
 工具回傳：
 - temporary → job_id (用於 get_stats_job_result)
 - permanent → dataset_id (用於 submit_automl_job 或 auto_analyze) |
+| 2025-12-09 | Upload 時自動清理 Excel 來源的欄位名稱，保留原始對照表供參考 | 問題：真實研究資料來自 Excel，欄位名稱常有：
+1. 特殊符號（括號、斜線、加號）
+2. 空格
+3. 中英文混合
+4. Excel 產生的 "Unnamed:" 前綴
+
+解決：upload_dataset 時自動清理欄位名稱
+- 規則：特殊符號→底線，保留中文，移除 Unnamed:
+- 輸出：處理過的 CSV + Metadata JSON（原始↔清理後對照）
+- 位置：/data/processed/{user_id}/*.csv + *_metadata.json |
+| 2025-12-09 | Data Cleaning 整合到 Stats Service 而非獨立服務 | 三個選項：
+A) 嵌入現有 MCP Server（已嘗試）- MCP Server 會變胖
+B) 獨立 Cleaning Service - 服務過多
+C) 整合到 Stats Service（選擇）- 邏輯相關，共用環境
+
+決定採用 C 的理由：
+1. 資料清理是統計分析的前置步驟，邏輯上相關
+2. 避免服務過度拆分（已有 5 個服務）
+3. Stats Service 已有 pandas 環境
+4. 可共用 Redis + MinIO 基礎設施
+
+實作計畫：
+- Stats Service 新增 /cleaning/* API endpoints
+- MCP cleaning_tools.py 呼叫 Stats Service API
+- 清理後檔案存到 /data/processed/{user_id}/ |
+

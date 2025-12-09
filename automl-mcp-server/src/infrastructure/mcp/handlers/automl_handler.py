@@ -19,6 +19,7 @@ from .orchestration_tools import register_orchestration_tools
 from .statistics_tools import register_statistics_tools
 from .direct_tools import register_direct_tools
 from .smart_tools import register_smart_tools
+from .cleaning_tools import register_cleaning_tools
 
 logger = logging.getLogger(__name__)
 
@@ -78,3 +79,4 @@ class AutoMLHandler:
         register_direct_tools(self._mcp, self._client)
         register_statistics_tools(self._mcp, self._client)
         register_smart_tools(self._mcp, self._client)
+        register_cleaning_tools(self._mcp, self._client)  # NEW: Data cleaning tools

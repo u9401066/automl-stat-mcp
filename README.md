@@ -107,8 +107,8 @@ Agent: "訓練完成！最佳模型達到 87% AUC。"
 | AutoML API | `automl-service/` | REST API for job/dataset management | FastAPI, Redis, DDD | ✅ Ready |
 | AutoML MCP | `automl-mcp-server/` | MCP server for AI agents | FastMCP, httpx | ✅ Ready |
 | AutoML Worker | `automl-worker/` | ML training execution | AutoGluon 1.3.1 | ✅ Ready |
-| Stats API | `stats-service/` | Statistical analysis API | FastAPI, Redis | ✅ Ready |
-| Stats Worker | `stats-worker/` | EDA & TableOne execution | ydata-profiling, tableone | ✅ Ready |
+| Stats API | `stats-service/` | Statistical analysis API + **Data Cleaning** | FastAPI, Redis | ✅ Ready |
+| Stats Worker | `stats-worker/` | EDA, TableOne, cleaning execution | ydata-profiling, tableone | ✅ Ready |
 
 ## Quick Start
 
@@ -185,6 +185,9 @@ For Claude Desktop, add to config:
 | `upload_dataset` | 註冊資料集 | file_path, name | dataset_id |
 | `submit_automl_job` | ML 訓練工單 | dataset_id, target | job_id |
 | `submit_tableone_job` | 統計分析工單 | dataset_id, settings | job_id |
+| `convert_to_binary` | 轉換欄位為 0/1 | csv_path, column, mapping | output_path |
+| `handle_missing_values` | 缺失值處理 | csv_path, strategy | output_path |
+| `get_column_info` | 取得欄位資訊 | csv_path | column_info |
 | `get_job_status` | 查詢工單狀態 | job_id | status, progress |
 | `get_stats_job_result` | 取得統計結果 | job_id | result |
 | `get_model_leaderboard` | 取得模型排行 | model_id | leaderboard |
