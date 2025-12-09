@@ -169,6 +169,12 @@ services:
       - SERVICE_HOST=0.0.0.0
       - SERVICE_PORT=8003
       - LOG_LEVEL=INFO
+    volumes:
+      # Data directories for data cleaning operations
+      - ./sample_data:/data/sample_data:ro    # Sample datasets (read-only)
+      - ./uploads:/data/uploads:ro            # User uploaded files (read-only)
+      - ./datasets:/data/datasets:ro          # Additional datasets (read-only)
+      - ./processed:/data/processed           # Processed/cleaned files (read-write)
     networks:
       - automl-network
     depends_on:

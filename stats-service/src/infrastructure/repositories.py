@@ -23,16 +23,16 @@ class RedisStatsJobRepository(StatsJobRepository):
     """Redis implementation of StatsJobRepository"""
 
     def __init__(self):
-        self._pool = None
+        self._client = None
 
     async def _get_client(self) -> redis.Redis:
         """Get Redis client"""
-        if self._pool is None:
-            self._pool = redis.ConnectionPool.from_url(
+        if self._client is None:
+            self._client = redis.Redis.from_url(
                 f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}",
                 decode_responses=True
             )
-        return redis.Redis(connection_pool=self._pool)
+        return self._client
 
     async def save(self, job: StatsJob) -> None:
         """Save a job"""

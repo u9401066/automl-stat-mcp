@@ -133,24 +133,24 @@ POST /cleaning/auto-clean
 | `filter_rows` | 篩選資料列 | 同步 |
 | `rename_columns` | 重新命名欄位 | 同步 |
 | `get_column_info` | 取得欄位資訊 | 同步 |
-| `auto_clean_dataset` | 自動清理 | 非同步 |
+| `auto_clean_dataset` | 自動清理 | 同步 |
 
 ## 4. 實作計畫
 
-### Phase 1: Stats Service 擴充（1 天）
-- [ ] 新增 `stats-service/src/routes/cleaning.py`
-- [ ] 實作同步清理 API endpoints
-- [ ] 新增 Pydantic schemas
+### Phase 1: Stats Service 擴充（1 天）✅ 完成
+- [x] 新增 `stats-service/src/routes/cleaning.py`
+- [x] 實作同步清理 API endpoints
+- [x] 新增 Pydantic schemas
 
-### Phase 2: MCP Tools 更新（1 天）
-- [ ] 移動 `cleaning_tools.py` 到呼叫 Stats Service API
-- [ ] 移除直接檔案操作，改用 HTTP 呼叫
-- [ ] 測試 MCP tools
+### Phase 2: MCP Tools 更新（1 天）✅ 完成
+- [x] `cleaning_tools.py` 直接呼叫 Stats Service API
+- [x] 使用 StatsClient 進行 HTTP 呼叫
+- [x] 測試 MCP tools 載入
 
-### Phase 3: 整合與測試（1 天）
+### Phase 3: 整合與測試（進行中）
 - [ ] 整合測試（upload → clean → analyze → train）
-- [ ] 更新文件
-- [ ] 部署到 Docker
+- [x] 更新 docker-compose.yml (stats-service 掛載 /data)
+- [x] 部署到 Docker
 
 ## 5. 資料流程
 

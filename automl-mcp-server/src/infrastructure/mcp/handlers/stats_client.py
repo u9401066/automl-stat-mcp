@@ -375,6 +375,7 @@ class StatsClient:
         csv_content: Optional[str] = None,
         is_base64: bool = False,
         method: str = "matching",
+        target: str = "ate",
         caliper: float = 0.2,
     ) -> Dict[str, Any]:
         """Submit full propensity score analysis job
@@ -382,6 +383,9 @@ class StatsClient:
         Supports dual-mode:
         - Dataset mode: Provide dataset_id
         - Direct mode: Provide csv_content
+        
+        Args:
+            target: 'ate' (Average Treatment Effect), 'att' (on Treated), 'atu' (on Untreated)
         """
         return await self._request(
             "POST",
@@ -395,6 +399,7 @@ class StatsClient:
                 "outcome_column": outcome_column,
                 "covariates": covariates,
                 "method": method,
+                "target": target,
                 "caliper": caliper,
             },
         )
@@ -882,3 +887,167 @@ class StatsClient:
     async def get_power_guidelines(self) -> Dict[str, Any]:
         """Get power analysis guidelines"""
         return await self._request("GET", "/power/guidelines")
+
+    # ============== Data Cleaning Operations ==============
+    
+    async def convert_to_binary(
+        self,
+        csv_path: str,
+        column: str,
+        mapping: Dict[str, int],
+        output_column: Optional[str] = None,
+        save_path: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Convert a column to binary (0/1)"""
+        return await self._request(
+            "POST",
+            "/cleaning/convert-binary",
+            json={
+                "csv_path": csv_path,
+                "column": column,
+                "mapping": mapping,
+                "output_column": output_column,
+                "save_path": save_path,
+            },
+        )
+    
+    async def encode_categorical(
+        self,
+        csv_path: str,
+        columns: List[str],
+        method: str = "label",
+        target_column: Optional[str] = None,
+        save_path: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Encode categorical columns"""
+        return await self._request(
+            "POST",
+            "/cleaning/encode-categorical",
+            json={
+                "csv_path": csv_path,
+                "columns": columns,
+                "method": method,
+                "target_column": target_column,
+                "save_path": save_path,
+            },
+        )
+    
+    async def handle_missing_values(
+        self,
+        csv_path: str,
+        strategy: str = "auto",
+        columns: Optional[List[str]] = None,
+        fill_value: Optional[Any] = None,
+        threshold: float = 0.5,
+        save_path: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Handle missing values in dataset"""
+        return await self._request(
+            "POST",
+            "/cleaning/handle-missing",
+            json={
+                "csv_path": csv_path,
+                "strategy": strategy,
+                "columns": columns,
+                "fill_value": fill_value,
+                "threshold": threshold,
+                "save_path": save_path,
+            },
+        )
+    
+    async def remove_columns(
+        self,
+        csv_path: str,
+        columns: List[str],
+        save_path: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Remove columns from dataset"""
+        return await self._request(
+            "POST",
+            "/cleaning/remove-columns",
+            json={
+                "csv_path": csv_path,
+                "columns": columns,
+                "save_path": save_path,
+            },
+        )
+    
+    async def filter_rows(
+        self,
+        csv_path: str,
+        column: str,
+        operator: str,
+        value: Optional[Any] = None,
+        save_path: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Filter rows based on condition"""
+        return await self._request(
+            "POST",
+            "/cleaning/filter-rows",
+            json={
+                "csv_path": csv_path,
+                "column": column,
+                "operator": operator,
+                "value": value,
+                "save_path": save_path,
+            },
+        )
+    
+    async def rename_columns(
+        self,
+        csv_path: str,
+        mapping: Dict[str, str],
+        save_path: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Rename columns in dataset"""
+        return await self._request(
+            "POST",
+            "/cleaning/rename-columns",
+            json={
+                "csv_path": csv_path,
+                "mapping": mapping,
+                "save_path": save_path,
+            },
+        )
+    
+    async def get_column_info(
+        self,
+        csv_path: str,
+    ) -> Dict[str, Any]:
+        """Get column information for dataset"""
+        return await self._request(
+            "POST",
+            "/cleaning/column-info",
+            json={
+                "csv_path": csv_path,
+            },
+        )
+    
+    async def auto_clean_dataset(
+        self,
+        csv_path: str,
+        target_column: Optional[str] = None,
+        remove_duplicates: bool = True,
+        handle_missing: bool = True,
+        remove_constant: bool = True,
+        remove_high_cardinality: bool = True,
+        cardinality_threshold: float = 0.95,
+        missing_threshold: float = 0.5,
+        save_path: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Automatically clean dataset"""
+        return await self._request(
+            "POST",
+            "/cleaning/auto-clean",
+            json={
+                "csv_path": csv_path,
+                "target_column": target_column,
+                "remove_duplicates": remove_duplicates,
+                "handle_missing": handle_missing,
+                "remove_constant": remove_constant,
+                "remove_high_cardinality": remove_high_cardinality,
+                "cardinality_threshold": cardinality_threshold,
+                "missing_threshold": missing_threshold,
+                "save_path": save_path,
+            },
+        )
