@@ -42,6 +42,57 @@ DATA_MOUNT_PATHS = [
     "/data/datasets",       # ./datasets:/data/datasets (if exists)
 ]
 
+# Token limit for data preview (prevent response bloat)
+MAX_PREVIEW_VALUE_LENGTH = 50  # Truncate cell values longer than this
+MAX_PREVIEW_ROWS = 2  # Only show 2 sample rows
+MAX_PREVIEW_COLUMNS = 10  # Only show first N columns in sample rows
+
+
+def _truncate_value(value: Any, max_length: int = MAX_PREVIEW_VALUE_LENGTH) -> Any:
+    """Truncate string values that exceed max_length"""
+    if value is None:
+        return None
+    if isinstance(value, str) and len(value) > max_length:
+        return value[:max_length] + "..."
+    return value
+
+
+def _truncate_row(row: Dict[str, Any], max_columns: int = MAX_PREVIEW_COLUMNS) -> Dict[str, Any]:
+    """Truncate row: limit columns and truncate values"""
+    truncated = {}
+    for i, (k, v) in enumerate(row.items()):
+        if i >= max_columns:
+            truncated["..."] = f"(+{len(row) - max_columns} more columns)"
+            break
+        truncated[k] = _truncate_value(v)
+    return truncated
+
+
+def _create_data_preview(data_preview: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Create minimal data preview for Agent confirmation.
+    
+    Returns:
+        - rows: total row count
+        - column_count: total column count  
+        - column_names: FULL list of column names
+        - sample_rows: 2 rows with truncated values (confirm data received)
+    """
+    sample_rows = data_preview.get("sample_rows", [])
+    column_names = data_preview.get("column_names", [])
+    
+    # Truncate sample rows (max 2 rows, max 10 columns, truncated values)
+    truncated_samples = [
+        _truncate_row(row) for row in sample_rows[:MAX_PREVIEW_ROWS]
+    ]
+    
+    return {
+        "rows": data_preview.get("rows"),
+        "column_count": data_preview.get("columns"),  # count
+        "column_names": column_names,  # FULL list
+        "sample_rows": truncated_samples,  # 2 rows, 10 columns, truncated values
+    }
+
 
 def register_upload_tools(mcp: FastMCP, client: AutoMLClient) -> None:
     """Register dataset upload tools"""
@@ -364,13 +415,16 @@ async def _upload_temporary(
         user_id=user_id,
     )
     
+    # Create minimal preview (full column_names + 2 truncated sample rows)
+    data_preview = _create_data_preview(result.get("data_preview", {}))
+    
     return {
         "success": True,
         "storage_mode": "temporary",
         "job_id": result.get("job_id"),
         "job_type": result.get("job_type"),
         "status": result.get("status"),
-        "data_preview": result.get("data_preview"),
+        "data_preview": data_preview,
         "source": {
             "type": "local",
             "path": source_path,
@@ -404,14 +458,18 @@ async def _upload_permanent(
         description=description or f"Uploaded from {Path(source_path).name}",
     )
     
+    # Return full column list + count (Agent needs column names for analysis)
+    columns = result.get("columns", [])
+    
     return {
         "success": True,
         "storage_mode": "permanent",
         "dataset_id": result.get("dataset_id"),
         "name": result.get("name"),
         "minio_path": result.get("minio_path"),
-        "columns": result.get("columns"),
         "row_count": result.get("row_count"),
+        "column_count": len(columns),
+        "column_names": columns,  # FULL list for Agent to select target/features
         "source": {
             "type": "local",
             "path": source_path,
@@ -444,14 +502,18 @@ async def _register_minio_dataset(
         description=description,
     )
     
+    # Return full column list + count (Agent needs column names for analysis)
+    columns = result.get("columns", [])
+    
     return {
         "success": True,
         "storage_mode": "permanent",
         "dataset_id": result.get("dataset_id"),
         "name": result.get("name"),
         "minio_path": minio_path,
-        "columns": result.get("columns"),
         "row_count": result.get("row_count"),
+        "column_count": len(columns),
+        "column_names": columns,  # FULL list for Agent to select target/features
         "source": {
             "type": "minio",
             "path": minio_path,
