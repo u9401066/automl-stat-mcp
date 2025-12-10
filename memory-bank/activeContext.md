@@ -55,9 +55,26 @@
 
 ## Current Goals
 
-- 完成所有 worker tasks 的本地結果整合
-- 確保每種分析都有對應的視覺化輸出
-- 使用者可完全透過檔案系統存取所有結果
+- ## 當前工作焦點：無痛分娩研究專案系統化
+- ### 已完成
+- 1. 建立研究計畫文件 `RESEARCH_PLAN.md`
+- 2. 建立變更記錄 `CHANGELOG.md`
+- 3. 建立完整目錄結構
+- 4. 複製原始資料到 `data/raw/`
+- ### 研究計畫 5 階段
+- - Phase 1: 資料準備（清理、建立分析子集）
+- - Phase 2: 描述性統計（TableOne、EDA）
+- - Phase 3: 單變量分析（ROC、組間比較）
+- - Phase 4: 多變量分析（多模型比較、Logistic）
+- - Phase 5: 預測模型（AutoML）
+- ### 命名規則
+- - 資料: `{專案}_{用途}_{日期}.csv`
+- - 圖表: `fig_{類型}_{變數}_{結果}.png`
+- - 表格: `tbl_{類型}_{內容}.csv`
+- ### 專案路徑
+- `/home/eric/workspace251204/projects/painless_胃鏡/`
+- ### 下一步
+- 開始執行 Phase 1: 資料清理
 
 ## Current Blockers
 

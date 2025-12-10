@@ -413,3 +413,29 @@ class StatsWorker(WorkerResultsMixin):
 
 - stats-worker/src/results/worker_mixin.py: WorkerResultsMixin
 - stats-worker/src/worker.py: class StatsWorker(WorkerResultsMixin)
+
+
+## Research-Driven Analysis Workflow
+
+系統化研究分析流程：
+
+1. **計畫先行** - 先建立 RESEARCH_PLAN.md 定義分析步驟
+2. **變更追蹤** - 使用 CHANGELOG.md 記錄每次分析
+3. **標準化目錄結構**:
+   ```
+   project/
+   ├── data/{raw,cleaned,analysis}/
+   ├── results/{01_descriptive,02_univariate,03_multivariate,04_model}/
+   └── reports/figures/
+   ```
+4. **命名規則**:
+   - 資料: `{專案}_{用途}_{日期}.csv`
+   - 圖表: `fig_{類型}_{變數}_{結果}.png`
+   - 表格: `tbl_{類型}_{內容}.csv`
+5. **分階段執行** - Phase 1-5 依序完成
+6. **MCP 工具對應** - 每個步驟指定使用的 MCP 工具
+
+### Examples
+
+- projects/painless_胃鏡/RESEARCH_PLAN.md
+- projects/painless_胃鏡/CHANGELOG.md
