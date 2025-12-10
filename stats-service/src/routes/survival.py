@@ -47,6 +47,7 @@ class KaplanMeierRequest(BaseModel):
     group_column: Optional[str] = Field(None, description="Optional grouping variable")
     confidence_level: float = Field(default=0.95, description="Confidence level for CI")
     time_points: Optional[List[float]] = Field(None, description="Specific time points for survival estimates")
+    generate_visualizations: bool = Field(default=True, description="Generate Kaplan-Meier curve plot")
 
 
 class CoxRegressionRequest(BaseModel):
@@ -66,6 +67,7 @@ class CoxRegressionRequest(BaseModel):
     strata: Optional[List[str]] = Field(None, description="Stratification variables")
     ties: str = Field(default="efron", description="Tie handling: efron, breslow, exact")
     penalizer: float = Field(default=0.0, description="L2 regularization")
+    generate_visualizations: bool = Field(default=True, description="Generate forest plot for hazard ratios")
 
 
 class SurvivalCompareRequest(BaseModel):
@@ -84,6 +86,7 @@ class SurvivalCompareRequest(BaseModel):
     group_column: str = Field(..., description="Grouping variable for comparison")
     test: str = Field(default="logrank", description="Test: logrank, wilcoxon, tarone-ware")
     confidence_level: float = Field(default=0.95, description="Confidence level")
+    generate_visualizations: bool = Field(default=True, description="Generate comparison plots")
 
 
 class SurvivalSummaryRequest(BaseModel):
@@ -231,6 +234,7 @@ async def submit_kaplan_meier_job(request: KaplanMeierRequest):
         "group_col": request.group_column,
         "confidence_level": request.confidence_level,
         "time_points": request.time_points,
+        "generate_visualizations": request.generate_visualizations,
     }
     
     return await _submit_survival_job(
@@ -273,6 +277,7 @@ async def submit_cox_regression_job(request: CoxRegressionRequest):
         "strata": request.strata,
         "ties": request.ties,
         "penalizer": request.penalizer,
+        "generate_visualizations": request.generate_visualizations,
     }
     
     return await _submit_survival_job(
@@ -310,6 +315,7 @@ async def submit_survival_comparison_job(request: SurvivalCompareRequest):
         "group_col": request.group_column,
         "test": request.test,
         "confidence_level": request.confidence_level,
+        "generate_visualizations": request.generate_visualizations,
     }
     
     return await _submit_survival_job(

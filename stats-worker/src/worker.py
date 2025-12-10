@@ -659,11 +659,12 @@ class StatsWorker(WorkerResultsMixin):
     # =========================================================================
     
     def process_kaplan_meier_job(self, job: dict):
-        """Process Kaplan-Meier survival analysis job"""
+        """Process Kaplan-Meier survival analysis job with visualization support"""
         from .tasks.survival_analysis import kaplan_meier_analysis, survival_summary
         
         job_id = job["job_id"]
         params = job["params"]
+        user_id = job.get("user_id") or params.get("user_id", "anonymous")
         
         logger.info(f"Processing Kaplan-Meier job {job_id}")
         self.update_job_status(job_id, "running", progress=0.1, message="Loading dataset...")
@@ -672,12 +673,18 @@ class StatsWorker(WorkerResultsMixin):
         
         self.update_job_status(job_id, "running", progress=0.4, message="Computing Kaplan-Meier curves...")
         
+        # Check if visualizations are requested (default True for MCP calls)
+        generate_visualizations = params.get("generate_visualizations", True)
+        
         km_result = kaplan_meier_analysis(
             df=df,
             time_col=params["time_col"],
             event_col=params["event_col"],
             group_col=params.get("group_col"),
             alpha=params.get("alpha", 0.05),
+            generate_visualizations=generate_visualizations,
+            user_id=user_id,
+            job_id=job_id,
         )
         
         summary = survival_summary(
@@ -702,11 +709,12 @@ class StatsWorker(WorkerResultsMixin):
         logger.info(f"Kaplan-Meier job {job_id} completed")
     
     def process_cox_regression_job(self, job: dict):
-        """Process Cox proportional hazards regression job"""
+        """Process Cox proportional hazards regression job with visualization support"""
         from .tasks.survival_analysis import cox_regression
         
         job_id = job["job_id"]
         params = job["params"]
+        user_id = job.get("user_id") or params.get("user_id", "anonymous")
         
         logger.info(f"Processing Cox regression job {job_id}")
         self.update_job_status(job_id, "running", progress=0.1, message="Loading dataset...")
@@ -715,12 +723,18 @@ class StatsWorker(WorkerResultsMixin):
         
         self.update_job_status(job_id, "running", progress=0.4, message="Fitting Cox model...")
         
+        # Check if visualizations are requested (default True for MCP calls)
+        generate_visualizations = params.get("generate_visualizations", True)
+        
         result = cox_regression(
             df=df,
             time_col=params["time_col"],
             event_col=params["event_col"],
             covariates=params.get("covariates"),
             alpha=params.get("alpha", 0.05),
+            generate_visualizations=generate_visualizations,
+            user_id=user_id,
+            job_id=job_id,
         )
         
         self.update_job_status(job_id, "running", progress=0.8, message="Saving results...")
@@ -731,11 +745,12 @@ class StatsWorker(WorkerResultsMixin):
         logger.info(f"Cox regression job {job_id} completed")
     
     def process_survival_compare_job(self, job: dict):
-        """Process survival curves comparison job"""
+        """Process survival curves comparison job with visualization support"""
         from .tasks.survival_analysis import compare_survival_curves
         
         job_id = job["job_id"]
         params = job["params"]
+        user_id = job.get("user_id") or params.get("user_id", "anonymous")
         
         logger.info(f"Processing survival compare job {job_id}")
         self.update_job_status(job_id, "running", progress=0.1, message="Loading dataset...")
@@ -744,11 +759,17 @@ class StatsWorker(WorkerResultsMixin):
         
         self.update_job_status(job_id, "running", progress=0.4, message="Comparing survival curves...")
         
+        # Check if visualizations are requested (default True for MCP calls)
+        generate_visualizations = params.get("generate_visualizations", True)
+        
         result = compare_survival_curves(
             df=df,
             time_col=params["time_col"],
             event_col=params["event_col"],
             group_col=params["group_col"],
+            generate_visualizations=generate_visualizations,
+            user_id=user_id,
+            job_id=job_id,
         )
         
         self.update_job_status(job_id, "running", progress=0.8, message="Saving results...")
@@ -792,11 +813,12 @@ class StatsWorker(WorkerResultsMixin):
     # =========================================================================
     
     def process_roc_compute_job(self, job: dict):
-        """Process ROC curve computation job"""
+        """Process ROC curve computation job with visualization support"""
         from .tasks.roc_analysis import compute_roc_curve
         
         job_id = job["job_id"]
         params = job["params"]
+        user_id = job.get("user_id") or params.get("user_id", "anonymous")
         
         logger.info(f"Processing ROC compute job {job_id}")
         self.update_job_status(job_id, "running", progress=0.1, message="Loading dataset...")
@@ -812,11 +834,18 @@ class StatsWorker(WorkerResultsMixin):
         confidence_level = params.get("confidence_level", 0.95)
         alpha = 1.0 - confidence_level
         
+        # Check if visualizations are requested (default True for MCP calls)
+        generate_visualizations = params.get("generate_visualizations", True)
+        
         result = compute_roc_curve(
             y_true=y_true,
             y_scores=y_scores,
             threshold_method=params.get("threshold_method", "youden"),
             alpha=alpha,
+            generate_visualizations=generate_visualizations,
+            user_id=user_id,
+            job_id=job_id,
+            model_name=params.get("model_name", "Model"),
         )
         
         self.update_job_status(job_id, "running", progress=0.8, message="Saving results...")
@@ -827,11 +856,12 @@ class StatsWorker(WorkerResultsMixin):
         logger.info(f"ROC compute job {job_id} completed")
     
     def process_roc_compare_job(self, job: dict):
-        """Process ROC curves comparison job (two models)"""
+        """Process ROC curves comparison job (two models) with visualization support"""
         from .tasks.roc_analysis import compare_roc_curves
         
         job_id = job["job_id"]
         params = job["params"]
+        user_id = job.get("user_id") or params.get("user_id", "anonymous")
         
         logger.info(f"Processing ROC compare job {job_id}")
         self.update_job_status(job_id, "running", progress=0.1, message="Loading dataset...")
@@ -851,6 +881,9 @@ class StatsWorker(WorkerResultsMixin):
         scores1 = df[model_score_cols[0]].values
         scores2 = df[model_score_cols[1]].values
         
+        # Check if visualizations are requested (default True for MCP calls)
+        generate_visualizations = params.get("generate_visualizations", True)
+        
         result = compare_roc_curves(
             y_true=y_true,
             scores1=scores1,
@@ -858,6 +891,9 @@ class StatsWorker(WorkerResultsMixin):
             model1_name=model_names[0],
             model2_name=model_names[1],
             alpha=params.get("alpha", 0.05),
+            generate_visualizations=generate_visualizations,
+            user_id=user_id,
+            job_id=job_id,
         )
         
         self.update_job_status(job_id, "running", progress=0.8, message="Saving results...")

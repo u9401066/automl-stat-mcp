@@ -872,6 +872,9 @@ def kaplan_meier_analysis(
     event_col: str,
     group_col: Optional[str] = None,
     alpha: float = 0.05,
+    generate_visualizations: bool = False,
+    user_id: Optional[str] = None,
+    job_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Perform Kaplan-Meier survival analysis.
@@ -882,6 +885,9 @@ def kaplan_meier_analysis(
         event_col: Column name for event indicator (1=event, 0=censored)
         group_col: Optional column for grouping (stratification)
         alpha: Significance level for CI (default: 0.05)
+        generate_visualizations: Whether to generate KM curve plot
+        user_id: User ID for MinIO storage (required if generate_visualizations=True)
+        job_id: Job ID for MinIO storage (required if generate_visualizations=True)
     
     Returns:
         Dictionary with survival curves and statistics
@@ -909,10 +915,68 @@ def kaplan_meier_analysis(
         # Log-rank test
         lr = log_rank_test(times, events, groups, pairwise=True)
         result["log_rank_test"] = lr.to_dict()
+        
+        # Generate visualizations if requested
+        if generate_visualizations and HAS_VISUALIZATION:
+            try:
+                import matplotlib.pyplot as plt
+                
+                visualizations = []
+                group_data = [v.to_dict() for v in km_results.values()]
+                
+                # Kaplan-Meier curve
+                fig_km = plot_kaplan_meier(
+                    group_data,
+                    title="Kaplan-Meier Survival Curves",
+                    log_rank_p=lr.p_value,
+                )
+                if user_id and job_id:
+                    url = save_figure_to_minio(fig_km, user_id, job_id, "kaplan_meier.png")
+                    visualizations.append({
+                        "type": "kaplan_meier",
+                        "url": url,
+                        "title": "Kaplan-Meier Survival Curves by Group",
+                        "description": f"Log-rank p = {lr.p_value:.4f}",
+                    })
+                plt.close(fig_km)
+                
+                result["visualizations"] = visualizations
+                
+            except Exception as e:
+                logger.error(f"Error generating KM visualization: {e}")
+                result["visualization_error"] = str(e)
     else:
         km_result = km.fit(times, events, "Overall")
         result["grouped"] = False
         result["overall"] = km_result.to_dict()
+        
+        # Generate visualizations for single group
+        if generate_visualizations and HAS_VISUALIZATION:
+            try:
+                import matplotlib.pyplot as plt
+                
+                visualizations = []
+                
+                # Kaplan-Meier curve
+                fig_km = plot_kaplan_meier(
+                    [km_result.to_dict()],
+                    title="Kaplan-Meier Survival Curve",
+                )
+                if user_id and job_id:
+                    url = save_figure_to_minio(fig_km, user_id, job_id, "kaplan_meier.png")
+                    visualizations.append({
+                        "type": "kaplan_meier",
+                        "url": url,
+                        "title": "Kaplan-Meier Survival Curve",
+                        "description": "Overall survival probability over time",
+                    })
+                plt.close(fig_km)
+                
+                result["visualizations"] = visualizations
+                
+            except Exception as e:
+                logger.error(f"Error generating KM visualization: {e}")
+                result["visualization_error"] = str(e)
     
     return result
 

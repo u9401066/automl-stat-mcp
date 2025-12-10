@@ -48,6 +48,7 @@ class ROCComputeRequest(BaseModel):
     pos_label: int = Field(default=1, description="Positive class label")
     n_bootstrap: int = Field(default=1000, description="Bootstrap iterations for CI")
     confidence_level: float = Field(default=0.95, description="Confidence level")
+    generate_visualizations: bool = Field(default=True, description="Generate ROC curve plot")
 
 
 class ROCCompareRequest(BaseModel):
@@ -65,6 +66,7 @@ class ROCCompareRequest(BaseModel):
     score_columns: List[str] = Field(..., description="Multiple score columns to compare")
     model_names: Optional[List[str]] = Field(None, description="Names for each model")
     method: str = Field(default="delong", description="Comparison method: delong, bootstrap")
+    generate_visualizations: bool = Field(default=True, description="Generate comparison plots")
 
 
 class ThresholdRequest(BaseModel):
@@ -120,6 +122,7 @@ class FullEvalRequest(BaseModel):
     threshold: Optional[float] = Field(None, description="Classification threshold (default: find optimal)")
     include_calibration: bool = Field(default=True, description="Include calibration analysis")
     include_precision_recall: bool = Field(default=True, description="Include PR curve")
+    generate_visualizations: bool = Field(default=True, description="Generate all evaluation plots")
 
 
 class JobResponse(BaseModel):
@@ -249,6 +252,7 @@ async def submit_roc_compute_job(request: ROCComputeRequest):
         "pos_label": request.pos_label,
         "n_bootstrap": request.n_bootstrap,
         "confidence_level": request.confidence_level,
+        "generate_visualizations": request.generate_visualizations,
     }
     
     return await _submit_roc_job(
@@ -281,6 +285,7 @@ async def submit_roc_compare_job(request: ROCCompareRequest):
         "model_score_cols": request.score_columns,
         "model_names": request.model_names or [f"Model_{i+1}" for i in range(len(request.score_columns))],
         "method": request.method,
+        "generate_visualizations": request.generate_visualizations,
     }
     
     return await _submit_roc_job(
@@ -389,6 +394,7 @@ async def submit_full_evaluation_job(request: FullEvalRequest):
         "threshold": request.threshold,
         "include_calibration": request.include_calibration,
         "include_precision_recall": request.include_precision_recall,
+        "generate_visualizations": request.generate_visualizations,
     }
     
     return await _submit_roc_job(

@@ -49,6 +49,10 @@ def compute_roc_curve(
     y_scores: Union[np.ndarray, pd.Series, List],
     threshold_method: str = "youden",
     alpha: float = 0.05,
+    generate_visualizations: bool = False,
+    user_id: Optional[str] = None,
+    job_id: Optional[str] = None,
+    model_name: str = "Model",
 ) -> Dict[str, Any]:
     """
     Compute ROC curve with AUC and confidence interval.
@@ -58,6 +62,10 @@ def compute_roc_curve(
         y_scores: Predicted probabilities or scores
         threshold_method: Method for optimal threshold ('youden', 'closest_to_01')
         alpha: Significance level for CI (default 0.05 for 95% CI)
+        generate_visualizations: If True, generate ROC curve plot
+        user_id: User ID for MinIO path
+        job_id: Job ID for MinIO path
+        model_name: Name for the model in plot
         
     Returns:
         Dictionary with ROC curve data, AUC, CI, optimal threshold
@@ -68,11 +76,43 @@ def compute_roc_curve(
     analyzer = ROCAnalyzer(alpha=alpha)
     result = analyzer.compute_roc(y_true, y_scores, threshold_method)
     
-    return {
+    output = {
         "status": "success",
         "analysis_type": "roc_curve",
         **result.to_dict(),
     }
+    
+    # Generate visualizations if requested
+    if generate_visualizations and HAS_VISUALIZATION and user_id and job_id:
+        try:
+            # Create ROC curve plot
+            fig = plot_roc_curve(
+                result.to_dict(),
+                title=f"ROC Curve - {model_name}",
+                show_optimal_point=True,
+            )
+            
+            # Save to MinIO
+            url = save_figure_to_minio(
+                fig,
+                filename="roc_curve.png",
+                user_id=user_id,
+                job_id=job_id,
+            )
+            
+            output["visualizations"] = [{
+                "type": "roc_curve",
+                "url": url,
+                "title": f"ROC Curve - {model_name} (AUC={result.auc:.3f})",
+            }]
+            
+            import matplotlib.pyplot as plt
+            plt.close(fig)
+            
+        except Exception as e:
+            logger.warning(f"Failed to generate ROC curve visualization: {e}")
+    
+    return output
 
 
 def compare_roc_curves(
