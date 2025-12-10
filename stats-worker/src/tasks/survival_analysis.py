@@ -30,14 +30,14 @@ warnings.filterwarnings('ignore', category=RuntimeWarning)
 
 # Optional visualization support
 try:
-    from visualization.survival import (
+    from src.visualization.survival import (
         plot_kaplan_meier,
         plot_cumulative_hazard,
         plot_forest_plot,
         create_survival_visualizations,
     )
-    from visualization.storage import save_figure_to_minio
-    from visualization.schemas import VisualizationResult, VisualizationType
+    from src.visualization.storage import save_figure_to_minio
+    from src.visualization.schemas import VisualizationResult, VisualizationType
     HAS_VISUALIZATION = True
 except ImportError:
     HAS_VISUALIZATION = False

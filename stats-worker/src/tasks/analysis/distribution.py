@@ -23,11 +23,11 @@ logger = logging.getLogger(__name__)
 
 # Optional visualization support
 try:
-    from visualization.group_comparison import (
+    from src.visualization.group_comparison import (
         create_group_comparison_visualizations,
         plot_group_comparison,
     )
-    from visualization.storage import save_figure_to_minio
+    from src.visualization.storage import save_figure_to_minio
     HAS_VISUALIZATION = True
 except ImportError:
     HAS_VISUALIZATION = False

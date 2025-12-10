@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 # Optional visualization support
 try:
-    from visualization.roc import (
+    from src.visualization.roc import (
         plot_roc_curve,
         plot_pr_curve,
         plot_calibration_curve,
@@ -36,8 +36,8 @@ try:
         plot_threshold_analysis,
         create_roc_visualizations,
     )
-    from visualization.storage import save_figure_to_minio
-    from visualization.schemas import VisualizationResult, VisualizationType
+    from src.visualization.storage import save_figure_to_minio
+    from src.visualization.schemas import VisualizationResult, VisualizationType
     HAS_VISUALIZATION = True
 except ImportError:
     HAS_VISUALIZATION = False
@@ -175,7 +175,7 @@ def compare_roc_curves(
     # Generate visualizations if requested
     if generate_visualizations and HAS_VISUALIZATION and user_id and job_id:
         try:
-            from visualization.roc import plot_roc_curves_comparison
+            from src.visualization.roc import plot_roc_curves_comparison
             
             # Convert ROC results to dict format for plotting
             roc1_dict = roc1.to_dict()
@@ -775,7 +775,7 @@ def compare_multiple_models(
     # Generate visualizations if requested
     if generate_visualizations and HAS_VISUALIZATION and user_id and job_id:
         try:
-            from visualization.roc import plot_roc_curves_comparison
+            from src.visualization.roc import plot_roc_curves_comparison
             
             # Compute full ROC results for each model for plotting
             roc_results = []

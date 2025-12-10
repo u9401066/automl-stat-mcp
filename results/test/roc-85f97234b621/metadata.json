@@ -1,0 +1,31 @@
+{
+  "job_id": "roc-85f97234b621",
+  "job_name": "roc-85f97234b621",
+  "user_id": "test",
+  "job_type": "roc_full_evaluation",
+  "created_at": "2025-12-10T11:56:04.421905",
+  "completed_at": "2025-12-10T11:56:04.429231",
+  "status": "completed",
+  "parameters": {
+    "y_true_col": "target",
+    "y_score_col": "thalach",
+    "threshold": null,
+    "include_calibration": true,
+    "include_precision_recall": true,
+    "generate_visualizations": true,
+    "csv_content": "target,thalach\n0,150\n1,180\n0,120\n1,170"
+  },
+  "source_info": {
+    "row_count": 4,
+    "column_count": 2,
+    "columns_used": [
+      "target",
+      "thalach"
+    ],
+    "target_column": "target",
+    "created_at": "2025-12-10T11:56:04.422077"
+  },
+  "result_path": "/data/results/test/roc-85f97234b621",
+  "figures": [],
+  "error_message": null
+}
