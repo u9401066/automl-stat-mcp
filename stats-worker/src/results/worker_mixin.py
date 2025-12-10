@@ -4,14 +4,17 @@ Worker Results Mixin
 Provides integration between StatsWorker and JobResultsManager
 for saving analysis results to local directory structure.
 """
+import os
 import logging
 from typing import Dict, Any, Optional, List
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 
-from ..config import RESULTS_BASE_PATH
-from ..results.manager import JobResultsManager
+# Use environment variable directly instead of relative import
+RESULTS_BASE_PATH = os.getenv("RESULTS_BASE_PATH", "/data/results")
+
+from .manager import JobResultsManager
 
 logger = logging.getLogger(__name__)
 

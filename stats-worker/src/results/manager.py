@@ -440,7 +440,9 @@ class JobResultsManager:
         
         # Update metadata
         self.metadata.completed_at = datetime.now().isoformat()
-        self.metadata.status = "completed"
+        # Only set to completed if not already failed
+        if self.metadata.status != "failed":
+            self.metadata.status = "completed"
         self.metadata.figures = self._figures_saved
         
         # Save result if provided
