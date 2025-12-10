@@ -108,7 +108,32 @@ Agent: "訓練完成！最佳模型達到 87% AUC。"
 | AutoML MCP | `automl-mcp-server/` | MCP server for AI agents | FastMCP, httpx | ✅ Ready |
 | AutoML Worker | `automl-worker/` | ML training execution | AutoGluon 1.3.1 | ✅ Ready |
 | Stats API | `stats-service/` | Statistical analysis API + **Data Cleaning** | FastAPI, Redis | ✅ Ready |
-| Stats Worker | `stats-worker/` | EDA, TableOne, cleaning execution | ydata-profiling, tableone | ✅ Ready |
+| Stats Worker | `stats-worker/` | EDA, TableOne, ROC, Survival analysis | ydata-profiling, tableone, lifelines | ✅ Ready |
+
+## 📁 Directory Structure
+
+```
+workspace/
+├── datasets/              # 原始資料 (read-only)
+├── processed/             # 處理過的資料
+│   └── {user_id}/
+│       ├── data_20251210.csv
+│       └── data_20251210_metadata.json
+├── results/               # 📊 分析結果 (User 可直接查看)
+│   └── {user_id}/
+│       └── {job_name}_{timestamp}/
+│           ├── metadata.json      # Job 資訊
+│           ├── report.json        # 分析結果
+│           ├── report.html        # 📄 HTML 報告
+│           ├── figures/           # 📈 視覺化圖表
+│           │   ├── roc_curve.png
+│           │   ├── feature_importance.png
+│           │   └── ...
+│           └── data/
+│               └── source_info.json  # 資料來源資訊
+├── sample_data/           # 範例資料集
+└── uploads/               # 上傳的檔案
+```
 
 ## Quick Start
 

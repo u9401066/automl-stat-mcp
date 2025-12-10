@@ -115,3 +115,4 @@ C) 整合到 Stats Service（選擇）- 邏輯相關，共用環境
 - 清理後檔案存到 /data/processed/{user_id}/ |
 
 | 2025-12-09 | Worker 結果存儲只保留統計摘要，不存儲原始資料陣列 | Propensity score 分析原本會將完整的分數陣列（數千個值）存到 MinIO。這既浪費存儲空間，對使用者也沒有意義。改為只存儲統計摘要（mean, std, min, max, percentiles）。如果需要完整分數用於後續分析，可透過 include_scores=True 參數在內部流程中取得。 |
+| 2025-12-09 | Phase 8 Visualization Service 採用 Matplotlib + Seaborn 生成出版品質圖表 | 現狀：系統只返回數據（figure_data），不生成圖片。問題：用戶需要視覺化結果（ROC曲線、KM曲線、森林圖等）。決定：1. 採用 Matplotlib + Seaborn（出版品質、300dpi、無需前端）2. 圖片存 MinIO，返回 URL 陣列 3. 返回格式新增 `visualizations[]` 4. 分 5 個子階段實施（8A基礎-8E整合）5. 先實作 P0 圖表：ROC、PR、KM、森林圖、直條圖+p-value。設計文件：docs/design-issues/003-visualization-service.md |

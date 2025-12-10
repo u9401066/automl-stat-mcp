@@ -28,6 +28,21 @@ from scipy.optimize import minimize
 logger = logging.getLogger(__name__)
 warnings.filterwarnings('ignore', category=RuntimeWarning)
 
+# Optional visualization support
+try:
+    from visualization.survival import (
+        plot_kaplan_meier,
+        plot_cumulative_hazard,
+        plot_forest_plot,
+        create_survival_visualizations,
+    )
+    from visualization.storage import save_figure_to_minio
+    from visualization.schemas import VisualizationResult, VisualizationType
+    HAS_VISUALIZATION = True
+except ImportError:
+    HAS_VISUALIZATION = False
+    logger.debug("Visualization module not available")
+
 
 def safe_float(value: Any, default: Optional[float] = None) -> Optional[float]:
     """Safely convert to float, handling None/NaN/inf."""
@@ -908,6 +923,9 @@ def cox_regression(
     event_col: str,
     covariates: Optional[List[str]] = None,
     alpha: float = 0.05,
+    generate_visualizations: bool = False,
+    user_id: Optional[str] = None,
+    job_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Perform Cox proportional hazards regression.
@@ -918,14 +936,17 @@ def cox_regression(
         event_col: Column name for event indicator
         covariates: List of covariate column names
         alpha: Significance level for CI
+        generate_visualizations: Whether to generate forest plot
+        user_id: User ID for MinIO storage
+        job_id: Job ID for MinIO storage
     
     Returns:
-        Dictionary with regression results
+        Dictionary with regression results and optional visualizations
     """
     cox = CoxPHFitter(alpha=alpha)
     result = cox.fit(df, time_col, event_col, covariates)
     
-    return {
+    output = {
         "analysis_type": "cox_regression",
         "time_column": time_col,
         "event_column": event_col,
@@ -933,6 +954,37 @@ def cox_regression(
         "alpha": alpha,
         **result.to_dict(),
     }
+    
+    # Generate forest plot if requested
+    if generate_visualizations and HAS_VISUALIZATION:
+        try:
+            import matplotlib.pyplot as plt
+            
+            visualizations = []
+            
+            fig_forest = plot_forest_plot(result.to_dict())
+            if user_id and job_id:
+                url = save_figure_to_minio(fig_forest, user_id, job_id, "forest_plot.png")
+                visualizations.append({
+                    "type": "forest_plot",
+                    "url": url,
+                    "title": "Forest Plot - Cox Regression",
+                    "description": "Hazard ratios with 95% confidence intervals",
+                    "metadata": {
+                        "n_subjects": result.n_subjects,
+                        "n_events": result.n_events,
+                        "concordance": result.concordance,
+                    }
+                })
+            plt.close(fig_forest)
+            
+            output["visualizations"] = visualizations
+            
+        except Exception as e:
+            logger.error(f"Error generating Cox regression visualizations: {e}")
+            output["visualization_error"] = str(e)
+    
+    return output
 
 
 def survival_summary(
@@ -1026,6 +1078,9 @@ def compare_survival_curves(
     time_col: str,
     event_col: str,
     group_col: str,
+    generate_visualizations: bool = False,
+    user_id: Optional[str] = None,
+    job_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Compare survival curves between groups.
@@ -1035,9 +1090,12 @@ def compare_survival_curves(
         time_col: Column name for time-to-event
         event_col: Column name for event indicator
         group_col: Column for grouping
+        generate_visualizations: Whether to generate plot images
+        user_id: User ID for MinIO storage (required if generate_visualizations=True)
+        job_id: Job ID for MinIO storage (required if generate_visualizations=True)
     
     Returns:
-        Comparison results with log-rank test
+        Comparison results with log-rank test and optional visualizations
     """
     times = df[time_col].values
     events = df[event_col].values
@@ -1050,9 +1108,53 @@ def compare_survival_curves(
     # Log-rank test
     lr = log_rank_test(times, events, groups, pairwise=True)
     
-    return {
+    result = {
         "comparison_type": "survival_curves",
         "groups": {k: v.to_dict() for k, v in km_results.items()},
         "log_rank_test": lr.to_dict(),
         "conclusion": "Significant difference" if lr.p_value < 0.05 else "No significant difference",
     }
+    
+    # Generate visualizations if requested
+    if generate_visualizations and HAS_VISUALIZATION:
+        try:
+            import matplotlib.pyplot as plt
+            
+            visualizations = []
+            group_data = [v.to_dict() for v in km_results.values()]
+            
+            # Kaplan-Meier curve
+            fig_km = plot_kaplan_meier(
+                group_data,
+                title="Kaplan-Meier Survival Curves",
+                log_rank_p=lr.p_value,
+            )
+            if user_id and job_id:
+                url = save_figure_to_minio(fig_km, user_id, job_id, "kaplan_meier.png")
+                visualizations.append({
+                    "type": "kaplan_meier",
+                    "url": url,
+                    "title": "Kaplan-Meier Survival Curves",
+                    "description": f"Log-rank p = {lr.p_value:.4f}",
+                })
+            plt.close(fig_km)
+            
+            # Cumulative hazard
+            fig_ch = plot_cumulative_hazard(group_data)
+            if user_id and job_id:
+                url = save_figure_to_minio(fig_ch, user_id, job_id, "cumulative_hazard.png")
+                visualizations.append({
+                    "type": "cumulative_hazard",
+                    "url": url,
+                    "title": "Nelson-Aalen Cumulative Hazard",
+                    "description": "Cumulative hazard function by group",
+                })
+            plt.close(fig_ch)
+            
+            result["visualizations"] = visualizations
+            
+        except Exception as e:
+            logger.error(f"Error generating survival visualizations: {e}")
+            result["visualization_error"] = str(e)
+    
+    return result

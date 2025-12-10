@@ -5,6 +5,8 @@ Processes statistical analysis jobs from Redis queue:
 - EDA reports using ydata-profiling
 - Table 1 using tableone
 - Auto-analyze: intelligent statistical analysis
+- ROC/PR analysis with visualizations
+- Survival analysis with Kaplan-Meier and Cox regression
 """
 import json
 import logging
@@ -28,8 +30,9 @@ from .config import (
     STATS_JOBS_PENDING, STATS_JOBS_PREFIX,
     MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY,
     MINIO_SECURE, MINIO_DATASET_BUCKET, MINIO_REPORTS_BUCKET,
-    WORKER_POLL_INTERVAL, TEMP_DIR,
+    WORKER_POLL_INTERVAL, TEMP_DIR, RESULTS_BASE_PATH,
 )
+from .results import JobResultsManager, WorkerResultsMixin
 
 # Configure logging
 log_level = os.environ.get("LOG_LEVEL", "INFO")
@@ -82,7 +85,7 @@ def signal_handler(signum, frame):
     running = False
 
 
-class StatsWorker:
+class StatsWorker(WorkerResultsMixin):
     """Worker for processing statistical analysis jobs"""
     
     def __init__(self):
@@ -941,34 +944,64 @@ class StatsWorker:
         logger.info(f"ROC calibration job {job_id} completed")
     
     def process_roc_full_eval_job(self, job: dict):
-        """Process full classifier evaluation job"""
+        """Process full classifier evaluation job with local results"""
         from .tasks.roc_analysis import full_classifier_evaluation
         
         job_id = job["job_id"]
         params = job["params"]
+        user_id = job.get("user_id") or params.get("user_id", "anonymous")
         
         logger.info(f"Processing ROC full eval job {job_id}")
         self.update_job_status(job_id, "running", progress=0.1, message="Loading dataset...")
         
         df = self._load_dataset_from_job(job)
         
+        # Create local results manager
+        results_manager = self.create_results_manager(job, "roc_full_evaluation")
+        self.save_source_info_from_job(
+            results_manager, job, df.shape,
+            columns_used=[params["y_true_col"], params["y_score_col"]]
+        )
+        
         self.update_job_status(job_id, "running", progress=0.3, message="Running full classifier evaluation...")
         
         y_true = df[params["y_true_col"]].values
         y_scores = df[params["y_score_col"]].values
         
+        # Run evaluation with visualizations
         result = full_classifier_evaluation(
             y_true=y_true,
             y_scores=y_scores,
             model_name=params.get("model_name", "Model"),
+            generate_visualizations=params.get("generate_visualizations", True),
+            user_id=user_id,
+            job_id=job_id,
         )
+        
+        self.update_job_status(job_id, "running", progress=0.7, message="Saving figures locally...")
+        
+        # Save figures locally if generated
+        if result.get("visualizations"):
+            self.save_visualizations_locally(results_manager, result["visualizations"])
         
         self.update_job_status(job_id, "running", progress=0.8, message="Saving results...")
         
+        # Save to MinIO
         result_path = self.save_report(job_id, result, format="json")
         
-        self.update_job_status(job_id, "completed", progress=1.0, message="Full evaluation completed", result_path=result_path)
-        logger.info(f"ROC full eval job {job_id} completed")
+        # Finalize local results with HTML report
+        local_summary = self.finalize_job_results(results_manager, result)
+        result["local_results"] = local_summary
+        
+        self.update_job_status(
+            job_id, "completed", 
+            progress=1.0, 
+            message="Full evaluation completed", 
+            result_path=result_path,
+            local_path=local_summary.get("result_path"),
+            html_report=local_summary.get("html_report_path"),
+        )
+        logger.info(f"ROC full eval job {job_id} completed, local results at {local_summary.get('result_path')}")
     
     def process_roc_compare_multiple_job(self, job: dict):
         """Process multiple models comparison job"""

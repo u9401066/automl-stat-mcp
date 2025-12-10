@@ -1,6 +1,7 @@
 # 架構審查文件 (Architecture Audit)
 
 > 建立日期：2025-01-13  
+> 更新日期：2025-12-10  
 > 目的：檢查專案是否符合新的設計原則
 
 ## 🎯 核心設計原則
@@ -12,6 +13,42 @@
 4. 取得輸出連結
 
 **所有資料處理、計算、轉換都是 AutoML 系統內部的事！**
+
+---
+
+## 📁 資料流向與儲存架構
+
+### 目錄結構 (2025-12 更新)
+
+```
+workspace/
+├── datasets/              # 原始資料 (read-only)
+├── processed/             # 處理過的資料
+│   └── {user_id}/
+│       ├── data_20251210.csv
+│       └── data_20251210_metadata.json
+├── results/               # 📊 分析結果 (User 可直接查看)
+│   └── {user_id}/
+│       └── {job_name}_{timestamp}/
+│           ├── metadata.json      # Job 資訊
+│           ├── report.json        # 分析結果 JSON
+│           ├── report.html        # 📄 HTML 報告 (人類可讀)
+│           ├── figures/           # 📈 視覺化圖表
+│           │   ├── roc_curve.png
+│           │   ├── feature_importance.png
+│           │   └── ...
+│           └── data/
+│               └── source_info.json  # 資料來源追蹤
+├── sample_data/           # 範例資料集
+└── uploads/               # 上傳的檔案
+```
+
+### 儲存位置對比
+
+| 儲存位置 | 用途 | 存取方式 |
+|----------|------|----------|
+| **MinIO** (`stats-reports` bucket) | 雲端備份、API 存取 | Agent 透過 URL |
+| **本地** (`/results/`) | User 直接瀏覽 | VS Code / 檔案總管 |
 
 ---
 

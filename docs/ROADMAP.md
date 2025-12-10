@@ -77,6 +77,36 @@
 | 自動清理 | 一鍵處理常見問題 | ✅ |
 | Worker 優化 | 結果存統計摘要，不存原始陣列 | ✅ |
 
+### 🆕 Phase 8: Visualization Service (計畫中)
+
+> 設計文件: [docs/design-issues/003-visualization-service.md](design-issues/003-visualization-service.md)
+
+**目標**: 分析完成時自動生成出版品質圖表，返回 MinIO 圖片 URL
+
+**🚀 使用現成套件加速開發** (無 sklearn 依賴): 
+- lifelines (存活曲線內建)
+- statannotations (p-value 標註)  
+- matplotlib (ROC/PR 用現有數據畫)
+- shap (特徵解釋)
+
+| 子階段 | 功能 | 使用套件 | 工作量 |
+|--------|------|----------|--------|
+| **8A: 基礎設施** | MinIO 存儲, 風格設定 | matplotlib | 1.5d |
+| **8B: 存活分析** | KM 曲線, Cox 森林圖 | lifelines 內建 | 1d |
+| **8C: ROC/PR** | ROC, PR, 混淆矩陣 | matplotlib + 現有數據 | 1d |
+| **8D: 組間比較** | 箱形圖/直條圖 + p-value | statannotations | 1d |
+| **8E: AutoML** | SHAP, 校準曲線 | shap | 1.5d |
+| **8F: 整合測試** | E2E 測試, 文檔 | - | 1d |
+
+**總計**: ~7 天 (原 16 天，節省 56%)
+
+**預期產出**:
+- 12+ 種圖表類型
+- 300dpi 出版品質 PNG
+- 返回結果包含 `visualizations` 陣列 (多圖片 URL)
+
+---
+
 ### Q1 2026 - 進階分析能力
 
 #### Phase 5B ROC 進階
@@ -86,7 +116,7 @@
 | 模型重新校準 | Platt scaling, Isotonic |
 | 決策曲線分析 | Net Benefit, 臨床實用性 |
 
-#### Phase 7: Meta-Analysis
+#### Phase 9: Meta-Analysis
 | 功能 | 描述 |
 |------|------|
 | 固定效應模型 | Mantel-Haenszel |
@@ -118,10 +148,10 @@
 ### Design Issues 待決策
 | Issue | 描述 | 狀態 |
 |-------|------|------|
-| #001 | Data Cleaning Workflow | 🔴 Open |
+| #001 | Data Cleaning Workflow | ✅ Done |
+| #003 | Visualization Service (圖表生成) | 🟡 Planned |
 | - | PII 處理策略 (整欄 vs 內嵌) | 待討論 |
 | - | 缺失值預設處理方式 | 待討論 |
-| - | 自動清理 vs 確認流程 | 待討論 |
 
 ### 基礎設施改進
 - [ ] 監控儀表板 (Grafana)
@@ -150,6 +180,18 @@ v1.1 (Current) ✅
     ├── start_data_analysis
     ├── execute_analysis_ticket
     └── check_analysis_progress
+
+v1.2 (Phase 8 - Visualization) 🟡 Planned
+├── 既有工具增強
+│   ├── ROC 分析 → +ROC/PR 曲線圖
+│   ├── Survival 分析 → +KM 曲線圖
+│   ├── Cox 回歸 → +森林圖
+│   └── 組間比較 → +直條圖/箱形圖 + p-value
+├── AutoML 增強
+│   ├── Leaderboard → +模型比較圖
+│   └── 新增 explain_model → SHAP 圖
+└── 返回格式
+    └── 新增 visualizations[] (多圖片 URL)
 
 v2.0 (Planned - Q1/Q2 2026)
 ├── Meta-Analysis (5)

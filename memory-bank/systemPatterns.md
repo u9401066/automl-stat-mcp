@@ -327,3 +327,89 @@ Metadata JSON 輸出：
 
 - stats-worker/src/worker.py: sanitize_for_json()
 - stats-worker/src/worker.py: save_report() 使用 sanitize_for_json
+
+
+## Visualization Module Pattern (Phase 8)
+
+統計分析結果自動產生視覺化圖表。每種分析類型有對應的繪圖函數，統一使用 matplotlib backend。所有圖表函數遵循相同介面：接受資料、可選 ax 參數、返回 Figure 物件。
+
+模組結構：
+- visualization/survival.py - 生存分析（KM曲線、風險圖）
+- visualization/roc.py - ROC/PR 曲線分析
+- visualization/group_comparison.py - 組間比較（箱形圖、直方圖）
+- visualization/automl.py - AutoML 結果（特徵重要性、SHAP、學習曲線）
+
+設計原則：
+1. 每個函數專注單一圖表類型
+2. 支援傳入 ax 參數整合到子圖
+3. 錯誤時 graceful degradation（返回空圖而非拋錯）
+4. 高階 helper 函數組合多個圖表
+
+### Examples
+
+- visualization/survival.py: plot_kaplan_meier(), plot_cumulative_hazard()
+- visualization/roc.py: plot_roc_curve(), plot_roc_with_ci()
+- visualization/automl.py: plot_feature_importance(), plot_shap_summary()
+- visualization/__init__.py: 統一導出所有繪圖函數
+
+
+## Local Results Storage Pattern (Phase 8)
+
+除了 MinIO 雲端儲存，同時提供本地目錄結構讓使用者直接瀏覽分析結果。
+
+目錄結構：
+```
+/data/results/{user_id}/{job_name}_{timestamp}/
+├── metadata.json      # 任務元資料
+├── report.json        # JSON 格式報告
+├── report.html        # HTML 可視化報告
+├── figures/           # 圖表 PNG 檔案
+│   ├── roc_curve.png
+│   ├── feature_importance.png
+│   └── ...
+└── data/
+    └── source_info.json  # 資料來源追蹤
+```
+
+實作元件：
+- JobResultsManager: 管理目錄建立、檔案儲存
+- WorkerResultsMixin: Worker 整合 mixin
+- RESULTS_BASE_PATH: 可配置基礎路徑
+
+優點：
+1. 使用者可直接瀏覽檔案系統存取結果
+2. HTML 報告可用瀏覽器開啟
+3. 圖表可直接複製到報告中
+4. MinIO 仍作為備份和 API 存取
+
+### Examples
+
+- stats-worker/src/results/manager.py: JobResultsManager 類別
+- stats-worker/src/results/worker_mixin.py: WorkerResultsMixin
+- docker-compose.yml: ./results:/data/results volume mount
+
+
+## Worker Mixin Pattern
+
+使用 Mixin 類別為 Worker 添加可選功能，保持主類別簡潔。Mixin 提供特定功能的方法，Worker 透過多重繼承獲得這些功能。
+
+好處：
+1. 功能解耦：Local Results 相關邏輯在 WorkerResultsMixin
+2. 可選性：可選擇是否繼承 Mixin
+3. 測試簡單：Mixin 可獨立測試
+4. 擴展容易：新功能寫新 Mixin
+
+使用方式：
+```python
+class StatsWorker(WorkerResultsMixin):
+    def process_job(self, job):
+        # 使用 mixin 方法
+        manager = self.create_job_results_manager(job)
+        # ...處理...
+        self.finalize_job_with_local_results(manager, result)
+```
+
+### Examples
+
+- stats-worker/src/results/worker_mixin.py: WorkerResultsMixin
+- stats-worker/src/worker.py: class StatsWorker(WorkerResultsMixin)

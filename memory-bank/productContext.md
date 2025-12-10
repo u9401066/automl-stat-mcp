@@ -339,35 +339,51 @@ Separated Container Architecture with 4 components: 1) AutoML API (FastAPI) - li
 
 ## Libraries and Dependencies
 
-- ydata-profiling
-- tableone
-- scipy
-- statsmodels
-- lifelines
-- scikit-learn
-- numpy
-- pandas
+**統計分析:**
+- tableone - Table 1 生成
+- scipy - 統計檢定
+- statsmodels - 進階統計模型
+- lifelines - 生存分析
+- scikit-learn - 機器學習工具
+- numpy, pandas - 資料處理
+- ydata-profiling - EDA 報告
+
+**視覺化 (Phase 8 新增):**
+- matplotlib>=3.7.0 - 基礎繪圖
+- seaborn - 統計視覺化
+- shap - SHAP 圖表（可選）
+
+**AutoML:**
+- autogluon.tabular==1.3.1 - AutoML 引擎
+
+**基礎設施:**
+- fastapi, uvicorn - API 服務
+- redis - 任務佇列
+- minio - 物件儲存
+- mcp, fastmcp - MCP 協議
 
 
+## 結果儲存 (Phase 8 新增)
 
-- autogluon.tabular==1.3.1
-- fastapi
-- uvicorn
-- redis
-- minio
-- mcp
-- fastmcp
-- pydantic
-- httpx
+分析任務完成後，結果同時儲存到：
 
+1. **MinIO (雲端)** - API 存取、備份
+2. **本地目錄 (新增)** - 使用者直接瀏覽
 
+本地目錄結構：
+```
+/results/{user_id}/{job_name}_{timestamp}/
+├── metadata.json    # 任務資訊
+├── report.json      # 分析結果
+├── report.html      # HTML 報告
+├── figures/         # 圖表 PNG
+└── data/            # 來源追蹤
+```
 
-- autogluon.tabular==1.3.1
-- fastapi
-- uvicorn
-- redis
-- minio
-- mcp
+存取方式：
+- 直接瀏覽檔案系統：`./results/eric/roc_analysis_20241210/`
+- 瀏覽器開啟 HTML 報告
+- 複製圖表到簡報
 - pydantic
 - python-multipart
 

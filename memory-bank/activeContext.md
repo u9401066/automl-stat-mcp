@@ -1,8 +1,8 @@
 # Active Context
 
-## Current Status (2025-12-08)
+## Current Status (2025-12-10)
 
-### 🎯 平台狀態: v1.1 穩定運行 ✅
+### 🎯 平台狀態: v0.5.0 - Visualization + Local Results ✅
 
 **核心設計原則 (重要!):**
 
@@ -12,70 +12,59 @@
 > 3. 查詢工單狀態
 > 4. 取得輸出連結
 >
-> **所有資料處理、計算、轉換都是 AutoML 系統內部的事！**
+> **所有資料處理、計算、視覺化都是 AutoML 系統內部的事！**
 
-### ✅ 已完成
+### ✅ 剛完成: Phase 8 Visualization + Local Results
 
-1. **Phase 6: MCP 統計工具修復** (2025-12-08)
-   - 修復 23 個損壞的 `stats_worker_tasks` imports
-   - Power Analysis Tools (17個) 改用 stats_client API
-   - EDA/TableOne Tools (6個) 使用本地 fallback
-   - **57 統計工具全部正常運作**
+**Phase 8A-8D: Visualization Module**
+- `visualization/survival.py` - 生存分析圖（KM 曲線、風險表）
+- `visualization/roc.py` - ROC/PR 曲線（信賴區間、校正曲線）
+- `visualization/group_comparison.py` - 組間比較（箱形圖、直方圖）
+- `visualization/automl.py` - AutoML 結果（特徵重要性、SHAP、學習曲線）
 
-2. **核心功能**
-   - AutoML 訓練（提交 → 等待 → 取結果）
-   - 統計分析（TableOne, EDA, Auto-Analyze）
-   - Power Analysis (T-test, Proportion, ANOVA, Chi-square, Survival)
-   - E2E 測試全部通過 (5/5)
+**Phase 8E: Local Results Storage**
+- `results/manager.py` - JobResultsManager 本地結果管理
+- `results/worker_mixin.py` - Worker 整合 mixin
+- 目錄結構：`/results/{user_id}/{job_name}_{timestamp}/`
+- 內容：metadata.json, report.json, report.html, figures/, data/
 
-### ✅ 已解決問題
+**使用者可直接存取:**
+- 瀏覽 `./results/eric/` 看自己的分析結果
+- 開啟 HTML 報告檢視視覺化圖表
+- 複製 PNG 圖表到簡報
 
-**MCP 工具架構問題 (已修復):**
-- ~~30 個工具返回 "Module not available"~~ → 全部修復
-- Power Analysis: 改用 stats_client → stats-service API
-- EDA Tools: 使用本地 pandas/scipy fallback
-- stats-service power.py: 使用 statsmodels 計算
+### ✅ 已整合
+
+1. **Worker 整合範例**
+   - `process_roc_full_eval_job()` 使用 JobResultsManager
+   - 自動儲存圖表到 figures/
+   - 生成 HTML 視覺化報告
+
+2. **Docker Volume Mount**
+   - `./results:/data/results` 加到 MCP, stats-service, stats-worker
+
+3. **文檔更新**
+   - README.md, CHANGELOG.md, ARCHITECTURE_AUDIT.md
+   - systemPatterns.md (3 個新 patterns)
 
 ### 📋 下一步
 
-1. **執行完整測試套件** 確認所有功能正常
-2. **完善文檔** 更新 MCP 工具清單
-3. **考慮 Phase 7** Meta-Analysis 功能
+1. **整合其餘 worker tasks** - 將 JobResultsManager 應用到所有分析任務
+2. **圖表自動化** - 各分析類型自動產生對應圖表
+3. **Phase 9: Meta-Analysis** - 固定效應、隨機效應、森林圖
 
 ## Current Goals
 
-- ## Current Focus (2025-12-09)
-- ### ✅ Just Completed: Phase 7 Data Cleaning + Worker Optimization
-- **Stats Service Cleaning API (9 endpoints):**
-- - `/cleaning/convert-binary` - 轉換欄位為 0/1
-- - `/cleaning/encode-categorical` - 類別編碼 (Label/OneHot)
-- - `/cleaning/handle-missing` - 缺失值處理
-- - `/cleaning/remove-columns` - 移除欄位
-- - `/cleaning/filter-rows` - 篩選資料列
-- - `/cleaning/rename-columns` - 重新命名欄位
-- - `/cleaning/column-info` - 取得欄位資訊
-- - `/cleaning/auto-clean` - 自動清理
-- - `/cleaning/health` - 健康檢查
-- **Worker Result Optimization:**
-- - 修改 `estimate_propensity_scores()` 不再回傳完整分數陣列，改為統計摘要
-- - 修改 `match_propensity_scores()` 不再回傳完整索引陣列，改為配對摘要
-- - 新增 `sanitize_for_json()` 處理 NaN/Infinity JSON 序列化問題
-- - 大幅減少 MinIO 存儲空間使用
-- **Key Bug Fixes:**
-- - StatsJobType enum 補齊所有工作類型
-- - StatsJobId 改為 string 支援 "propensity-xxx" 格式
-- - Redis async client 正確初始化
-- ### Next Actions
-- - 完整 E2E 測試（傾向分數分析工作流）
-- - 更多資料集測試
-- - 考慮 Meta-Analysis (Phase 8) 或其他進階功能
+- 完成所有 worker tasks 的本地結果整合
+- 確保每種分析都有對應的視覺化輸出
+- 使用者可完全透過檔案系統存取所有結果
 
 ## Current Blockers
 
-- stats-service 缺少部分 API endpoints
+- None
 
 ## References
 
 - [ROADMAP](../docs/ROADMAP.md) - 完整開發藍圖
-- [ROC Features Plan](../docs/ROC_AUC_Interactive_Features_Plan.md) - Phase 5+ 詳細規劃
+- [CHANGELOG](../CHANGELOG.md) - 版本更新記錄
 - [Design Issue #001](../docs/design-issues/001-data-cleaning-workflow.md) - 資料清理設計

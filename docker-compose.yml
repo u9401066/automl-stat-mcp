@@ -135,6 +135,7 @@ services:
       - ./uploads:/data/uploads:ro            # User uploaded files (read-only)
       - ./datasets:/data/datasets:ro          # Additional datasets (read-only)
       - ./processed:/data/processed           # Processed files with sanitized columns (read-write)
+      - ./results:/data/results               # Analysis results for user access (read-write)
     networks:
       - automl-network
     depends_on:
@@ -175,6 +176,7 @@ services:
       - ./uploads:/data/uploads:ro            # User uploaded files (read-only)
       - ./datasets:/data/datasets:ro          # Additional datasets (read-only)
       - ./processed:/data/processed           # Processed/cleaned files (read-write)
+      - ./results:/data/results               # Analysis results for user access (read-write)
     networks:
       - automl-network
     depends_on:
@@ -206,7 +208,14 @@ services:
       - REDIS_PORT=6379
       # Worker
       - TEMP_DIR=/tmp/stats-work
+      - RESULTS_BASE_PATH=/data/results
       - LOG_LEVEL=INFO
+    volumes:
+      # Data and results directories
+      - ./sample_data:/data/sample_data:ro    # Sample datasets (read-only)
+      - ./datasets:/data/datasets:ro          # Additional datasets (read-only)
+      - ./processed:/data/processed           # Processed files (read-write)
+      - ./results:/data/results               # Analysis results for user access (read-write)
     networks:
       - automl-network
     depends_on:

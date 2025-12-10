@@ -23,3 +23,6 @@ MINIO_REPORTS_BUCKET = os.getenv("MINIO_REPORTS_BUCKET", "stats-reports")
 # Worker settings
 WORKER_POLL_INTERVAL = int(os.getenv("WORKER_POLL_INTERVAL", "1"))
 TEMP_DIR = os.getenv("WORKER_TEMP_DIR", "/tmp/stats-work")
+
+# Results storage (local directory for user-accessible results)
+RESULTS_BASE_PATH = os.getenv("RESULTS_BASE_PATH", "/data/results")

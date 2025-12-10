@@ -21,6 +21,18 @@ from .base import safe_round
 
 logger = logging.getLogger(__name__)
 
+# Optional visualization support
+try:
+    from visualization.group_comparison import (
+        create_group_comparison_visualizations,
+        plot_group_comparison,
+    )
+    from visualization.storage import save_figure_to_minio
+    HAS_VISUALIZATION = True
+except ImportError:
+    HAS_VISUALIZATION = False
+    logger.debug("Visualization module not available")
+
 
 @dataclass
 class DistributionComparisonResult:
@@ -62,8 +74,11 @@ class GroupComparisonResult:
     # Descriptive stats per group
     group_stats: Dict[str, Dict] = field(default_factory=dict)
     
+    # Visualizations (if generated)
+    visualizations: List[Dict] = field(default_factory=list)
+    
     def to_dict(self) -> Dict:
-        return {
+        result = {
             "groups": self.groups,
             "n_groups": self.n_groups,
             "normality": self.normality_tests,
@@ -72,6 +87,9 @@ class GroupComparisonResult:
             "post_hoc": self.post_hoc_tests,
             "group_statistics": self.group_stats,
         }
+        if self.visualizations:
+            result["visualizations"] = self.visualizations
+        return result
 
 
 def compare_distributions(
@@ -79,6 +97,9 @@ def compare_distributions(
     numeric_col: str,
     group_col: str,
     alpha: float = 0.05,
+    generate_visualizations: bool = False,
+    user_id: Optional[str] = None,
+    job_id: Optional[str] = None,
 ) -> GroupComparisonResult:
     """
     Compare distributions of a numeric variable across groups.
@@ -93,6 +114,9 @@ def compare_distributions(
         numeric_col: Column with numeric values to compare
         group_col: Column with group labels
         alpha: Significance level
+        generate_visualizations: If True, generate plots and save to MinIO
+        user_id: User ID for MinIO storage path
+        job_id: Job ID for MinIO storage path
     
     Returns:
         GroupComparisonResult with all test results
@@ -235,6 +259,53 @@ def compare_distributions(
         # Post-hoc tests if significant
         if p < alpha:
             result.post_hoc_tests = _compute_post_hoc(group_data, use_parametric, alpha)
+    
+    # Generate visualizations if requested
+    if generate_visualizations and HAS_VISUALIZATION and user_id and job_id:
+        try:
+            import matplotlib.pyplot as plt
+            
+            # Create box plot with p-value
+            fig = plot_group_comparison(
+                data=df,
+                x=group_col,
+                y=numeric_col,
+                plot_type="boxplot",
+                pairs=None,  # Let it auto-detect
+                show_data_points=True,
+                title=f"{numeric_col} by {group_col}",
+            )
+            
+            # Add test result annotation
+            ax = fig.axes[0]
+            if result.main_test:
+                test_name = result.main_test.test_name
+                p_value = result.main_test.p_value
+                stat = result.main_test.statistic
+                effect = result.main_test.details.get('effect_size', 0)
+                effect_name = result.main_test.details.get('effect_size_name', 'effect size')
+                
+                sig = "***" if p_value < 0.001 else "**" if p_value < 0.01 else "*" if p_value < 0.05 else "ns"
+                annotation = f"{test_name}\nstat = {stat:.3f}, p = {p_value:.4f} {sig}\n{effect_name} = {effect:.3f}"
+                
+                ax.text(0.95, 0.95, annotation, transform=ax.transAxes,
+                        ha='right', va='top', fontsize=10,
+                        bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+            
+            # Save to MinIO
+            url = save_figure_to_minio(fig, "group_comparison.png", user_id, job_id)
+            
+            # Store visualization info in result
+            result.visualizations = [{
+                "type": "boxplot",
+                "url": url,
+                "title": f"{numeric_col} by {group_col}",
+            }]
+            
+            plt.close(fig)
+            
+        except Exception as e:
+            logger.warning(f"Failed to generate group comparison visualization: {e}")
     
     return result
 

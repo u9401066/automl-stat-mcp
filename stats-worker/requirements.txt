@@ -10,6 +10,14 @@ pandas>=2.0.0
 numpy>=1.24.0
 scipy>=1.11.0
 
+# Visualization
+matplotlib>=3.7.0
+seaborn>=0.12.0
+statannotations>=0.6.0
+
+# Survival analysis (with plotting)
+lifelines>=0.27.0
+
 # Redis client
 redis>=5.0.0
 

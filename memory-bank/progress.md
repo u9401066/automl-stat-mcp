@@ -1,6 +1,32 @@
-# Progress (Updated: 2025-12-09)
+# Progress (Updated: 2025-12-10)
 
 ## Done
+
+### 2025-12-10 (Phase 8: Visualization + Local Results)
+- ✅ **Phase 8A-8D: Visualization Module 完成**
+  - `visualization/survival.py` - 生存分析圖表（KM 曲線、風險表、累積風險）
+  - `visualization/roc.py` - ROC/PR 曲線（含信賴區間、比較、校正曲線）
+  - `visualization/group_comparison.py` - 組間比較（箱形圖、直方圖、散佈圖）
+  - `visualization/automl.py` - AutoML 結果（特徵重要性、SHAP、學習曲線）
+  - 39 個測試案例全部通過
+
+- ✅ **Phase 8E: Local Results Storage 完成**
+  - `results/manager.py` - JobResultsManager 本地結果管理
+  - `results/worker_mixin.py` - Worker 整合 mixin
+  - 目錄結構：`/results/{user_id}/{job_name}_{timestamp}/`
+  - 自動生成：metadata.json, report.json, report.html, figures/, data/
+  - docker-compose.yml 新增 `./results:/data/results` volume
+
+- ✅ **Worker 整合範例**
+  - `process_roc_full_eval_job()` 已整合 JobResultsManager
+  - 自動儲存 ROC 曲線圖到 figures/
+  - 生成 HTML 視覺化報告
+
+- ✅ **文檔更新**
+  - README.md 新增 Local Results Storage 章節
+  - CHANGELOG.md v0.5.0 版本記錄
+  - ARCHITECTURE_AUDIT.md Phase 5 更新
+  - systemPatterns.md 新增 3 個 patterns
 
 ### 2025-12-09 (Phase 7 Data Cleaning + Worker Optimization)
 - ✅ **Phase 7 Data Cleaning Service 完成**
@@ -81,13 +107,14 @@
 
 ## Doing
 
-- 🔄 **E2E 測試完善**
-  - [ ] 傾向分數分析完整工作流測試
-  - [ ] 更多資料集測試 (titanic, heart_disease)
+- 🔄 **Worker 整合擴展**
+  - [ ] 其他 job types 整合 JobResultsManager
+  - [ ] 各種分析自動生成對應圖表
 
 ## Next
 
-- Phase 8: Meta-Analysis (固定效應、隨機效應、森林圖)
+- Phase 9: Meta-Analysis (固定效應、隨機效應、森林圖)
+- 完善其餘 worker tasks 的本地結果整合
 - 監控儀表板 (Grafana)
 - 日誌集中化
 

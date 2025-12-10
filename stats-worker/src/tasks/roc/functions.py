@@ -14,6 +14,7 @@ Contains:
     - threshold_analysis: Comprehensive threshold analysis
     - generate_publication_report: Publication-ready report
 """
+import logging
 from typing import Any, Dict, List, Optional, Union
 import numpy as np
 import pandas as pd
@@ -22,6 +23,25 @@ from .types import ROCCurveResult
 from .core import ROCAnalyzer, DeLongTest
 from .calibration import CalibrationAnalyzer
 from .precision_recall import PrecisionRecallAnalyzer, NetBenefitAnalyzer
+
+logger = logging.getLogger(__name__)
+
+# Optional visualization support
+try:
+    from visualization.roc import (
+        plot_roc_curve,
+        plot_pr_curve,
+        plot_calibration_curve,
+        plot_confusion_matrix,
+        plot_threshold_analysis,
+        create_roc_visualizations,
+    )
+    from visualization.storage import save_figure_to_minio
+    from visualization.schemas import VisualizationResult, VisualizationType
+    HAS_VISUALIZATION = True
+except ImportError:
+    HAS_VISUALIZATION = False
+    logger.debug("Visualization module not available")
 
 
 def compute_roc_curve(
@@ -62,6 +82,9 @@ def compare_roc_curves(
     model1_name: str = "Model 1",
     model2_name: str = "Model 2",
     alpha: float = 0.05,
+    generate_visualizations: bool = False,
+    user_id: Optional[str] = None,
+    job_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Compare two ROC curves using DeLong test.
@@ -73,6 +96,9 @@ def compare_roc_curves(
         model1_name: Name for model 1
         model2_name: Name for model 2
         alpha: Significance level
+        generate_visualizations: If True, generate comparison plot
+        user_id: User ID for MinIO path
+        job_id: Job ID for MinIO path
         
     Returns:
         Dictionary with comparison results
@@ -89,7 +115,7 @@ def compare_roc_curves(
     roc1 = analyzer.compute_roc(y_true, scores1)
     roc2 = analyzer.compute_roc(y_true, scores2)
     
-    return {
+    output = {
         "status": "success",
         "analysis_type": "roc_comparison",
         "model1": {
@@ -105,6 +131,47 @@ def compare_roc_curves(
         "comparison": result.to_dict(),
         "conclusion": f"{model1_name} {'significantly better' if result.significant and result.difference > 0 else 'significantly worse' if result.significant and result.difference < 0 else 'not significantly different'} than {model2_name}",
     }
+    
+    # Generate visualizations if requested
+    if generate_visualizations and HAS_VISUALIZATION and user_id and job_id:
+        try:
+            from visualization.roc import plot_roc_curves_comparison
+            
+            # Convert ROC results to dict format for plotting
+            roc1_dict = roc1.to_dict()
+            roc2_dict = roc2.to_dict()
+            
+            # Create comparison plot
+            fig = plot_roc_curves_comparison(
+                [roc1_dict, roc2_dict],
+                labels=[model1_name, model2_name],
+                comparison_result={
+                    "difference": float(result.difference),
+                    "p_value": float(result.p_value),
+                }
+            )
+            
+            # Save to MinIO
+            url = save_figure_to_minio(
+                fig,
+                filename="roc_comparison.png",
+                user_id=user_id,
+                job_id=job_id,
+            )
+            
+            output["visualizations"] = [{
+                "type": "roc_comparison",
+                "url": url,
+                "title": f"ROC Curve Comparison: {model1_name} vs {model2_name}",
+            }]
+            
+            import matplotlib.pyplot as plt
+            plt.close(fig)
+            
+        except Exception as e:
+            logger.warning(f"Failed to generate ROC comparison visualization: {e}")
+    
+    return output
 
 
 def analyze_calibration(
@@ -273,6 +340,9 @@ def full_classifier_evaluation(
     y_true: Union[np.ndarray, pd.Series, List],
     y_scores: Union[np.ndarray, pd.Series, List],
     model_name: str = "Model",
+    generate_visualizations: bool = False,
+    user_id: Optional[str] = None,
+    job_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Complete classifier evaluation including ROC, PR, and calibration.
@@ -281,9 +351,12 @@ def full_classifier_evaluation(
         y_true: True binary labels
         y_scores: Predicted probabilities
         model_name: Name of the model
+        generate_visualizations: Whether to generate plot images
+        user_id: User ID for MinIO storage
+        job_id: Job ID for MinIO storage
         
     Returns:
-        Dictionary with complete evaluation results
+        Dictionary with complete evaluation results and optional visualizations
     """
     y_true = np.asarray(y_true)
     y_scores = np.asarray(y_scores)
@@ -304,7 +377,7 @@ def full_classifier_evaluation(
     nb_analyzer = NetBenefitAnalyzer()
     nb_result = nb_analyzer.compute(y_true, y_scores)
     
-    return {
+    result = {
         "status": "success",
         "analysis_type": "full_classifier_evaluation",
         "model_name": model_name,
@@ -336,6 +409,89 @@ def full_classifier_evaluation(
             "calibration": "Good" if cal_result.well_calibrated else "Needs recalibration",
         },
     }
+    
+    # Generate visualizations if requested
+    if generate_visualizations and HAS_VISUALIZATION:
+        try:
+            import matplotlib.pyplot as plt
+            
+            visualizations = []
+            
+            # ROC curve
+            fig_roc = plot_roc_curve(roc_result.to_dict())
+            if user_id and job_id:
+                url = save_figure_to_minio(fig_roc, user_id, job_id, "roc_curve.png")
+                visualizations.append({
+                    "type": "roc_curve",
+                    "url": url,
+                    "title": "ROC Curve",
+                    "description": f"AUC = {roc_result.auc:.3f} (95% CI: {roc_result.auc_ci_lower:.3f}-{roc_result.auc_ci_upper:.3f})",
+                })
+            plt.close(fig_roc)
+            
+            # PR curve
+            fig_pr = plot_pr_curve(pr_result.to_dict())
+            if user_id and job_id:
+                url = save_figure_to_minio(fig_pr, user_id, job_id, "pr_curve.png")
+                visualizations.append({
+                    "type": "pr_curve",
+                    "url": url,
+                    "title": "Precision-Recall Curve",
+                    "description": f"AUC-PR = {pr_result.auc_pr:.3f}",
+                })
+            plt.close(fig_pr)
+            
+            # Calibration curve
+            fig_cal = plot_calibration_curve(cal_result.to_dict())
+            if user_id and job_id:
+                url = save_figure_to_minio(fig_cal, user_id, job_id, "calibration_curve.png")
+                visualizations.append({
+                    "type": "calibration_curve",
+                    "url": url,
+                    "title": "Calibration Curve",
+                    "description": f"Brier score = {cal_result.brier_score:.3f}",
+                })
+            plt.close(fig_cal)
+            
+            # Threshold analysis
+            fig_thresh = plot_threshold_analysis(roc_result.to_dict())
+            if user_id and job_id:
+                url = save_figure_to_minio(fig_thresh, user_id, job_id, "threshold_analysis.png")
+                visualizations.append({
+                    "type": "threshold_analysis",
+                    "url": url,
+                    "title": "Threshold Analysis",
+                    "description": "Sensitivity, specificity, PPV, NPV vs threshold",
+                })
+            plt.close(fig_thresh)
+            
+            # Confusion matrix at optimal threshold
+            optimal_thresh = roc_result.optimal_threshold
+            y_pred = (y_scores >= optimal_thresh).astype(int)
+            tp = int(np.sum((y_pred == 1) & (y_true == 1)))
+            tn = int(np.sum((y_pred == 0) & (y_true == 0)))
+            fp = int(np.sum((y_pred == 1) & (y_true == 0)))
+            fn = int(np.sum((y_pred == 0) & (y_true == 1)))
+            
+            cm_dict = {"tp": tp, "tn": tn, "fp": fp, "fn": fn}
+            fig_cm = plot_confusion_matrix(cm_dict)
+            if user_id and job_id:
+                url = save_figure_to_minio(fig_cm, user_id, job_id, "confusion_matrix.png")
+                visualizations.append({
+                    "type": "confusion_matrix",
+                    "url": url,
+                    "title": "Confusion Matrix",
+                    "description": f"At optimal threshold = {optimal_thresh:.2f}",
+                })
+            plt.close(fig_cm)
+            
+            result["visualizations"] = visualizations
+            
+        except Exception as e:
+            logger.error(f"Error generating classifier visualizations: {e}")
+            result["visualization_error"] = str(e)
+    
+    return result
 
 
 def _interpret_auc(auc: float) -> str:
@@ -357,6 +513,9 @@ def compare_multiple_models(
     models: Dict[str, Union[np.ndarray, pd.Series, List]],
     correction: str = "bonferroni",
     alpha: float = 0.05,
+    generate_visualizations: bool = False,
+    user_id: Optional[str] = None,
+    job_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Compare 3+ models simultaneously with pairwise AUC comparisons.
@@ -377,6 +536,9 @@ def compare_multiple_models(
             - "bh": Benjamini-Hochberg FDR control
             - "none": No correction
         alpha: Significance level
+        generate_visualizations: If True, generate comparison plots
+        user_id: User ID for MinIO path
+        job_id: Job ID for MinIO path
         
     Returns:
         Dictionary with:
@@ -551,6 +713,84 @@ def compare_multiple_models(
     else:
         interpretation_lines.append("")
         interpretation_lines.append(f"⚠️ Top models are not significantly different - consider other factors.")
+    
+    return {
+        "status": "success",
+        "analysis_type": "multi_model_comparison",
+        "n_models": n_models,
+        "n_comparisons": n_comparisons,
+        "correction_method": correction,
+        "model_rankings": model_rankings,
+        "individual_aucs": individual_aucs,
+        "pairwise_comparisons": pairwise_comparisons,
+        "comparison_matrix": comparison_matrix,
+        "best_model": {
+            "name": best_model["model"],
+            "auc": best_model["auc"],
+            "significantly_better": best_significantly_better,
+        },
+        "interpretation": "\n".join(interpretation_lines),
+    }
+    
+    # Generate visualizations if requested
+    if generate_visualizations and HAS_VISUALIZATION and user_id and job_id:
+        try:
+            from visualization.roc import plot_roc_curves_comparison
+            
+            # Compute full ROC results for each model for plotting
+            roc_results = []
+            model_names_list = list(models.keys())
+            
+            for name in model_names_list:
+                scores = np.asarray(models[name])
+                roc_result = analyzer.compute_roc(y_true, scores)
+                roc_results.append(roc_result.to_dict())
+            
+            # Create multi-model comparison plot
+            fig = plot_roc_curves_comparison(
+                roc_results,
+                labels=model_names_list,
+                title=f"Multi-Model ROC Comparison ({n_models} models)"
+            )
+            
+            # Save to MinIO
+            url = save_figure_to_minio(
+                fig,
+                filename="multi_model_roc_comparison.png",
+                user_id=user_id,
+                job_id=job_id,
+            )
+            
+            output = {
+                "status": "success",
+                "analysis_type": "multi_model_comparison",
+                "n_models": n_models,
+                "n_comparisons": n_comparisons,
+                "correction_method": correction,
+                "model_rankings": model_rankings,
+                "individual_aucs": individual_aucs,
+                "pairwise_comparisons": pairwise_comparisons,
+                "comparison_matrix": comparison_matrix,
+                "best_model": {
+                    "name": best_model["model"],
+                    "auc": best_model["auc"],
+                    "significantly_better": best_significantly_better,
+                },
+                "interpretation": "\n".join(interpretation_lines),
+                "visualizations": [{
+                    "type": "multi_model_roc_comparison",
+                    "url": url,
+                    "title": f"ROC Comparison: {n_models} Models",
+                }]
+            }
+            
+            import matplotlib.pyplot as plt
+            plt.close(fig)
+            
+            return output
+            
+        except Exception as e:
+            logger.warning(f"Failed to generate multi-model ROC comparison visualization: {e}")
     
     return {
         "status": "success",
