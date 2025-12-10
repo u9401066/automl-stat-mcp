@@ -116,3 +116,15 @@ C) 整合到 Stats Service（選擇）- 邏輯相關，共用環境
 
 | 2025-12-09 | Worker 結果存儲只保留統計摘要，不存儲原始資料陣列 | Propensity score 分析原本會將完整的分數陣列（數千個值）存到 MinIO。這既浪費存儲空間，對使用者也沒有意義。改為只存儲統計摘要（mean, std, min, max, percentiles）。如果需要完整分數用於後續分析，可透過 include_scores=True 參數在內部流程中取得。 |
 | 2025-12-09 | Phase 8 Visualization Service 採用 Matplotlib + Seaborn 生成出版品質圖表 | 現狀：系統只返回數據（figure_data），不生成圖片。問題：用戶需要視覺化結果（ROC曲線、KM曲線、森林圖等）。決定：1. 採用 Matplotlib + Seaborn（出版品質、300dpi、無需前端）2. 圖片存 MinIO，返回 URL 陣列 3. 返回格式新增 `visualizations[]` 4. 分 5 個子階段實施（8A基礎-8E整合）5. 先實作 P0 圖表：ROC、PR、KM、森林圖、直條圖+p-value。設計文件：docs/design-issues/003-visualization-service.md |
+| 2025-12-10 | 研究分析專案採用 Agent-Driven Workflow，完全不寫 Python code | MCP Tools 已提供完整分析能力 (資料清理、描述統計、ROC 分析、AutoML)。Agent 只需讀取 AGENT_WORKFLOW.yaml 並依序呼叫工具。這樣更符合 AI Agent 的設計理念，也讓工作流程可重複、可追蹤。 |
+| 2025-12-10 | MinIO 架構：只使用遠端實例 (192.168.1.102:9000)，禁止本地重複部署 | 問題：發現本地有空的 MinIO 容器 (localhost:9000)，導致 Agent 下載分析圖表失敗 (403 錯誤)。根因：stats-worker 上傳到遠端 MinIO，但 Agent 誤從本地空的 MinIO 下載。
+
+修復措施：
+1. 停止並移除本地 MinIO 容器
+2. 確認環境變數 MINIO_ENDPOINT=192.168.1.102:9000
+3. 所有服務使用同一個遠端 MinIO 實例
+
+設計原則：
+- 共用基礎設施只部署一份（避免資源浪費和狀態不一致）
+- 本地開發環境連接遠端 MinIO（已在 .env 配置）
+- Agent 下載 MinIO 檔案需使用 Python minio client（不是 curl/wget） |

@@ -439,3 +439,64 @@ class StatsWorker(WorkerResultsMixin):
 
 - projects/painless_胃鏡/RESEARCH_PLAN.md
 - projects/painless_胃鏡/CHANGELOG.md
+
+
+## Agent-Driven Research Workflow (No Code)
+
+執行資料分析研究時，Agent 讀取 YAML 工作流程定義 → 依序呼叫 MCP Tools 完成分析 → 返回結果。完全不需要寫 Python code，MCP Tools 處理一切：start_data_analysis (資料清理) → execute_analysis_ticket (執行清理) → generate_tableone_directly (描述統計) → full_classifier_evaluation (ROC) → quick_train (AutoML)
+
+### Examples
+
+- projects/painless_胃鏡/AGENT_WORKFLOW.yaml - Agent 執行計畫定義
+- User: 執行分析 → Agent: 讀取 yaml → Agent: call MCP tools 依序 → 返回結果
+
+
+## Remote MinIO Only Pattern
+
+⚠️ 系統只使用遠端 MinIO 實例 (192.168.1.102:9000)，禁止本地部署重複的 MinIO 容器。
+
+問題背景：
+- 2025-12-10 發現本地存在空的 MinIO 容器 (localhost:9000)
+- stats-worker 上傳到遠端 MinIO，Agent 卻從本地 MinIO 下載
+- 導致 403 錯誤，分析圖表無法取得
+
+架構規則：
+1. **單一實例**: 所有服務連接同一個遠端 MinIO
+2. **環境變數**: MINIO_ENDPOINT=192.168.1.102:9000
+3. **Bucket 結構**:
+   - automl-datasets/  (訓練資料集)
+   - automl-models/    (訓練模型)
+   - stats-reports/    (統計分析結果: JSON + PNG)
+
+### Examples
+
+- .env: MINIO_ENDPOINT=192.168.1.102:9000
+- docker-compose.yml: 不包含 MinIO 服務定義
+- stats-worker: 上傳到 stats-reports/{user_id}/roc-{job_id}/*.png
+
+
+## Agent MinIO Download Pattern
+
+MCP 統計分析工具返回 MinIO URLs (visualization_urls[])，Agent 需要主動下載到專案資料夾。
+
+流程：
+1. MCP 工具執行分析 → 圖表上傳到 MinIO → 返回 URL 列表
+2. Agent 解析 visualization_urls 陣列
+3. Agent 使用 Python minio client 下載 (不是 curl/wget)
+4. 儲存到 `projects/{project}/results/{phase}/` 相應目錄
+
+下載程式碼範例：
+```python
+from minio import Minio
+client = Minio('192.168.1.102:9000', 
+               access_key='...', secret_key='...',
+               secure=False)
+client.fget_object('stats-reports', 
+                   'mcp_user/roc-{job_id}/roc_curve.png',
+                   'results/02_univariate/roc_curve.png')
+```
+
+### Examples
+
+- MCP 返回: {"visualization_urls": ["http://192.168.1.102:9000/stats-reports/mcp_user/roc-xxx/roc_curve.png"]}
+- Agent 下載到: projects/painless_胃鏡/results/02_univariate/roc_curve.png

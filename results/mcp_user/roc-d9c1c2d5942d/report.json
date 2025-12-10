@@ -1,0 +1,64 @@
+{
+  "status": "success",
+  "analysis_type": "full_classifier_evaluation",
+  "model_name": "Model",
+  "n_samples": 1016,
+  "n_positive": 992,
+  "n_negative": 24,
+  "prevalence": 0.9763779527559056,
+  "discrimination": {
+    "auc_roc": 0.4881972446236559,
+    "auc_roc_ci": {
+      "lower": 0.3742344296323418,
+      "upper": 0.6021600596149699
+    },
+    "auc_pr": 0.9774225828473346,
+    "average_precision": 0.9774521096263272
+  },
+  "calibration": {
+    "brier_score": NaN,
+    "hosmer_lemeshow_p": 1.0,
+    "calibration_slope": 1.0,
+    "well_calibrated": true
+  },
+  "optimal_thresholds": {
+    "youden": 14.0,
+    "f1_max": 0.0
+  },
+  "interpretation": {
+    "auc_roc": "Fail (no better than chance)",
+    "calibration": "Good"
+  },
+  "visualizations": [
+    {
+      "type": "roc_curve",
+      "url": "http://192.168.1.102:9000/stats-reports/mcp_user/roc-d9c1c2d5942d/roc_curve.png",
+      "title": "ROC Curve",
+      "description": "AUC = 0.488 (95% CI: 0.374-0.602)"
+    },
+    {
+      "type": "pr_curve",
+      "url": "http://192.168.1.102:9000/stats-reports/mcp_user/roc-d9c1c2d5942d/pr_curve.png",
+      "title": "Precision-Recall Curve",
+      "description": "AUC-PR = 0.977"
+    },
+    {
+      "type": "calibration_curve",
+      "url": "http://192.168.1.102:9000/stats-reports/mcp_user/roc-d9c1c2d5942d/calibration_curve.png",
+      "title": "Calibration Curve",
+      "description": "Brier score = nan"
+    },
+    {
+      "type": "threshold_analysis",
+      "url": "http://192.168.1.102:9000/stats-reports/mcp_user/roc-d9c1c2d5942d/threshold_analysis.png",
+      "title": "Threshold Analysis",
+      "description": "Sensitivity, specificity, PPV, NPV vs threshold"
+    },
+    {
+      "type": "confusion_matrix",
+      "url": "http://192.168.1.102:9000/stats-reports/mcp_user/roc-d9c1c2d5942d/confusion_matrix.png",
+      "title": "Confusion Matrix",
+      "description": "At optimal threshold = 14.00"
+    }
+  ]
+}
