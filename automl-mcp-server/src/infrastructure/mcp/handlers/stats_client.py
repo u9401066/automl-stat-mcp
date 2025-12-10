@@ -720,6 +720,40 @@ class StatsClient:
             },
         )
     
+    # Alias for backward compatibility
+    async def submit_roc_full_eval_job(
+        self,
+        user_id: str = "mcp_user",
+        y_true_column: Optional[str] = None,
+        y_score_column: Optional[str] = None,
+        true_column: Optional[str] = None,
+        score_column: Optional[str] = None,
+        dataset_id: Optional[str] = None,
+        csv_content: Optional[str] = None,
+        is_base64: bool = False,
+        threshold: Optional[float] = None,
+        include_calibration: bool = True,
+        include_precision_recall: bool = True,
+        generate_visualizations: bool = True,
+    ) -> Dict[str, Any]:
+        """Submit full classifier evaluation job (alias with flexible parameter names)"""
+        return await self._request(
+            "POST",
+            "/roc/full-eval/submit",
+            json={
+                "dataset_id": dataset_id,
+                "csv_content": csv_content,
+                "is_base64": is_base64,
+                "user_id": user_id,
+                "true_column": y_true_column or true_column,
+                "score_column": y_score_column or score_column,
+                "threshold": threshold,
+                "include_calibration": include_calibration,
+                "include_precision_recall": include_precision_recall,
+                "generate_visualizations": generate_visualizations,
+            },
+        )
+    
     async def get_roc_methods(self) -> Dict[str, Any]:
         """Get available ROC analysis methods"""
         return await self._request("GET", "/roc/methods")

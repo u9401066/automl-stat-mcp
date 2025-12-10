@@ -30,10 +30,18 @@ class StatsJobType(str, Enum):
     # Survival Analysis
     KAPLAN_MEIER = "kaplan_meier"
     COX_PH = "cox_ph"
+    COX_REGRESSION = "cox_regression"
     SURVIVAL_COMPARISON = "survival_comparison"
+    SURVIVAL_COMPARE = "survival_compare"
+    SURVIVAL_SUMMARY = "survival_summary"
     # ROC Analysis
     ROC = "roc"
+    ROC_COMPUTE = "roc_compute"
     ROC_COMPARE = "roc_compare"
+    ROC_COMPARE_MULTIPLE = "roc_compare_multiple"
+    ROC_THRESHOLD = "roc_threshold"
+    ROC_CALIBRATION = "roc_calibration"
+    ROC_FULL_EVAL = "roc_full_eval"
     # Power Analysis
     POWER = "power"
 
