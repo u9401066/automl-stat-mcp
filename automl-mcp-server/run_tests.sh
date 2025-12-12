@@ -37,6 +37,9 @@ if [[ "$1" == "--isolated" || "$1" == "-i" ]]; then
         "tests/unit/test_survival_isolated.py"
         "tests/unit/test_propensity_isolated.py"
         "tests/unit/test_tableone_isolated.py"
+        "tests/unit/test_automl_workflow_isolated.py"
+        "tests/unit/test_dataset_isolated.py"
+        "tests/unit/test_model_isolated.py"
     )
     
     PASSED=0
