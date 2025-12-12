@@ -24,5 +24,7 @@ MINIO_REPORTS_BUCKET = os.getenv("MINIO_REPORTS_BUCKET", "stats-reports")
 WORKER_POLL_INTERVAL = int(os.getenv("WORKER_POLL_INTERVAL", "1"))
 TEMP_DIR = os.getenv("WORKER_TEMP_DIR", "/tmp/stats-work")
 
-# Results storage (local directory for user-accessible results)
-RESULTS_BASE_PATH = os.getenv("RESULTS_BASE_PATH", "/data/results")
+# Redis TTL settings (seconds)
+# Job results expire after 24 hours - use MinIO for permanent storage
+REDIS_JOB_TTL = int(os.getenv("REDIS_JOB_TTL", str(24 * 60 * 60)))  # 24 hours
+REDIS_TEMP_DATA_TTL = int(os.getenv("REDIS_TEMP_DATA_TTL", str(1 * 60 * 60)))  # 1 hour

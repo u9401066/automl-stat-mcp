@@ -55,26 +55,37 @@
 
 ## Current Goals
 
-- ## 當前工作焦點：無痛分娩研究專案系統化
-- ### 已完成
-- 1. 建立研究計畫文件 `RESEARCH_PLAN.md`
-- 2. 建立變更記錄 `CHANGELOG.md`
-- 3. 建立完整目錄結構
-- 4. 複製原始資料到 `data/raw/`
-- ### 研究計畫 5 階段
-- - Phase 1: 資料準備（清理、建立分析子集）
-- - Phase 2: 描述性統計（TableOne、EDA）
-- - Phase 3: 單變量分析（ROC、組間比較）
-- - Phase 4: 多變量分析（多模型比較、Logistic）
-- - Phase 5: 預測模型（AutoML）
-- ### 命名規則
-- - 資料: `{專案}_{用途}_{日期}.csv`
-- - 圖表: `fig_{類型}_{變數}_{結果}.png`
-- - 表格: `tbl_{類型}_{內容}.csv`
-- ### 專案路徑
-- `/home/eric/workspace251204/projects/painless_胃鏡/`
-- ### 下一步
-- 開始執行 Phase 1: 資料清理
+- ## Current Focus: Result Persistence Feature - COMPLETED
+- ### Just Accomplished
+- 1. Fixed JSON serialization issue in `result_storage.py`:
+- - Added `NumpyJSONEncoder` class to handle numpy types (int64, float64, bool_, ndarray)
+- - Added `safe_json_dumps()` helper function
+- - Modified `_save_to_redis()` and `_save_to_minio()` to use safe encoder
+- 2. Fixed API endpoint routing issue:
+- - Changed `_save_to_minio()` to call `stats-service` instead of `automl-service`
+- - The `/storage/minio/upload` endpoint exists only in stats-service
+- 3. Verified result persistence is working:
+- - `compare_groups` results saved to both Redis and MinIO ✓
+- - `analyze_correlations` results saved successfully ✓
+- - Results accessible via `/storage/minio/download` endpoint ✓
+- ### Tools with Result Persistence
+- - `analyze_correlations` - saves to Redis + MinIO
+- - `compare_groups` - saves to Redis + MinIO
+- - `generate_tableone_directly` - saves to Redis + MinIO
+- ### Test Results
+- ```
+- Redis: stats:result:stat_compare_groups_c32b80b7 ✓
+- MinIO: automl-results/default/compare_groups/20251212_105836_stat_compare_groups_c32b80b7.json ✓
+- MinIO: automl-results/default/correlation/20251212_110048_stat_correlation_e9231bb4.json ✓
+- ```
+- ### Storage Architecture
+- - Redis Key Pattern: `stats:result:{result_id}`
+- - MinIO Path Pattern: `{bucket}/{user_id}/{analysis_type}/{timestamp}_{result_id}.json`
+- - Default TTL: 7 days for Redis
+- ### Next Steps
+- 1. Continue painless delivery analysis Phase 5 (multivariate analysis)
+- 2. Add result persistence to more tools as needed
+- 3. Consider adding `list_saved_results` and `get_saved_result` tools for retrieval
 
 ## Current Blockers
 

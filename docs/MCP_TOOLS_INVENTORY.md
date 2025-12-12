@@ -1,315 +1,232 @@
-# AutoML MCP Server - 工具清單與使用指南
+# AutoML MCP Server - Tools Inventory
 
-## 📊 工具總覽
+> Last Updated: 2025-12-12
 
-| 模組 | 工具數量 | 狀態 | 說明 |
-|------|----------|------|------|
-| Upload | 3 | ✅ 可用 | 資料上傳與檔案列表 |
-| Dataset | 3 | ✅ 可用 | 資料集管理 |
-| Training | 3 | ✅ 可用 | AutoML 訓練 |
-| Job | 3 | ✅ 可用 | 訓練任務管理 |
-| Model | 2 | ✅ 可用 | 模型管理 |
-| Orchestration | 5 | ✅ 可用 | 工作流編排 |
-| EDA/Auto-Analyze | 14 | ⚠️ 部分可用 | 探索性資料分析 |
-| TableOne | 5 | ⚠️ 部分可用 | 統計表格生成 |
-| Survival | 4 | ❌ 不可用 | 生存分析 |
-| Propensity | 5 | ❌ 不可用 | 傾向分數分析 |
-| ROC/AUC | 8 | ⚠️ 部分可用 | ROC 曲線分析 |
-| Power Analysis | 19 | ⚠️ 部分可用 | 檢定力分析 |
-| Stats Jobs | 3 | ✅ 可用 | 統計任務管理 |
+## 📊 Overview
 
-**總計: ~77 工具 (但許多因 import 問題無法使用)**
+| Category | Count | Status |
+|----------|-------|--------|
+| AutoML | 26 | ✅ Ready |
+| Statistics | 57+ | ✅ Ready |
+| Data Cleaning | 9 | ✅ Ready |
+| Workflow | 3 | ✅ Ready |
+| **Total** | **98+** | |
 
 ---
 
-## 🚨 關鍵問題
+## ✅ AutoML Tools (26)
 
-### 問題 1: stats-worker 模組無法在 MCP 容器中 import
+### Dataset Management
+| Tool | Description | Returns |
+|------|-------------|---------|
+| `list_available_files` | 列出本地可用檔案 | files[] |
+| `upload_dataset` | 上傳/註冊資料集 | dataset_id |
+| `list_datasets` | 列出已註冊資料集 | datasets[] |
+| `delete_dataset` | 刪除資料集 | success |
+| `register_dataset` | 從 MinIO 註冊 | dataset_id |
+| `analyze_dataset` | 分析資料集特性 | analysis |
 
-```
-WARNING - Could not import stats-worker tasks: No module named 'tasks'
-```
+### Training
+| Tool | Description | Returns |
+|------|-------------|---------|
+| `submit_automl_job` | 提交 AutoML 訓練 | job_id |
+| `submit_specific_job` | 指定演算法訓練 | job_id |
+| `submit_compare_job` | 比較多個演算法 | job_id |
+| `train_and_wait` | 訓練並等待完成 | model_id, result |
+| `quick_train` | 一鍵訓練 | model_id |
 
-**原因**: MCP Server (automl-mcp) 和 Stats Worker (stats-worker) 是獨立容器，MCP 嘗試直接 import stats-worker 程式碼失敗。
+### Job Management
+| Tool | Description | Returns |
+|------|-------------|---------|
+| `get_job_status` | 查詢工作狀態 | status, progress |
+| `wait_for_job` | 等待工作完成 | result |
+| `list_jobs` | 列出所有工作 | jobs[] |
+| `cancel_job` | 取消工作 | success |
 
-**影響的工具**:
-- 所有 Propensity Score 工具 (5個)
-- 所有 Survival Analysis 工具 (4個)
-- 部分 ROC/Calibration 工具
-- 部分 Power Analysis 工具
+### Model Management
+| Tool | Description | Returns |
+|------|-------------|---------|
+| `list_models` | 列出所有模型 | models[] |
+| `get_model_leaderboard` | 取得模型排行榜 | leaderboard |
+| `predict` | 使用模型預測 | predictions |
+| `delete_model` | 刪除模型 | success |
+| `list_algorithms` | 列出可用演算法 | algorithms[] |
 
-**解決方案**:
-1. 統計工具應該透過 API 呼叫 stats-service，而非直接 import
-2. 或者將 stats-worker 程式碼打包成 Python package
+### Orchestration
+| Tool | Description | Returns |
+|------|-------------|---------|
+| `get_training_summary` | 訓練總覽 | summary |
+| `get_upload_help` | 上傳說明 | help |
+| `health_check` | 服務健康檢查 | status |
 
 ---
 
-### 問題 2: 工具依賴關係複雜，Agent 難以正確串接
+## ✅ Statistics Tools (57+)
 
-**正確的工作流程**:
-```
-1. list_available_files()     → 看有什麼檔案
-2. upload_dataset()           → 上傳/註冊資料集 → 取得 dataset_id
-3. analyze_dataset()          → 分析資料集特性
-4. submit_automl_job()        → 開始訓練 → 取得 job_id
-5. get_job_status()           → 輪詢直到完成 → 取得 model_id
-6. get_model_leaderboard()    → 查看結果
-7. predict()                  → 預測新資料
-```
+### Core Analysis
+| Tool | Description | Result Persistence |
+|------|-------------|-------------------|
+| `auto_analyze` | 智能自動分析 | ✅ |
+| `run_quick_auto_analyze` | 快速分析 | ✅ |
+| `analyze_csv_directly` | 直接分析 CSV | - |
+| `get_quick_stats` | 快速統計 | - |
+| `direct_ml_analyze` | ML 前置分析 | - |
 
-**Agent 容易犯的錯誤**:
-- 沒有 dataset_id 就嘗試訓練
-- 沒有等待 job 完成就查詢結果
-- 使用需要 CSV content 的工具但用錯格式
+### Correlations & Groups
+| Tool | Description | Result Persistence |
+|------|-------------|-------------------|
+| `analyze_correlations` | 相關性分析 | ✅ `result_id`, `result_path` |
+| `compare_groups` | 組間比較 | ✅ `result_id`, `result_path` |
+| `check_multicollinearity` | VIF 分析 | - |
+
+### Missing Values
+| Tool | Description | Result Persistence |
+|------|-------------|-------------------|
+| `analyze_missing_values` | 缺失值分析 | - |
+| `run_full_statistical_analysis` | 完整統計分析 | - |
+
+### TableOne
+| Tool | Description | Result Persistence |
+|------|-------------|-------------------|
+| `generate_tableone_directly` | 生成 Table 1 | ✅ `result_id`, `result_path` |
+| `submit_tableone_job` | 提交 TableOne 工作 | - |
+| `get_tableone_preview` | TableOne 預覽 | - |
+| `run_quick_tableone` | 快速 TableOne | - |
+| `get_column_suggestions` | 欄位建議 | - |
+
+### EDA
+| Tool | Description | Result Persistence |
+|------|-------------|-------------------|
+| `submit_eda_job` | 提交 EDA 工作 | - |
+| `run_quick_eda` | 快速 EDA | - |
+| `get_analysis_capabilities` | 分析能力 | - |
+
+### ROC/AUC Analysis
+| Tool | Description |
+|------|-------------|
+| `compute_roc_curve` | 計算 ROC 曲線 |
+| `compare_roc_curves` | 比較兩個 ROC (DeLong) |
+| `compare_multiple_roc_curves` | 多模型比較 |
+| `find_optimal_threshold` | 最佳閾值 |
+| `full_classifier_evaluation` | 完整分類評估 |
+| `analyze_calibration` | 校準分析 |
+| `interactive_threshold_analysis` | 互動式閾值 |
+| `generate_roc_publication_report` | ROC 報告 |
+
+### Survival Analysis
+| Tool | Description |
+|------|-------------|
+| `kaplan_meier_survival` | KM 曲線 |
+| `compare_survival` | 存活比較 |
+| `cox_proportional_hazards` | Cox 迴歸 |
+| `survival_data_summary` | 存活資料摘要 |
+
+### Propensity Score
+| Tool | Description |
+|------|-------------|
+| `estimate_propensity_scores` | 估計傾向分數 |
+| `match_propensity_scores` | PSM 配對 |
+| `estimate_treatment_effect` | 治療效果 (IPTW) |
+| `assess_covariate_balance` | 共變數平衡 |
+| `run_propensity_analysis` | 完整 PSA |
+
+### Power Analysis (19 tools)
+| Category | Tools |
+|----------|-------|
+| T-test | `calculate_ttest_sample_size`, `calculate_ttest_power`, `calculate_effect_size`, `ttest_sensitivity_analysis` |
+| Proportion | `calculate_proportion_sample_size`, `calculate_proportion_power`, `proportion_sensitivity_analysis` |
+| ANOVA | `calculate_anova_sample_size`, `calculate_anova_power`, `calculate_anova_effect_size` |
+| Chi-square | `calculate_chisquare_sample_size`, `calculate_chisquare_power`, `calculate_chisquare_effect_size` |
+| Survival | `calculate_survival_sample_size`, `calculate_survival_power`, `calculate_survival_events`, `calculate_survival_from_medians`, `convert_hazard_ratio_to_log` |
+
+### Job Management
+| Tool | Description |
+|------|-------------|
+| `get_stats_job_status` | 統計工作狀態 |
+| `get_stats_job_result` | 統計工作結果 |
+| `list_stats_jobs` | 列出統計工作 |
+
+### Result Storage (NEW)
+| Tool | Description |
+|------|-------------|
+| `list_analysis_results` | 列出儲存的結果 |
+| `get_analysis_result` | 取得儲存的結果 |
 
 ---
 
-## ✅ 完全可用的工具 (推薦使用)
+## ✅ Data Cleaning Tools (9)
 
-### 1. 上傳與檔案管理
+| Tool | Description | Input | Output |
+|------|-------------|-------|--------|
+| `handle_missing_values` | 缺失值處理 | csv_path, strategy | output_path |
+| `remove_columns` | 移除欄位 | csv_path, columns | output_path |
+| `filter_rows` | 篩選資料 | csv_path, condition | output_path |
+| `rename_columns` | 重新命名 | csv_path, mapping | output_path |
+| `convert_to_binary` | 轉換為 0/1 | csv_path, column, mapping | output_path |
+| `encode_categorical` | 類別編碼 | csv_path, columns, method | output_path |
+| `get_column_info` | 欄位資訊 | csv_path | column_info |
+| `direct_preview_data` | 資料預覽 | csv_path | preview |
+| `preview_dataset_stats` | 資料集統計 | dataset_id | stats |
+
+---
+
+## ✅ Workflow Tools (3)
+
+| Tool | Description |
+|------|-------------|
+| `start_data_analysis` | 開始分析流程 (返回 ticket) |
+| `execute_analysis_ticket` | 執行分析工單 |
+| `check_analysis_progress` | 檢查進度 |
+
+---
+
+## 🆕 Result Persistence
+
+Tools with result persistence return:
+```json
+{
+  "result_id": "stat_compare_groups_abc12345",
+  "result_path": "automl-results/user/compare_groups/20251212_120000_stat_compare_groups_abc12345.json"
+}
+```
+
+**Storage Locations:**
+- Redis: `stats:result:{result_id}` (7-day TTL)
+- MinIO: `{bucket}/{user_id}/{analysis_type}/{timestamp}_{result_id}.json`
+
+**Supported Tools:**
+- `compare_groups` ✅
+- `analyze_correlations` ✅
+- `generate_tableone_directly` ✅
+
+---
+
+## Usage Example
+
 ```python
-# 列出可用檔案
-list_available_files(directory="/data/sample_data")
+# 1. List available files
+files = list_available_files(directory="/data/sample_data")
 
-# 上傳資料集 (永久存檔)
-upload_dataset(
+# 2. Upload dataset
+result = upload_dataset(
     name="my_data",
     source_type="local",
     source_path="/data/sample_data/titanic.csv",
-    storage_mode="permanent",
-    user_id="user1"
-)  # → 返回 dataset_id
-
-# 查看上傳說明
-get_upload_help()
-```
-
-### 2. 資料集管理
-```python
-# 列出已註冊的資料集
-list_datasets(user_id="user1")
-
-# 刪除資料集
-delete_dataset(dataset_id="xxx", user_id="user1")
-```
-
-### 3. AutoML 訓練
-```python
-# 提交 AutoML 訓練
-submit_automl_job(
-    dataset_id="xxx",
-    target_column="survived",
-    problem_type="binary",
-    user_id="user1",
-    presets="medium_quality",
-    time_limit=300
-)  # → 返回 job_id
-
-# 提交特定算法訓練
-submit_specific_job(
-    dataset_id="xxx",
-    target_column="survived",
-    problem_type="binary",
-    algorithms=["XGB", "RF", "GBM"],
-    user_id="user1"
+    user_id="eric"
 )
+dataset_id = result["dataset_id"]
 
-# 比較多個算法
-submit_compare_job(
-    dataset_id="xxx",
-    target_column="survived",
-    problem_type="binary",
-    algorithms=["XGB", "GBM", "RF", "NN_TORCH"],
-    user_id="user1"
+# 3. Run analysis with persistence
+result = compare_groups(
+    csv_path="/data/sample_data/titanic.csv",
+    numeric_column="age",
+    group_column="survived",
+    save_result=True,
+    user_id="eric"
 )
+print(result["result_id"])  # stat_compare_groups_abc12345
+print(result["result_path"])  # automl-results/eric/compare_groups/...
+
+# 4. Retrieve saved result later
+saved = get_analysis_result(result_id="stat_compare_groups_abc12345")
 ```
-
-### 4. 任務管理
-```python
-# 查詢任務狀態
-get_job_status(job_id="xxx", user_id="user1")
-
-# 等待任務完成
-wait_for_job(job_id="xxx", user_id="user1", timeout=3600)
-
-# 列出所有任務
-list_jobs(user_id="user1")
-```
-
-### 5. 模型管理
-```python
-# 查看排行榜
-get_model_leaderboard(model_id="xxx", user_id="user1")
-
-# 預測
-predict(model_id="xxx", dataset_id="yyy", user_id="user1")
-```
-
-### 6. 統計分析 (透過 stats-service API)
-```python
-# TableOne - 透過 API
-submit_tableone_job(
-    dataset_id="xxx",
-    user_id="user1",
-    groupby="survived",
-    categorical=["sex", "pclass"],
-    nonnormal=["age", "fare"],
-    pval=True
-)  # → 返回 job_id
-
-# 查詢統計任務狀態
-get_stats_job_status(job_id="xxx")
-
-# 取得統計結果
-get_stats_job_result(job_id="xxx")
-```
-
----
-
-## ⚠️ 部分可用的工具 (需注意)
-
-### Direct CSV 分析工具
-
-這些工具需要直接傳入 CSV 內容，適合小型資料：
-
-```python
-# 快速統計 (同步)
-get_quick_stats(csv_content="col1,col2\n1,2\n3,4")
-
-# 完整分析 (同步)
-run_full_statistical_analysis(
-    csv_content="...",
-    target_column="target"
-)
-
-# 生成 TableOne (同步)
-generate_tableone_directly(
-    csv_content="...",
-    groupby="group",
-    categorical=["cat1", "cat2"],
-    pval=True
-)
-```
-
----
-
-## ❌ 目前無法使用的工具
-
-### Propensity Score Analysis (傾向分數)
-- `estimate_propensity_scores` - ❌ Module not available
-- `match_propensity_scores` - ❌ Module not available
-- `estimate_treatment_effect` - ❌ Module not available
-- `assess_covariate_balance` - ❌ Module not available
-- `run_propensity_analysis` - ❌ Module not available
-
-### Survival Analysis (生存分析)
-- `kaplan_meier_survival` - ❌ Module not available
-- `cox_proportional_hazards` - ❌ Module not available
-- `compare_survival` - ❌ Module not available
-- `survival_data_summary` - ❌ Module not available
-
----
-
-## 🔧 建議的修復方案
-
-### 方案 A: 統一透過 stats-service API (推薦)
-
-將 MCP 的統計工具改為呼叫 stats-service REST API，而非直接 import：
-
-```python
-# 修改前 (直接 import)
-from .stats_worker_tasks import estimate_propensity_scores
-
-# 修改後 (呼叫 API)
-async def estimate_propensity_scores(...):
-    response = await stats_client.post("/stats/propensity/estimate", json={...})
-    return response.json()
-```
-
-### 方案 B: 建立 shared Python package
-
-將 stats-worker/src/tasks 打包成 Python package 並安裝到 MCP 容器。
-
-### 方案 C: 精簡工具數量
-
-移除無法使用的工具，只保留可靠的工具：
-- 保留: Upload, Dataset, Training, Job, Model, TableOne (via API)
-- 移除或重構: Propensity, Survival, ROC (direct), Power
-
----
-
-## 📋 給 Agent 的提示模板
-
-建議在 MCP instruction 中加入：
-
-```
-## AutoML MCP 使用流程
-
-### 步驟 1: 上傳資料
-必須先呼叫 upload_dataset() 取得 dataset_id，才能進行後續操作。
-
-### 步驟 2: 訓練模型
-使用 submit_automl_job() 開始訓練，這是非同步操作。
-
-### 步驟 3: 等待完成
-使用 wait_for_job() 或重複呼叫 get_job_status() 直到 status="completed"。
-
-### 步驟 4: 查看結果
-使用 get_model_leaderboard() 查看訓練結果。
-
-### 重要提醒
-- 沒有 dataset_id 不能訓練
-- 沒有 job 完成不能查結果
-- 統計分析使用 submit_tableone_job (非同步) 或 generate_tableone_directly (同步)
-- Propensity Score 和 Survival Analysis 工具目前不可用
-```
-
----
-
-## 📈 後續改進計劃
-
-### 優先級 1: 精簡工具 (短期)
-1. [ ] 移除無法使用的 Propensity/Survival/Power 工具 (或改為 "coming soon" 提示)
-2. [ ] 確保保留的工具都能正常運作
-3. [ ] 更新 Agent 提示，只列出可用的工具
-
-### 優先級 2: 擴展 stats-service API (中期)
-1. [ ] 新增 `/propensity/*` endpoints
-2. [ ] 新增 `/survival/*` endpoints
-3. [ ] 新增 `/roc/*` endpoints
-4. [ ] 新增 `/power/*` endpoints
-5. [ ] MCP 工具改為呼叫這些 API
-
-### 優先級 3: 改善 Agent 體驗 (持續)
-1. [ ] 增加工具的錯誤提示，說明缺少什麼前置條件
-2. [ ] 加入工作流程驗證，防止錯誤的呼叫順序
-3. [ ] 提供更好的範例和文件
-
----
-
-## 🎯 精簡後的推薦工具清單
-
-如果要立即發布，建議只保留以下工具：
-
-| 工具 | 用途 | 依賴 |
-|------|------|------|
-| `health_check` | 檢查服務狀態 | 無 |
-| `list_available_files` | 列出可用檔案 | 無 |
-| `get_upload_help` | 上傳說明 | 無 |
-| `upload_dataset` | 上傳資料集 | 無 → dataset_id |
-| `list_datasets` | 列出資料集 | 無 |
-| `delete_dataset` | 刪除資料集 | dataset_id |
-| `analyze_dataset` | 分析資料集 | dataset_id |
-| `submit_automl_job` | AutoML 訓練 | dataset_id → job_id |
-| `submit_specific_job` | 特定算法訓練 | dataset_id → job_id |
-| `submit_compare_job` | 比較算法 | dataset_id → job_id |
-| `get_job_status` | 查詢任務狀態 | job_id |
-| `wait_for_job` | 等待任務完成 | job_id → model_id |
-| `list_jobs` | 列出任務 | 無 |
-| `get_model_leaderboard` | 查看排行榜 | model_id |
-| `predict` | 預測 | model_id, dataset_id |
-| `submit_tableone_job` | TableOne 統計 | dataset_id → job_id |
-| `get_stats_job_status` | 統計任務狀態 | job_id |
-| `get_stats_job_result` | 統計結果 | job_id |
-
-**總計: 18 個核心工具** (從 77 個精簡到 18 個)

@@ -18,9 +18,6 @@ from mcp.server.fastmcp import FastMCP
 
 logger = logging.getLogger(__name__)
 
-# Constants
-PROCESSED_DATA_DIR = "/data/processed"
-
 
 def register_cleaning_tools(mcp: FastMCP, automl_client) -> None:
     """Register data cleaning tools with MCP server"""
@@ -34,17 +31,15 @@ def register_cleaning_tools(mcp: FastMCP, automl_client) -> None:
         """Load CSV from path"""
         return pd.read_csv(csv_path)
     
-    def _save_cleaned_csv(df: pd.DataFrame, original_name: str, user_id: str) -> str:
-        """Save cleaned CSV and return path"""
-        user_dir = os.path.join(PROCESSED_DATA_DIR, user_id)
-        os.makedirs(user_dir, exist_ok=True)
+    def _get_csv_content(df: pd.DataFrame) -> str:
+        """Convert DataFrame to CSV string (in-memory, no file write).
         
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        clean_name = f"{original_name}_cleaned_{timestamp}.csv"
-        output_path = os.path.join(user_dir, clean_name)
-        
-        df.to_csv(output_path, index=False)
-        return output_path
+        All cleaned data is returned as CSV content for:
+        - Direct use by Agent/user
+        - Upload to MinIO if permanent storage needed
+        - Store in Redis if temporary storage needed
+        """
+        return df.to_csv(index=False)
     
     # ==================== COLUMN TRANSFORMATION TOOLS ====================
     
@@ -63,24 +58,24 @@ def register_cleaning_tools(mcp: FastMCP, automl_client) -> None:
         that require binary treatment indicators.
         
         Args:
-            csv_path: Path to CSV file (e.g., /data/processed/eric/file.csv)
+            csv_path: Path to CSV file (e.g., /data/sample_data/file.csv or /data/projects/my_project/data/file.csv)
             column: Column name to convert
             mapping: Dict mapping original values to 0 or 1
                     e.g., {"200": 0, "400": 1} or {"control": 0, "treatment": 1}
-            user_id: User ID for file organization
-            save_result: Whether to save the transformed CSV
+            user_id: User ID for tracking
+            save_result: Whether to return csv_content for upload
         
         Returns:
             status: "success" or "error"
             original_values: Unique values before conversion
             new_values: Values after conversion (should be 0 and 1)
-            output_path: Path to saved file (if save_result=True)
+            csv_content: Processed CSV (if save_result=True) - upload to MinIO or use directly
             preview: Sample of converted data
         
         Example:
             # Convert Ropica dosage to binary treatment indicator
             convert_to_binary(
-                csv_path="/data/processed/eric/painless.csv",
+                csv_path="/data/sample_data/painless.csv",
                 column="Ropica_ML",
                 mapping={"200": 0, "400": 1},
                 user_id="eric"
@@ -134,14 +129,12 @@ def register_cleaning_tools(mcp: FastMCP, automl_client) -> None:
                 result["unmapped_values"] = [str(v) for v in unmapped[:10]]
                 result["warning"] = f"Some values were not mapped: {unmapped[:5]}"
             
-            # Save if requested
+            # Return CSV content in memory (no local file storage)
             if save_result:
-                base_name = os.path.splitext(os.path.basename(csv_path))[0]
-                output_path = _save_cleaned_csv(df, base_name, user_id)
-                result["output_path"] = output_path
-                result["message"] = f"Binary column '{new_column_name}' created and saved"
+                result["csv_content"] = _get_csv_content(df)
+                result["message"] = f"Binary column '{new_column_name}' created. Use csv_content for further analysis or upload to MinIO."
             else:
-                result["message"] = f"Binary column '{new_column_name}' created (not saved)"
+                result["message"] = f"Binary column '{new_column_name}' created (preview only)"
             
             # Preview
             result["preview"] = df[[column, new_column_name]].head(5).to_dict('records')
@@ -173,17 +166,17 @@ def register_cleaning_tools(mcp: FastMCP, automl_client) -> None:
             column: Column name to encode
             method: "label", "onehot", or "ordinal"
             user_id: User ID
-            save_result: Whether to save result
+            save_result: Whether to return csv_content
         
         Returns:
             status: "success" or "error"
             encoding_map: Mapping of original values to encoded values
             new_columns: List of new column names created
-            output_path: Path to saved file
+            csv_content: Processed CSV (if save_result=True)
         
         Example:
             encode_categorical(
-                csv_path="/data/processed/eric/data.csv",
+                csv_path="/data/sample_data/data.csv",
                 column="gender",
                 method="label"
             )
@@ -227,9 +220,8 @@ def register_cleaning_tools(mcp: FastMCP, automl_client) -> None:
             }
             
             if save_result:
-                base_name = os.path.splitext(os.path.basename(csv_path))[0]
-                output_path = _save_cleaned_csv(df, base_name, user_id)
-                result["output_path"] = output_path
+                result["csv_content"] = _get_csv_content(df)
+                result["message"] = "Encoding complete. Use csv_content for further analysis or upload to MinIO."
             
             return result
             
@@ -264,18 +256,18 @@ def register_cleaning_tools(mcp: FastMCP, automl_client) -> None:
             columns: Specific columns to process (None = all)
             fill_value: Value to use for "constant" strategy
             user_id: User ID
-            save_result: Whether to save result
+            save_result: Whether to return csv_content
         
         Returns:
             status: "success" or "error"
             columns_processed: List of processed columns
             missing_before: Missing count before
             missing_after: Missing count after
-            output_path: Path to saved file
+            csv_content: Processed CSV (if save_result=True)
         
         Example:
             handle_missing_values(
-                csv_path="/data/processed/eric/data.csv",
+                csv_path="/data/sample_data/data.csv",
                 strategy="auto"
             )
         """
@@ -342,9 +334,8 @@ def register_cleaning_tools(mcp: FastMCP, automl_client) -> None:
             }
             
             if save_result:
-                base_name = os.path.splitext(os.path.basename(csv_path))[0]
-                output_path = _save_cleaned_csv(df, base_name, user_id)
-                result["output_path"] = output_path
+                result["csv_content"] = _get_csv_content(df)
+                result["message"] = "Missing values handled. Use csv_content for further analysis or upload to MinIO."
             
             return result
             
@@ -398,9 +389,8 @@ def register_cleaning_tools(mcp: FastMCP, automl_client) -> None:
             }
             
             if save_result:
-                base_name = os.path.splitext(os.path.basename(csv_path))[0]
-                output_path = _save_cleaned_csv(df, base_name, user_id)
-                result["output_path"] = output_path
+                result["csv_content"] = _get_csv_content(df)
+                result["message"] = "Columns removed. Use csv_content for further analysis or upload to MinIO."
             
             return result
             
@@ -451,9 +441,8 @@ def register_cleaning_tools(mcp: FastMCP, automl_client) -> None:
             }
             
             if save_result:
-                base_name = os.path.splitext(os.path.basename(csv_path))[0]
-                output_path = _save_cleaned_csv(df, base_name, user_id)
-                result["output_path"] = output_path
+                result["csv_content"] = _get_csv_content(df)
+                result["message"] = "Columns renamed. Use csv_content for further analysis or upload to MinIO."
             
             return result
             
@@ -550,9 +539,8 @@ def register_cleaning_tools(mcp: FastMCP, automl_client) -> None:
             }
             
             if save_result:
-                base_name = os.path.splitext(os.path.basename(csv_path))[0]
-                output_path = _save_cleaned_csv(df, base_name, user_id)
-                result["output_path"] = output_path
+                result["csv_content"] = _get_csv_content(df)
+                result["message"] = "Rows filtered. Use csv_content for further analysis or upload to MinIO."
             
             return result
             

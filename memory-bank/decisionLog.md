@@ -128,3 +128,4 @@ C) 整合到 Stats Service（選擇）- 邏輯相關，共用環境
 - 共用基礎設施只部署一份（避免資源浪費和狀態不一致）
 - 本地開發環境連接遠端 MinIO（已在 .env 配置）
 - Agent 下載 MinIO 檔案需使用 Python minio client（不是 curl/wget） |
+| 2025-12-11 | 儲存架構改為 Redis (暫存+TTL) + MinIO (永久儲存), 完全移除本地檔案儲存 | 1. 避免重複儲存造成空間浪費和同步問題 2. Redis TTL 自動清理過期資料 3. MinIO 提供可靠的永久儲存 4. 簡化架構，減少維護負擔 |

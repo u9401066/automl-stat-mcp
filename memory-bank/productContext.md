@@ -82,6 +82,10 @@ MCP Server (8002)
 
 ## Architecture
 
+Microservices: MCP Server (8002) → AutoML Service (8001) + Stats Service (8003) → Workers → Redis + MinIO
+
+
+
 DDD (Domain-Driven Design) with layers: Domain (stats-worker/tasks), Application (services), Infrastructure (MCP handlers). 83 MCP tools across AutoML (23) and Statistics (57) domains. Code quality issues: 11 files >500 lines requiring refactoring.
 
 
@@ -257,6 +261,16 @@ Separated Container Architecture with 4 components: 1) AutoML API (FastAPI) - li
 
 ## Technologies
 
+- Python 3.11
+- FastAPI
+- MCP (Model Context Protocol)
+- Docker Compose
+- AutoGluon 1.3.1
+- Redis
+- MinIO
+
+
+
 - Python 3.10+
 - FastAPI
 - FastMCP
@@ -338,6 +352,21 @@ Separated Container Architecture with 4 components: 1) AutoML API (FastAPI) - li
 
 
 ## Libraries and Dependencies
+
+- scipy
+- statsmodels
+- lifelines
+- tableone
+- ydata-profiling
+- matplotlib
+- seaborn
+- statannotations
+- httpx
+- celery
+- pandas
+- numpy
+
+
 
 **統計分析:**
 - tableone - Table 1 生成
@@ -443,4 +472,10 @@ Separated Container Architecture with 4 components: 1) AutoML API (FastAPI) - li
 - scikit-learn
 - httpx
 - mcp (Python SDK)
+
+
+
+## Project Description
+
+AutoML MCP System - Multi-user AutoML and statistical analysis platform accessible via AI Agents through MCP protocol
 

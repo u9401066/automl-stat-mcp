@@ -35,20 +35,17 @@ from .stats_client import StatsClient
 logger = logging.getLogger(__name__)
 
 # Data directories mounted in container
-# These paths are inside the container, mapped from host
+# Only sample_data (public test data) and projects (user research projects)
+# All temp data goes to Redis, permanent results go to MinIO
 DATA_MOUNT_PATHS = [
-    "/data/sample_data",    # ./sample_data:/data/sample_data
-    "/data/uploads",        # ./uploads:/data/uploads
-    "/data/datasets",       # ./datasets:/data/datasets (if exists)
+    "/data/sample_data",    # ./sample_data:/data/sample_data (read-only)
+    "/data/projects",       # ./projects:/data/projects (read-write)
 ]
 
 # Token limit for data preview (prevent response bloat)
 MAX_PREVIEW_VALUE_LENGTH = 50  # Truncate cell values longer than this
 MAX_PREVIEW_ROWS = 2  # Only show 2 sample rows
 MAX_PREVIEW_COLUMNS = 10  # Only show first N columns in sample rows
-
-# Directory for processed files and metadata
-PROCESSED_DATA_DIR = Path("/data/processed")
 
 
 def _sanitize_column_name(name: str) -> str:
@@ -139,31 +136,27 @@ def _create_column_mapping(original_columns: List[str]) -> Dict[str, Any]:
     }
 
 
-def _save_processed_csv_and_metadata(
+def _process_csv_in_memory(
     csv_content: str,
     original_name: str,
-    user_id: str,
 ) -> Dict[str, Any]:
     """
-    Process CSV: sanitize column names, save processed file + metadata.
+    Process CSV in memory: sanitize column names, return processed content.
+    
+    NO LOCAL FILE STORAGE - all data stays in memory or goes to Redis/MinIO.
     
     Returns:
         {
-            "processed_path": path to cleaned CSV,
-            "metadata_path": path to metadata JSON,
+            "processed_content": cleaned CSV as string,
             "column_mapping": mapping dict,
-            "original_path": original file info,
+            "sanitized_columns": list of new column names,
+            "row_count": number of rows,
+            "column_count": number of columns,
         }
     """
     import pandas as pd
-    import json
     from datetime import datetime
     from io import StringIO
-    
-    # Ensure processed directory exists
-    PROCESSED_DATA_DIR.mkdir(parents=True, exist_ok=True)
-    user_dir = PROCESSED_DATA_DIR / user_id
-    user_dir.mkdir(parents=True, exist_ok=True)
     
     # Read original CSV
     df = pd.read_csv(StringIO(csv_content))
@@ -175,42 +168,15 @@ def _save_processed_csv_and_metadata(
     # Rename columns
     df.columns = [column_mapping["mapping"][col] for col in original_columns]
     
-    # Generate unique filename
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    base_name = _sanitize_column_name(Path(original_name).stem)
-    
-    processed_filename = f"{base_name}_{timestamp}.csv"
-    metadata_filename = f"{base_name}_{timestamp}_metadata.json"
-    
-    processed_path = user_dir / processed_filename
-    metadata_path = user_dir / metadata_filename
-    
-    # Save processed CSV
-    df.to_csv(processed_path, index=False)
-    
-    # Save metadata
-    metadata = {
-        "original_name": original_name,
-        "processed_name": processed_filename,
-        "processed_path": str(processed_path),
-        "created_at": datetime.now().isoformat(),
-        "user_id": user_id,
-        "row_count": len(df),
-        "column_count": len(df.columns),
-        "column_mapping": column_mapping["mapping"],
-        "reverse_mapping": column_mapping["reverse_mapping"],
-        "changed_columns": column_mapping["changed_columns"],
-        "sanitized_columns": list(df.columns),
-    }
-    
-    with open(metadata_path, "w", encoding="utf-8") as f:
-        json.dump(metadata, f, ensure_ascii=False, indent=2)
+    # Convert back to CSV string (in memory, no file write)
+    processed_content = df.to_csv(index=False)
     
     return {
-        "processed_path": str(processed_path),
-        "metadata_path": str(metadata_path),
+        "processed_content": processed_content,
         "column_mapping": column_mapping,
         "sanitized_columns": list(df.columns),
+        "row_count": len(df),
+        "column_count": len(df.columns),
     }
 
 
@@ -280,9 +246,8 @@ def register_upload_tools(mcp: FastMCP, client: AutoMLClient) -> None:
         Use this BEFORE upload_dataset to see what LOCAL files are available.
         
         Mounted directories:
-        - /data/sample_data - Sample datasets for testing
-        - /data/uploads - User uploaded files
-        - /data/datasets - Additional datasets
+        - /data/sample_data - Sample datasets for testing (read-only)
+        - /data/projects - User research projects (read-write)
         
         Note: This only shows LOCAL files. For registered datasets (in MinIO),
         use list_datasets() instead.
@@ -572,22 +537,21 @@ async def _upload_temporary(
     session_id: Optional[str],
     source_path: str,
 ) -> Dict[str, Any]:
-    """Upload to Redis for temporary/one-time analysis with column sanitization"""
+    """Upload to Redis for temporary/one-time analysis with column sanitization.
+    
+    NO LOCAL FILE STORAGE - all data processed in memory, stored in Redis with TTL.
+    """
     
     try:
-        # Process CSV: sanitize columns, save processed file + metadata
-        processed = _save_processed_csv_and_metadata(
+        # Process CSV in memory: sanitize columns
+        processed = _process_csv_in_memory(
             csv_content=csv_content,
             original_name=name,
-            user_id=user_id,
         )
         
-        # Read processed CSV for analysis
-        processed_content = Path(processed["processed_path"]).read_text(encoding="utf-8")
-        
-        # Call stats-service with processed (clean) data
+        # Call stats-service with processed (clean) data - stored in Redis with TTL
         result = await stats_client.direct_analyze(
-            csv_content=processed_content,
+            csv_content=processed["processed_content"],
             user_id=user_id,
         )
         
@@ -609,10 +573,8 @@ async def _upload_temporary(
             "job_type": result.get("job_type"),
             "status": result.get("status"),
             "data_preview": data_preview,
-            # Column processing info
+            # Column processing info (no file paths - all in memory/Redis)
             "column_processing": {
-                "processed_file": processed["processed_path"],
-                "metadata_file": processed["metadata_path"],
                 "columns_renamed": column_mapping["columns_renamed"],
                 "total_columns": column_mapping["total_columns"],
                 "rename_examples": rename_summary if rename_summary else None,
@@ -627,9 +589,8 @@ async def _upload_temporary(
                 f"Job submitted with ID: {result.get('job_id')}",
                 "Check status: get_stats_job_status(job_id)",
                 "Get results: get_stats_job_result(job_id)",
-                f"📋 Metadata saved: {processed['metadata_path']}",
                 f"📊 Use sanitized column names for analysis (see column_processing.sanitized_columns)",
-                "⚠️ Data is temporary - will be cleared after job completion",
+                "⚠️ Data is temporary in Redis - auto-expires after 24h",
             ],
         }
     except Exception as e:
@@ -650,23 +611,22 @@ async def _upload_permanent(
     description: Optional[str],
     source_path: str,
 ) -> Dict[str, Any]:
-    """Upload to MinIO for permanent storage with column sanitization"""
+    """Upload to MinIO for permanent storage with column sanitization.
+    
+    NO LOCAL FILE STORAGE - processed in memory, uploaded directly to MinIO.
+    """
     
     try:
-        # Process CSV: sanitize columns, save processed file + metadata
-        processed = _save_processed_csv_and_metadata(
+        # Process CSV in memory: sanitize columns
+        processed = _process_csv_in_memory(
             csv_content=csv_content,
             original_name=name,
-            user_id=user_id,
         )
         
-        # Read processed CSV for upload
-        processed_content = Path(processed["processed_path"]).read_text(encoding="utf-8")
-        
-        # Upload processed (clean) data to MinIO
+        # Upload processed (clean) data directly to MinIO
         result = await client.upload_csv_content(
             name=name,
-            csv_content=processed_content,
+            csv_content=processed["processed_content"],
             user_id=user_id,
             session_id=session_id,
             description=description or f"Uploaded from {Path(source_path).name} (columns sanitized)",
@@ -689,9 +649,8 @@ async def _upload_permanent(
             "row_count": result.get("row_count"),
             "column_count": len(processed["sanitized_columns"]),
             "column_names": processed["sanitized_columns"],  # Sanitized names
-            # Column processing info
+            # Column processing info (no local file paths)
             "column_processing": {
-                "metadata_file": processed["metadata_path"],
                 "columns_renamed": column_mapping["columns_renamed"],
                 "total_columns": column_mapping["total_columns"],
                 "rename_examples": rename_summary if rename_summary else None,
@@ -704,7 +663,6 @@ async def _upload_permanent(
                 f"Dataset registered with ID: {result.get('dataset_id')}",
                 "For ML training: submit_automl_job(dataset_id=..., target_column='...')",
                 "For statistics: auto_analyze(dataset_id=...) or submit_tableone_job(...)",
-                f"📋 Column mapping saved: {processed['metadata_path']}",
                 f"📊 Use sanitized column names (see column_names)",
                 "💾 Data saved permanently in MinIO",
             ],

@@ -216,6 +216,68 @@ class MinioClient:
                 })
         
         return datasets
+    
+    # =========================================================================
+    # Generic Storage Methods (for result persistence)
+    # =========================================================================
+    
+    def ensure_bucket(self, bucket: str) -> None:
+        """Ensure a specific bucket exists"""
+        client = self._get_client()
+        if not client.bucket_exists(bucket):
+            client.make_bucket(bucket)
+            logger.info(f"Created bucket: {bucket}")
+    
+    def put_object(
+        self,
+        bucket: str,
+        path: str,
+        data: bytes,
+        content_type: str = "application/octet-stream",
+    ) -> None:
+        """Upload data to MinIO"""
+        client = self._get_client()
+        
+        client.put_object(
+            bucket,
+            path,
+            io.BytesIO(data),
+            length=len(data),
+            content_type=content_type,
+        )
+        logger.info(f"Uploaded to MinIO: {bucket}/{path}")
+    
+    def get_object(self, bucket: str, path: str) -> bytes:
+        """Download data from MinIO"""
+        client = self._get_client()
+        
+        response = client.get_object(bucket, path)
+        data = response.read()
+        response.close()
+        response.release_conn()
+        
+        return data
+    
+    def list_objects(
+        self,
+        bucket: str,
+        prefix: str = "",
+        limit: int = 100,
+    ) -> list:
+        """List objects in a bucket"""
+        client = self._get_client()
+        
+        objects = []
+        for obj in client.list_objects(bucket, prefix=prefix, recursive=True):
+            objects.append({
+                "name": obj.object_name,
+                "size": obj.size,
+                "last_modified": obj.last_modified.isoformat() if obj.last_modified else None,
+            })
+            if len(objects) >= limit:
+                break
+        
+        return objects
 
 
 # Singleton instance

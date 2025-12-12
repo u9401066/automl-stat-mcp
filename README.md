@@ -1,13 +1,19 @@
 # AutoML MCP System
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Docker](https://img.shields.io/badge/docker-ready-blue)](https://www.docker.com/)
+[![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/)
+
 Multi-user AutoML system accessible via AI Agents through MCP (Model Context Protocol).
 
-**Features:**
+## ✨ Features
+
 - 🤖 **AutoML Training** - Automatic model selection with AutoGluon
-- 📊 **Smart Statistical Analysis** - Intelligent auto-analysis with automatic method selection
-- 📁 **Simple File References** - Agent only passes file paths, system handles everything
+- 📊 **Statistical Analysis** - Comprehensive stats tools (TableOne, ROC, Survival, Power)
+- 📁 **Simple File References** - Agent passes file paths, system handles everything
+- 💾 **Result Persistence** - All results saved to Redis + MinIO with unique IDs
 - 🔌 **MCP Integration** - Direct access from AI Agents (Claude, Copilot)
-- 🔒 **Enterprise Ready** - HTTPS, POST-only API, multi-user isolation
+- 🔒 **Enterprise Ready** - HTTPS, multi-user isolation
 
 ## 🎯 Design Philosophy
 
@@ -15,132 +21,86 @@ Multi-user AutoML system accessible via AI Agents through MCP (Model Context Pro
 1. **傳入檔案路徑** - 告訴系統資料在哪裡
 2. **建立工單** - 設定要做什麼任務（含參數）
 3. **查詢狀態** - 檢查工單執行進度
-4. **取得結果連結** - 獲取輸出（模型/報告/圖片）
-
-**系統內部負責所有其他事情** - 資料讀取、清理、訓練、評估、報告生成。
+4. **取得結果** - 獲取輸出（模型/報告/圖片 + 持久化連結）
 
 ## 📚 Documentation
 
 | Document | Description |
 |----------|-------------|
-| [Agent Workflow](docs/AGENT_WORKFLOW.md) | **Agent 工作流程與工具使用指南** |
+| [Agent Workflow](docs/AGENT_WORKFLOW.md) | Agent 工作流程與工具使用指南 |
+| [Architecture](docs/ARCHITECTURE.md) | 系統架構設計 |
 | [MCP Tools Inventory](docs/MCP_TOOLS_INVENTORY.md) | 工具清單與狀態 |
 | [Deployment Guide](docs/deployment-guide.md) | 完整部署教學 |
-| [ROADMAP](docs/ROADMAP.md) | 開發藍圖與進度追蹤 |
+| [Roadmap](docs/ROADMAP.md) | 開發藍圖與進度追蹤 |
 
-## Architecture
+## 🏗️ Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                              AI Agent (Claude/Copilot)                       │
-│                                                                              │
-│   Agent 只做:  1. 傳檔案路徑  2. 建立工單  3. 查狀態  4. 拿結果連結          │
 └──────────────────────────────────┬───────────────────────────────────────────┘
-                                   │ MCP Protocol
+                                   │ MCP Protocol (SSE)
                                    ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                              MCP Server (8002)                               │
+│                           MCP Server (Port 8002)                             │
 │  ┌─────────────────────────────────────────────────────────────────────┐    │
-│  │                     Core Tools (精簡工具集)                          │    │
-│  │  • list_available_files    • submit_ml_job    • get_job_status      │    │
-│  │  • submit_stats_job        • get_job_result   • health_check        │    │
+│  │                        98+ MCP Tools                                 │    │
+│  │  AutoML (26) | Stats (57+) | Cleaning (9) | Workflow (3)            │    │
 │  └─────────────────────────────────────────────────────────────────────┘    │
 └──────────────────┬────────────────────────────────────────┬─────────────────┘
                    │                                        │
                    ▼                                        ▼
 ┌──────────────────────────────────┐    ┌──────────────────────────────────┐
-│        AutoML Service            │    │        Stats Service             │
-│  ┌────────────────────────────┐  │    │  ┌────────────────────────────┐  │
-│  │ 系統內部處理 (Agent 不管)  │  │    │  │ 系統內部處理 (Agent 不管)  │  │
-│  │ • 資料讀取、驗證、清理     │  │    │  │ • 統計計算、假設檢定       │  │
-│  │ • 特徵工程、編碼           │  │    │  │ • 表格生成、圖表繪製       │  │
-│  │ • 模型訓練、調參、評估     │  │    │  │ • 報告產出                 │  │
-│  └────────────────────────────┘  │    │  └────────────────────────────┘  │
+│        AutoML Service (8001)     │    │        Stats Service (8003)      │
+│  • Dataset Management            │    │  • Statistical Analysis          │
+│  • Job Orchestration             │    │  • Data Cleaning                 │
+│  • Model Registry                │    │  • Result Storage API            │
 └──────────────────┬───────────────┘    └──────────────────┬───────────────┘
                    │                                        │
                    ▼                                        ▼
 ┌──────────────────────────────────┐    ┌──────────────────────────────────┐
 │        AutoML Worker             │    │        Stats Worker              │
-│  • AutoGluon 1.3.1               │    │  • ydata-profiling               │
-│  • Model training                │    │  • tableone, scipy, statsmodels  │
+│  • AutoGluon 1.3.1               │    │  • ydata-profiling, tableone     │
+│  • Model training                │    │  • lifelines, scipy, statsmodels │
 └──────────────────────────────────┘    └──────────────────────────────────┘
                    │                                        │
                    └──────────────┬─────────────────────────┘
                                   ▼
-               ┌──────────────────────────────────┐
-               │     Shared Infrastructure        │
-               │  ┌────────┐    ┌────────┐       │
-               │  │ Redis  │    │ MinIO  │       │
-               │  │ (6379) │    │ (9000) │       │
-               │  └────────┘    └────────┘       │
-               └──────────────────────────────────┘
+               ┌──────────────────────────────────────┐
+               │     Shared Infrastructure            │
+               │  ┌────────┐    ┌────────┐           │
+               │  │ Redis  │    │ (9000) │           │
+               │  │ (6379) │    │ MinIO  │           │
+               │  └────────┘    └────────┘           │
+               │    Cache         Object              │
+               │    Queue         Storage             │
+               └──────────────────────────────────────┘
 ```
-
-## 🔄 Standard Workflow
-
-```
-User: "用 titanic.csv 預測 survived"
-
-Agent:
-1. list_available_files() → 確認檔案存在
-2. submit_ml_job(file_path="/data/sample_data/titanic.csv", target="survived")
-   → job_id
-3. get_job_status(job_id) → 等待完成
-4. get_job_result(job_id) → 取得模型和報告連結
-
-Agent: "訓練完成！最佳模型達到 87% AUC。"
-```
-
-## ⛔ Agent Should NOT Do
-
-| Wrong | Right |
-|-------|-------|
-| 用 `cat` 讀取 CSV 內容 | 只傳入檔案路徑 |
-| 自己計算統計數值 | 建立統計工單讓系統算 |
-| 解析 CSV 判斷欄位類型 | 系統自動判斷 |
-| 呼叫多個底層工具串接 | 用高階工單一次搞定 |
-
-## Components
-
-| Component | Directory | Purpose | Tech Stack | Status |
-|-----------|-----------|---------|------------|--------|
-| AutoML API | `automl-service/` | REST API for job/dataset management | FastAPI, Redis, DDD | ✅ Ready |
-| AutoML MCP | `automl-mcp-server/` | MCP server for AI agents | FastMCP, httpx | ✅ Ready |
-| AutoML Worker | `automl-worker/` | ML training execution | AutoGluon 1.3.1 | ✅ Ready |
-| Stats API | `stats-service/` | Statistical analysis API + **Data Cleaning** | FastAPI, Redis | ✅ Ready |
-| Stats Worker | `stats-worker/` | EDA, TableOne, ROC, Survival analysis | ydata-profiling, tableone, lifelines | ✅ Ready |
 
 ## 📁 Directory Structure
 
 ```
 workspace/
-├── datasets/              # 原始資料 (read-only)
-├── processed/             # 處理過的資料
-│   └── {user_id}/
-│       ├── data_20251210.csv
-│       └── data_20251210_metadata.json
-├── results/               # 📊 分析結果 (User 可直接查看)
-│   └── {user_id}/
-│       └── {job_name}_{timestamp}/
-│           ├── metadata.json      # Job 資訊
-│           ├── report.json        # 分析結果
-│           ├── report.html        # 📄 HTML 報告
-│           ├── figures/           # 📈 視覺化圖表
-│           │   ├── roc_curve.png
-│           │   ├── feature_importance.png
-│           │   └── ...
-│           └── data/
-│               └── source_info.json  # 資料來源資訊
-├── sample_data/           # 範例資料集
-└── uploads/               # 上傳的檔案
+├── automl-mcp-server/    # MCP Server for AI Agents
+├── automl-service/       # AutoML REST API
+├── automl-worker/        # ML Training Workers
+├── stats-service/        # Statistics REST API
+├── stats-worker/         # Statistics Workers
+├── docs/                 # Documentation
+│   ├── design-issues/    # Design decisions
+│   └── archive/          # Completed plans
+├── memory-bank/          # Project context (for AI agents)
+├── projects/             # User research projects
+├── sample_data/          # Sample datasets
+└── docker-compose.yml    # Main deployment
 ```
 
-## Quick Start
+## 🚀 Quick Start
 
 ### Prerequisites
 
 - Docker & Docker Compose
-- External MinIO server (or modify to use local MinIO)
+- MinIO server (external or local)
 
 ### 1. Configure Environment
 
@@ -149,45 +109,39 @@ cp .env.example .env
 nano .env
 ```
 
-Example `.env`:
+Required settings:
 ```bash
-# Your MinIO server address
 MINIO_ENDPOINT=your-minio-host:9000
 MINIO_ACCESS_KEY=your-access-key
 MINIO_SECRET_KEY=your-secret-key
-MINIO_SECURE=false
 ```
 
-### 2. Start All Services (One Command!)
+### 2. Start All Services
 
 ```bash
 docker compose up -d
 ```
 
-This starts:
-- **Redis** - Job queue (port 6379)
-- **AutoML API** - REST API (port 8001)
-- **AutoML MCP** - MCP Server for AI agents (port 8002)
-- **Stats API** - Statistical analysis API (port 8003)
-- **4x AutoML Workers** - Parallel training execution
-- **2x Stats Workers** - Statistical analysis execution
+Services started:
+- **Redis** (6379) - Job queue
+- **AutoML API** (8001) - REST API
+- **AutoML MCP** (8002) - MCP Server
+- **Stats API** (8003) - Statistics API
+- **4x AutoML Workers** - ML training
+- **2x Stats Workers** - Statistical analysis
 
-### 3. Verify Services
+### 3. Verify
 
 ```bash
-# Check running containers
 docker ps
-
-# Check API health
 curl http://localhost:8001/health
-# {"status":"healthy","version":"1.0.0"}
 ```
 
 ### 4. Connect AI Agent
 
-For VS Code Copilot, the MCP config is in `.vscode/mcp.json`.
+**VS Code Copilot**: See `.vscode/mcp.json`
 
-For Claude Desktop, add to config:
+**Claude Desktop**:
 ```json
 {
   "mcpServers": {
@@ -199,53 +153,40 @@ For Claude Desktop, add to config:
 }
 ```
 
-## 📊 Current MCP Tools
+## 📊 Key MCP Tools
 
-### Core Tools (Recommended)
+| Category | Tools | Description |
+|----------|-------|-------------|
+| **File** | `list_available_files`, `upload_dataset` | 檔案管理 |
+| **AutoML** | `submit_automl_job`, `train_and_wait`, `predict` | ML 訓練 |
+| **Stats** | `compare_groups`, `analyze_correlations`, `generate_tableone_directly` | 統計分析 |
+| **Cleaning** | `handle_missing_values`, `convert_to_binary` | 資料清理 |
+| **ROC** | `compute_roc_curve`, `full_classifier_evaluation` | 分類評估 |
+| **Survival** | `kaplan_meier_survival`, `cox_proportional_hazards` | 存活分析 |
+| **Power** | `calculate_ttest_sample_size`, `calculate_survival_sample_size` | 樣本數 |
 
-| Tool | Purpose | Input | Output |
-|------|---------|-------|--------|
-| `health_check` | 服務健康檢查 | - | status |
-| `list_available_files` | 列出可用檔案 | directory | files[] |
-| `upload_dataset` | 註冊資料集 | file_path, name | dataset_id |
-| `submit_automl_job` | ML 訓練工單 | dataset_id, target | job_id |
-| `submit_tableone_job` | 統計分析工單 | dataset_id, settings | job_id |
-| `convert_to_binary` | 轉換欄位為 0/1 | csv_path, column, mapping | output_path |
-| `handle_missing_values` | 缺失值處理 | csv_path, strategy | output_path |
-| `get_column_info` | 取得欄位資訊 | csv_path | column_info |
-| `get_job_status` | 查詢工單狀態 | job_id | status, progress |
-| `get_stats_job_result` | 取得統計結果 | job_id | result |
-| `get_model_leaderboard` | 取得模型排行 | model_id | leaderboard |
+See [MCP Tools Inventory](docs/MCP_TOOLS_INVENTORY.md) for complete list (98+ tools).
 
-### Note on Other Tools
+## 🆕 Recent Updates (Dec 2025)
 
-Many other tools exist but require refactoring to follow the simplified workflow.
-See [MCP Tools Inventory](docs/MCP_TOOLS_INVENTORY.md) for full status.
+- **Result Persistence**: Analysis results saved to Redis + MinIO with `result_id`
+- **Visualization (Phase 8)**: Publication-quality charts (ROC, KM, SHAP)
+- **Data Cleaning**: 9 preprocessing tools
+- **Local Results**: `/results/{user_id}/` with HTML reports
 
-## Development
-
-### Run Tests
+## 🔧 Development
 
 ```bash
 # E2E tests
-cd tests && pip install -r requirements.txt
-pytest test_e2e.py -v
+cd tests && pytest test_e2e.py -v
 
-# Stats worker tests
+# Stats worker tests  
 cd stats-worker && pytest tests/ -v
+
+# View logs
+docker compose logs -f automl-mcp
 ```
 
-### View Logs
-
-```bash
-# All logs
-docker compose logs -f
-
-# Specific service
-docker compose logs -f automl-api
-docker compose logs -f stats-worker
-```
-
-## License
+## 📄 License
 
 MIT

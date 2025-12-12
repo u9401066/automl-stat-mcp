@@ -129,20 +129,18 @@ services:
       - MCP_PORT=8002
       - LOG_LEVEL=INFO
     volumes:
-      # Data directories for file upload (MCP reads files directly)
-      # This avoids Copilot handling file content (saves tokens, no truncation)
+      # Only two data directories needed:
+      # 1. sample_data - Public test datasets (read-only)
+      # 2. projects - User research projects (read-write)
+      # All temp data goes to Redis, permanent results go to MinIO
       - ./sample_data:/data/sample_data:ro    # Sample datasets (read-only)
-      - ./uploads:/data/uploads:ro            # User uploaded files (read-only)
-      - ./datasets:/data/datasets:ro          # Additional datasets (read-only)
-      - ./processed:/data/processed           # Processed files with sanitized columns (read-write)
-      - ./results:/data/results               # Analysis results for user access (read-write)
+      - ./projects:/data/projects             # User research projects (read-write)
     networks:
       - automl-network
     depends_on:
       - automl-api
       - stats-service
     restart: unless-stopped
-
   # ===========================================================================
   # Stats Service - Statistical Analysis API
   # ===========================================================================
@@ -171,12 +169,9 @@ services:
       - SERVICE_PORT=8003
       - LOG_LEVEL=INFO
     volumes:
-      # Data directories for data cleaning operations
+      # Only sample_data and projects - all temp goes to Redis, permanent to MinIO
       - ./sample_data:/data/sample_data:ro    # Sample datasets (read-only)
-      - ./uploads:/data/uploads:ro            # User uploaded files (read-only)
-      - ./datasets:/data/datasets:ro          # Additional datasets (read-only)
-      - ./processed:/data/processed           # Processed/cleaned files (read-write)
-      - ./results:/data/results               # Analysis results for user access (read-write)
+      - ./projects:/data/projects             # User research projects (read-write)
     networks:
       - automl-network
     depends_on:
@@ -206,16 +201,14 @@ services:
       # Redis
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      # Worker
+      # Worker - Temp data only, no local results storage
       - TEMP_DIR=/tmp/stats-work
-      - RESULTS_BASE_PATH=/data/results
+      - REDIS_JOB_TTL=86400
       - LOG_LEVEL=INFO
     volumes:
-      # Data and results directories
+      # Only sample_data and projects - all temp goes to Redis, permanent to MinIO
       - ./sample_data:/data/sample_data:ro    # Sample datasets (read-only)
-      - ./datasets:/data/datasets:ro          # Additional datasets (read-only)
-      - ./processed:/data/processed           # Processed files (read-write)
-      - ./results:/data/results               # Analysis results for user access (read-write)
+      - ./projects:/data/projects             # User research projects (read-write)
     networks:
       - automl-network
     depends_on:

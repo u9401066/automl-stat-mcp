@@ -10,3 +10,4 @@ from . import survival
 from . import roc
 from . import power
 from . import cleaning
+from . import storage

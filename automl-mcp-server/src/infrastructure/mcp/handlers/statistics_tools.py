@@ -18,10 +18,11 @@ from mcp.server.fastmcp import FastMCP
 logger = logging.getLogger(__name__)
 
 # Data directories mounted in container
+# Only sample_data (public test data) and projects (user research projects)
+# All temp data goes to Redis, permanent results go to MinIO
 DATA_MOUNT_PATHS = [
-    "/data/sample_data",
-    "/data/uploads", 
-    "/data/datasets",
+    "/data/sample_data",    # ./sample_data:/data/sample_data (read-only)
+    "/data/projects",       # ./projects:/data/projects (read-write)
 ]
 
 
@@ -99,7 +100,7 @@ def _read_csv_from_path_or_reject(csv_path_or_content: str) -> Tuple[bool, Union
                 "example_paths": [
                     "/data/sample_data/iris.csv",
                     "/data/sample_data/titanic.csv",
-                    "/data/uploads/your_file.csv"
+                    "/data/projects/my_project/data/my_file.csv"
                 ]
             }
         }
@@ -127,6 +128,94 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
     
     from .stats_client import StatsClient
     stats_client = StatsClient()
+    
+    # ==================== RESULT MANAGEMENT ====================
+    
+    @mcp.tool()
+    async def list_analysis_results(
+        user_id: str,
+        analysis_type: Optional[str] = None,
+        limit: int = 20,
+    ) -> dict:
+        """
+        📋 List saved analysis results for a user.
+        
+        Retrieves results stored in Redis from previous analysis runs.
+        Results are automatically saved when using tools like:
+        - compare_groups
+        - analyze_correlations
+        - generate_tableone_directly
+        
+        Args:
+            user_id: User ID to list results for
+            analysis_type: Filter by type (tableone, correlation, compare_groups, roc)
+            limit: Maximum number of results to return (default 20)
+        
+        Returns:
+            results: List of result summaries with result_id and metadata
+            count: Number of results found
+        """
+        try:
+            from .result_storage import get_result_storage
+            storage = get_result_storage()
+            
+            # Query Redis for user's results
+            pattern = f"stats:result:stat_{analysis_type or '*'}_*"
+            
+            import httpx
+            async with httpx.AsyncClient(timeout=30) as client:
+                response = await client.get(
+                    f"{storage.stats_service_url}/storage/redis/keys",
+                    params={"pattern": pattern, "limit": limit},
+                )
+                response.raise_for_status()
+                data = response.json()
+            
+            return {
+                "status": "success",
+                "user_id": user_id,
+                "count": data.get("count", 0),
+                "keys": data.get("keys", []),
+            }
+        except Exception as e:
+            return {"status": "error", "error": str(e)}
+    
+    @mcp.tool()
+    async def get_analysis_result(
+        result_id: str,
+    ) -> dict:
+        """
+        📄 Retrieve a saved analysis result by ID.
+        
+        Fetches the full result from Redis storage.
+        Use list_analysis_results to find available result IDs.
+        
+        Args:
+            result_id: The result ID (e.g., "stat_tableone_abc123")
+        
+        Returns:
+            metadata: Result metadata (type, user, created_at)
+            result: The full analysis result
+        """
+        try:
+            from .result_storage import get_result_storage
+            storage = get_result_storage()
+            
+            result = await storage.get_result(result_id)
+            
+            if result is None:
+                return {
+                    "status": "not_found",
+                    "error": f"Result '{result_id}' not found or expired",
+                }
+            
+            return {
+                "status": "success",
+                "result_id": result_id,
+                **result,
+            }
+        except Exception as e:
+            return {"status": "error", "error": str(e)}
     
     # ==================== AUTO-ANALYZE (Smart Analysis) ====================
     
@@ -746,6 +835,8 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         columns: Optional[List[str]] = None,
         method: str = "all",
         min_correlation: float = 0.3,
+        save_result: bool = True,
+        user_id: str = "default",
     ) -> dict:
         """
         📈 Enhanced correlation analysis with multiple methods.
@@ -763,8 +854,12 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             columns: Columns to analyze (default: all numeric)
             method: "pearson", "spearman", "kendall", or "all"
             min_correlation: Minimum |r| to flag (default: 0.3)
+            save_result: Whether to save result to Redis/MinIO (default True)
+            user_id: User ID for result storage (default "default")
         
         Returns:
+            result_id: Unique ID for retrieving result later
+            result_path: MinIO path where result is stored
             matrices: Pearson/Spearman correlation and p-value matrices
             significant_pairs: Pairs with significant correlation
             heatmap_data: Ready-to-plot heatmap data
@@ -830,6 +925,21 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
                 "min_correlation_threshold": min_correlation,
             }
             
+            # Save result if requested
+            if save_result:
+                try:
+                    from .result_storage import get_result_storage
+                    storage = get_result_storage()
+                    metadata = await storage.save_result(
+                        result=result,
+                        user_id=user_id,
+                        analysis_type="correlation",
+                    )
+                    result["result_id"] = metadata.result_id
+                    result["result_path"] = metadata.minio_path
+                except Exception as e:
+                    logger.warning(f"Failed to save result: {e}")
+            
             return result
             
         except Exception as e:
@@ -840,6 +950,8 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         csv_path: str,
         numeric_column: str,
         group_column: str,
+        save_result: bool = True,
+        user_id: str = "default",
     ) -> dict:
         """
         🔬 Compare distributions of a numeric variable across groups.
@@ -860,8 +972,12 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             csv_path: Path to CSV file (e.g., '/data/sample_data/iris.csv')
             numeric_column: Column with numeric values to compare
             group_column: Column with group labels
+            save_result: Whether to save result to Redis/MinIO (default True)
+            user_id: User ID for result storage (default "default")
         
         Returns:
+            result_id: Unique ID for retrieving result later
+            result_path: MinIO path where result is stored
             groups: Group labels
             normality: Normality test results per group
             variance_test: Levene's test result
@@ -910,7 +1026,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
                 stat, pval = scipy_stats.f_oneway(*[group_data[g] for g in groups])
                 test_name = "One-way ANOVA"
             
-            return {
+            result = {
                 "status": "success",
                 "groups": groups,
                 "n_groups": n_groups,
@@ -922,6 +1038,23 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
                     "significant": pval < 0.05,
                 },
             }
+            
+            # Save result if requested
+            if save_result:
+                try:
+                    from .result_storage import get_result_storage
+                    storage = get_result_storage()
+                    metadata = await storage.save_result(
+                        result=result,
+                        user_id=user_id,
+                        analysis_type="compare_groups",
+                    )
+                    result["result_id"] = metadata.result_id
+                    result["result_path"] = metadata.minio_path
+                except Exception as e:
+                    logger.warning(f"Failed to save result: {e}")
+            
+            return result
             
         except Exception as e:
             return {"status": "error", "error": str(e)}
@@ -1187,6 +1320,8 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         nonnormal: Optional[List[str]] = None,
         pval: bool = True,
         output_format: str = "dict",
+        save_result: bool = True,
+        user_id: str = "default",
     ) -> dict:
         """
         📊 Generate Table 1 (baseline characteristics) directly from CSV.
@@ -1207,8 +1342,12 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             nonnormal: Columns to report as median[IQR] instead of mean±SD
             pval: Include p-values for group comparisons (default: True)
             output_format: "dict", "markdown", "html", or "latex"
+            save_result: Whether to save result to Redis/MinIO (default True)
+            user_id: User ID for result storage (default "default")
         
         Returns:
+            result_id: Unique ID for retrieving result later
+            result_path: MinIO path where result is stored
             status: "success" or "error"
             table_data: Summary statistics table as nested dict
             n_total: Total sample size
@@ -1314,6 +1453,21 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
                 "format": output_format,
                 "table_data": table_data,
             }
+            
+            # Save result if requested
+            if save_result:
+                try:
+                    from .result_storage import get_result_storage
+                    storage = get_result_storage()
+                    metadata = await storage.save_result(
+                        result=response,
+                        user_id=user_id,
+                        analysis_type="tableone",
+                    )
+                    response["result_id"] = metadata.result_id
+                    response["result_path"] = metadata.minio_path
+                except Exception as e:
+                    logger.warning(f"Failed to save result: {e}")
             
             return response
             

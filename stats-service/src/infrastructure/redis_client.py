@@ -149,6 +149,36 @@ class RedisClient:
         
         await client.delete(f"{STATS_JOBS_PREFIX}{job_id}")
         return True
+    
+    # =========================================================================
+    # Generic Redis Operations (for result storage)
+    # =========================================================================
+    
+    async def set(self, key: str, value: str, ex: int = None) -> None:
+        """Set a key-value pair with optional TTL"""
+        client = await self.connect()
+        await client.set(key, value, ex=ex)
+    
+    async def get(self, key: str) -> Optional[str]:
+        """Get a value by key"""
+        client = await self.connect()
+        return await client.get(key)
+    
+    async def delete(self, key: str) -> int:
+        """Delete a key"""
+        client = await self.connect()
+        return await client.delete(key)
+    
+    async def scan_iter(self, match: str = "*", count: int = 100):
+        """Iterate over keys matching a pattern"""
+        client = await self.connect()
+        cursor = 0
+        while True:
+            cursor, keys = await client.scan(cursor, match=match, count=count)
+            for key in keys:
+                yield key
+            if cursor == 0:
+                break
 
 
 # Singleton instance

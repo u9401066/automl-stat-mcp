@@ -500,3 +500,30 @@ client.fget_object('stats-reports',
 
 - MCP 返回: {"visualization_urls": ["http://192.168.1.102:9000/stats-reports/mcp_user/roc-xxx/roc_curve.png"]}
 - Agent 下載到: projects/painless_胃鏡/results/02_univariate/roc_curve.png
+
+
+## Project-Oriented Storage Architecture
+
+專案導向的儲存架構:
+
+**本地目錄 (Volume Mounts):**
+- sample_data/ → /data/sample_data:ro (公開測試資料集，唯讀)
+- projects/ → /data/projects (使用者研究專案，讀寫)
+
+**Redis (暫存儲存):**
+- Job 狀態和結果: 24h TTL (REDIS_JOB_TTL=86400)
+- Worker heartbeat: 1h TTL (REDIS_WORKER_TTL=3600)
+- 暫存資料: 1h TTL (REDIS_TEMP_DATA_TTL=3600)
+- 使用 setex() 和 expire() 設定 TTL
+
+**MinIO (永久儲存):**
+- automl-datasets/: 訓練資料集
+- automl-models/: 訓練模型
+- stats-reports/: 統計分析結果 (JSON + PNG)
+
+### Examples
+
+- docker-compose.yml volume mounts
+- stats-worker/src/config.py TTL settings
+- upload_tools.py _process_csv_in_memory()
+- cleaning_tools.py _get_csv_content()

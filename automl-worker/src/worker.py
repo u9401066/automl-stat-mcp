@@ -106,6 +106,10 @@ class AutoGluonWorker:
         self.job_queue = "automl:jobs:pending"
         self.job_prefix = "automl:job:"
         
+        # Redis TTL settings (seconds)
+        self.job_ttl = int(os.environ.get("REDIS_JOB_TTL", str(24 * 60 * 60)))  # 24 hours
+        self.worker_ttl = int(os.environ.get("REDIS_WORKER_TTL", str(60 * 60)))  # 1 hour
+        
         logger.info(f"AutoGluon Worker initialized: {self.worker_id}")
         logger.info(f"Device: {self.device_info}")
         logger.info(f"Worker type: {self.worker_type}")
@@ -138,7 +142,7 @@ class AutoGluonWorker:
                 asyncio.sleep(1)
     
     def _register_worker(self):
-        """Register this worker in Redis for monitoring"""
+        """Register this worker in Redis for monitoring (with TTL)"""
         worker_info = {
             "id": self.worker_id,
             "type": self.worker_type,
@@ -147,7 +151,9 @@ class AutoGluonWorker:
             "started_at": datetime.utcnow().isoformat(),
             "status": "running",
         }
-        self.redis.hset(f"automl:workers:{self.worker_id}", mapping=worker_info)
+        worker_key = f"automl:workers:{self.worker_id}"
+        self.redis.hset(worker_key, mapping=worker_info)
+        self.redis.expire(worker_key, self.worker_ttl)  # Auto-expire if worker dies
         self.redis.sadd("automl:workers:active", self.worker_id)
         logger.info(f"Worker registered: {self.worker_id}")
     
@@ -158,12 +164,10 @@ class AutoGluonWorker:
         logger.info(f"Worker unregistered: {self.worker_id}")
     
     def _update_worker_heartbeat(self):
-        """Update worker heartbeat in Redis"""
-        self.redis.hset(
-            f"automl:workers:{self.worker_id}", 
-            "last_heartbeat", 
-            datetime.utcnow().isoformat()
-        )
+        """Update worker heartbeat in Redis (refresh TTL)"""
+        worker_key = f"automl:workers:{self.worker_id}"
+        self.redis.hset(worker_key, "last_heartbeat", datetime.utcnow().isoformat())
+        self.redis.expire(worker_key, self.worker_ttl)  # Refresh TTL on heartbeat
 
     def _process_job(self, job_id: str):
         """Process a single training job"""
@@ -356,7 +360,9 @@ class AutoGluonWorker:
         if status == "completed":
             update["completed_at"] = datetime.utcnow().isoformat()
         
-        self.redis.hset(f"{self.job_prefix}{job_id}", mapping=update)
+        job_key = f"{self.job_prefix}{job_id}"
+        self.redis.hset(job_key, mapping=update)
+        self.redis.expire(job_key, self.job_ttl)  # Job data expires after 24h
         
         # Publish status update for WebSocket subscribers
         self.redis.publish(f"automl:job:{job_id}:status", json.dumps(update))

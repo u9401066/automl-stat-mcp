@@ -30,9 +30,8 @@ from .config import (
     STATS_JOBS_PENDING, STATS_JOBS_PREFIX,
     MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY,
     MINIO_SECURE, MINIO_DATASET_BUCKET, MINIO_REPORTS_BUCKET,
-    WORKER_POLL_INTERVAL, TEMP_DIR, RESULTS_BASE_PATH,
+    WORKER_POLL_INTERVAL, TEMP_DIR, REDIS_JOB_TTL,
 )
-from .results import JobResultsManager, WorkerResultsMixin
 
 # Configure logging
 log_level = os.environ.get("LOG_LEVEL", "INFO")
@@ -85,8 +84,13 @@ def signal_handler(signum, frame):
     running = False
 
 
-class StatsWorker(WorkerResultsMixin):
-    """Worker for processing statistical analysis jobs"""
+class StatsWorker:
+    """Worker for processing statistical analysis jobs.
+    
+    All results are stored in:
+    - Redis (temp storage with TTL) for job status and quick results
+    - MinIO (permanent storage) for reports and visualizations
+    """
     
     def __init__(self):
         self.redis_client = redis.Redis(
@@ -114,7 +118,7 @@ class StatsWorker(WorkerResultsMixin):
         logger.info("Stats Worker initialized")
     
     def update_job_status(self, job_id: str, status: str, **kwargs):
-        """Update job status in Redis"""
+        """Update job status in Redis with TTL"""
         key = f"{STATS_JOBS_PREFIX}{job_id}"
         data = self.redis_client.get(key)
         
@@ -123,7 +127,8 @@ class StatsWorker(WorkerResultsMixin):
             job["status"] = status
             job["updated_at"] = datetime.utcnow().isoformat()
             job.update(kwargs)
-            self.redis_client.set(key, json.dumps(job))
+            # Set with TTL - job data expires after 24 hours
+            self.redis_client.setex(key, REDIS_JOB_TTL, json.dumps(job))
     
     def load_dataset_by_path(self, minio_path: str) -> pd.DataFrame:
         """Load dataset from MinIO by path (bucket/object format)"""
@@ -980,7 +985,7 @@ class StatsWorker(WorkerResultsMixin):
         logger.info(f"ROC calibration job {job_id} completed")
     
     def process_roc_full_eval_job(self, job: dict):
-        """Process full classifier evaluation job with local results"""
+        """Process full classifier evaluation job - results to MinIO only"""
         from .tasks.roc_analysis import full_classifier_evaluation
         
         job_id = job["job_id"]
@@ -991,13 +996,6 @@ class StatsWorker(WorkerResultsMixin):
         self.update_job_status(job_id, "running", progress=0.1, message="Loading dataset...")
         
         df = self._load_dataset_from_job(job)
-        
-        # Create local results manager
-        results_manager = self.create_results_manager(job, "roc_full_evaluation")
-        self.save_source_info_from_job(
-            results_manager, job, df.shape,
-            columns_used=[params["y_true_col"], params["y_score_col"]]
-        )
         
         self.update_job_status(job_id, "running", progress=0.3, message="Running full classifier evaluation...")
         
@@ -1014,30 +1012,18 @@ class StatsWorker(WorkerResultsMixin):
             job_id=job_id,
         )
         
-        self.update_job_status(job_id, "running", progress=0.7, message="Saving figures locally...")
+        self.update_job_status(job_id, "running", progress=0.8, message="Saving results to MinIO...")
         
-        # Save figures locally if generated
-        if result.get("visualizations"):
-            self.save_visualizations_locally(results_manager, result["visualizations"])
-        
-        self.update_job_status(job_id, "running", progress=0.8, message="Saving results...")
-        
-        # Save to MinIO
+        # Save to MinIO (permanent storage)
         result_path = self.save_report(job_id, result, format="json")
-        
-        # Finalize local results with HTML report
-        local_summary = self.finalize_job_results(results_manager, result)
-        result["local_results"] = local_summary
         
         self.update_job_status(
             job_id, "completed", 
             progress=1.0, 
             message="Full evaluation completed", 
             result_path=result_path,
-            local_path=local_summary.get("result_path"),
-            html_report=local_summary.get("html_report_path"),
         )
-        logger.info(f"ROC full eval job {job_id} completed, local results at {local_summary.get('result_path')}")
+        logger.info(f"ROC full eval job {job_id} completed, results saved to MinIO: {result_path}")
     
     def process_roc_compare_multiple_job(self, job: dict):
         """Process multiple models comparison job"""

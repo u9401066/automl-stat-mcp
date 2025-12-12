@@ -1,19 +1,25 @@
 """
 Results Management Module
 
-Provides local storage management for analysis results.
+⚠️ DEPRECATED: This module is deprecated as of the project-oriented architecture refactoring.
 
-Directory Structure:
-    /results/{user_id}/{job_name}_{timestamp}/
-        ├── metadata.json          # Job info, data source, parameters
-        ├── report.json            # Analysis results in JSON
-        ├── report.html            # Human-readable HTML report
-        ├── figures/
-        │   ├── roc_curve.png
-        │   └── ...
-        └── data/
-            └── source_info.json   # Original dataset metadata
+All results are now stored in:
+- Redis (temp storage with TTL) for job status and quick results  
+- MinIO (permanent storage) for reports and visualizations
+
+No local file storage is used anymore.
+
+This module is kept for backward compatibility but should not be used in new code.
 """
+import warnings
+
+warnings.warn(
+    "The results module is deprecated. "
+    "Results are now stored in Redis (temp) and MinIO (permanent). "
+    "No local file storage is used.",
+    DeprecationWarning,
+    stacklevel=2
+)
 
 from .manager import (
     JobResultsManager,

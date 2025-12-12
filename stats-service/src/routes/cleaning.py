@@ -200,7 +200,7 @@ async def convert_to_binary(request: ConvertBinaryRequest):
     Example:
     ```json
     {
-        "csv_path": "/data/processed/my_data.csv",
+        "csv_path": "/data/sample_data/my_data.csv",
         "column": "Ropica_ML",
         "mapping": {"200": 0, "400": 1}
     }
