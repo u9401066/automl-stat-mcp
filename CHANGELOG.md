@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2025-12-16
+
+### Added
+
+#### AI Development Framework Integration
+- Integrated `template-is-all-you-need` framework for AI-assisted development
+- `.claude/skills/` - 12 Claude Skills for automation:
+  - `git-precommit` - Git commit workflow orchestrator
+  - `memory-checkpoint` - Memory checkpoint before context loss
+  - `memory-updater` - Memory Bank synchronization
+  - `test-generator` - Auto-generate tests
+  - `code-reviewer` - Code review
+  - `ddd-architect` - DDD architecture assistant
+  - `code-refactor` - Code refactoring
+  - `readme-updater` - README updates
+  - `changelog-updater` - CHANGELOG updates
+  - `roadmap-updater` - ROADMAP updates
+  - `readme-i18n` - README internationalization
+  - `project-init` - Project initialization
+
+#### Project Governance
+- `CONSTITUTION.md` - Project constitution (highest principles)
+  - Chapter 1: DDD Architecture Principles
+  - Chapter 2: Memory Bank Principles
+  - Chapter 3: Documentation Principles
+  - Chapter 4: Bylaw Authorization
+- `.github/bylaws/` - 4 bylaws for detailed regulations:
+  - `ddd-architecture.md` - DDD implementation guide
+  - `git-workflow.md` - Git workflow rules
+  - `memory-bank.md` - Memory Bank usage rules
+  - `python-environment.md` - Python environment (uv-first)
+- `AGENTS.md` - VS Code Copilot Agent guidelines
+- `.vscode/settings.json` - Claude Skills enabled
+
 ## [1.3.0] - 2025-12-12
 
 ### Added

@@ -1,6 +1,6 @@
 # AutoML MCP System - Roadmap
 
-> Last Updated: 2025-12-12
+> Last Updated: 2025-12-16
 
 ## 🎯 Vision
 
@@ -8,12 +8,13 @@
 
 ---
 
-## 📊 Current Status (v1.3)
+## 📊 Current Status (v1.4)
 
 ### ✅ 已完成功能
 
 | 模組 | 功能 | 工具數 | 狀態 |
 |------|------|--------|------|
+| **AI Framework** | Claude Skills, Constitution-Bylaw | 12 Skills | ✅ NEW |
 | **AutoML Core** | 資料集管理、模型訓練、預測 | 26 | ✅ |
 | **Statistics Core** | EDA、TableOne、智能分析 | 12 | ✅ |
 | **Smart Workflow** | 引導式分析流程 | 3 | ✅ |

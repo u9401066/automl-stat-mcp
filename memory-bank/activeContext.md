@@ -1,6 +1,26 @@
 # Active Context
 
-## Current Status (2025-12-10)
+## Current Status (2025-12-16)
+
+### 🎯 剛完成: 整合 template-is-all-you-need 框架
+
+**新增組件:**
+- `.claude/skills/` - 12 個 Claude Skills（git-precommit, memory-checkpoint 等）
+- `CONSTITUTION.md` - 專案憲法（DDD、Memory Bank、文檔原則）
+- `.github/bylaws/` - 4 個子法（ddd-architecture, git-workflow, memory-bank, python-environment）
+- `AGENTS.md` - VS Code Copilot Agent 指引
+- `.vscode/settings.json` - 啟用 Claude Skills
+
+**可用指令:**
+- 「準備 commit」- 執行完整 Git 提交流程
+- 「checkpoint」- 保存記憶檢查點
+- 「更新 memory」- 同步 Memory Bank
+- 「生成測試」- 自動生成測試
+- 「review 程式碼」- 程式碼審查
+
+---
+
+## Previous Status (2025-12-10)
 
 ### 🎯 平台狀態: v0.5.0 - Visualization + Local Results ✅
 

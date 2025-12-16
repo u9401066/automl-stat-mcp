@@ -1,7 +1,13 @@
-# Progress (Updated: 2025-12-12)
+# Progress (Updated: 2025-12-16)
 
 ## Done
 
+- Integrated template-is-all-you-need framework:
+  - `.claude/skills/` - 12 Claude Skills for automation
+  - `CONSTITUTION.md` - Project constitution (highest principles)
+  - `.github/bylaws/` - 4 bylaws (DDD, Git, Memory Bank, Python)
+  - `AGENTS.md` - VS Code Copilot Agent guidelines
+  - `.vscode/settings.json` - Claude Skills enabled
 - Result Persistence feature implemented (Redis + MinIO)
 - JSON serialization fixed for numpy types
 - Storage API endpoints created in stats-service
