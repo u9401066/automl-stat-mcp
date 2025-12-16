@@ -2,6 +2,23 @@
 
 ## Done
 
+### 2025-12-16 - Project Laws Enhancement
+- **新增子法**:
+  - `.github/bylaws/file-paths.md` - 檔案路徑規範
+    - Host vs Container 路徑區分規則
+    - 測試檔案放置規範
+    - MCP 工具路徑驗證規則
+  - `.github/bylaws/docker-operations.md` - Docker 操作規範
+    - 服務架構圖
+    - MinIO/Redis 操作指南
+    - 常見問題排查
+- **憲法更新**:
+  - 新增第 7.4 條：檔案路徑原則
+  - 新增第 7.5 條：Docker 服務原則
+- **AGENTS.md 更新**:
+  - 新增檔案路徑規則快速參考
+  - 新增 Docker 服務操作命令
+
 ### 2025-12-16 - Comprehensive Testing & Bug Fixes
 - **Static Analysis (ruff)**: Fixed 7 real bugs + 659 formatting issues
   - B006: Mutable default argument in base.py

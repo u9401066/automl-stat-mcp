@@ -62,6 +62,54 @@ uv add --dev pytest ruff
 
 詳見：`.github/bylaws/git-workflow.md`
 
+### 檔案路徑規則
+
+⚠️ **這是最常犯的錯誤！**
+
+| 環境 | 路徑前綴 | 使用時機 |
+|------|----------|----------|
+| Container | `/data/sample_data/` | MCP 工具參數、API 請求 |
+| Container | `/data/projects/` | 使用者專案資料 |
+| Host | `/home/eric/...` | 本機測試、IDE 開發 |
+
+```python
+# ❌ 錯誤：MCP 工具中使用 Host 路徑
+csv_path="/home/eric/workspace251204/sample_data/iris.csv"
+
+# ✅ 正確：使用 Container 路徑
+csv_path="/data/sample_data/iris.csv"
+```
+
+**測試檔案位置：**
+- ✅ `tests/` - 整合/E2E 測試
+- ✅ `{service}/tests/` - 服務單元測試
+- ❌ 根目錄禁止放任何測試
+
+詳見：`.github/bylaws/file-paths.md`
+
+### Docker 服務操作
+
+```bash
+# 啟動所有服務
+docker compose up -d
+
+# 重建單一服務
+docker compose up -d --build automl-mcp
+
+# 擴展 Worker
+docker compose up -d --scale automl-worker=8
+
+# 查看日誌
+docker compose logs -f automl-mcp
+
+# 進入容器除錯
+docker compose exec automl-mcp ls /data/sample_data/
+```
+
+**MinIO/Redis 配置：** 使用 `.env` 檔案
+
+詳見：`.github/bylaws/docker-operations.md`
+
 ---
 
 ## 可用 Skills

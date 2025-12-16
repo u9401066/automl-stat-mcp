@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Project Governance - New Bylaws
+- `.github/bylaws/file-paths.md` - 檔案路徑規範子法
+  - Host vs Container 路徑區分
+  - 測試檔案放置規則
+  - MCP 工具路徑驗證
+  - 範例資料集清單
+- `.github/bylaws/docker-operations.md` - Docker 操作規範子法
+  - 服務架構圖
+  - 啟動/停止/擴展命令
+  - MinIO/Redis 操作指南
+  - 日誌與除錯方法
+  - 常見問題排查
+
+#### CONSTITUTION.md 新增條款
+- 第 7.4 條：檔案路徑原則
+- 第 7.5 條：Docker 服務原則
+
 #### Comprehensive Testing Framework
 - Static analysis with `ruff`: Fixed 7 bugs (B006, E722, F841) + 659 formatting issues
 - `automl-mcp-server/tests/unit/test_error_scenarios_isolated.py` - 36 error scenario tests
