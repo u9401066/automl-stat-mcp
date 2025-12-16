@@ -421,6 +421,7 @@ class StatsClient:
         group_column: Optional[str] = None,
         confidence_level: float = 0.95,
         time_points: Optional[List[float]] = None,
+        generate_visualizations: bool = True,
     ) -> Dict[str, Any]:
         """Submit Kaplan-Meier analysis job
 
@@ -441,8 +442,14 @@ class StatsClient:
                 "group_column": group_column,
                 "confidence_level": confidence_level,
                 "time_points": time_points,
+                "generate_visualizations": generate_visualizations,
             },
         )
+
+    # Alias for backward compatibility
+    async def submit_survival_kaplan_meier_job(self, **kwargs):
+        """Alias for submit_kaplan_meier_job"""
+        return await self.submit_kaplan_meier_job(**kwargs)
 
     async def submit_cox_regression_job(
         self,
@@ -561,6 +568,7 @@ class StatsClient:
         pos_label: int = 1,
         n_bootstrap: int = 1000,
         confidence_level: float = 0.95,
+        generate_visualizations: bool = True,
     ) -> Dict[str, Any]:
         """Submit ROC curve computation job
 
@@ -581,6 +589,7 @@ class StatsClient:
                 "pos_label": pos_label,
                 "n_bootstrap": n_bootstrap,
                 "confidence_level": confidence_level,
+                "generate_visualizations": generate_visualizations,
             },
         )
 
@@ -594,6 +603,7 @@ class StatsClient:
         is_base64: bool = False,
         model_names: Optional[List[str]] = None,
         method: str = "delong",
+        generate_visualizations: bool = True,
     ) -> Dict[str, Any]:
         """Submit ROC curves comparison job
 
@@ -613,6 +623,7 @@ class StatsClient:
                 "score_columns": score_columns,
                 "model_names": model_names,
                 "method": method,
+                "generate_visualizations": generate_visualizations,
             },
         )
 

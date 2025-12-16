@@ -1634,6 +1634,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         group_col: Optional[str] = None,
         time_points: Optional[List[float]] = None,
         alpha: float = 0.05,
+        generate_plot: bool = True,
     ) -> dict:
         """
         📈 Kaplan-Meier survival analysis with log-rank test.
@@ -1643,6 +1644,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         - Median survival time with 95% CI
         - Log-rank test for group comparisons
         - Survival probability at specified time points
+        - **Kaplan-Meier curve plot (saved to MinIO)**
 
         Args:
             csv_path: Path to CSV file (e.g., /data/sample_data/file.csv)
@@ -1651,12 +1653,14 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             group_col: Optional column for stratification (e.g., "treatment")
             time_points: Specific times to report survival (e.g., [12, 24, 36])
             alpha: Significance level for CI (default: 0.05 for 95% CI)
+            generate_plot: Generate KM curve image (default: True)
 
         Returns:
             survival_curves: KM curves for each group
             median_survival: Median survival with CI per group
             log_rank_test: Test for difference between groups (if grouped)
             survival_at_times: Survival probability at specified times
+            visualizations: List of generated plots with MinIO URLs
         """
         try:
             # Read CSV from path
@@ -1665,7 +1669,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
                 return result
             csv_content = result
 
-            result = await stats_client.submit_survival_kaplan_meier_job(
+            result = await stats_client.submit_kaplan_meier_job(
                 csv_content=csv_content,
                 is_base64=False,
                 user_id="mcp_user",
@@ -1673,7 +1677,8 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
                 event_column=event_col,
                 group_column=group_col,
                 time_points=time_points,
-                alpha=alpha,
+                confidence_level=1 - alpha,
+                generate_visualizations=generate_plot,
             )
 
             job_id = result.get("job_id")
@@ -2247,6 +2252,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         confidence_level: float = 0.95,
         n_bootstrap: int = 1000,
         threshold_method: str = "youden",
+        generate_plot: bool = True,
     ) -> dict:
         """
         📈 Compute ROC curve with AUC and confidence intervals.
@@ -2256,6 +2262,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         - AUC with DeLong or bootstrap confidence intervals
         - Optimal threshold selection
         - Sensitivity, specificity, PPV, NPV at optimal point
+        - **ROC curve plot (saved to MinIO)**
 
         Threshold selection methods:
         - youden: Maximizes Youden's J (sensitivity + specificity - 1)
@@ -2271,6 +2278,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             confidence_level: CI level (default 0.95 for 95% CI)
             n_bootstrap: Bootstrap samples for CI (default 1000)
             threshold_method: How to select optimal threshold
+            generate_plot: Generate ROC curve image (default: True)
 
         Returns:
             auc: Area Under the ROC Curve
@@ -2280,6 +2288,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             optimal_metrics: Sens, spec, PPV, NPV at optimal threshold
             curve: List of ROC points (threshold, fpr, tpr, sens, spec)
             interpretation: Text description of model performance
+            visualizations: List of generated plots with MinIO URLs
         """
         try:
             # Read CSV from path
@@ -2292,12 +2301,12 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
                 csv_content=csv_content,
                 is_base64=False,
                 user_id="mcp_user",
-                y_true_column=y_true_col,
-                y_score_column=y_score_col,
+                true_column=y_true_col,
+                score_column=y_score_col,
                 pos_label=pos_label,
                 confidence_level=confidence_level,
                 n_bootstrap=n_bootstrap,
-                threshold_method=threshold_method,
+                generate_visualizations=generate_plot,
             )
 
             job_id = result.get("job_id")
@@ -2326,6 +2335,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         model_score_cols: List[str],
         model_names: Optional[List[str]] = None,
         method: str = "delong",
+        generate_plot: bool = True,
     ) -> dict:
         """
         🔬 Compare ROC curves from multiple models using DeLong test.
@@ -2348,6 +2358,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             model_score_cols: List of columns with predicted probabilities
             model_names: Optional names for models (for output clarity)
             method: 'delong' (recommended) or 'bootstrap'
+            generate_plot: Generate comparison plot (default: True)
 
         Returns:
             models: Per-model results (AUC, CI, SE)
@@ -2359,6 +2370,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
                 - ci: Confidence interval for difference
             best_model: Model with highest AUC
             recommendation: Statistical interpretation
+            visualizations: List of generated plots with MinIO URLs
         """
         try:
             # Read CSV from path
@@ -2371,10 +2383,11 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
                 csv_content=csv_content,
                 is_base64=False,
                 user_id="mcp_user",
-                y_true_column=y_true_col,
-                model_score_columns=model_score_cols,
+                true_column=y_true_col,
+                score_columns=model_score_cols,
                 model_names=model_names,
                 method=method,
+                generate_visualizations=generate_plot,
             )
 
             job_id = result.get("job_id")
@@ -2572,9 +2585,10 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         y_true_col: str,
         y_score_col: str,
         threshold: Optional[float] = None,
+        generate_plot: bool = True,
     ) -> dict:
         """
-        🏆 Complete classifier evaluation report.
+        🏆 Complete classifier evaluation report with visualizations.
 
         Comprehensive evaluation combining all ROC analysis tools:
 
@@ -2592,9 +2606,10 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
            - Hosmer-Lemeshow test
            - Calibration curve
 
-        4. **Clinical Utility** (optional)
-           - Net benefit analysis
-           - Decision curve
+        4. **Visualizations** (saved to MinIO)
+           - ROC curve plot
+           - Calibration plot
+           - Confusion matrix heatmap
 
         Perfect for publication-ready classifier assessment.
 
@@ -2603,6 +2618,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             y_true_col: Column with true binary labels
             y_score_col: Column with predicted probabilities
             threshold: Classification threshold (default: optimal)
+            generate_plot: Generate all evaluation plots (default: True)
 
         Returns:
             roc_analysis: Full ROC curve results
@@ -2610,6 +2626,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             classification_report: Metrics at threshold
             summary: Executive summary text
             publication_text: Ready-to-use results paragraph
+            visualizations: List of generated plots with MinIO URLs
         """
         try:
             # Read CSV from path
@@ -2625,6 +2642,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
                 y_true_column=y_true_col,
                 y_score_column=y_score_col,
                 threshold=threshold,
+                generate_visualizations=generate_plot,
             )
 
             job_id = result.get("job_id")
