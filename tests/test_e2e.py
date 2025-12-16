@@ -25,9 +25,13 @@ from pathlib import Path
 
 import httpx
 import pandas as pd
+from dotenv import load_dotenv
 from minio import Minio
 
 import os
+
+# Load .env file from project root
+load_dotenv(Path(__file__).parent.parent / ".env")
 
 # Path to sample data
 SAMPLE_DATA_DIR = Path(__file__).parent.parent / "sample_data"
