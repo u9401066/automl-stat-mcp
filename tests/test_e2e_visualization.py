@@ -128,10 +128,9 @@ def event_loop():
 
 
 @pytest.fixture
-async def stats_client():
-    """Create async HTTP client for stats service."""
-    async with httpx.AsyncClient(timeout=TIMEOUT) as client:
-        yield client
+def stats_client():
+    """Create HTTP client for stats service (not pre-opened)."""
+    return httpx.AsyncClient(timeout=TIMEOUT)
 
 
 @pytest.fixture

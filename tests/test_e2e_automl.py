@@ -117,10 +117,9 @@ def event_loop():
 
 
 @pytest.fixture
-async def automl_client():
-    """Create async HTTP client for automl service."""
-    async with httpx.AsyncClient(timeout=TIMEOUT) as client:
-        yield client
+def automl_client():
+    """Create HTTP client for automl service (not pre-opened)."""
+    return httpx.AsyncClient(timeout=TIMEOUT)
 
 
 @pytest.fixture(scope="module")
