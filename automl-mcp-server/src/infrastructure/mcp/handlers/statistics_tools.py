@@ -218,7 +218,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
 
     # ==================== AUTO-ANALYZE (Smart Analysis) ====================
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def auto_analyze(
         dataset_id: str,
         user_id: str,
@@ -282,7 +282,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             target_column=target_column,
         )
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def run_quick_auto_analyze(
         dataset_id: str,
         user_id: str,
@@ -358,7 +358,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             "message": f"Analysis did not complete in {wait_timeout}s. Use get_stats_job_status('{job_id}') to check.",
         }
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def get_analysis_capabilities() -> dict:
         """
         📋 Get capabilities of the auto-analyze engine.
@@ -370,7 +370,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
 
     # ==================== EDA (ydata-profiling) ====================
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def submit_eda_job(
         dataset_id: str,
         user_id: str,
@@ -408,7 +408,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             minimal=minimal,
         )
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def submit_tableone_job(
         dataset_id: str,
         user_id: str,
@@ -528,7 +528,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             limit=limit,
         )
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def get_column_suggestions(
         dataset_id: str,
         user_id: str,
@@ -559,7 +559,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             user_id=user_id,
         )
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def preview_dataset_stats(
         dataset_id: str,
         n_rows: int = 10,
@@ -585,7 +585,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             n_rows=n_rows,
         )
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def run_quick_eda(
         dataset_id: str,
         user_id: str,
@@ -655,7 +655,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             "message": f"Job did not complete within {wait_timeout} seconds. Check status with get_stats_job_status()",
         }
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def run_quick_tableone(
         dataset_id: str,
         user_id: str,
@@ -746,7 +746,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
 
     # ==================== DIRECT ANALYSIS (No MinIO Storage) ====================
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def analyze_csv_directly(
         csv_path: str,
         user_id: str,
@@ -1137,7 +1137,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         except Exception as e:
             return {"status": "error", "error": str(e)}
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def check_multicollinearity(
         csv_path: str,
         columns: Optional[List[str]] = None,
@@ -1235,7 +1235,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         except Exception as e:
             return {"status": "error", "error": str(e)}
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def run_full_statistical_analysis(
         csv_path: str,
         target_column: Optional[str] = None,
@@ -1474,7 +1474,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         except Exception as e:
             return {"status": "error", "error": str(e)}
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def get_tableone_preview(
         csv_path: str,
         groupby: Optional[str] = None,
@@ -1764,7 +1764,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         except Exception as e:
             return {"status": "error", "error": str(e)}
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def compare_survival(
         csv_path: str,
         time_col: str,
@@ -1832,7 +1832,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         except Exception as e:
             return {"status": "error", "error": str(e)}
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def survival_data_summary(
         csv_path: str,
         time_col: str,
@@ -1898,7 +1898,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
 
     # ==================== PROPENSITY SCORE ANALYSIS ====================
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def estimate_propensity_scores(
         csv_path: str,
         treatment_col: str,
@@ -1961,7 +1961,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         except Exception as e:
             return {"status": "error", "error": str(e)}
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def match_propensity_scores(
         csv_path: str,
         treatment_col: str,
@@ -2099,7 +2099,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         except Exception as e:
             return {"status": "error", "error": str(e)}
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def assess_covariate_balance(
         csv_path: str,
         treatment_col: str,
@@ -2484,7 +2484,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         except Exception as e:
             return {"status": "error", "error": str(e)}
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def analyze_calibration(
         csv_path: str,
         y_true_col: str,
@@ -2650,7 +2650,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
     # Phase 5A: Enhanced ROC/AUC Interactive Tools
     # =========================================================================
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def compare_multiple_roc_curves(
         csv_path: str,
         y_true_col: str,
@@ -2750,7 +2750,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         except Exception as e:
             return {"status": "error", "error": str(e)}
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def interactive_threshold_analysis(
         csv_path: str,
         y_true_col: str,
@@ -2848,7 +2848,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         except Exception as e:
             return {"status": "error", "error": str(e)}
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def generate_roc_publication_report(
         csv_path: str,
         y_true_col: str,
@@ -2956,7 +2956,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
 
     # ==================== POWER ANALYSIS TOOLS (Phase 6) ====================
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def calculate_ttest_sample_size(
         effect_size: float,
         alpha: float = 0.05,
@@ -3010,7 +3010,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         except Exception as e:
             return {"status": "error", "error": str(e)}
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def calculate_ttest_power(
         effect_size: float,
         n1: int,
@@ -3057,7 +3057,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         except Exception as e:
             return {"status": "error", "error": str(e)}
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def calculate_proportion_sample_size(
         p1: float,
         p2: float,
@@ -3107,7 +3107,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         except Exception as e:
             return {"status": "error", "error": str(e)}
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def calculate_proportion_power(
         p1: float,
         p2: float,
@@ -3152,7 +3152,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         except Exception as e:
             return {"status": "error", "error": str(e)}
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def ttest_sensitivity_analysis(
         effect_size: float,
         alpha: float = 0.05,
@@ -3212,7 +3212,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         except Exception as e:
             return {"status": "error", "error": str(e)}
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def proportion_sensitivity_analysis(
         p1: float,
         p2: float,
@@ -3270,7 +3270,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         except Exception as e:
             return {"status": "error", "error": str(e)}
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def calculate_effect_size(
         mean1: Optional[float] = None,
         mean2: Optional[float] = None,
@@ -3376,7 +3376,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
 
     # ==================== PHASE 6.2: ANOVA POWER ANALYSIS ====================
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def calculate_anova_sample_size(
         effect_size: Optional[float] = None,
         k_groups: int = 3,
@@ -3433,7 +3433,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         except Exception as e:
             return {"status": "error", "error": str(e)}
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def calculate_anova_power(
         n_per_group: int,
         effect_size: Optional[float] = None,
@@ -3478,7 +3478,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         except Exception as e:
             return {"status": "error", "error": str(e)}
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def calculate_anova_effect_size(
         group_means: List[float],
         pooled_sd: Optional[float] = None,
@@ -3558,7 +3558,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
 
     # ==================== PHASE 6.2: CHI-SQUARE POWER ANALYSIS ====================
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def calculate_chisquare_sample_size(
         effect_size: Optional[float] = None,
         alpha: float = 0.05,
@@ -3619,7 +3619,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         except Exception as e:
             return {"status": "error", "error": str(e)}
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def calculate_chisquare_power(
         n: int,
         effect_size: Optional[float] = None,
@@ -3669,7 +3669,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         except Exception as e:
             return {"status": "error", "error": str(e)}
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def calculate_chisquare_effect_size(
         observed_proportions: List[float],
         expected_proportions: Optional[List[float]] = None,
@@ -3733,7 +3733,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
 
     # ==================== PHASE 6.3: SURVIVAL ANALYSIS POWER ====================
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def calculate_survival_events(
         hazard_ratio: float,
         alpha: float = 0.05,
@@ -3783,7 +3783,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         except Exception as e:
             return {"status": "error", "error": str(e)}
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def calculate_survival_sample_size(
         hazard_ratio: float,
         alpha: float = 0.05,
@@ -3845,7 +3845,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         except Exception as e:
             return {"status": "error", "error": str(e)}
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def calculate_survival_power(
         hazard_ratio: float,
         n_events: int = None,
@@ -3898,7 +3898,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         except Exception as e:
             return {"status": "error", "error": str(e)}
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def calculate_survival_from_medians(
         median_control: float,
         median_treatment: float,
@@ -3975,7 +3975,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         except Exception as e:
             return {"status": "error", "error": str(e)}
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def convert_hazard_ratio_to_log(
         hazard_ratio: float,
     ) -> Dict[str, Any]:

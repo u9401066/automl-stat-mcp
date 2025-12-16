@@ -17,11 +17,13 @@ Tool Categories:
 
 from .automl_handler import AutoMLHandler
 from .integrated_tools import register_integrated_tools, resolve_csv_path
+from .power_tools import register_power_tools
 from .resources import register_resources
 
 __all__ = [
     "AutoMLHandler",
     "register_integrated_tools",
+    "register_power_tools",
     "register_resources",
     "resolve_csv_path",
 ]

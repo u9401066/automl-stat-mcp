@@ -17,7 +17,7 @@ from .base import wait_for_completion
 def register_orchestration_tools(mcp: FastMCP, client: AutoMLClient) -> None:
     """Register smart orchestration tools"""
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def wait_for_job(
         job_id: Annotated[str, Field(description="Job ID to wait for")],
         user_id: Annotated[str, Field(description="User ID")],
@@ -137,7 +137,7 @@ def register_orchestration_tools(mcp: FastMCP, client: AutoMLClient) -> None:
 
         return result
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def quick_train(
         minio_path: Annotated[str, Field(description="Path to CSV file in MinIO (e.g., 'bucket/data.csv')")],
         target_column: Annotated[str, Field(description="Name of the target/label column")],
@@ -241,7 +241,7 @@ def register_orchestration_tools(mcp: FastMCP, client: AutoMLClient) -> None:
 
         return response
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def analyze_dataset(
         dataset_id: Annotated[str, Field(description="Dataset ID to analyze")],
         target_column: Annotated[str, Field(description="Target column for analysis")],
@@ -283,7 +283,7 @@ def register_orchestration_tools(mcp: FastMCP, client: AutoMLClient) -> None:
         recommendations = _get_recommendations(row_count, columns, target_column, dataset)
         return recommendations
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def get_training_summary(
         user_id: Annotated[str, Field(description="User ID")],
         session_id: Annotated[Optional[str], Field(description="Optional session ID")] = None,

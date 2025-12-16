@@ -61,7 +61,7 @@ def register_training_tools(mcp: FastMCP, client: AutoMLClient) -> None:
             metric=metric,
         )
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def submit_specific_job(
         dataset_id: Annotated[str, Field(description="Dataset ID to train on")],
         target_column: Annotated[str, Field(description="Name of the target/label column")],
@@ -103,7 +103,7 @@ def register_training_tools(mcp: FastMCP, client: AutoMLClient) -> None:
             time_limit=time_limit,
         )
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def submit_compare_job(
         dataset_id: Annotated[str, Field(description="Dataset ID to train on")],
         target_column: Annotated[str, Field(description="Name of the target/label column")],

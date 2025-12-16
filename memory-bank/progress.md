@@ -2,16 +2,25 @@
 
 ## Doing
 
-### 🚧 MCP Tools 精簡 (98 → 50)
-- **目標**: 將 98+ 工具精簡到 50 個
-- **策略**:
-  1. ✅ 建立整合工具 (smart_analyze, analyze_medical_study)
-  2. ✅ 建立 MCP Resources (減少查詢類工具)
-  3. 🚧 刪除被取代的舊工具
-  4. ⏳ 更新文檔和測試
-- **進度**: 4/50 新工具完成，待刪除 ~48 個舊工具
+(目前無進行中任務)
 
 ## Done
+
+### 2025-12-16 - MCP Tools 精簡完成 (98 → 50) ✅
+- **目標達成**: 50 個公開工具，53 個隱藏
+- **新增工具**:
+  - `integrated_tools.py`: smart_analyze, analyze_medical_study, quick_preview, compare_treatment_groups (4)
+  - `power_tools.py`: power_ttest, power_proportion, power_anova, power_chisquare, power_survival (5)
+  - `resources.py`: MCP Resources (algorithms, health, paths, presets)
+- **驗證結果**:
+  - Power Analysis (18 隱藏) → 5 統一工具
+  - Core Analysis: 恢復 2 個獨特 workflow 工具
+  - EDA/TableOne (7 隱藏) → generate_tableone_directly 替代
+  - Survival/Propensity/ROC (9 隱藏) → 避免子模組重複
+  - Orchestration (4 隱藏) → train_and_wait 替代
+  - Info (2 隱藏) → MCP Resources 替代
+  - Direct (3 隱藏) → smart_analyze 替代
+- **設計文檔**: `docs/design-issues/004-tool-consolidation-plan.md`
 
 ### 2025-12-16 - MCP 資料分析 Skills 建立
 - **新增 6 個 MCP 分析 Skills**:

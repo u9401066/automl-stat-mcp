@@ -95,7 +95,7 @@ def register_smart_tools(mcp: FastMCP, automl_client) -> None:
 
     # ==================== SMART DATA ANALYSIS ====================
 
-    @mcp.tool()
+    @mcp.tool()  # RESTORED: unique functionality (data validation + cleaning workflow)
     async def start_data_analysis(
         csv_content: str,
         user_id: str,
@@ -255,7 +255,7 @@ def register_smart_tools(mcp: FastMCP, automl_client) -> None:
                 "message": "Failed to parse or preview data. Please check the CSV format.",
             }
 
-    @mcp.tool()
+    @mcp.tool()  # RESTORED: unique functionality (data cleaning + persistent storage)
     async def execute_analysis_ticket(
         ticket_id: str,
         csv_content: str,
@@ -471,7 +471,7 @@ def register_smart_tools(mcp: FastMCP, automl_client) -> None:
                 "error": str(e),
             }
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def check_analysis_progress(
         job_id: str,
     ) -> dict:

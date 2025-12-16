@@ -15,7 +15,7 @@ from ..client import AutoMLClient
 def register_direct_tools(mcp: FastMCP, client: AutoMLClient) -> None:
     """Register all direct analysis tools"""
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def direct_ml_analyze(
         csv_content: Annotated[str, Field(description="CSV data as string (can be base64 encoded)")],
         user_id: Annotated[str, Field(description="User ID")],
@@ -73,7 +73,7 @@ def register_direct_tools(mcp: FastMCP, client: AutoMLClient) -> None:
             target_column=target_column,
         )
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def direct_ml_quick_stats(
         csv_content: Annotated[str, Field(description="CSV data as string")],
         user_id: Annotated[str, Field(description="User ID")],
@@ -103,7 +103,7 @@ def register_direct_tools(mcp: FastMCP, client: AutoMLClient) -> None:
             is_base64=is_base64,
         )
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def direct_preview_data(
         csv_content: Annotated[str, Field(description="CSV data as string")],
         user_id: Annotated[str, Field(description="User ID")],

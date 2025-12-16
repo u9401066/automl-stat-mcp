@@ -13,7 +13,7 @@ from ..client import AutoMLClient
 def register_info_tools(mcp: FastMCP, client: AutoMLClient) -> None:
     """Register info and discovery tools"""
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def list_algorithms() -> Dict[str, Any]:
         """
         List all available machine learning algorithms.
@@ -27,7 +27,7 @@ def register_info_tools(mcp: FastMCP, client: AutoMLClient) -> None:
         """
         return await client.list_algorithms()
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def health_check() -> Dict[str, Any]:
         """
         Check if the AutoML service is healthy.

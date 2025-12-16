@@ -418,7 +418,7 @@ def register_upload_tools(mcp: FastMCP, client: AutoMLClient) -> None:
                 "hint": "Check if file exists and is accessible.",
             }
 
-    @mcp.tool()
+    # @mcp.tool()  # HIDDEN: replaced by integrated tool
     async def get_upload_help() -> Dict[str, Any]:
         """
         ❓ Get help on how to upload datasets.

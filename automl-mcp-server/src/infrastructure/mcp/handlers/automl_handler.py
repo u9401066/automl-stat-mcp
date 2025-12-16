@@ -17,6 +17,7 @@ from .integrated_tools import register_integrated_tools
 from .job_tools import register_job_tools
 from .model_tools import register_model_tools
 from .orchestration_tools import register_orchestration_tools
+from .power_tools import register_power_tools
 from .resources import register_resources
 from .smart_tools import register_smart_tools
 from .statistics_tools import register_statistics_tools
@@ -95,7 +96,8 @@ class AutoMLHandler:
         register_statistics_tools(self._mcp, self._client)
         register_smart_tools(self._mcp, self._client)
         register_cleaning_tools(self._mcp, self._client)
-        register_integrated_tools(self._mcp, self._client)  # NEW: Integrated tools
+        register_integrated_tools(self._mcp, self._client)  # Integrated tools
+        register_power_tools(self._mcp, self._client)  # Consolidated power tools
 
     def _register_resources(self) -> None:
         """Register MCP resources (read-only info)"""
