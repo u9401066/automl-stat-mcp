@@ -100,13 +100,13 @@
 ### Infrastructure
 - [ ] 監控儀表板 (Grafana)
 - [ ] 日誌集中化 (Loki)
-- [ ] CI/CD 自動化測試
+- [x] CI/CD 自動化測試 ✅ 2025-12-16
 - [ ] 模型版本控制 (MLflow)
 
 ### Code Quality
-- [ ] 更多 E2E 測試覆蓋
-- [ ] API 文檔自動生成
-- [ ] Performance benchmarks
+- [x] 更多 E2E 測試覆蓋 ✅ 114 passed (91%)
+- [x] API 文檔自動生成 ✅ FastAPI Swagger
+- [x] Performance benchmarks ✅ ~30ms avg
 
 ---
 
