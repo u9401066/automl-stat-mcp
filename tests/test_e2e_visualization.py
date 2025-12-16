@@ -100,7 +100,7 @@ class TestMinIOResultsFlow:
         """Test that analysis returns result_id for MinIO storage."""
         async with stats_client as client:
             resp = await client.post(
-                f"{STATS_API_URL}/analysis/compare-groups",
+                f"{STATS_API_URL}/direct/analyze",
                 json={
                     "csv_path": SAMPLE_DATA["iris"],
                     "group_column": "species",
@@ -148,7 +148,7 @@ class TestROCVisualizationFlow:
         """Test that ROC analysis generates curve figure."""
         async with stats_client as client:
             resp = await client.post(
-                f"{STATS_API_URL}/roc/compute",
+                f"{STATS_API_URL}/roc/compute/submit",
                 json={
                     "csv_path": SAMPLE_DATA["breast_cancer"],
                     "y_true_col": "diagnosis",
@@ -176,7 +176,7 @@ class TestROCVisualizationFlow:
         """Test ROC comparison generates comparison figure."""
         async with stats_client as client:
             resp = await client.post(
-                f"{STATS_API_URL}/roc/compare",
+                f"{STATS_API_URL}/roc/compare/submit",
                 json={
                     "csv_path": SAMPLE_DATA["breast_cancer"],
                     "y_true_col": "diagnosis",
@@ -207,7 +207,7 @@ class TestSurvivalVisualizationFlow:
         """Test Kaplan-Meier curve generation."""
         async with stats_client as client:
             resp = await client.post(
-                f"{STATS_API_URL}/survival/kaplan-meier",
+                f"{STATS_API_URL}/survival/kaplan-meier/submit",
                 json={
                     "csv_path": SAMPLE_DATA["rossi"],
                     "time_column": "week",
@@ -238,7 +238,7 @@ class TestSurvivalVisualizationFlow:
         """Test survival curves with group comparison."""
         async with stats_client as client:
             resp = await client.post(
-                f"{STATS_API_URL}/survival/kaplan-meier",
+                f"{STATS_API_URL}/survival/kaplan-meier/submit",
                 json={
                     "csv_path": SAMPLE_DATA["rossi"],
                     "time_column": "week",
@@ -270,7 +270,7 @@ class TestFullEvaluationFlow:
         """Test that full ROC evaluation stores results."""
         async with stats_client as client:
             resp = await client.post(
-                f"{STATS_API_URL}/roc/full-eval",
+                f"{STATS_API_URL}/roc/full-eval/submit",
                 json={
                     "csv_path": SAMPLE_DATA["breast_cancer"],
                     "y_true_col": "diagnosis",
@@ -310,7 +310,7 @@ class TestVisualizationURLs:
         """Test that visualization URLs are valid MinIO paths."""
         async with stats_client as client:
             resp = await client.post(
-                f"{STATS_API_URL}/roc/compute",
+                f"{STATS_API_URL}/roc/compute/submit",
                 json={
                     "csv_path": SAMPLE_DATA["breast_cancer"],
                     "y_true_col": "diagnosis",
@@ -355,7 +355,7 @@ class TestCompleteVisualizationWorkflow:
         async with stats_client as client:
             # 1. Submit job
             resp = await client.post(
-                f"{STATS_API_URL}/roc/full-eval",
+                f"{STATS_API_URL}/roc/full-eval/submit",
                 json={
                     "csv_path": SAMPLE_DATA["breast_cancer"],
                     "y_true_col": "diagnosis",

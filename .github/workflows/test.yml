@@ -1,0 +1,148 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [ master, main, develop ]
+  pull_request:
+    branches: [ master, main ]
+  workflow_dispatch:  # 允許手動觸發
+
+env:
+  PYTHON_VERSION: "3.10"
+
+jobs:
+  # ==========================================================================
+  # Job 1: Unit Tests (快速, 不需要 Docker)
+  # ==========================================================================
+  unit-tests:
+    runs-on: ubuntu-latest
+    name: Unit Tests
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-asyncio httpx pandas numpy
+      
+      - name: Run unit tests
+        run: |
+          python -m pytest tests/test_tool_logic.py -v --tb=short
+        continue-on-error: false
+
+  # ==========================================================================
+  # Job 2: E2E Tests (需要 Docker Compose)
+  # ==========================================================================
+  e2e-tests:
+    runs-on: ubuntu-latest
+    name: E2E Tests
+    needs: unit-tests  # 先跑 unit tests
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-asyncio httpx pandas numpy
+      
+      - name: Create .env file
+        run: |
+          cat > .env << 'EOF'
+          MINIO_ROOT_USER=minioadmin
+          MINIO_ROOT_PASSWORD=minioadmin
+          REDIS_URL=redis://redis:6379
+          MINIO_ENDPOINT=minio:9000
+          EOF
+      
+      - name: Start services
+        run: |
+          docker compose up -d --build
+          echo "Waiting for services to be ready..."
+          sleep 30
+      
+      - name: Check service health
+        run: |
+          echo "Checking AutoML API..."
+          curl -f http://localhost:8001/health || exit 1
+          echo "Checking Stats API..."
+          curl -f http://localhost:8003/health || exit 1
+          echo "All services healthy!"
+      
+      - name: Run E2E tests
+        run: |
+          python -m pytest tests/ -v --tb=short -x --ignore=tests/test_tool_logic.py
+        env:
+          AUTOML_API_URL: http://localhost:8001
+          STATS_API_URL: http://localhost:8003
+      
+      - name: Show logs on failure
+        if: failure()
+        run: |
+          docker compose logs --tail=100
+      
+      - name: Stop services
+        if: always()
+        run: |
+          docker compose down -v
+
+  # ==========================================================================
+  # Job 3: Code Quality
+  # ==========================================================================
+  code-quality:
+    runs-on: ubuntu-latest
+    name: Code Quality
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Install linters
+        run: |
+          pip install ruff
+      
+      - name: Run Ruff linter
+        run: |
+          ruff check --select=E,F,W --ignore=E501 automl-service/src/ stats-service/src/ automl-mcp-server/src/ || true
+        continue-on-error: true  # 暫時不阻止 CI
+
+  # ==========================================================================
+  # Job 4: Security Scan
+  # ==========================================================================
+  security:
+    runs-on: ubuntu-latest
+    name: Security Scan
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Install safety
+        run: pip install safety
+      
+      - name: Check dependencies
+        run: |
+          safety check -r automl-service/requirements.txt || true
+          safety check -r stats-service/requirements.txt || true
+        continue-on-error: true  # 暫時不阻止 CI

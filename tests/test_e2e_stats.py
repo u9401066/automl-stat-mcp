@@ -116,7 +116,7 @@ class TestTableOneFlow:
     async def test_tableone_heart_disease(self, stats_client):
         """Generate TableOne for heart disease dataset grouped by target."""
         resp = await stats_client.post(
-            f"{STATS_API_URL}/stats/tableone/submit",
+            f"{STATS_API_URL}/tableone/submit",
             json={
                 "csv_path": SAMPLE_DATA["heart"],
                 "groupby": "target",
@@ -150,7 +150,7 @@ class TestTableOneFlow:
     async def test_tableone_with_specific_columns(self, stats_client):
         """Generate TableOne with selected columns only."""
         resp = await stats_client.post(
-            f"{STATS_API_URL}/stats/tableone/submit",
+            f"{STATS_API_URL}/tableone/submit",
             json={
                 "csv_path": SAMPLE_DATA["heart"],
                 "groupby": "target",
@@ -169,7 +169,7 @@ class TestTableOneFlow:
     async def test_tableone_titanic_by_survived(self, stats_client):
         """Generate TableOne for Titanic grouped by survived."""
         resp = await stats_client.post(
-            f"{STATS_API_URL}/stats/tableone/submit",
+            f"{STATS_API_URL}/tableone/submit",
             json={
                 "csv_path": SAMPLE_DATA["titanic"],
                 "groupby": "survived",
@@ -196,7 +196,7 @@ class TestEDAFlow:
     async def test_auto_analyze_iris(self, stats_client):
         """Run auto analysis on Iris dataset."""
         resp = await stats_client.post(
-            f"{STATS_API_URL}/stats/auto-analyze/submit",
+            f"{STATS_API_URL}/auto-analyze/submit",
             json={
                 "csv_path": SAMPLE_DATA["iris"],
                 "user_id": TEST_USER_ID,
@@ -216,7 +216,7 @@ class TestEDAFlow:
     async def test_auto_analyze_with_target(self, stats_client):
         """Run auto analysis with specified target column."""
         resp = await stats_client.post(
-            f"{STATS_API_URL}/stats/auto-analyze/submit",
+            f"{STATS_API_URL}/auto-analyze/submit",
             json={
                 "csv_path": SAMPLE_DATA["breast_cancer"],
                 "target_column": "diagnosis",
@@ -243,7 +243,7 @@ class TestEDAFlow:
         # Try both possible endpoints
         if resp.status_code != 200:
             resp = await stats_client.post(
-                f"{STATS_API_URL}/stats/quick-eda",
+                f"{STATS_API_URL}/eda/preview",
                 json={
                     "csv_path": SAMPLE_DATA["iris"],
                     "user_id": TEST_USER_ID,
@@ -357,7 +357,7 @@ class TestSurvivalAnalysisFlow:
     async def test_kaplan_meier(self, stats_client):
         """Run Kaplan-Meier analysis."""
         resp = await stats_client.post(
-            f"{STATS_API_URL}/survival/kaplan-meier",
+            f"{STATS_API_URL}/survival/kaplan-meier/submit",
             json={
                 "csv_path": SAMPLE_DATA["rossi"],
                 "time_column": "week",
@@ -375,7 +375,7 @@ class TestSurvivalAnalysisFlow:
     async def test_kaplan_meier_with_groups(self, stats_client):
         """Run Kaplan-Meier with group comparison."""
         resp = await stats_client.post(
-            f"{STATS_API_URL}/survival/kaplan-meier",
+            f"{STATS_API_URL}/survival/kaplan-meier/submit",
             json={
                 "csv_path": SAMPLE_DATA["rossi"],
                 "time_column": "week",
@@ -394,7 +394,7 @@ class TestSurvivalAnalysisFlow:
     async def test_cox_regression(self, stats_client):
         """Run Cox proportional hazards regression."""
         resp = await stats_client.post(
-            f"{STATS_API_URL}/survival/cox",
+            f"{STATS_API_URL}/survival/cox/submit",
             json={
                 "csv_path": SAMPLE_DATA["rossi"],
                 "time_column": "week",
@@ -413,7 +413,7 @@ class TestSurvivalAnalysisFlow:
     async def test_log_rank_test(self, stats_client):
         """Run log-rank test for survival comparison."""
         resp = await stats_client.post(
-            f"{STATS_API_URL}/survival/log-rank",
+            f"{STATS_API_URL}/survival/compare/submit",
             json={
                 "csv_path": SAMPLE_DATA["rossi"],
                 "time_column": "week",
@@ -442,7 +442,7 @@ class TestROCAnalysisFlow:
     async def test_compute_roc_curve(self, stats_client):
         """Compute ROC curve from predictions."""
         resp = await stats_client.post(
-            f"{STATS_API_URL}/roc/compute",
+            f"{STATS_API_URL}/roc/compute/submit",
             json={
                 "csv_path": SAMPLE_DATA["breast_cancer"],
                 "y_true_col": "diagnosis",
@@ -460,7 +460,7 @@ class TestROCAnalysisFlow:
     async def test_roc_with_confidence_interval(self, stats_client):
         """Compute ROC curve with bootstrap CI."""
         resp = await stats_client.post(
-            f"{STATS_API_URL}/roc/compute",
+            f"{STATS_API_URL}/roc/compute/submit",
             json={
                 "csv_path": SAMPLE_DATA["breast_cancer"],
                 "y_true_col": "diagnosis",
@@ -484,7 +484,7 @@ class TestROCAnalysisFlow:
     async def test_compare_roc_curves(self, stats_client):
         """Compare two ROC curves (DeLong test)."""
         resp = await stats_client.post(
-            f"{STATS_API_URL}/roc/compare",
+            f"{STATS_API_URL}/roc/compare/submit",
             json={
                 "csv_path": SAMPLE_DATA["breast_cancer"],
                 "y_true_col": "diagnosis",
@@ -503,7 +503,7 @@ class TestROCAnalysisFlow:
     async def test_full_classifier_evaluation(self, stats_client):
         """Full classifier evaluation with multiple metrics."""
         resp = await stats_client.post(
-            f"{STATS_API_URL}/roc/full-eval",
+            f"{STATS_API_URL}/roc/full-eval/submit",
             json={
                 "csv_path": SAMPLE_DATA["breast_cancer"],
                 "y_true_col": "diagnosis",
@@ -535,7 +535,7 @@ class TestPropensityScoreFlow:
     async def test_estimate_propensity_scores(self, stats_client):
         """Estimate propensity scores."""
         resp = await stats_client.post(
-            f"{STATS_API_URL}/propensity/estimate",
+            f"{STATS_API_URL}/propensity/estimate/submit",
             json={
                 "csv_path": SAMPLE_DATA["titanic"],
                 "treatment_col": "sex_binary",  # Needs binary column
@@ -555,7 +555,7 @@ class TestPropensityScoreFlow:
     async def test_propensity_score_matching(self, stats_client):
         """Perform propensity score matching."""
         resp = await stats_client.post(
-            f"{STATS_API_URL}/propensity/match",
+            f"{STATS_API_URL}/propensity/match/submit",
             json={
                 "csv_path": SAMPLE_DATA["titanic"],
                 "treatment_col": "sex_binary",
@@ -583,7 +583,7 @@ class TestCorrelationFlow:
     async def test_correlation_matrix(self, stats_client):
         """Compute correlation matrix."""
         resp = await stats_client.post(
-            f"{STATS_API_URL}/stats/correlation",
+            f"{STATS_API_URL}/direct/analyze",
             json={
                 "csv_path": SAMPLE_DATA["iris"],
                 "method": "pearson",
@@ -600,7 +600,7 @@ class TestCorrelationFlow:
     async def test_vif_multicollinearity(self, stats_client):
         """Check multicollinearity with VIF."""
         resp = await stats_client.post(
-            f"{STATS_API_URL}/stats/vif",
+            f"{STATS_API_URL}/direct/analyze",
             json={
                 "csv_path": SAMPLE_DATA["iris"],
                 "columns": ["sepal_length", "sepal_width", "petal_length", "petal_width"],
@@ -650,7 +650,7 @@ class TestCompleteStatisticalWorkflow:
         
         # 2. TableOne
         resp = await stats_client.post(
-            f"{STATS_API_URL}/stats/tableone/submit",
+            f"{STATS_API_URL}/tableone/submit",
             json={
                 "csv_path": SAMPLE_DATA["heart"],
                 "groupby": "target",
