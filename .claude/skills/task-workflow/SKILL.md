@@ -1,6 +1,6 @@
 ---
 name: task-workflow
-description: Standard workflow for executing a single task from start to finish. Triggers: TW, 做任務, 執行任務, 開始做, task, do task, implement.
+description: Standard workflow for executing a single task from analysis through implementation to verification. Use when working on a specific feature, fixing an issue, or implementing a change. Triggers: TW, 做任務, 執行任務, 開始做, task, do task, implement, 做這個, 實作, 處理這個, work on, 開發.
 ---
 
 # Task Workflow 技能 (任務執行流程)

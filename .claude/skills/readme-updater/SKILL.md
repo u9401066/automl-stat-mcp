@@ -1,6 +1,6 @@
 ---
 name: readme-updater
-description: Intelligently update README.md to sync with code changes. Triggers: readme, 說明, 更新說明, update readme, 文檔同步.
+description: Intelligently update README.md to reflect code changes, new features, and API updates. Use when adding new features, changing APIs, or syncing documentation with code. Triggers: readme, 說明, 更新說明, update readme, 文檔同步, 更新文檔, documentation, docs.
 ---
 
 # README 更新技能

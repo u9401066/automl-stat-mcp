@@ -1,6 +1,6 @@
 ---
 name: debug-workflow
-description: Systematic debugging workflow for finding and fixing issues. Triggers: DEBUG, 除錯, bug, 找問題, 為什麼不work, 出錯了, error, fix bug.
+description: Systematic debugging workflow using hypothesis-test-verify cycle to find and fix issues efficiently. Use when encountering errors, bugs, unexpected behavior, or test failures. Triggers: DEBUG, 除錯, bug, 找問題, 為什麼不work, 出錯了, error, fix bug, 壞了, broken, 不動, 故障, exception, traceback, 報錯.
 ---
 
 # Debug Workflow 技能 (除錯流程)

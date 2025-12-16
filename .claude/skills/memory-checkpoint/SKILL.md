@@ -1,6 +1,6 @@
 ---
 name: memory-checkpoint
-description: Externalize detailed memory to Memory Bank before conversation summarization to prevent context loss. Triggers: CP, checkpoint, save, 存檔, 記一下, 保存, sync memory, dump, 先記著.
+description: Externalize detailed context to Memory Bank before conversation summarization to prevent memory loss. Use when conversation is long, before taking breaks, or when explicitly saving progress. Triggers: CP, checkpoint, save, 存檔, 記一下, 保存, sync memory, dump, 先記著, 記憶點, 存檔點, 先存.
 ---
 
 # Memory Checkpoint 技能 (記憶檢查點)

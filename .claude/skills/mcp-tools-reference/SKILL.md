@@ -1,6 +1,6 @@
 ---
 name: mcp-tools-reference
-description: Quick reference for all AutoML MCP tools. Triggers: MCP 工具, 有什麼工具, 工具清單, tools reference.
+description: Quick reference guide for all 99+ AutoML MCP tools organized by category including data analysis, ML training, statistics, and utilities. Use when looking up tool names, checking available MCP functions, or understanding tool parameters. Triggers: MCP 工具, 有什麼工具, 工具清單, tools reference, 工具列表, available tools, 怎麼用, how to use, tool help, 工具說明.
 ---
 
 # MCP Tools Reference 技能 (MCP 工具速查)

@@ -1,6 +1,6 @@
 ---
 name: code-reviewer
-description: Comprehensive code review checking quality, security, and best practices. Triggers: CR, review, 審查, 檢查, check, 看一下, PR, code review, 品質.
+description: Comprehensive code review checking code quality, security vulnerabilities, and best practices. Use when reviewing pull requests, checking code before merge, or evaluating code quality. Triggers: CR, review, 審查, 檢查, check, 看一下, PR, code review, 品質, pull request, 檢視程式碼.
 ---
 
 # 程式碼審查技能

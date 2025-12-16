@@ -1,6 +1,6 @@
 ---
 name: project-audit
-description: Comprehensive project audit against CONSTITUTION and bylaws. Triggers: AUDIT, 審計, 檢查專案, 健康檢查, 整理專案, review project.
+description: Comprehensive project audit checking compliance with CONSTITUTION, bylaws, architecture, and best practices. Use when reviewing project health, preparing for major releases, or onboarding. Triggers: AUDIT, 審計, 檢查專案, 健康檢查, 整理專案, review project, 專案檢查, compliance, 檢核, 品質檢查, health check.
 ---
 
 # Project Audit 技能 (專案審計)

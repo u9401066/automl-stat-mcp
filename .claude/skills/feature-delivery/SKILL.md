@@ -1,6 +1,6 @@
 ---
 name: feature-delivery
-description: Complete feature delivery workflow with proper documentation and handoff. Triggers: DELIVER, 交付, 完成功能, feature done, ship it, 交給用戶.
+description: Complete feature delivery workflow including testing, documentation, and handoff to ensure features are production-ready. Use when a feature is complete and needs final checks before release. Triggers: DELIVER, 交付, 完成功能, feature done, ship it, 交給用戶, ready to ship, 可以上線, 發布, release, 準備好了.
 ---
 
 # Feature Delivery 技能 (功能交付)

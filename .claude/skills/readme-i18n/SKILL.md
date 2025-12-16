@@ -1,6 +1,6 @@
 ---
 name: readme-i18n
-description: Maintain multilingual README versions (English primary, Chinese translation). Triggers: i18n, 翻譯, translate, 多語言, sync readme, 中英文, bilingual.
+description: Maintain multilingual README versions with English as primary and Chinese translation. Use when updating documentation in multiple languages or syncing translations. Triggers: i18n, 翻譯, translate, 多語言, sync readme, 中英文, bilingual, 語言同步, internationalization.
 ---
 
 # Skill: README 國際化 (i18n)

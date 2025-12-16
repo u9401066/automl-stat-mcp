@@ -1,6 +1,6 @@
 ---
 name: result-delivery-workflow
-description: Result delivery and file sharing workflow for reports, data, and visualizations. Triggers: 下載結果, 取得報告, 傳檔案, share results, download.
+description: Result delivery workflow for retrieving analysis results, downloading files from MinIO, and sharing reports with users. Use when user wants to download results, export reports, get analysis outputs, or share data files. Triggers: 下載結果, 取得報告, 傳檔案, share results, download, 輸出, export, 結果在哪, where is result, 報告, report, 圖表, visualization.
 ---
 
 # Result Delivery Workflow 技能 (結果交付流程)

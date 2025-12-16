@@ -1,6 +1,6 @@
 ---
 name: changelog-updater
-description: Auto-update CHANGELOG.md following Keep a Changelog format. Triggers: CL, changelog, 變更, 版本, version, 更新日誌, whatsnew.
+description: Auto-update CHANGELOG.md following Keep a Changelog format with proper versioning. Use when releasing new versions, documenting changes, or tracking feature history. Triggers: CL, changelog, 變更, 版本, version, 更新日誌, whatsnew, release notes, 新功能記錄.
 ---
 
 # CHANGELOG 更新技能

@@ -1,6 +1,6 @@
 ---
 name: session-start
-description: Initialize work session with context recovery and task planning. Triggers: START, 開始, 開工, 繼續, 接續上次, 我回來了, resume, continue, 今天做什麼.
+description: Initialize work session by recovering context from Memory Bank and planning tasks. Use when starting a new coding session, returning after a break, or resuming work. Triggers: START, 開始, 開工, 繼續, 接續上次, 我回來了, resume, continue, 今天做什麼, good morning, 早安, 上工, 回來了.
 ---
 
 # Session Start 技能 (工作階段開始)

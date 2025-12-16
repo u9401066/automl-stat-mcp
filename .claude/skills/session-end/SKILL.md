@@ -1,6 +1,6 @@
 ---
 name: session-end
-description: Properly end work session with complete handoff documentation. Triggers: END, 結束, 收工, 下班, 今天到這, 先這樣, bye, done for today, wrap up.
+description: Properly end work session by saving context to Memory Bank and creating handoff documentation for future sessions. Use when finishing work for the day, taking a break, or wrapping up. Triggers: END, 結束, 收工, 下班, 今天到這, 先這樣, bye, done for today, wrap up, 結束工作, 先休息, 我要走了, 掙.
 ---
 
 # Session End 技能 (工作階段結束)

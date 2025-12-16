@@ -1,6 +1,6 @@
 ---
 name: master-workflow
-description: Master reference for all workflows and when to use which skill. This is the navigation hub for all project activities.
+description: Master navigation hub showing all available workflows and when to use each skill. Use when unsure which workflow to follow, need guidance on available skills, or want to see all options. Triggers: help, 幫助, 該用什麼, which skill, workflow, 流程, 導覽, navigation, skills list, 有哪些技能.
 ---
 
 # Master Workflow 技能 (工作流總覽)

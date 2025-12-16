@@ -1,6 +1,6 @@
 ---
 name: statistical-analysis-workflow
-description: Advanced statistical analysis workflow including survival, propensity score, ROC, and power analysis. Triggers: 統計分析, 存活分析, 傾向分數, ROC, power analysis.
+description: Advanced statistical analysis including survival analysis (Kaplan-Meier, Cox), propensity score matching (PSM), ROC curve analysis, and power/sample size calculations. Use when doing clinical research analysis, comparing treatment effects, evaluating diagnostic tests, or planning study sample sizes. Triggers: 統計分析, 存活分析, 傾向分數, ROC, power analysis, Kaplan-Meier, Cox, survival, PSM, 配對, AUC, sensitivity, specificity, 敏感度, 特異度, sample size, 樣本數.
 ---
 
 # Statistical Analysis Workflow 技能 (進階統計分析流程)

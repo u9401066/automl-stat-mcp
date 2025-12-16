@@ -1,6 +1,6 @@
 ---
 name: data-analysis-workflow
-description: Complete data analysis workflow using MCP tools. Triggers: 分析資料, analyze data, EDA, 探索資料, 資料分析.
+description: Complete data analysis workflow including EDA, Table One, descriptive statistics, and correlation analysis using MCP AutoML tools. Use when analyzing CSV data, exploring datasets, generating summary statistics, or creating publication-ready Table One reports. Triggers: 分析資料, analyze data, EDA, 探索資料, 資料分析, describe data, 資料探索, 基本統計, summary statistics, Table One, 敘述統計, 看看資料.
 ---
 
 # Data Analysis Workflow 技能 (資料分析流程)
