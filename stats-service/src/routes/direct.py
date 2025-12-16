@@ -96,6 +96,13 @@ async def direct_analyze(request: DirectAnalyzeRequest):
         else:
             csv_str = request.csv_content
         
+        # 早期驗證：空內容檢查
+        if not csv_str or not csv_str.strip():
+            raise HTTPException(
+                status_code=400,
+                detail="CSV content is empty"
+            )
+        
         # Parse CSV to validate and get preview
         df = pd.read_csv(io.StringIO(csv_str))
         
@@ -141,6 +148,9 @@ async def direct_analyze(request: DirectAnalyzeRequest):
             data_preview=preview
         )
         
+    except HTTPException:
+        # 讓 HTTPException 直接通過，不要被 except Exception 捕獲
+        raise
     except pd.errors.ParserError as e:
         raise HTTPException(
             status_code=400,
