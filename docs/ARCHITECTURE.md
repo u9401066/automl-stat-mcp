@@ -96,7 +96,6 @@ This system provides AI Agents with AutoML and statistical analysis capabilities
                │  │  Volume Mounts               │   │
                │  │  • /data/sample_data (RO)   │   │
                │  │  • /data/projects (RW)      │   │
-               │  │  • /data/results (RW)       │   │
                │  └──────────────────────────────┘   │
                └──────────────────────────────────────┘
 ```

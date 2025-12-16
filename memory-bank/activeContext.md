@@ -60,11 +60,10 @@
 - `visualization/group_comparison.py` - 組間比較（箱形圖、直方圖）
 - `visualization/automl.py` - AutoML 結果（特徵重要性、SHAP、學習曲線）
 
-**Phase 8E: Local Results Storage**
-- `results/manager.py` - JobResultsManager 本地結果管理
-- `results/worker_mixin.py` - Worker 整合 mixin
-- 目錄結構：`/results/{user_id}/{job_name}_{timestamp}/`
-- 內容：metadata.json, report.json, report.html, figures/, data/
+**Results Storage (全部存 MinIO)**
+- 分析結果: Redis (7天 TTL) + MinIO (永久)
+- 視覺化圖片: MinIO `stats-reports/{user_id}/`
+- 查詢工具: `list_analysis_results`, `list_user_visualizations`
 
 **使用者可直接存取:**
 - 瀏覽 `./results/eric/` 看自己的分析結果
@@ -74,12 +73,9 @@
 ### ✅ 已整合
 
 1. **Worker 整合範例**
-   - `process_roc_full_eval_job()` 使用 JobResultsManager
-   - 自動儲存圖表到 figures/
-   - 生成 HTML 視覺化報告
-
-2. **Docker Volume Mount**
-   - `./results:/data/results` 加到 MCP, stats-service, stats-worker
+   - `process_roc_full_eval_job()` 使用 MinIO 上傳
+   - 自動儲存圖表到 MinIO stats-reports bucket
+   - 生成分析結果並存到 Redis + MinIO
 
 3. **文檔更新**
    - README.md, CHANGELOG.md, ARCHITECTURE_AUDIT.md

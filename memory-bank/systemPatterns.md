@@ -353,40 +353,23 @@ Metadata JSON 輸出：
 - visualization/__init__.py: 統一導出所有繪圖函數
 
 
-## Local Results Storage Pattern (Phase 8)
+## Results Storage Pattern (MinIO Priority)
 
-除了 MinIO 雲端儲存，同時提供本地目錄結構讓使用者直接瀏覽分析結果。
+所有分析結果儲存到 MinIO 雲端儲存，透過 MCP 工具查詢。
 
-目錄結構：
-```
-/data/results/{user_id}/{job_name}_{timestamp}/
-├── metadata.json      # 任務元資料
-├── report.json        # JSON 格式報告
-├── report.html        # HTML 可視化報告
-├── figures/           # 圖表 PNG 檔案
-│   ├── roc_curve.png
-│   ├── feature_importance.png
-│   └── ...
-└── data/
-    └── source_info.json  # 資料來源追蹤
-```
+儲存架構：
+- **Redis**: 暫存 + 7 天 TTL，快速查詢
+- **MinIO**: 永久儲存，`automl-results/{user_id}/{analysis_type}/{timestamp}_{result_id}.json`
 
-實作元件：
-- JobResultsManager: 管理目錄建立、檔案儲存
-- WorkerResultsMixin: Worker 整合 mixin
-- RESULTS_BASE_PATH: 可配置基礎路徑
-
-優點：
-1. 使用者可直接瀏覽檔案系統存取結果
-2. HTML 報告可用瀏覽器開啟
-3. 圖表可直接複製到報告中
-4. MinIO 仍作為備份和 API 存取
+查詢工具：
+- `list_analysis_results(user_id)` - 列出使用者的分析結果
+- `get_analysis_result(result_id)` - 取得特定結果
+- `list_user_visualizations(user_id)` - 列出視覺化圖片
 
 ### Examples
 
-- stats-worker/src/results/manager.py: JobResultsManager 類別
-- stats-worker/src/results/worker_mixin.py: WorkerResultsMixin
-- docker-compose.yml: ./results:/data/results volume mount
+- stats-worker/src/results/manager.py: JobResultsManager 類別（MinIO 上傳）
+- automl-mcp-server/src/infrastructure/mcp/handlers/result_storage.py: ResultStorage 類別
 
 
 ## Worker Mixin Pattern
@@ -394,20 +377,10 @@ Metadata JSON 輸出：
 使用 Mixin 類別為 Worker 添加可選功能，保持主類別簡潔。Mixin 提供特定功能的方法，Worker 透過多重繼承獲得這些功能。
 
 好處：
-1. 功能解耦：Local Results 相關邏輯在 WorkerResultsMixin
+1. 功能解耦：MinIO 上傳相關邏輯在 WorkerResultsMixin
 2. 可選性：可選擇是否繼承 Mixin
 3. 測試簡單：Mixin 可獨立測試
 4. 擴展容易：新功能寫新 Mixin
-
-使用方式：
-```python
-class StatsWorker(WorkerResultsMixin):
-    def process_job(self, job):
-        # 使用 mixin 方法
-        manager = self.create_job_results_manager(job)
-        # ...處理...
-        self.finalize_job_with_local_results(manager, result)
-```
 
 ### Examples
 
