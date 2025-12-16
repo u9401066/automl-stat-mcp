@@ -157,8 +157,13 @@ docker compose exec automl-mcp ls /data/sample_data/
 - **code-reviewer** - 程式碼審查
 - **test-generator** - 測試生成（Unit/Integration/E2E）
 - **project-init** - 專案初始化
-- **test-generator** - 測試生成（Unit/Integration/E2E）
-- **project-init** - 專案初始化
+
+### MCP 資料分析 Skills（本專案核心）
+- **data-analysis-workflow** - 資料探索分析流程 (EDA, Table One)
+- **ml-training-workflow** - ML 模型訓練流程 (AutoML)
+- **statistical-analysis-workflow** - 進階統計分析 (存活、PSM、ROC)
+- **data-cleaning-workflow** - 資料清理前處理
+- **mcp-tools-reference** - MCP 工具速查參考
 
 ---
 

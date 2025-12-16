@@ -2,6 +2,19 @@
 
 ## Done
 
+### 2025-12-16 - MCP 資料分析 Skills 建立
+- **新增 5 個 MCP 分析 Skills**:
+  - `data-analysis-workflow` - 資料探索分析 (EDA, Table One)
+  - `ml-training-workflow` - ML 模型訓練流程 (AutoML)
+  - `statistical-analysis-workflow` - 進階統計 (存活、PSM、ROC、Power)
+  - `data-cleaning-workflow` - 資料清理前處理
+  - `mcp-tools-reference` - MCP 工具速查參考 (83+ 工具)
+- **更新 master-workflow**:
+  - 新增 MCP 資料分析流程圖
+  - 新增 MCP 分析 Skills 快速參照表
+- **更新 AGENTS.md**:
+  - 新增 MCP 資料分析 Skills 分類
+
 ### 2025-12-16 - Workflow Skills 建立
 - **新增 7 個工作流 Skills**:
   - `master-workflow` - 工作流導航中心，決定何時用哪個 Skill

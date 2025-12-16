@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### MCP Data Analysis Skills (New)
+- `.claude/skills/data-analysis-workflow/` - 資料探索分析流程 (EDA, Table One, 相關性)
+- `.claude/skills/ml-training-workflow/` - ML 模型訓練流程 (AutoML, 預測)
+- `.claude/skills/statistical-analysis-workflow/` - 進階統計分析 (存活、PSM、ROC、Power)
+- `.claude/skills/data-cleaning-workflow/` - 資料清理前處理 (缺失值、編碼、篩選)
+- `.claude/skills/mcp-tools-reference/` - MCP 工具速查參考 (83+ 工具完整分類)
+
 #### Workflow Skills (New)
 - `.claude/skills/master-workflow/` - 工作流導航中心
 - `.claude/skills/session-start/` - 工作階段開始（恢復上下文）

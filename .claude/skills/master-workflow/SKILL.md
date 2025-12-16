@@ -98,6 +98,16 @@ description: Master reference for all workflows and when to use which skill. Thi
 | **code-refactor** | 重構 | 程式碼重構 |
 | **ddd-architect** | 架構 | DDD 架構檢查 |
 
+### MCP 資料分析（本專案核心）
+
+| Skill | 觸發詞 | 用途 |
+|-------|--------|------|
+| **data-analysis-workflow** | 分析資料, EDA, describe | 完整資料探索分析 |
+| **ml-training-workflow** | 訓練模型, AutoML, train | ML 模型訓練 |
+| **statistical-analysis-workflow** | 統計分析, 存活分析, PSM | 進階統計分析 |
+| **data-cleaning-workflow** | 資料清理, preprocess | 資料前處理 |
+| **mcp-tools-reference** | 工具清單, MCP 工具 | 工具速查參考 |
+
 ---
 
 ## 🔄 典型工作日流程
@@ -138,6 +148,47 @@ description: Master reference for all workflows and when to use which skill. Thi
 │  17:30  🌙 「收工」                                                  │
 │         ↓                                                           │
 │         session-end → 保存狀態 → 交接報告                            │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 📊 MCP 資料分析流程
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                     MCP 資料分析流程                                 │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  「分析這個資料」                                                     │
+│         ↓                                                           │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │  📊 data-analysis-workflow                                   │    │
+│  │  list_available_files → direct_preview_data → auto_analyze  │    │
+│  └─────────────────────────────────────────────────────────────┘    │
+│                                                                      │
+│  「我要訓練模型」                                                     │
+│         ↓                                                           │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │  🤖 ml-training-workflow                                    │    │
+│  │  upload_dataset → submit_automl_job → get_job_status →      │    │
+│  │  get_model_leaderboard → predict                            │    │
+│  └─────────────────────────────────────────────────────────────┘    │
+│                                                                      │
+│  「做存活分析/傾向分數/ROC」                                          │
+│         ↓                                                           │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │  🔬 statistical-analysis-workflow                           │    │
+│  │  Survival / PSM / ROC / Power Analysis                      │    │
+│  └─────────────────────────────────────────────────────────────┘    │
+│                                                                      │
+│  「清理資料」                                                        │
+│         ↓                                                           │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │  🧹 data-cleaning-workflow                                  │    │
+│  │  handle_missing_values → encode_categorical → filter_rows   │    │
+│  └─────────────────────────────────────────────────────────────┘    │
 │                                                                      │
 └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -211,3 +262,8 @@ description: Master reference for all workflows and when to use which skill. Thi
 | 產生測試 | generate test | test-generator |
 | 重構 | refactor | code-refactor |
 | review | review | code-reviewer |
+| **分析資料, 探索** | **EDA, explore, describe** | **data-analysis-workflow** |
+| **訓練模型** | **train, AutoML, ML** | **ml-training-workflow** |
+| **存活分析, PSM, ROC** | **survival, propensity** | **statistical-analysis-workflow** |
+| **資料清理, 缺失值** | **clean, preprocess** | **data-cleaning-workflow** |
+| **MCP 工具, 工具清單** | **tools, reference** | **mcp-tools-reference** |
