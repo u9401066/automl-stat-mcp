@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Workflow Skills (New)
+- `.claude/skills/master-workflow/` - 工作流導航中心
+- `.claude/skills/session-start/` - 工作階段開始（恢復上下文）
+- `.claude/skills/session-end/` - 工作階段結束（保存狀態）
+- `.claude/skills/task-workflow/` - 單一任務執行流程
+- `.claude/skills/debug-workflow/` - 系統化除錯流程
+- `.claude/skills/feature-delivery/` - 功能完整交付
+- `.claude/skills/project-audit/` - 專案全面審計
+
 #### Project Governance - New Bylaws
 - `.github/bylaws/file-paths.md` - 檔案路徑規範子法
   - Host vs Container 路徑區分

@@ -112,19 +112,51 @@ docker compose exec automl-mcp ls /data/sample_data/
 
 ---
 
+## 🔄 工作流 Skills（最重要！）
+
+**每次工作必用的 Skills：**
+
+| 時機 | Skill | 觸發詞 |
+|------|-------|--------|
+| 開始工作 | `session-start` | 開始, 繼續, resume |
+| 執行任務 | `task-workflow` | 做任務, implement |
+| 遇到 bug | `debug-workflow` | 除錯, bug, error |
+| 功能完成 | `feature-delivery` | 交付, ship it |
+| 準備提交 | `git-precommit` | 準備 commit |
+| 中途保存 | `memory-checkpoint` | checkpoint, 存檔 |
+| 結束工作 | `session-end` | 收工, 下班, bye |
+
+**完整導航：** 見 `.claude/skills/master-workflow/SKILL.md`
+
+---
+
 ## 可用 Skills
 
 位於 `.claude/skills/` 目錄：
 
+### 工作流 Skills（核心）
+- **master-workflow** - 工作流導航中心（入口點）
+- **session-start** - 工作階段開始，恢復上下文
+- **session-end** - 工作階段結束，保存狀態
+- **task-workflow** - 單一任務執行流程
+- **debug-workflow** - 系統化除錯流程
+- **feature-delivery** - 功能完整交付
+- **project-audit** - 專案全面審計
+
+### 文檔維護 Skills
 - **git-precommit** - Git 提交前編排器
-- **ddd-architect** - DDD 架構輔助與檢查
-- **code-refactor** - 主動重構與模組化
 - **memory-updater** - Memory Bank 同步
 - **memory-checkpoint** - 記憶檢查點（Summarize 前外部化）
 - **readme-updater** - README 智能更新
 - **changelog-updater** - CHANGELOG 自動更新
 - **roadmap-updater** - ROADMAP 狀態追蹤
+
+### 程式碼品質 Skills
+- **ddd-architect** - DDD 架構輔助與檢查
+- **code-refactor** - 主動重構與模組化
 - **code-reviewer** - 程式碼審查
+- **test-generator** - 測試生成（Unit/Integration/E2E）
+- **project-init** - 專案初始化
 - **test-generator** - 測試生成（Unit/Integration/E2E）
 - **project-init** - 專案初始化
 
