@@ -2,25 +2,31 @@
 
 ## Current Status (2025-12-16)
 
-### 🎯 剛完成: 整合 template-is-all-you-need 框架
+### 🎯 剛完成: 專案結構審查與測試擴充
 
-**新增組件:**
-- `.claude/skills/` - 12 個 Claude Skills（git-precommit, memory-checkpoint 等）
-- `CONSTITUTION.md` - 專案憲法（DDD、Memory Bank、文檔原則）
-- `.github/bylaws/` - 4 個子法（ddd-architecture, git-workflow, memory-bank, python-environment）
-- `AGENTS.md` - VS Code Copilot Agent 指引
-- `.vscode/settings.json` - 啟用 Claude Skills
+**專案審查結果:**
+- ✅ automl-service, stats-service: DDD 架構符合
+- ⚠️ automl-mcp-server, workers: 結構較扁平（可接受）
+- ✅ Memory Bank: 完整且格式正確
+- ⚠️ Python 環境: 大部分服務缺少 pyproject.toml
+
+**新增測試:**
+- `test_smart_tools_isolated.py` (27 tests) - Ticket生成、CSV解析、問題格式化
+- `test_orchestration_isolated.py` (26 tests) - 推薦生成、Job分類、訓練摘要
+
+**待改進項目:**
+1. 為各服務建立 pyproject.toml（符合 python-environment 子法）
+2. 考慮重構 automl-mcp-server 結構
 
 **可用指令:**
 - 「準備 commit」- 執行完整 Git 提交流程
 - 「checkpoint」- 保存記憶檢查點
 - 「更新 memory」- 同步 Memory Bank
 - 「生成測試」- 自動生成測試
-- 「review 程式碼」- 程式碼審查
 
 ---
 
-## Previous Status (2025-12-10)
+## Previous Status (2025-12-16 earlier)
 
 ### 🎯 平台狀態: v0.5.0 - Visualization + Local Results ✅
 
