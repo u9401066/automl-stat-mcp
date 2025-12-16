@@ -44,8 +44,8 @@ Multi-user AutoML system accessible via AI Agents through MCP (Model Context Pro
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                           MCP Server (Port 8002)                             │
 │  ┌─────────────────────────────────────────────────────────────────────┐    │
-│  │                        98+ MCP Tools                                 │    │
-│  │  AutoML (26) | Stats (57+) | Cleaning (9) | Workflow (3)            │    │
+│  │                        102+ MCP Tools                               │    │
+│  │  AutoML (26) | Stats (61+) | Cleaning (9) | Workflow (3) | Proj (4) │    │
 │  └─────────────────────────────────────────────────────────────────────┘    │
 └──────────────────┬────────────────────────────────────────┬─────────────────┘
                    │                                        │
@@ -165,14 +165,15 @@ curl http://localhost:8001/health
 | **Survival** | `kaplan_meier_survival`, `cox_proportional_hazards` | 存活分析 |
 | **Power** | `calculate_ttest_sample_size`, `calculate_survival_sample_size` | 樣本數 |
 
-See [MCP Tools Inventory](docs/MCP_TOOLS_INVENTORY.md) for complete list (98+ tools).
+See [MCP Tools Inventory](docs/MCP_TOOLS_INVENTORY.md) for complete list (102+ tools).
 
 ## 🆕 Recent Updates (Dec 2025)
 
+- **Project Management Tools** (NEW): `create_project_workspace`, `list_user_visualizations`
 - **Result Persistence**: Analysis results saved to Redis + MinIO with `result_id`
 - **Visualization (Phase 8)**: Publication-quality charts (ROC, KM, SHAP)
 - **Data Cleaning**: 9 preprocessing tools
-- **Local Results**: `/results/{user_id}/` with HTML reports
+- **E2E Tests**: 43 passed, 84% coverage
 
 ## 🔧 Development
 

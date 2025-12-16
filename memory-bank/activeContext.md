@@ -2,21 +2,33 @@
 
 ## Current Status (2025-12-16)
 
-### 🎯 剛完成: 專案結構審查與測試擴充
+### 🎯 剛完成: MCP 專案管理工具新增 + E2E 測試修復
 
-**專案審查結果:**
-- ✅ automl-service, stats-service: DDD 架構符合
-- ⚠️ automl-mcp-server, workers: 結構較扁平（可接受）
-- ✅ Memory Bank: 完整且格式正確
-- ⚠️ Python 環境: 大部分服務缺少 pyproject.toml
+**新增 4 個 MCP 工具：**
+1. `create_project_workspace` - 建立研究專案目錄結構（支援 default, medical_study, ml_project 模板）
+2. `list_project_workspaces` - 列出 /data/projects/ 下的所有專案
+3. `list_user_visualizations` - 列出 MinIO 中的視覺化圖片（PNG, SVG）
+4. `generate_analysis_report` - 從分析結果生成 Markdown 報告
 
-**新增測試:**
-- `test_smart_tools_isolated.py` (27 tests) - Ticket生成、CSV解析、問題格式化
-- `test_orchestration_isolated.py` (26 tests) - 推薦生成、Job分類、訓練摘要
+**E2E 測試狀態：**
+- ✅ 43 passed, 40 skipped, 0 failed
+- ✅ 84% 測試覆蓋率
+- ✅ 修復 httpx AsyncClient fixture 問題
+- ✅ 修復 Power Analysis API 回應格式（`result` vs `power`）
 
-**待改進項目:**
-1. 為各服務建立 pyproject.toml（符合 python-environment 子法）
-2. 考慮重構 automl-mcp-server 結構
+**工具測試結果：**
+- ✅ `create_project_workspace` - 成功建立 `/data/projects/test_study_2025`
+- ✅ `list_analysis_results` - 成功找到 6 個結果
+- ✅ `get_analysis_result` - 成功取回 tableone 結果
+- ⚠️ `list_project_workspaces` - 使用者已停用
+- ⚠️ `list_user_visualizations` - 使用者已停用
+
+**文檔更新：**
+- ✅ mcp-tools-reference/SKILL.md - 新增專案管理工具章節
+- ✅ README.md - 更新工具數量和最新更新
+- ✅ CHANGELOG.md - 記錄新工具
+- ✅ ROADMAP.md - 更新進度
+- ✅ progress.md - 同步進度
 
 **可用指令:**
 - 「準備 commit」- 執行完整 Git 提交流程

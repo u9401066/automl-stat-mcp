@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### MCP Project Management Tools (New)
+- `create_project_workspace` - 建立研究專案目錄結構（支援 default, medical_study, ml_project 模板）
+- `list_project_workspaces` - 列出 /data/projects/ 下的所有專案
+- `list_user_visualizations` - 列出 MinIO 中的視覺化圖片（PNG, SVG）
+- `generate_analysis_report` - 從分析結果生成 Markdown 報告
+
+#### E2E Testing Framework
+- E2E 測試全數通過：43 passed, 40 skipped, 0 failed
+- 覆蓋率測試：84% overall (unit tests: tool_logic, dataflow, service)
+- 修復 httpx AsyncClient fixture 問題
+- 修復 Power Analysis API 回應格式
+
 #### MCP Data Analysis Skills (New)
 - `.claude/skills/data-analysis-workflow/` - 資料探索分析流程 (EDA, Table One, 相關性)
 - `.claude/skills/ml-training-workflow/` - ML 模型訓練流程 (AutoML, 預測)

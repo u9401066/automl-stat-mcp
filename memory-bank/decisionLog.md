@@ -2,6 +2,7 @@
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
+| 2025-12-16 | 新增 4 個 MCP 專案管理工具 (create_project_workspace, list_project_workspaces, list_user_visualizations, generate_analysis_report) | 解決用戶反映的「專案建立不明確」「取回圖片不明確」「報告產生不明確」問題。這些工具讓使用者可以：1) 建立標準化研究專案結構 2) 查詢已儲存的視覺化圖片 3) 從分析結果產生 Markdown 報告。符合 CONSTITUTION 第 7.1 條關於使用者只需透過 MCP 工具操作的原則。 |
 | 2025-12-16 | 整合 template-is-all-you-need 框架 | 引入憲法-子法層級規則系統、Claude Skills 自動化、Memory Bank 規範。統一專案規範，提升 AI 輔助開發效率。 |
 | 2025-12-02 | 採用 FLAML 作為 AutoML 後端 | FLAML 比 auto-sklearn 輕量，安裝簡單，適合單節點 CPU only 部署環境。效能足夠處理 tabular data 的分類和回歸任務。 |
 | 2025-12-02 | 三層架構分離：AutoML Server + Core Library + MCP Server | 解耦設計，便於獨立開發、測試和部署。MCP Server 透過 HTTP 呼叫 AutoML Server，後續可輕鬆替換 AutoML 後端或擴展為多節點。 |

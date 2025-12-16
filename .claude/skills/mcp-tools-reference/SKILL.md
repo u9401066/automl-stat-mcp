@@ -14,7 +14,7 @@ description: Quick reference guide for all 51 AutoML MCP tools organized by cate
 
 ---
 
-## 📊 工具總覽 (51 個公開)
+## 📊 工具總覽 (57 個公開)
 
 | 類別 | 數量 | 主要用途 |
 |------|------|----------|
@@ -31,7 +31,8 @@ description: Quick reference guide for all 51 AutoML MCP tools organized by cate
 | 🗂️ 模型管理 | 4 | 模型操作、預測 |
 | 🔄 智慧工作流 | 2 | 資料驗證與清理 |
 | 📥 結果查詢 | 2 | 分析結果管理 |
-| **總計** | **51** | |
+| 📂 專案管理 | 4 | 專案建立、視覺化、報告 |
+| **總計** | **57** | |
 
 ---
 
@@ -264,6 +265,36 @@ train_and_wait(
 |------|------|
 | `list_analysis_results` | 列出分析結果 |
 | `get_analysis_result` | 取得特定結果 |
+
+---
+
+## 📂 專案管理工具 (4) ⭐ NEW
+
+| 工具 | 用途 | 說明 |
+|------|------|------|
+| `create_project_workspace` | 建立專案目錄 | 支援 default/medical_study/ml_project 模板 |
+| `list_project_workspaces` | 列出專案 | 顯示 /data/projects/ 下所有專案 |
+| `list_user_visualizations` | 列出視覺化 | 查詢 MinIO 中的圖片檔案 |
+| `generate_analysis_report` | 產生報告 | 從分析結果生成 Markdown 報告 |
+
+### create_project_workspace
+```python
+create_project_workspace(
+    project_name="my_study",
+    user_id="eric",
+    template="medical_study"  # default, medical_study, ml_project
+)
+# 返回：project_path, directories[], next_steps[]
+```
+
+### list_user_visualizations
+```python
+list_user_visualizations(
+    user_id="eric",
+    result_type="roc"  # 可選：roc, km_curve, correlation
+)
+# 返回：visualizations[] with URLs
+```
 
 ---
 

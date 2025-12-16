@@ -15,6 +15,7 @@
 | 模組 | 功能 | 工具數 | 狀態 |
 |------|------|--------|------|
 | **AI Framework** | Claude Skills, Constitution-Bylaw | 12 Skills | ✅ NEW |
+| **Project Mgmt** | 專案目錄、視覺化列表、報告產生 | 4 | ✅ NEW |
 | **AutoML Core** | 資料集管理、模型訓練、預測 | 26 | ✅ |
 | **Statistics Core** | EDA、TableOne、智能分析 | 12 | ✅ |
 | **Smart Workflow** | 引導式分析流程 | 3 | ✅ |
@@ -29,7 +30,20 @@
 | **Visualization** | 出版品質圖表 | - | ✅ |
 | **Result Persistence** | Redis + MinIO 儲存 | - | ✅ |
 
-**總計: 98+ MCP 工具**
+**總計: 102+ MCP 工具**
+
+### 🆕 2025-12-16 更新
+
+- **Project Management 完成**
+  - `create_project_workspace` - 建立專案目錄結構
+  - `list_project_workspaces` - 列出專案
+  - `list_user_visualizations` - 查詢視覺化圖片
+  - `generate_analysis_report` - 產生分析報告
+
+- **E2E 測試完善**
+  - 43 tests passed, 40 skipped
+  - 84% 測試覆蓋率
+  - 修復 httpx fixture 和 Power Analysis 回應格式
 
 ### 🆕 2025-12-12 更新
 

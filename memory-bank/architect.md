@@ -5,6 +5,24 @@ This file contains the architectural decisions and design patterns for the Memor
 
 ## Architectural Decisions
 
+### 2025-12-16 新增專案管理工具
+
+新增 4 個 MCP 工具於 `statistics_tools.py`：
+1. `create_project_workspace` - 建立專案目錄結構（支援 3 種模板）
+2. `list_project_workspaces` - 列出 /data/projects/ 下的專案
+3. `list_user_visualizations` - 查詢 MinIO 中的圖片
+4. `generate_analysis_report` - 從分析結果產生報告
+
+**專案模板：**
+- `default`: data/{raw,processed}, analysis, reports, figures
+- `medical_study`: 加入 survival, models, roc, km_curves, forest_plots
+- `ml_project`: 加入 features, models/{trained,evaluation}, notebooks
+
+**儲存位置：**
+- 專案目錄: `/data/projects/{project_name}/`
+- 視覺化圖片: MinIO `stats-reports/{user_id}/`
+- 分析結果: Redis `stats:result:{result_id}` + MinIO
+
 - Smart Workflow with Ticket System implemented for storage decisions
 - Stats service DDD architecture completed
 - Accept dependency pattern for dataset registration
