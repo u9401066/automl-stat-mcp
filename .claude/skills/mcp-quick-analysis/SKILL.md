@@ -111,25 +111,32 @@ def convert_to_container_path(user_path: str) -> str:
 
 ---
 
-## 🎯 工具選擇決策樹
+## 🎯 工具選擇決策樹（51 個工具版本）
 
 ```
 使用者需求
     │
     ├─→ 「看看資料」「概覽」
-    │       └─→ get_quick_stats + direct_preview_data
+    │       └─→ quick_preview（自動路徑解析）
     │
-    ├─→ 「分析這個資料」（有分組欄位）
-    │       └─→ generate_tableone_directly
-    │           ⚠️ 優先於 auto_analyze（更穩定）
+    ├─→ 「分析這個資料」
+    │       └─→ smart_analyze（推薦！）
+    │           • 自動路徑解析
+    │           • 整合 stats + tableone + correlations
+    │           • 有分組 → 自動生成 Table One
     │
     ├─→ 「比較兩組」「治療效果」
-    │       └─→ compare_groups
+    │       └─→ compare_treatment_groups（簡化版）
+    │           或 compare_groups（完整版）
     │           • 自動選擇 t-test 或 Mann-Whitney
     │
     ├─→ 「相關性」「變數關係」
     │       └─→ analyze_correlations
     │           • 自動偵測數值欄位
+    │
+    ├─→ 「VIF」「共線性」
+    │       └─→ check_multicollinearity
+    │           • VIF > 5 表示有問題
     │
     ├─→ 「預測」「訓練模型」
     │       └─→ upload_dataset (storage_mode="temporary")
@@ -137,16 +144,21 @@ def convert_to_container_path(user_path: str) -> str:
     │               └─→ get_model_leaderboard
     │
     ├─→ 「存活分析」「KM」「Cox」
-    │       └─→ activate_group_4
-    │           └─→ kaplan_meier_survival / cox_proportional_hazards
+    │       └─→ kaplan_meier_survival / cox_proportional_hazards
     │
     ├─→ 「傾向分數」「PSM」「IPTW」
-    │       └─→ activate_group_1
-    │           └─→ run_propensity_analysis
+    │       └─→ run_propensity_analysis
     │
-    └─→ 「ROC」「AUC」「最佳閾值」
-            └─→ activate_group_6
-                └─→ compute_roc_curve / find_optimal_threshold
+    ├─→ 「ROC」「AUC」「最佳閾值」
+    │       └─→ compute_roc_curve / find_optimal_threshold
+    │
+    ├─→ 「樣本數計算」「Power」
+    │       └─→ power_ttest / power_proportion / power_anova
+    │           • mode="sample_size" 或 "power"
+    │
+    └─→ 「醫學研究完整分析」
+            └─→ analyze_medical_study
+                • 一站式 RCT 分析
 ```
 
 ---
@@ -168,52 +180,50 @@ DEFAULT_PARAMS = {
 
 ## 📊 範例對話
 
-### 範例 1: 簡單分析
+### 範例 1: 簡單分析（使用整合工具）
 
 **使用者：** 幫我分析 iris.csv
 
 **Agent 執行：**
 ```python
-# Step 1: 路徑轉換
-csv_path = "/data/sample_data/iris.csv"
-
-# Step 2: 快速統計
-get_quick_stats(csv_path=csv_path)
-
-# Step 3: 無分組欄位 → 相關性分析
-analyze_correlations(csv_path=csv_path, user_id="eric")
+# 一站式分析（推薦！）
+smart_analyze(
+    csv_path="iris.csv",  # 自動轉換路徑
+    include_correlations=True
+)
+# 返回：quick_stats + correlations + summary
 ```
 
 ---
 
-### 範例 2: 醫學研究
+### 範例 2: 醫學研究（使用整合工具）
 
 **使用者：** 分析 medical_study_200.csv，比較 treatment_group 對 bp_change 的效果
 
 **Agent 執行：**
 ```python
-csv_path = "/data/sample_data/medical_study_200.csv"
-
-# Step 1: 快速統計
-get_quick_stats(csv_path=csv_path)
-
-# Step 2: Table One (有分組)
-generate_tableone_directly(
-    csv_path=csv_path,
-    group_column="treatment_group",
-    user_id="eric"
+# 方案 A: 完整研究分析（推薦！）
+analyze_medical_study(
+    csv_path="medical_study_200.csv",
+    treatment_column="treatment_group",
+    outcome_columns=["bp_change", "weight_change"]
 )
+# 返回：baseline table + treatment effects + correlations + report
 
-# Step 3: 組間比較
-compare_groups(
-    csv_path=csv_path,
-    numeric_column="bp_change",
-    group_column="treatment_group",
-    user_id="eric"
+# 方案 B: 分步分析
+# Step 1: 帶分組的完整分析
+smart_analyze(
+    csv_path="medical_study_200.csv",
+    group_column="treatment_group"
 )
+# 返回：quick_stats + tableone + correlations
 
-# Step 4: 相關性
-analyze_correlations(csv_path=csv_path, user_id="eric")
+# Step 2: 特定比較
+compare_treatment_groups(
+    csv_path="medical_study_200.csv",
+    outcome_column="bp_change",
+    treatment_column="treatment_group"
+)
 ```
 
 ---
@@ -251,36 +261,17 @@ get_model_leaderboard(model_id=train_result["model_id"])
 
 ## ⚠️ 故障排除
 
-### auto_analyze 失敗
+### 工具選擇建議（51 個工具版本）
 
-**錯誤：** `'<' not supported between instances of 'NoneType' and 'float'`
-
-**原因：** 資料有缺失值
-
-**解法：**
-```python
-# 改用更穩定的 generate_tableone_directly
-generate_tableone_directly(csv_path=csv_path, group_column="...", user_id="eric")
-
-# 或先處理缺失值
-handle_missing_values(csv_path=csv_path, strategy="mean", output_path="...")
-```
-
----
-
-### Tool not found
-
-**錯誤：** `mcp_automl_kaplan_meier_survival not found`
-
-**原因：** 工具在其他 group，未啟用
-
-**解法：**
-```python
-# 先啟用對應 group
-activate_group_4()  # 存活分析
-activate_group_1()  # 傾向分數
-activate_group_6()  # ROC 分析
-```
+| 需求 | 推薦工具 | 備註 |
+|------|----------|------|
+| 「看資料」 | `quick_preview` | 自動路徑解析 |
+| 「分析這個」 | `smart_analyze` | 一站式分析 |
+| 「醫學研究」 | `analyze_medical_study` | RCT 完整流程 |
+| 「比較兩組」 | `compare_treatment_groups` | 簡化版 |
+| 「Table One」 | `generate_tableone_directly` | 出版級表格 |
+| 「VIF/共線性」 | `check_multicollinearity` | 迴歸前診斷 |
+| 「樣本數」 | `power_ttest` | mode="sample_size" |
 
 ---
 
@@ -290,7 +281,9 @@ activate_group_6()  # ROC 分析
 
 **原因：** 用了 Host 路徑
 
-**解法：** 轉為 Container 路徑 `/data/sample_data/xxx.csv`
+**解法：** 
+- 使用整合工具（自動路徑解析）：`smart_analyze(csv_path="iris.csv")`
+- 或手動轉換：`/data/sample_data/xxx.csv`
 
 ---
 
@@ -338,4 +331,4 @@ Result ID: `{correlation_result_id}`
 - `data-analysis-workflow` - 完整分析流程（含詳細說明）
 - `ml-training-workflow` - ML 訓練專用
 - `statistical-analysis-workflow` - 進階統計
-- `mcp-tools-reference` - 工具速查
+- `mcp-tools-reference` - 51 個工具速查

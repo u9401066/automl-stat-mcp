@@ -173,11 +173,11 @@ docker compose exec automl-mcp ls /data/sample_data/
 - **statistical-analysis-workflow** - 進階統計分析 (存活、PSM、ROC)
 - **data-cleaning-workflow** - 資料清理前處理
 - **result-delivery-workflow** - 結果交付與專案管理 (下載報告、檔案分享)
-- **mcp-tools-reference** - MCP 工具速查參考
+- **mcp-tools-reference** - MCP 工具速查參考 (51 個工具)
 
 ---
 
-## 🔧 MCP 工具使用指南
+## 🔧 MCP 工具使用指南 (51 個工具)
 
 ### 預設參數（減少重複輸入）
 
@@ -187,33 +187,41 @@ user_id = "eric"
 storage_mode = "temporary"  # 快速分析用
 ```
 
-### 工具選擇速查表
+### 工具選擇速查表（精簡版）
 
 | 使用者說... | 推薦工具 | 備註 |
 |-------------|----------|------|
-| 「看看資料」「有什麼欄位」 | `get_quick_stats` | 最快 |
-| 「預覽前幾行」 | `direct_preview_data` | |
-| 「分析這個資料」 | `generate_tableone_directly` | ⚠️ 比 `auto_analyze` 穩定 |
-| 「比較兩組」「治療效果」 | `compare_groups` | 自動選檢定方法 |
+| 「看看資料」「有什麼欄位」 | `quick_preview` | 自動路徑解析 |
+| 「分析這個資料」 | `smart_analyze` | ⭐ 一站式推薦 |
+| 「醫學研究分析」 | `analyze_medical_study` | RCT 完整流程 |
+| 「比較兩組」「治療效果」 | `compare_treatment_groups` | 簡化版 |
+| 「Table One」 | `generate_tableone_directly` | 出版級表格 |
 | 「相關性」「變數關係」 | `analyze_correlations` | |
-| 「訓練模型」「預測」 | `upload_dataset` → `train_and_wait` | |
-| 「存活分析」「KM 曲線」 | `kaplan_meier_survival` | 需 activate_group_4 |
-| 「傾向分數」「PSM」 | `run_propensity_analysis` | 需 activate_group_1 |
-| 「ROC」「AUC」 | `compute_roc_curve` | 需 activate_group_6 |
+| 「VIF」「共線性」 | `check_multicollinearity` | 迴歸前診斷 |
+| 「訓練模型」「預測」 | `train_and_wait` | 一站式訓練 |
+| 「存活分析」「KM 曲線」 | `kaplan_meier_survival` | |
+| 「傾向分數」「PSM」 | `run_propensity_analysis` | |
+| 「ROC」「AUC」 | `compute_roc_curve` | |
+| 「樣本數計算」 | `power_ttest` | mode="sample_size" |
 
-### 分組啟用 (Lazy Loading)
+### 整合工具（推薦入口）
 
-MCP 工具分組載入，需先呼叫 `activate_group_N`：
+| 工具 | 功能 | 自動路徑 |
+|------|------|----------|
+| `smart_analyze` | stats + tableone + correlations | ✅ |
+| `analyze_medical_study` | 醫學研究完整分析 | ✅ |
+| `quick_preview` | 快速資料預覽 | ✅ |
+| `compare_treatment_groups` | 組間比較 | ✅ |
 
-| Group | 功能 | 啟用方式 |
-|-------|------|----------|
-| 0 | 核心分析 (auto_analyze, tableone, correlations) | `activate_group_0` |
-| 1 | 傾向分數 (PSM, IPTW) | `activate_group_1` |
-| 4 | 存活分析 (KM, Cox) | `activate_group_4` |
-| 5 | Job 管理 (status, cancel) | `activate_group_5` |
-| 6 | ROC 分析 | `activate_group_6` |
-| 8 | 資料集管理 (upload, list) | `activate_group_8` |
-| 9 | 模型管理 (predict, leaderboard) | `activate_group_9` |
+### Power 分析（統一版）
+
+| 工具 | mode 選項 |
+|------|-----------|
+| `power_ttest` | sample_size / power / sensitivity / effect_size |
+| `power_proportion` | sample_size / power / sensitivity |
+| `power_anova` | sample_size / power / effect_size |
+| `power_chisquare` | sample_size / power / effect_size |
+| `power_survival` | sample_size / power / events / from_medians |
 
 ### 故障排除
 
@@ -222,7 +230,7 @@ MCP 工具分組載入，需先呼叫 `activate_group_N`：
 | `auto_analyze` 失敗 | 有缺失值/類型問題 | 改用 `generate_tableone_directly` |
 | `'<' not supported` | NaN 比較 | 先 `handle_missing_values` |
 | 找不到檔案 | 路徑錯誤 | 確認用 `/data/...` 開頭 |
-| Tool not found | 未啟用 group | 呼叫 `activate_group_N` |
+| 工具不存在 | 工具被整併 | 查看 `mcp-tools-reference` Skill |
 
 ---
 

@@ -1137,7 +1137,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         except Exception as e:
             return {"status": "error", "error": str(e)}
 
-    # @mcp.tool()  # HIDDEN: replaced by integrated tool
+    @mcp.tool()  # RESTORED: VIF is unique functionality for regression diagnostics
     async def check_multicollinearity(
         csv_path: str,
         columns: Optional[List[str]] = None,

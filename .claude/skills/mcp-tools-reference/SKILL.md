@@ -1,12 +1,12 @@
 ---
 name: mcp-tools-reference
-description: Quick reference guide for all 99+ AutoML MCP tools organized by category including data analysis, ML training, statistics, and utilities. Use when looking up tool names, checking available MCP functions, or understanding tool parameters. Triggers: MCP 工具, 有什麼工具, 工具清單, tools reference, 工具列表, available tools, 怎麼用, how to use, tool help, 工具說明.
+description: Quick reference guide for all 51 AutoML MCP tools organized by category. Use when looking up tool names, checking available MCP functions, or understanding tool parameters. Triggers: MCP 工具, 有什麼工具, 工具清單, tools reference, 工具列表, available tools, 怎麼用, how to use, tool help, 工具說明.
 ---
 
 # MCP Tools Reference 技能 (MCP 工具速查)
 
 ## 描述
-所有 AutoML MCP 工具的快速參照，幫助選擇正確的工具。
+所有 51 個 AutoML MCP 工具的快速參照，幫助選擇正確的工具。
 
 ## 觸發條件
 - 「有什麼工具」「工具清單」
@@ -14,240 +14,289 @@ description: Quick reference guide for all 99+ AutoML MCP tools organized by cat
 
 ---
 
-## 📊 工具總覽
+## 📊 工具總覽 (51 個公開)
 
 | 類別 | 數量 | 主要用途 |
 |------|------|----------|
-| 資料管理 | 9 | 上傳、列出、預覽資料 |
-| 資料清理 | 9 | 缺失值、編碼、篩選 |
-| 基本統計 | 12 | 統計摘要、Table One |
-| 進階統計 | 15 | 存活、傾向分數、ROC |
-| 檢定力分析 | 19 | 樣本數、Power |
-| ML 訓練 | 11 | AutoML、模型管理 |
-| 工作管理 | 8 | 狀態、結果、取消 |
-| **總計** | **83+** | |
+| 🎯 整合分析 | 4 | 一站式分析（推薦入口） |
+| 🧹 資料清理 | 7 | 缺失值、編碼、篩選 |
+| 📁 資料管理 | 5 | 上傳、列出、刪除資料集 |
+| 📈 基礎統計 | 6 | 統計摘要、Table One、相關性 |
+| 🔬 存活分析 | 2 | KM 曲線、Cox 迴歸 |
+| 🎯 傾向分數 | 2 | PSM、治療效果 |
+| 📊 ROC 分析 | 4 | ROC 曲線、閾值優化 |
+| 📐 Power 分析 | 5 | 樣本數、檢定力（統一版） |
+| 🤖 ML 訓練 | 2 | AutoML 訓練 |
+| 📋 Job 管理 | 6 | 狀態、結果、取消 |
+| 🗂️ 模型管理 | 4 | 模型操作、預測 |
+| 🔄 智慧工作流 | 2 | 資料驗證與清理 |
+| 📥 結果查詢 | 2 | 分析結果管理 |
+| **總計** | **51** | |
 
 ---
 
-## 🔧 資料管理工具
+## 🎯 整合分析工具（推薦入口）
 
-### 檔案操作
+這 4 個工具是**最常用的入口點**，整合多個功能於一身：
 
-| 工具 | 用途 | 範例參數 |
+| 工具 | 用途 | 何時使用 |
 |------|------|----------|
-| `list_available_files` | 列出可用檔案 | `directory="/data/sample_data"` |
-| `direct_preview_data` | 預覽資料 | `csv_path, n_rows=10` |
-| `get_column_info` | 欄位資訊 | `csv_path` |
-| `get_upload_help` | 上傳說明 | - |
+| `smart_analyze` | 一站式資料分析 | 「分析這個資料」「看看資料」 |
+| `analyze_medical_study` | 醫學研究分析 | 「分析治療效果」「RCT 分析」 |
+| `quick_preview` | 快速資料預覽 | 「預覽」「有什麼欄位」 |
+| `compare_treatment_groups` | 組間比較 | 「比較兩組」「治療對照」 |
 
-### 資料集操作
-
-| 工具 | 用途 | 範例參數 |
-|------|------|----------|
-| `upload_dataset` | 上傳資料集 | `name, source_type, source_path, user_id` |
-| `register_dataset` | 從 MinIO 註冊 | `name, minio_path, user_id` |
-| `list_datasets` | 列出資料集 | `user_id` |
-| `delete_dataset` | 刪除資料集 | `dataset_id, user_id` |
-| `analyze_dataset` | 分析資料集 | `dataset_id` |
+### smart_analyze（推薦！）
+```python
+smart_analyze(
+    csv_path="iris.csv",           # 自動路徑解析！
+    group_column="species",        # 可選：分組欄位
+    include_correlations=True      # 可選：包含相關性
+)
+# 返回：quick_stats + tableone + correlations
+```
 
 ---
 
-## 🧹 資料清理工具
+## 🧹 資料清理工具 (7)
 
 | 工具 | 用途 | 關鍵參數 |
 |------|------|----------|
-| `handle_missing_values` | 處理缺失值 | `csv_path, strategy, columns, output_path` |
-| `remove_columns` | 移除欄位 | `csv_path, columns, output_path` |
-| `rename_columns` | 重新命名 | `csv_path, mapping, output_path` |
-| `convert_to_binary` | 轉換 0/1 | `csv_path, column, mapping, output_path` |
-| `encode_categorical` | 類別編碼 | `csv_path, columns, method, output_path` |
-| `filter_rows` | 篩選資料 | `csv_path, condition, output_path` |
-
-**缺失值策略：** `mean`, `median`, `mode`, `constant`, `drop`
-**編碼方法：** `onehot`, `label`, `target`
+| `handle_missing_values` | 處理缺失值 | `strategy`: mean/median/mode/drop |
+| `remove_columns` | 移除欄位 | `columns`: List[str] |
+| `rename_columns` | 重新命名 | `mapping`: {"old": "new"} |
+| `filter_rows` | 篩選資料 | `condition`: "age > 30" |
+| `encode_categorical` | 類別編碼 | `method`: onehot/label |
+| `convert_to_binary` | 轉換 0/1 | `mapping`: {"yes": 1, "no": 0} |
+| `get_column_info` | 欄位資訊 | 顯示類型、缺失、唯一值 |
 
 ---
 
-## 📈 基本統計工具
+## 📁 資料管理工具 (5)
 
-### 快速分析
+| 工具 | 用途 | 說明 |
+|------|------|------|
+| `list_available_files` | 列出檔案 | `/data/sample_data/` 下的 CSV |
+| `upload_dataset` | 上傳資料集 | 上傳到 MinIO |
+| `register_dataset` | 註冊資料集 | 從 MinIO 路徑註冊 |
+| `list_datasets` | 列出資料集 | 已註冊的資料集 |
+| `delete_dataset` | 刪除資料集 | 從 MinIO 刪除 |
+
+---
+
+## 📈 基礎統計工具 (6)
 
 | 工具 | 用途 | 輸出 |
 |------|------|------|
-| `get_quick_stats` | 快速統計摘要 | 基本統計 |
-| `auto_analyze` | 智能自動分析 | 完整分析 |
-| `run_quick_auto_analyze` | 快速自動分析 | 精簡分析 |
-| `analyze_csv_directly` | 直接分析 CSV | 詳細分析 |
+| `get_quick_stats` | 快速統計 | 行數、欄位、缺失值、基本統計 |
+| `generate_tableone_directly` | 生成 Table 1 | 出版級基線特徵表 |
+| `compare_groups` | 組間比較 | t-test / ANOVA / Mann-Whitney |
+| `analyze_correlations` | 相關性分析 | Pearson / Spearman 矩陣 |
+| `analyze_missing_values` | 缺失值分析 | MCAR/MAR/MNAR 判斷 |
+| `check_multicollinearity` | VIF 分析 | 多重共線性檢測 |
 
-### Table One
+### generate_tableone_directly
+```python
+generate_tableone_directly(
+    csv_path="/data/sample_data/titanic.csv",
+    groupby="Survived",
+    categorical=["Sex", "Pclass"],
+    pval=True
+)
+```
 
-| 工具 | 用途 | 關鍵參數 |
-|------|------|----------|
-| `generate_tableone_directly` | 生成 Table 1 | `csv_path, group_column, categorical, pval` |
-| `get_tableone_preview` | Table One 預覽 | `csv_path, group_column` |
-| `run_quick_tableone` | 快速 Table One | `csv_path, group_column` |
-| `get_column_suggestions` | 欄位建議 | `csv_path` |
-
-### 相關性與比較
-
-| 工具 | 用途 | 關鍵參數 |
-|------|------|----------|
-| `compare_groups` | 組間比較 | `csv_path, numeric_column, group_column` |
-| `analyze_correlations` | 相關性分析 | `csv_path, columns, method` |
-| `check_multicollinearity` | VIF 分析 | `csv_path, columns, vif_threshold` |
-| `analyze_missing_values` | 缺失值分析 | `csv_path` |
-
----
-
-## 🔬 進階統計工具
-
-### 存活分析
-
-| 工具 | 用途 | 關鍵參數 |
-|------|------|----------|
-| `kaplan_meier_survival` | KM 曲線 | `csv_path, time_column, event_column, group_column` |
-| `compare_survival` | 存活比較 (Log-rank) | 同上 |
-| `cox_proportional_hazards` | Cox 迴歸 | `csv_path, time_column, event_column, covariates` |
-| `survival_data_summary` | 存活資料摘要 | `csv_path, time_column, event_column` |
-
-### 傾向分數分析
-
-| 工具 | 用途 | 關鍵參數 |
-|------|------|----------|
-| `estimate_propensity_scores` | 估計 PS | `csv_path, treatment_column, covariates` |
-| `match_propensity_scores` | PSM 配對 | `csv_path, treatment_column, covariates, method` |
-| `estimate_treatment_effect` | 治療效果 | `csv_path, treatment_column, outcome_column, method` |
-| `assess_covariate_balance` | 共變數平衡 | `csv_path, treatment_column, covariates` |
-| `run_propensity_analysis` | 完整 PSA | 同上 |
-
-### ROC 分析
-
-| 工具 | 用途 | 關鍵參數 |
-|------|------|----------|
-| `compute_roc_curve` | 計算 ROC | `csv_path, y_true_column, y_score_column` |
-| `compare_roc_curves` | 比較 ROC (DeLong) | `csv_path, y_true_column, y_score1_column, y_score2_column` |
-| `compare_multiple_roc_curves` | 多模型比較 | `csv_path, y_true_column, y_score_columns` |
-| `find_optimal_threshold` | 最佳閾值 | `csv_path, y_true_column, y_score_column, method` |
-| `full_classifier_evaluation` | 完整評估 | `csv_path, y_true_column, y_score_column` |
-| `analyze_calibration` | 校準分析 | 同上 |
+### check_multicollinearity
+```python
+check_multicollinearity(
+    csv_path="/data/sample_data/data.csv",
+    columns=["age", "income", "education"],
+    vif_threshold=5.0  # VIF > 5 表示有共線性問題
+)
+```
 
 ---
 
-## 📐 檢定力分析工具
+## 🔬 存活分析工具 (2)
 
-### T-test
+| 工具 | 用途 | 輸出 |
+|------|------|------|
+| `kaplan_meier_survival` | KM 曲線 | 存活曲線 + Log-rank test |
+| `cox_proportional_hazards` | Cox 迴歸 | HR + CI + p-value |
+
+```python
+kaplan_meier_survival(
+    csv_path="/data/sample_data/rossi_recidivism.csv",
+    time_col="week",
+    event_col="arrest",
+    group_col="fin"
+)
+```
+
+---
+
+## 🎯 傾向分數工具 (2)
+
+| 工具 | 用途 | 說明 |
+|------|------|------|
+| `run_propensity_analysis` | 完整 PSM 分析 | 一站式：估計 + 配對 + 平衡檢查 |
+| `estimate_treatment_effect` | 治療效果估計 | ATE/ATT/IPTW |
+
+```python
+run_propensity_analysis(
+    csv_path="/data/sample_data/data.csv",
+    treatment_col="treatment",
+    outcome_col="outcome",
+    covariates=["age", "sex", "baseline"]
+)
+```
+
+---
+
+## 📊 ROC 分析工具 (4)
+
+| 工具 | 用途 | 輸出 |
+|------|------|------|
+| `compute_roc_curve` | 計算 ROC | AUC + CI + 曲線 |
+| `compare_roc_curves` | DeLong 比較 | 兩模型 AUC 差異檢定 |
+| `find_optimal_threshold` | 最佳閾值 | Youden / Cost-based |
+| `full_classifier_evaluation` | 完整評估 | ROC + 校準 + 分類報告 |
+
+```python
+full_classifier_evaluation(
+    csv_path="/data/sample_data/data.csv",
+    y_true_col="actual",
+    y_score_col="predicted_prob"
+)
+```
+
+---
+
+## 📐 Power 分析工具 (5) ⭐ 統一版
+
+原本 18 個工具現在整合為 5 個，每個支援多種 `mode`：
+
+| 工具 | Mode 選項 | 用途 |
+|------|-----------|------|
+| `power_ttest` | sample_size / power / sensitivity / effect_size | T 檢定 |
+| `power_proportion` | sample_size / power / sensitivity | 比例檢定 |
+| `power_anova` | sample_size / power / effect_size | ANOVA |
+| `power_chisquare` | sample_size / power / effect_size | 卡方檢定 |
+| `power_survival` | sample_size / power / events / from_medians | 存活分析 |
+
+### 範例
+```python
+# 計算樣本數
+power_ttest(effect_size=0.5, mode="sample_size", power=0.80)
+
+# 計算檢定力
+power_ttest(effect_size=0.5, mode="power", n1=50)
+
+# 敏感度分析
+power_ttest(effect_size=0.5, mode="sensitivity")
+
+# 計算效果量
+power_ttest(mode="effect_size", mean1=100, mean2=115, pooled_sd=30)
+```
+
+---
+
+## 🤖 ML 訓練工具 (2)
+
+| 工具 | 用途 | 說明 |
+|------|------|------|
+| `submit_automl_job` | 提交訓練 | 非同步，返回 job_id |
+| `train_and_wait` | 訓練並等待 | 同步，直接返回結果 |
+
+```python
+# 簡單版（推薦）
+train_and_wait(
+    dataset_id="abc123",
+    target_column="label",
+    problem_type="binary",
+    user_id="eric",
+    time_limit=300
+)
+```
+
+---
+
+## 📋 Job 管理工具 (6)
 
 | 工具 | 用途 |
 |------|------|
-| `calculate_ttest_sample_size` | 樣本數計算 |
-| `calculate_ttest_power` | 檢定力計算 |
-| `calculate_effect_size` | 效果量計算 |
-| `ttest_sensitivity_analysis` | 敏感度分析 |
-
-### 比例/卡方
-
-| 工具 | 用途 |
-|------|------|
-| `calculate_proportion_sample_size` | 比例檢定樣本數 |
-| `calculate_proportion_power` | 比例檢定力 |
-| `calculate_chisquare_sample_size` | 卡方樣本數 |
-| `calculate_chisquare_power` | 卡方檢定力 |
-| `calculate_chisquare_effect_size` | 卡方效果量 |
-
-### ANOVA
-
-| 工具 | 用途 |
-|------|------|
-| `calculate_anova_sample_size` | ANOVA 樣本數 |
-| `calculate_anova_power` | ANOVA 檢定力 |
-| `calculate_anova_effect_size` | ANOVA 效果量 |
-
-### 存活分析
-
-| 工具 | 用途 |
-|------|------|
-| `calculate_survival_sample_size` | 存活分析樣本數 |
-| `calculate_survival_power` | 存活分析檢定力 |
-| `calculate_survival_events` | 所需事件數 |
-| `calculate_survival_from_medians` | 從中位存活計算 |
-| `convert_hazard_ratio_to_log` | HR 轉 log |
+| `get_job_status` | 查詢 AutoML job 狀態 |
+| `list_jobs` | 列出所有 jobs |
+| `cancel_job` | 取消 job |
+| `get_stats_job_status` | 查詢統計 job 狀態 |
+| `get_stats_job_result` | 取得統計 job 結果 |
+| `list_stats_jobs` | 列出統計 jobs |
 
 ---
 
-## 🤖 ML 訓練工具
+## 🗂️ 模型管理工具 (4)
 
-### 訓練
-
-| 工具 | 用途 | 關鍵參數 |
-|------|------|----------|
-| `submit_automl_job` | 提交 AutoML | `dataset_id, target_column, problem_type, time_limit, presets` |
-| `submit_specific_job` | 指定演算法 | `dataset_id, target_column, algorithms` |
-| `submit_compare_job` | 比較演算法 | `dataset_id, target_column, algorithms` |
-| `quick_train` | 一鍵訓練 | `csv_path, target_column` |
-| `train_and_wait` | 訓練並等待 | 同 submit_automl_job |
-
-### 模型管理
-
-| 工具 | 用途 | 關鍵參數 |
-|------|------|----------|
-| `list_models` | 列出模型 | `user_id` |
-| `get_model_leaderboard` | 模型排行榜 | `model_id` |
-| `list_algorithms` | 可用演算法 | - |
-| `predict` | 預測 | `model_id, dataset_id` |
-| `delete_model` | 刪除模型 | `model_id, user_id` |
-| `get_training_summary` | 訓練摘要 | `model_id` |
+| 工具 | 用途 |
+|------|------|
+| `list_models` | 列出所有模型 |
+| `get_model_leaderboard` | 模型排行榜 |
+| `predict` | 使用模型預測 |
+| `delete_model` | 刪除模型 |
 
 ---
 
-## 📋 工作管理工具
+## 🔄 智慧工作流工具 (2)
 
-| 工具 | 用途 | 關鍵參數 |
-|------|------|----------|
-| `get_job_status` | 工作狀態 | `job_id, user_id` |
-| `wait_for_job` | 等待完成 | `job_id, timeout, user_id` |
-| `list_jobs` | 列出工作 | `user_id` |
-| `cancel_job` | 取消工作 | `job_id, user_id` |
-| `health_check` | 健康檢查 | - |
+| 工具 | 用途 | 說明 |
+|------|------|------|
+| `start_data_analysis` | 開始分析 | 資料驗證 + 問題偵測 |
+| `execute_analysis_ticket` | 執行分析 | 資料清理 + 持久化選項 |
 
-### 結果管理
-
-| 工具 | 用途 | 關鍵參數 |
-|------|------|----------|
-| `list_analysis_results` | 列出結果 | `user_id, analysis_type` |
-| `get_analysis_result` | 取得結果 | `result_id` |
+這兩個工具提供**兩階段工作流**：
+1. `start_data_analysis` 檢測資料問題（PII、缺失值、異常值）
+2. 使用者決定如何處理
+3. `execute_analysis_ticket` 執行清理並分析
 
 ---
 
-## 🎯 常用工具組合
+## 📥 結果查詢工具 (2)
+
+| 工具 | 用途 |
+|------|------|
+| `list_analysis_results` | 列出分析結果 |
+| `get_analysis_result` | 取得特定結果 |
+
+---
+
+## 🎯 常用工作流
 
 ### 快速探索資料
 ```
-list_available_files → direct_preview_data → get_quick_stats
+quick_preview → smart_analyze
 ```
 
 ### 完整資料分析
 ```
-get_column_info → analyze_missing_values → auto_analyze → generate_tableone_directly
+list_available_files → quick_preview → smart_analyze → generate_tableone_directly
 ```
 
 ### ML 訓練流程
 ```
-upload_dataset → submit_automl_job → get_job_status → get_model_leaderboard → predict
-```
-
-### 資料清理流程
-```
-get_column_info → handle_missing_values → encode_categorical → filter_rows
+upload_dataset → train_and_wait → get_model_leaderboard → predict
 ```
 
 ### 存活分析流程
 ```
-survival_data_summary → kaplan_meier_survival → compare_survival → cox_proportional_hazards
+kaplan_meier_survival → cox_proportional_hazards
 ```
 
 ### 傾向分數分析
 ```
-estimate_propensity_scores → match_propensity_scores → assess_covariate_balance → estimate_treatment_effect
+run_propensity_analysis → estimate_treatment_effect
+```
+
+### Power 分析流程
+```
+power_ttest(mode="effect_size") → power_ttest(mode="sample_size")
 ```
 
 ---
@@ -255,17 +304,22 @@ estimate_propensity_scores → match_propensity_scores → assess_covariate_bala
 ## ⚠️ 重要提醒
 
 ### 路徑規則
-- 永遠使用 Container 路徑：`/data/sample_data/` 或 `/data/projects/`
-- 不要使用 Host 路徑：`/home/...`
+- ✅ 整合工具自動解析：`smart_analyze(csv_path="iris.csv")`
+- ✅ Container 路徑：`/data/sample_data/iris.csv`
+- ❌ 不要用 Host 路徑：`/home/eric/...`
 
 ### user_id
-- 大多數操作需要 `user_id`
-- 用於資源隔離和追蹤
+- 預設使用 `"eric"`
+- 用於資源隔離
 
-### 非同步工作
-- `submit_*_job` 返回 `job_id`
-- 需要用 `get_job_status` 或 `wait_for_job` 取得結果
-
-### 結果儲存
-- 部分工具支援 `save_result=True`
-- 結果存到 Redis (7 天) + MinIO (永久)
+### 工具選擇建議
+| 需求 | 推薦工具 |
+|------|----------|
+| 「看看資料」 | `quick_preview` |
+| 「分析這個」 | `smart_analyze` |
+| 「比較兩組」 | `compare_groups` |
+| 「Table One」 | `generate_tableone_directly` |
+| 「訓練模型」 | `train_and_wait` |
+| 「存活分析」 | `kaplan_meier_survival` |
+| 「樣本數計算」 | `power_*` 工具 |
+| 「VIF/共線性」 | `check_multicollinearity` |
