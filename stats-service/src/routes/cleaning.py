@@ -126,13 +126,55 @@ class ColumnInfoResponse(BaseModel):
 # Helper Functions
 # =============================================================================
 
+# 允許存取的目錄 (安全白名單)
+ALLOWED_PATHS = [
+    "/data/sample_data",
+    "/data/projects",
+    "/data/uploads",
+    "/tmp",
+]
+
+
+def _validate_path(csv_path: str) -> str:
+    """
+    驗證並正規化路徑，防止路徑遍歷攻擊
+    
+    安全檢查：
+    1. 解析真實路徑 (resolve symlinks, .., etc)
+    2. 確認在允許的目錄內
+    3. 拒絕讀取系統檔案
+    """
+    import os
+    from pathlib import Path
+    
+    # 解析真實路徑
+    try:
+        real_path = str(Path(csv_path).resolve())
+    except Exception:
+        raise HTTPException(status_code=400, detail=f"Invalid path: {csv_path}")
+    
+    # 檢查是否在允許的目錄內
+    is_allowed = any(real_path.startswith(allowed) for allowed in ALLOWED_PATHS)
+    
+    if not is_allowed:
+        raise HTTPException(
+            status_code=403, 
+            detail=f"Access denied: Path must be within allowed directories ({', '.join(ALLOWED_PATHS)})"
+        )
+    
+    return real_path
+
+
 def _load_csv(csv_path: str) -> pd.DataFrame:
-    """Load CSV file"""
-    if not os.path.exists(csv_path):
+    """Load CSV file with security validation"""
+    # 安全驗證
+    safe_path = _validate_path(csv_path)
+    
+    if not os.path.exists(safe_path):
         raise HTTPException(status_code=404, detail=f"File not found: {csv_path}")
     
     try:
-        return pd.read_csv(csv_path)
+        return pd.read_csv(safe_path)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to read CSV: {str(e)}")
 

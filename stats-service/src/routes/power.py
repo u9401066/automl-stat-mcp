@@ -8,8 +8,8 @@ Routes for sample size and power calculations:
 - Chi-square power analysis
 - Survival analysis power
 """
-from fastapi import APIRouter
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List
 
 router = APIRouter(prefix="/power", tags=["Power Analysis"])
@@ -30,6 +30,41 @@ class TTestPowerRequest(BaseModel):
     n: Optional[int] = Field(None, description="Sample size per group (for power calc)")
     ratio: float = Field(default=1.0, description="n2/n1 ratio")
     alternative: str = Field(default="two-sided", description="Alternative: two-sided, larger, smaller")
+    
+    @field_validator('effect_size')
+    @classmethod
+    def validate_effect_size(cls, v):
+        if v is not None and v == 0:
+            raise ValueError('effect_size cannot be zero (no effect to detect)')
+        return v
+    
+    @field_validator('alpha')
+    @classmethod
+    def validate_alpha(cls, v):
+        if not 0 < v < 1:
+            raise ValueError('alpha must be between 0 and 1 (exclusive)')
+        return v
+    
+    @field_validator('power')
+    @classmethod
+    def validate_power(cls, v):
+        if v is not None and not 0 < v < 1:
+            raise ValueError('power must be between 0 and 1 (exclusive)')
+        return v
+    
+    @field_validator('n')
+    @classmethod
+    def validate_n(cls, v):
+        if v is not None and v <= 0:
+            raise ValueError('n must be a positive integer')
+        return v
+    
+    @field_validator('ratio')
+    @classmethod
+    def validate_ratio(cls, v):
+        if v <= 0:
+            raise ValueError('ratio must be positive')
+        return v
 
 
 class ProportionPowerRequest(BaseModel):
@@ -41,6 +76,34 @@ class ProportionPowerRequest(BaseModel):
     n: Optional[int] = Field(None, description="Sample size per group")
     ratio: float = Field(default=1.0, description="n2/n1 ratio")
     alternative: str = Field(default="two-sided", description="Alternative hypothesis")
+    
+    @field_validator('p1', 'p2')
+    @classmethod
+    def validate_proportion(cls, v):
+        if not 0 <= v <= 1:
+            raise ValueError('proportions must be between 0 and 1')
+        return v
+    
+    @field_validator('alpha')
+    @classmethod
+    def validate_alpha(cls, v):
+        if not 0 < v < 1:
+            raise ValueError('alpha must be between 0 and 1 (exclusive)')
+        return v
+    
+    @field_validator('power')
+    @classmethod
+    def validate_power(cls, v):
+        if v is not None and not 0 < v < 1:
+            raise ValueError('power must be between 0 and 1 (exclusive)')
+        return v
+    
+    @field_validator('n')
+    @classmethod
+    def validate_n(cls, v):
+        if v is not None and v <= 0:
+            raise ValueError('n must be a positive integer')
+        return v
 
 
 class ANOVAPowerRequest(BaseModel):
@@ -52,6 +115,34 @@ class ANOVAPowerRequest(BaseModel):
     alpha: float = Field(default=0.05, description="Significance level")
     power: Optional[float] = Field(default=0.8, description="Desired power")
     n: Optional[int] = Field(None, description="Sample size per group")
+    
+    @field_validator('effect_size')
+    @classmethod
+    def validate_effect_size(cls, v):
+        if v is not None and v == 0:
+            raise ValueError('effect_size cannot be zero')
+        return v
+    
+    @field_validator('alpha')
+    @classmethod
+    def validate_alpha(cls, v):
+        if not 0 < v < 1:
+            raise ValueError('alpha must be between 0 and 1 (exclusive)')
+        return v
+    
+    @field_validator('k')
+    @classmethod
+    def validate_k(cls, v):
+        if v < 2:
+            raise ValueError('k (number of groups) must be at least 2')
+        return v
+    
+    @field_validator('n')
+    @classmethod
+    def validate_n(cls, v):
+        if v is not None and v <= 0:
+            raise ValueError('n must be a positive integer')
+        return v
 
 
 class ChiSquarePowerRequest(BaseModel):
@@ -62,6 +153,27 @@ class ChiSquarePowerRequest(BaseModel):
     alpha: float = Field(default=0.05, description="Significance level")
     power: Optional[float] = Field(default=0.8, description="Desired power")
     n: Optional[int] = Field(None, description="Total sample size")
+    
+    @field_validator('effect_size')
+    @classmethod
+    def validate_effect_size(cls, v):
+        if v is not None and v <= 0:
+            raise ValueError('effect_size must be positive')
+        return v
+    
+    @field_validator('alpha')
+    @classmethod
+    def validate_alpha(cls, v):
+        if not 0 < v < 1:
+            raise ValueError('alpha must be between 0 and 1 (exclusive)')
+        return v
+    
+    @field_validator('df')
+    @classmethod
+    def validate_df(cls, v):
+        if v is not None and v < 1:
+            raise ValueError('degrees of freedom must be at least 1')
+        return v
 
 
 class SurvivalPowerRequest(BaseModel):
@@ -75,6 +187,36 @@ class SurvivalPowerRequest(BaseModel):
     dropout_rate: float = Field(default=0.0, description="Expected dropout rate")
     accrual_time: Optional[float] = Field(None, description="Accrual period")
     followup_time: Optional[float] = Field(None, description="Follow-up period")
+    
+    @field_validator('hazard_ratio')
+    @classmethod
+    def validate_hr(cls, v):
+        if v <= 0:
+            raise ValueError('hazard_ratio must be positive')
+        if v == 1:
+            raise ValueError('hazard_ratio cannot be 1 (no effect to detect)')
+        return v
+    
+    @field_validator('p1')
+    @classmethod
+    def validate_p1(cls, v):
+        if not 0 < v < 1:
+            raise ValueError('p1 (event probability) must be between 0 and 1 (exclusive)')
+        return v
+    
+    @field_validator('alpha')
+    @classmethod
+    def validate_alpha(cls, v):
+        if not 0 < v < 1:
+            raise ValueError('alpha must be between 0 and 1 (exclusive)')
+        return v
+    
+    @field_validator('dropout_rate')
+    @classmethod
+    def validate_dropout(cls, v):
+        if not 0 <= v < 1:
+            raise ValueError('dropout_rate must be between 0 and 1')
+        return v
 
 
 class PowerResponse(BaseModel):
