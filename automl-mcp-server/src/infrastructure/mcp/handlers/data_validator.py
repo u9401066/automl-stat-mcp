@@ -10,13 +10,14 @@ Issue Categories:
 - MEDIUM: Recommended to address (outliers, moderate missing)
 - LOW: Auto-handled (ID columns, constant columns)
 """
-import re
 import logging
+import re
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
-import pandas as pd
+from typing import Any, Dict, List, Optional
+
 import numpy as np
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -34,19 +35,19 @@ class IssueType(str, Enum):
     # Critical
     PII_DETECTED = "pii_detected"              # Entire column is PII (can be deleted/masked)
     PII_EMBEDDED = "pii_embedded"              # PII mixed in other data (needs PHI MCP)
-    
+
     # High
     HIGH_MISSING_RATIO = "high_missing_ratio"
     INVALID_DATA_TYPE = "invalid_data_type"
     TARGET_HAS_MISSING = "target_has_missing"
-    
+
     # Medium
     MODERATE_MISSING = "moderate_missing"
     OUTLIERS_DETECTED = "outliers_detected"
     HIGH_CARDINALITY = "high_cardinality"
     CLASS_IMBALANCE = "class_imbalance"
     DUPLICATE_ROWS = "duplicate_rows"
-    
+
     # Low
     ID_COLUMN = "id_column"
     CONSTANT_COLUMN = "constant_column"
@@ -62,23 +63,23 @@ class CleaningAction(str, Enum):
     FILL_MEDIAN = "fill_median"
     FILL_MODE = "fill_mode"
     FILL_CONSTANT = "fill_constant"
-    
+
     # Column handling
     EXCLUDE_COLUMN = "exclude_column"
     CONVERT_TYPE = "convert_type"
-    
+
     # Row handling
     REMOVE_DUPLICATES = "remove_duplicates"
     REMOVE_OUTLIERS = "remove_outliers"
-    
+
     # PII handling
     MASK_PII = "mask_pii"
     REMOVE_PII_COLUMN = "remove_pii_column"
-    
+
     # Complex PII - requires external processing
     REQUIRE_PHI_MCP = "require_phi_mcp"        # Needs dedicated PHI MCP to handle
     REJECT_DATA = "reject_data"                # Data too complex, reject entirely
-    
+
     # No action
     IGNORE = "ignore"
     KEEP_AS_IS = "keep_as_is"
@@ -95,7 +96,7 @@ class DataIssue:
     suggested_actions: List[CleaningAction] = field(default_factory=list)
     default_action: Optional[CleaningAction] = None
     requires_user_decision: bool = False
-    
+
     def to_dict(self) -> dict:
         return {
             "issue_type": self.issue_type.value,
@@ -123,7 +124,7 @@ class ValidationReport:
     can_proceed: bool  # Can analysis proceed without user intervention?
     requires_user_decisions: List[DataIssue]  # Issues that need user input
     auto_fixable: List[DataIssue]  # Issues that can be auto-fixed
-    
+
     def to_dict(self) -> dict:
         return {
             "is_valid": self.is_valid,
@@ -143,12 +144,12 @@ class ValidationReport:
 class DataValidator:
     """
     Validates dataset and detects quality issues.
-    
+
     Usage:
         validator = DataValidator()
         report = validator.validate(df, target_column="price")
     """
-    
+
     # PII patterns (basic detection)
     PII_PATTERNS = {
         "email": r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',
@@ -158,7 +159,7 @@ class DataValidator:
         "tw_id": r'\b[A-Z][12]\d{8}\b',  # Taiwan ID
         "ip_address": r'\b(?:\d{1,3}\.){3}\d{1,3}\b',
     }
-    
+
     # Column name patterns suggesting PII
     PII_COLUMN_PATTERNS = [
         r'(?i)^name$', r'(?i).*_name$', r'(?i)^.*name_.*',  # Name fields
@@ -175,14 +176,14 @@ class DataValidator:
         r'(?i).*birthday.*', r'(?i).*birth.*date.*', r'(?i).*dob.*',  # DOB
         r'(?i).*生日.*', r'(?i).*出生.*',  # Chinese DOB
     ]
-    
+
     # ID column patterns
     ID_PATTERNS = [
         r'(?i)^id$', r'(?i).*_id$', r'(?i)^.*id_.*',
         r'(?i)^index$', r'(?i)^row.*', r'(?i)^record.*',
         r'(?i)^key$', r'(?i).*_key$',
     ]
-    
+
     def __init__(
         self,
         missing_threshold_high: float = 0.2,
@@ -198,24 +199,24 @@ class DataValidator:
         self.cardinality_threshold = cardinality_threshold
         self.correlation_threshold = correlation_threshold
         self.imbalance_threshold = imbalance_threshold
-    
+
     def validate(
-        self, 
-        df: pd.DataFrame, 
+        self,
+        df: pd.DataFrame,
         target_column: Optional[str] = None
     ) -> ValidationReport:
         """
         Validate a DataFrame and return a comprehensive report.
-        
+
         Args:
             df: DataFrame to validate
             target_column: Optional target column for ML tasks
-            
+
         Returns:
             ValidationReport with all detected issues
         """
         issues: List[DataIssue] = []
-        
+
         # Run all checks
         issues.extend(self._check_pii(df))
         issues.extend(self._check_missing_values(df, target_column))
@@ -226,10 +227,10 @@ class DataValidator:
         issues.extend(self._check_duplicates(df))
         issues.extend(self._check_high_cardinality(df))
         issues.extend(self._check_correlations(df))
-        
+
         if target_column:
             issues.extend(self._check_target_column(df, target_column))
-        
+
         # Sort by severity
         severity_order = {
             IssueSeverity.CRITICAL: 0,
@@ -238,23 +239,23 @@ class DataValidator:
             IssueSeverity.LOW: 3,
         }
         issues.sort(key=lambda x: severity_order[x.severity])
-        
+
         # Count by severity
         critical = sum(1 for i in issues if i.severity == IssueSeverity.CRITICAL)
         high = sum(1 for i in issues if i.severity == IssueSeverity.HIGH)
         medium = sum(1 for i in issues if i.severity == IssueSeverity.MEDIUM)
         low = sum(1 for i in issues if i.severity == IssueSeverity.LOW)
-        
+
         # Categorize issues
         requires_user = [i for i in issues if i.requires_user_decision]
         auto_fixable = [i for i in issues if not i.requires_user_decision and i.default_action]
-        
+
         # Determine if we can proceed
         can_proceed = critical == 0 and len(requires_user) == 0
-        
+
         # Generate summary
         summary = self._generate_summary(df, issues, critical, high, medium, low)
-        
+
         return ValidationReport(
             is_valid=len(issues) == 0,
             total_issues=len(issues),
@@ -268,22 +269,22 @@ class DataValidator:
             requires_user_decisions=requires_user,
             auto_fixable=auto_fixable,
         )
-    
+
     # Threshold for determining if a column is "entirely PII" vs "embedded PII"
     PII_COLUMN_THRESHOLD = 0.5  # If >50% values match PII pattern, treat as PII column
     PII_EMBEDDED_THRESHOLD = 0.05  # If <5% but some matches, consider embedded PII
-    
+
     def _check_pii(self, df: pd.DataFrame) -> List[DataIssue]:
         """
         Check for potential PII in data.
-        
+
         Distinguishes between:
         1. PII_DETECTED: Entire column is clearly PII (>50% matches) - can be deleted/masked
         2. PII_EMBEDDED: PII scattered in other data (<50% matches) - needs PHI MCP
         """
         issues = []
         pii_columns_detected = set()  # Track columns already flagged by name pattern
-        
+
         for col in df.columns:
             # Check column name patterns (like 'email', 'phone', etc.)
             name_suggests_pii = False
@@ -309,29 +310,29 @@ class DataValidator:
                         requires_user_decision=True,
                     ))
                     break
-            
+
             # Skip content check if already flagged by name
             if name_suggests_pii:
                 continue
-                
+
             # Check content for string columns
             if df[col].dtype == 'object':
                 non_null = df[col].dropna()
                 if len(non_null) == 0:
                     continue
-                    
+
                 sample = non_null.astype(str)
                 sample_size = len(sample)
-                
+
                 for pii_type, pattern in self.PII_PATTERNS.items():
                     matches = sample.str.contains(pattern, regex=True, na=False)
                     match_count = matches.sum()
-                    
+
                     if match_count == 0:
                         continue
-                        
+
                     match_ratio = match_count / sample_size
-                    
+
                     if match_ratio >= self.PII_COLUMN_THRESHOLD:
                         # High ratio: Entire column is PII - can delete/mask column
                         pii_columns_detected.add(col)
@@ -356,7 +357,7 @@ class DataValidator:
                             requires_user_decision=True,
                         ))
                         break  # One PII type per column is enough
-                        
+
                     elif match_ratio >= self.PII_EMBEDDED_THRESHOLD:
                         # Low ratio: PII embedded in other data - needs PHI MCP
                         issues.append(DataIssue(
@@ -380,24 +381,24 @@ class DataValidator:
                             requires_user_decision=True,
                         ))
                         break
-        
+
         return issues
-    
+
     def _check_missing_values(
-        self, 
-        df: pd.DataFrame, 
+        self,
+        df: pd.DataFrame,
         target_column: Optional[str]
     ) -> List[DataIssue]:
         """Check for missing values"""
         issues = []
-        
+
         for col in df.columns:
             missing_count = df[col].isna().sum()
             missing_ratio = missing_count / len(df)
-            
+
             if missing_ratio == 0:
                 continue
-            
+
             if missing_ratio >= self.missing_threshold_high:
                 severity = IssueSeverity.HIGH
                 requires_decision = True
@@ -406,7 +407,7 @@ class DataValidator:
                 requires_decision = False
             else:
                 continue  # Very low missing, skip
-            
+
             # Determine suggested actions based on column type
             if pd.api.types.is_numeric_dtype(df[col]):
                 suggested = [
@@ -424,13 +425,13 @@ class DataValidator:
                     CleaningAction.DROP_COLUMN,
                 ]
                 default = CleaningAction.FILL_MODE
-            
+
             issue_type = (
-                IssueType.HIGH_MISSING_RATIO 
-                if severity == IssueSeverity.HIGH 
+                IssueType.HIGH_MISSING_RATIO
+                if severity == IssueSeverity.HIGH
                 else IssueType.MODERATE_MISSING
             )
-            
+
             issues.append(DataIssue(
                 issue_type=issue_type,
                 severity=severity,
@@ -445,24 +446,24 @@ class DataValidator:
                 default_action=default if not requires_decision else None,
                 requires_user_decision=requires_decision,
             ))
-        
+
         return issues
-    
+
     def _check_id_columns(self, df: pd.DataFrame) -> List[DataIssue]:
         """Detect ID-like columns"""
         issues = []
-        
+
         for col in df.columns:
             is_id = False
             detection_reason = ""
-            
+
             # Check column name pattern (high confidence)
             for pattern in self.ID_PATTERNS:
                 if re.match(pattern, col):
                     is_id = True
                     detection_reason = "column_name_pattern"
                     break
-            
+
             # Check if all values are unique AND it's an integer column (medium confidence)
             # Only for datasets with > 10 rows to avoid false positives on small data
             if not is_id and len(df) > 10 and df[col].nunique() == len(df):
@@ -475,7 +476,7 @@ class DataValidator:
                         if max_val - min_val == len(sorted_vals) - 1:
                             is_id = True
                             detection_reason = "sequential_integer"
-            
+
             if is_id:
                 issues.append(DataIssue(
                     issue_type=IssueType.ID_COLUMN,
@@ -493,13 +494,13 @@ class DataValidator:
                     default_action=CleaningAction.EXCLUDE_COLUMN,
                     requires_user_decision=False,
                 ))
-        
+
         return issues
-    
+
     def _check_constant_columns(self, df: pd.DataFrame) -> List[DataIssue]:
         """Detect constant columns (single value)"""
         issues = []
-        
+
         for col in df.columns:
             if df[col].nunique(dropna=True) <= 1:
                 issues.append(DataIssue(
@@ -515,13 +516,13 @@ class DataValidator:
                     default_action=CleaningAction.EXCLUDE_COLUMN,
                     requires_user_decision=False,
                 ))
-        
+
         return issues
-    
+
     def _check_data_types(self, df: pd.DataFrame) -> List[DataIssue]:
         """Check for potential data type issues"""
         issues = []
-        
+
         for col in df.columns:
             if df[col].dtype == 'object':
                 # Try to detect if it should be numeric
@@ -530,7 +531,7 @@ class DataValidator:
                     # Check if values look numeric
                     numeric_pattern = r'^-?\d+\.?\d*$'
                     is_numeric_like = non_null.astype(str).str.match(numeric_pattern).mean()
-                    
+
                     if is_numeric_like > 0.8:  # 80% look numeric
                         issues.append(DataIssue(
                             issue_type=IssueType.INVALID_DATA_TYPE,
@@ -549,35 +550,35 @@ class DataValidator:
                             default_action=CleaningAction.CONVERT_TYPE,
                             requires_user_decision=False,
                         ))
-        
+
         return issues
-    
+
     def _check_outliers(self, df: pd.DataFrame) -> List[DataIssue]:
         """Detect outliers in numeric columns using IQR method (more robust than z-score)"""
         issues = []
-        
+
         numeric_cols = df.select_dtypes(include=[np.number]).columns
-        
+
         for col in numeric_cols:
             values = df[col].dropna()
             if len(values) < 10:
                 continue
-            
+
             # IQR method (more robust to outliers than z-score)
             q1 = values.quantile(0.25)
             q3 = values.quantile(0.75)
             iqr = q3 - q1
-            
+
             if iqr == 0:
                 continue
-            
+
             lower_bound = q1 - 1.5 * iqr
             upper_bound = q3 + 1.5 * iqr
-            
+
             outlier_mask = (values < lower_bound) | (values > upper_bound)
             outlier_count = outlier_mask.sum()
             outlier_ratio = outlier_count / len(values)
-            
+
             if outlier_count > 0 and outlier_ratio > 0.01:  # More than 1% outliers
                 issues.append(DataIssue(
                     issue_type=IssueType.OUTLIERS_DETECTED,
@@ -601,13 +602,13 @@ class DataValidator:
                     default_action=CleaningAction.KEEP_AS_IS,
                     requires_user_decision=False,
                 ))
-        
+
         return issues
-    
+
     def _check_duplicates(self, df: pd.DataFrame) -> List[DataIssue]:
         """Check for duplicate rows"""
         dup_count = df.duplicated().sum()
-        
+
         if dup_count > 0:
             return [DataIssue(
                 issue_type=IssueType.DUPLICATE_ROWS,
@@ -625,16 +626,16 @@ class DataValidator:
                 default_action=CleaningAction.REMOVE_DUPLICATES,
                 requires_user_decision=False,
             )]
-        
+
         return []
-    
+
     def _check_high_cardinality(self, df: pd.DataFrame) -> List[DataIssue]:
         """Check for high cardinality categorical columns"""
         issues = []
-        
+
         for col in df.select_dtypes(include=['object']).columns:
             cardinality_ratio = df[col].nunique() / len(df)
-            
+
             if cardinality_ratio > self.cardinality_threshold:
                 issues.append(DataIssue(
                     issue_type=IssueType.HIGH_CARDINALITY,
@@ -652,20 +653,20 @@ class DataValidator:
                     default_action=CleaningAction.KEEP_AS_IS,
                     requires_user_decision=False,
                 ))
-        
+
         return issues
-    
+
     def _check_correlations(self, df: pd.DataFrame) -> List[DataIssue]:
         """Check for highly correlated features"""
         issues = []
-        
+
         numeric_cols = df.select_dtypes(include=[np.number]).columns
         if len(numeric_cols) < 2:
             return issues
-        
+
         try:
             corr_matrix = df[numeric_cols].corr().abs()
-            
+
             # Find high correlations (excluding self-correlation)
             high_corr_pairs = []
             for i in range(len(corr_matrix.columns)):
@@ -676,7 +677,7 @@ class DataValidator:
                             "col2": corr_matrix.columns[j],
                             "correlation": float(corr_matrix.iloc[i, j]),
                         })
-            
+
             if high_corr_pairs:
                 issues.append(DataIssue(
                     issue_type=IssueType.HIGH_CORRELATION,
@@ -693,22 +694,22 @@ class DataValidator:
                 ))
         except Exception as e:
             logger.warning(f"Could not compute correlations: {e}")
-        
+
         return issues
-    
+
     def _check_target_column(
-        self, 
-        df: pd.DataFrame, 
+        self,
+        df: pd.DataFrame,
         target_column: str
     ) -> List[DataIssue]:
         """Check target column specific issues"""
         issues = []
-        
+
         if target_column not in df.columns:
             return issues
-        
+
         target = df[target_column]
-        
+
         # Check for missing values in target
         missing = target.isna().sum()
         if missing > 0:
@@ -727,12 +728,12 @@ class DataValidator:
                 default_action=None,
                 requires_user_decision=True,
             ))
-        
+
         # Check for class imbalance (classification)
         if target.dtype == 'object' or target.nunique() < 20:
             value_counts = target.value_counts(normalize=True)
             min_class_ratio = value_counts.min()
-            
+
             if min_class_ratio < self.imbalance_threshold:
                 issues.append(DataIssue(
                     issue_type=IssueType.CLASS_IMBALANCE,
@@ -749,9 +750,9 @@ class DataValidator:
                     default_action=CleaningAction.KEEP_AS_IS,
                     requires_user_decision=False,
                 ))
-        
+
         return issues
-    
+
     def _generate_summary(
         self,
         df: pd.DataFrame,
@@ -763,7 +764,7 @@ class DataValidator:
     ) -> str:
         """Generate human-readable summary"""
         lines = [f"Dataset: {len(df)} rows × {len(df.columns)} columns"]
-        
+
         if len(issues) == 0:
             lines.append("✅ No data quality issues detected!")
         else:
@@ -776,7 +777,7 @@ class DataValidator:
                 lines.append(f"  🟡 {medium} medium priority")
             if low > 0:
                 lines.append(f"  🟢 {low} low priority (auto-handled)")
-        
+
         return "\n".join(lines)
 
 

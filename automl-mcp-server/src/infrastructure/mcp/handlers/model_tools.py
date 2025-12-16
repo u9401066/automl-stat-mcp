@@ -21,7 +21,7 @@ def register_model_tools(mcp: FastMCP, client: AutoMLClient) -> None:
     ) -> List[Dict[str, Any]]:
         """
         List all trained models for the user.
-        
+
         Returns models with their performance metrics and metadata.
         """
         return await client.list_models(user_id, session_id)
@@ -33,9 +33,9 @@ def register_model_tools(mcp: FastMCP, client: AutoMLClient) -> None:
     ) -> List[Dict[str, Any]]:
         """
         Get the leaderboard for a trained model.
-        
+
         Shows all models trained during the experiment, ranked by performance.
-        
+
         Returns:
             List of entries with:
             - model_name: Name of the model (e.g., "WeightedEnsemble_L2", "XGBoost")
@@ -54,10 +54,10 @@ def register_model_tools(mcp: FastMCP, client: AutoMLClient) -> None:
     ) -> Dict[str, Any]:
         """
         Make predictions using a trained model.
-        
+
         The prediction dataset should have the same features as the training
         dataset (excluding the target column).
-        
+
         Returns:
             model_id: Model used
             predictions: List of predicted values
@@ -72,7 +72,7 @@ def register_model_tools(mcp: FastMCP, client: AutoMLClient) -> None:
     ) -> Dict[str, Any]:
         """
         Delete a trained model.
-        
+
         This permanently removes the model and its files.
         """
         return await client.delete_model(model_id, user_id)

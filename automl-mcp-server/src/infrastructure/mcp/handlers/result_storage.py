@@ -12,9 +12,9 @@ import json
 import logging
 import os
 import uuid
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Any, Dict, Optional
-from dataclasses import dataclass, field
 
 import httpx
 import numpy as np
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 class NumpyJSONEncoder(json.JSONEncoder):
     """Custom JSON encoder that handles numpy types and other special types."""
-    
+
     def default(self, obj):
         # Handle numpy types
         if isinstance(obj, (np.integer, np.int64, np.int32)):
@@ -82,30 +82,30 @@ class ResultMetadata:
 class ResultStorage:
     """
     Service for storing and retrieving analysis results.
-    
+
     Storage hierarchy:
     1. Redis (fast, temporary): TTL 7 days
        - Key: stats:result:{result_id}
        - Full result JSON
-       
+
     2. MinIO (persistent):
        - Path: {bucket}/{user_id}/{analysis_type}/{timestamp}_{result_id}.json
        - Full result JSON + metadata
-    
+
     Usage:
         storage = ResultStorage()
-        
+
         # Save a result
         metadata = await storage.save_result(
             result={"status": "success", "data": {...}},
             user_id="eric",
             analysis_type="tableone",
         )
-        
+
         # Get result back
         result = await storage.get_result(metadata.result_id)
     """
-    
+
     def __init__(
         self,
         stats_service_url: str = STATS_SERVICE_URL,
@@ -116,12 +116,12 @@ class ResultStorage:
         self.automl_service_url = automl_service_url
         self.minio_bucket = minio_bucket
         self.timeout = 30
-    
+
     def _generate_result_id(self, analysis_type: str) -> str:
         """Generate a unique result ID"""
         short_uuid = uuid.uuid4().hex[:8]
         return f"stat_{analysis_type}_{short_uuid}"
-    
+
     def _get_minio_path(
         self,
         user_id: str,
@@ -132,7 +132,7 @@ class ResultStorage:
         """Generate MinIO path for result storage"""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         return f"{user_id}/{analysis_type}/{timestamp}_{result_id}.{file_format}"
-    
+
     async def save_result(
         self,
         result: Dict[str, Any],
@@ -145,7 +145,7 @@ class ResultStorage:
     ) -> ResultMetadata:
         """
         Save analysis result to Redis and optionally MinIO.
-        
+
         Args:
             result: The analysis result dictionary
             user_id: User identifier
@@ -154,7 +154,7 @@ class ResultStorage:
             save_to_minio: Whether to persist to MinIO (default True)
             redis_ttl: Redis TTL in seconds (default 7 days)
             file_format: Output format (json, csv, markdown)
-        
+
         Returns:
             ResultMetadata with storage locations
         """
@@ -162,7 +162,7 @@ class ResultStorage:
         redis_key = f"stats:result:{result_id}"
         created_at = datetime.now().isoformat()
         expires_at = (datetime.now() + timedelta(seconds=redis_ttl)).isoformat()
-        
+
         # Prepare metadata
         metadata = ResultMetadata(
             result_id=result_id,
@@ -173,7 +173,7 @@ class ResultStorage:
             expires_at=expires_at,
             summary=summary or self._extract_summary(result, analysis_type),
         )
-        
+
         # Prepare full result with metadata
         full_result = {
             "metadata": {
@@ -184,7 +184,7 @@ class ResultStorage:
             },
             "result": result,
         }
-        
+
         # 1. Save to Redis via Stats Service
         try:
             await self._save_to_redis(redis_key, full_result, redis_ttl)
@@ -192,7 +192,7 @@ class ResultStorage:
         except Exception as e:
             logger.error(f"Failed to save to Redis: {e}")
             # Continue anyway - MinIO might work
-        
+
         # 2. Save to MinIO if requested
         if save_to_minio:
             try:
@@ -202,17 +202,17 @@ class ResultStorage:
                 logger.info(f"Saved result to MinIO: {metadata.minio_path}")
             except Exception as e:
                 logger.error(f"Failed to save to MinIO: {e}")
-        
+
         return metadata
-    
+
     async def get_result(self, result_id: str) -> Optional[Dict[str, Any]]:
         """
         Retrieve a result by ID.
-        
+
         First tries Redis, then falls back to MinIO.
         """
         redis_key = f"stats:result:{result_id}"
-        
+
         # Try Redis first
         try:
             result = await self._get_from_redis(redis_key)
@@ -220,12 +220,12 @@ class ResultStorage:
                 return result
         except Exception as e:
             logger.warning(f"Redis lookup failed: {e}")
-        
+
         # TODO: Fall back to MinIO lookup
         # Would need to query by result_id pattern
-        
+
         return None
-    
+
     async def list_results(
         self,
         user_id: str,
@@ -236,30 +236,30 @@ class ResultStorage:
         # This would query Redis or MinIO for user's results
         # For now, return empty - need to implement index
         return []
-    
+
     def _extract_summary(self, result: Dict[str, Any], analysis_type: str) -> Dict[str, Any]:
         """Extract a summary from the result for quick reference"""
         summary = {}
-        
+
         if analysis_type == "tableone":
             summary["n_total"] = result.get("n_total")
             summary["n_variables"] = len(result.get("variables_analyzed", []))
-            
+
         elif analysis_type == "correlation":
             summary["n_variables"] = len(result.get("columns", []))
             summary["n_significant_pairs"] = len(result.get("significant_pairs", []))
-            
+
         elif analysis_type == "compare_groups":
             summary["n_groups"] = result.get("n_groups")
             summary["test_used"] = result.get("main_test", {}).get("test")
             summary["p_value"] = result.get("main_test", {}).get("p_value")
-            
+
         elif analysis_type == "roc":
             summary["auc"] = result.get("auc")
             summary["optimal_threshold"] = result.get("optimal_threshold")
-            
+
         return summary
-    
+
     async def _save_to_redis(
         self,
         key: str,
@@ -270,7 +270,7 @@ class ResultStorage:
         # Use safe_json_dumps to handle numpy types, then parse back for httpx
         json_str = safe_json_dumps(data)
         data_safe = json.loads(json_str)
-        
+
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             response = await client.post(
                 f"{self.stats_service_url}/storage/redis/set",
@@ -281,7 +281,7 @@ class ResultStorage:
                 },
             )
             response.raise_for_status()
-    
+
     async def _get_from_redis(self, key: str) -> Optional[Dict[str, Any]]:
         """Get data from Redis via Stats Service API"""
         async with httpx.AsyncClient(timeout=self.timeout) as client:
@@ -293,7 +293,7 @@ class ResultStorage:
                 return None
             response.raise_for_status()
             return response.json()
-    
+
     async def _save_to_minio(
         self,
         path: str,
@@ -311,7 +311,7 @@ class ResultStorage:
         else:
             content = safe_json_dumps(data)
             content_type = "application/json"
-        
+
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             response = await client.post(
                 f"{self.stats_service_url}/storage/minio/upload",
@@ -323,12 +323,12 @@ class ResultStorage:
                 },
             )
             response.raise_for_status()
-    
+
     def _result_to_markdown(self, data: Dict[str, Any]) -> str:
         """Convert result to Markdown format"""
         metadata = data.get("metadata", {})
         result = data.get("result", {})
-        
+
         md_lines = [
             f"# Analysis Result: {metadata.get('analysis_type', 'Unknown')}",
             "",
@@ -344,7 +344,7 @@ class ResultStorage:
             json.dumps(result, ensure_ascii=False, indent=2),
             "```",
         ]
-        
+
         return "\n".join(md_lines)
 
 

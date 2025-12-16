@@ -21,9 +21,9 @@ def register_job_tools(mcp: FastMCP, client: AutoMLClient) -> None:
     ) -> Dict[str, Any]:
         """
         Get the status of a training job.
-        
+
         Use this to check if training is complete.
-        
+
         Returns:
             job_id: Job identifier
             status: "pending" | "running" | "completed" | "failed" | "cancelled"
@@ -31,7 +31,7 @@ def register_job_tools(mcp: FastMCP, client: AutoMLClient) -> None:
             status_message: Human-readable status
             model_id: (only when completed) ID of the trained model
             error_message: (only when failed) Error description
-            
+
         When status is "completed":
             - Use model_id with get_model_leaderboard() to see results
             - Use model_id with predict() to make predictions
@@ -45,7 +45,7 @@ def register_job_tools(mcp: FastMCP, client: AutoMLClient) -> None:
     ) -> List[Dict[str, Any]]:
         """
         List all training jobs for the user.
-        
+
         Returns jobs in all states (pending, running, completed, failed).
         """
         return await client.list_jobs(user_id, session_id)
@@ -57,7 +57,7 @@ def register_job_tools(mcp: FastMCP, client: AutoMLClient) -> None:
     ) -> Dict[str, Any]:
         """
         Cancel a pending or running training job.
-        
+
         Cannot cancel jobs that are already completed or failed.
         """
         return await client.cancel_job(job_id, user_id)

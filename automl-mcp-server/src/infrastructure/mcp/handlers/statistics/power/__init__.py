@@ -6,9 +6,9 @@ Submodules:
     - anova: ANOVA and Chi-square power analysis
     - survival: Survival analysis power
 """
-from .ttest import register_ttest_power_tools
 from .anova import register_anova_power_tools
 from .survival import register_survival_power_tools
+from .ttest import register_ttest_power_tools
 
 
 def register_power_tools(mcp, stats_client):

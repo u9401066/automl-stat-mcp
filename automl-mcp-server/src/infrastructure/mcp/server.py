@@ -12,10 +12,10 @@ Architecture:
 Usage:
     # Development mode with MCP inspector
     mcp dev src/infrastructure/mcp/server.py
-    
+
     # Direct execution (stdio transport)
     python -m src.infrastructure.mcp.server
-    
+
     # SSE transport for remote access
     python -m src.infrastructure.mcp.server --transport sse --port 8002
 
@@ -29,8 +29,6 @@ Workflow:
 """
 import logging
 import os
-import sys
-from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 
@@ -48,18 +46,18 @@ logger = logging.getLogger(__name__)
 class AutoMLMcpServer:
     """
     Main MCP Server for AutoML.
-    
+
     Orchestrates:
     - FastMCP server initialization
     - AutoML tool registration
-    
+
     Design follows medical-calc-mcp patterns.
     """
-    
+
     def __init__(self, config=None, host: str = "127.0.0.1", port: int = 8000):
         """Initialize the MCP server."""
         self._config = config or default_config
-        
+
         # Create FastMCP server
         self._mcp = FastMCP(
             name=self._config.name,
@@ -68,10 +66,10 @@ class AutoMLMcpServer:
             host=host,
             port=port,
         )
-        
+
         # Initialize handlers
         self._init_handlers()
-        
+
         logger.info(f"AutoML MCP Server initialized: {self._config.name}")
 
     def _init_handlers(self) -> None:
@@ -86,12 +84,12 @@ class AutoMLMcpServer:
     def run(self, transport: str = "stdio") -> None:
         """
         Run the MCP server.
-        
+
         Args:
             transport: Transport type ("stdio", "sse", or "streamable-http")
         """
         logger.info(f"Starting MCP server with transport: {transport}")
-        
+
         if transport == "http":
             self._mcp.run(transport="streamable-http")
         elif transport == "sse":
@@ -134,10 +132,10 @@ mcp = _McpProxy()
 def main():
     """Run the MCP server"""
     import argparse
-    
+
     parser = argparse.ArgumentParser(description="AutoML MCP Server")
     parser.add_argument(
-        "--transport", 
+        "--transport",
         choices=["stdio", "sse", "http"],
         default="stdio",
         help="Transport type"
@@ -153,9 +151,9 @@ def main():
         default="0.0.0.0",
         help="Host for SSE/HTTP transport"
     )
-    
+
     args = parser.parse_args()
-    
+
     get_server(host=args.host, port=args.port).run(transport=args.transport)
 
 

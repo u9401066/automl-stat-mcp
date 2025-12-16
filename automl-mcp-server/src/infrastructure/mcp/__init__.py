@@ -5,8 +5,8 @@ Provides the FastMCP-based server for exposing AutoML capabilities
 via the Model Context Protocol.
 """
 
-from .server import mcp, main, AutoMLMcpServer
 from .config import McpServerConfig, default_config
+from .server import AutoMLMcpServer, main, mcp
 
 __all__ = [
     "mcp",

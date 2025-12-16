@@ -17,10 +17,10 @@ def register_info_tools(mcp: FastMCP, client: AutoMLClient) -> None:
     async def list_algorithms() -> Dict[str, Any]:
         """
         List all available machine learning algorithms.
-        
+
         Returns the algorithm codes (e.g., 'XGB', 'GBM') that can be used
         in training requests.
-        
+
         Returns:
             algorithms: Dict mapping code to full name
             description: Usage instructions
@@ -31,7 +31,7 @@ def register_info_tools(mcp: FastMCP, client: AutoMLClient) -> None:
     async def health_check() -> Dict[str, Any]:
         """
         Check if the AutoML service is healthy.
-        
+
         Returns:
             status: "healthy" if service is running
             version: Service version

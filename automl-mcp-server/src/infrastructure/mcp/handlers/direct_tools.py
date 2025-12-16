@@ -24,27 +24,27 @@ def register_direct_tools(mcp: FastMCP, client: AutoMLClient) -> None:
     ) -> Dict[str, Any]:
         """
         📊 Analyze CSV data directly for ML training preparation.
-        
+
         This is useful for:
         - Pre-training dataset analysis before uploading to MinIO
         - Quick data exploration without permanent storage
         - Getting ML training recommendations
-        
+
         The CSV content is passed directly and analyzed synchronously.
         Results include:
         - Dataset shape and structure
         - Target column analysis (if provided)
         - ML training recommendations (presets, time_limit)
         - Data quality warnings
-        
+
         ⚠️ For large datasets, upload to MinIO first and use analyze_dataset.
-        
+
         Args:
             csv_content: CSV data as string (or base64 if is_base64=True)
             user_id: User ID
             is_base64: Set True if csv_content is base64 encoded
             target_column: Target column for ML recommendations
-        
+
         Returns:
             rows: Number of rows
             columns: Number of columns
@@ -54,7 +54,7 @@ def register_direct_tools(mcp: FastMCP, client: AutoMLClient) -> None:
             recommendations: ML training recommendations
             warnings: Data quality warnings
             data_preview: Sample rows
-            
+
         Example:
             # Analyze before training
             direct_ml_analyze(
@@ -81,15 +81,15 @@ def register_direct_tools(mcp: FastMCP, client: AutoMLClient) -> None:
     ) -> Dict[str, Any]:
         """
         ⚡ Get quick statistics for CSV data (synchronous).
-        
+
         Returns immediately with basic statistics.
         For full ML analysis, use direct_ml_analyze instead.
-        
+
         Args:
             csv_content: CSV data as string
             user_id: User ID
             is_base64: Set True if base64 encoded
-        
+
         Returns:
             rows: Number of rows
             columns: Number of columns
@@ -112,16 +112,16 @@ def register_direct_tools(mcp: FastMCP, client: AutoMLClient) -> None:
     ) -> Dict[str, Any]:
         """
         👀 Preview CSV data before registration.
-        
+
         Returns the first N rows and basic metadata.
         Useful for verifying data before uploading to MinIO.
-        
+
         Args:
             csv_content: CSV data as string
             user_id: User ID
             is_base64: Set True if base64 encoded
             n_rows: Number of rows to return (max 100)
-        
+
         Returns:
             rows: Total row count
             columns: Column count

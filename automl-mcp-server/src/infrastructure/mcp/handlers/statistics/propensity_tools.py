@@ -18,7 +18,7 @@ from .base import logger
 
 def register_propensity_tools(mcp, stats_client):
     """Register all propensity score analysis MCP tools."""
-    
+
     @mcp.tool()
     async def estimate_propensity_scores(
         csv_content: str,
@@ -29,27 +29,27 @@ def register_propensity_tools(mcp, stats_client):
     ) -> dict:
         """
         📊 Estimate propensity scores using logistic regression.
-        
+
         Propensity score = P(Treatment=1 | Covariates)
-        
+
         Used for:
         - Observational study analysis
         - Controlling for confounding
         - Matching or weighting for causal inference
-        
+
         Model diagnostics include:
         - Pseudo R² (McFadden's)
         - C-statistic (AUC)
         - Brier score
         - Score overlap between groups
-        
+
         Args:
             csv_content: CSV data as string
             treatment_col: Binary treatment column (0/1)
             covariates: List of covariate columns
             regularization: L2 regularization strength (0=none)
             is_base64: Set True if csv_content is base64 encoded
-        
+
         Returns:
             scores: Propensity score for each observation
             coefficients: Model coefficients per covariate
@@ -70,7 +70,7 @@ def register_propensity_tools(mcp, stats_client):
         except Exception as e:
             logger.error(f"estimate_propensity_scores error: {e}")
             return {"status": "error", "error": str(e)}
-    
+
     @mcp.tool()
     async def match_propensity_scores(
         csv_content: str,
@@ -85,13 +85,13 @@ def register_propensity_tools(mcp, stats_client):
     ) -> dict:
         """
         🔗 Match treated and control units by propensity score.
-        
+
         Creates matched pairs to balance covariate distributions.
-        
+
         Methods:
         - nearest: Greedy nearest neighbor matching
         - optimal: Minimizes total distance (for small datasets)
-        
+
         Args:
             csv_content: CSV data as string
             treatment_col: Binary treatment column
@@ -102,7 +102,7 @@ def register_propensity_tools(mcp, stats_client):
             caliper_scale: 'std' (standard deviations) or 'absolute'
             replacement: Allow control to match multiple treated
             is_base64: Set True if csv_content is base64 encoded
-        
+
         Returns:
             n_matched_pairs: Number of successful matches
             n_unmatched_treated: Treated units without match
@@ -128,7 +128,7 @@ def register_propensity_tools(mcp, stats_client):
         except Exception as e:
             logger.error(f"match_propensity_scores error: {e}")
             return {"status": "error", "error": str(e)}
-    
+
     @mcp.tool()
     async def estimate_treatment_effect(
         csv_content: str,
@@ -143,14 +143,14 @@ def register_propensity_tools(mcp, stats_client):
     ) -> dict:
         """
         💊 Estimate causal treatment effect using IPW.
-        
+
         Estimates:
         - ATE: Average Treatment Effect (population)
         - ATT: Average Treatment Effect on Treated
         - ATU: Average Treatment Effect on Untreated
-        
+
         Uses inverse probability weighting to adjust for confounding.
-        
+
         Args:
             csv_content: CSV data as string
             outcome_col: Outcome variable column
@@ -161,7 +161,7 @@ def register_propensity_tools(mcp, stats_client):
             target: 'ate', 'att', or 'atu'
             stabilized: Use stabilized weights (recommended)
             is_base64: Set True if csv_content is base64 encoded
-        
+
         Returns:
             effect_type: ATE, ATT, or ATU
             estimate: Point estimate of treatment effect
@@ -187,7 +187,7 @@ def register_propensity_tools(mcp, stats_client):
         except Exception as e:
             logger.error(f"estimate_treatment_effect error: {e}")
             return {"status": "error", "error": str(e)}
-    
+
     @mcp.tool()
     async def assess_covariate_balance(
         csv_content: str,
@@ -199,14 +199,14 @@ def register_propensity_tools(mcp, stats_client):
     ) -> dict:
         """
         ⚖️ Assess covariate balance between treatment groups.
-        
+
         Key metrics:
         - SMD (Standardized Mean Difference): <0.1 is ideal
         - Variance Ratio: Should be 0.5-2.0
         - KS Statistic: Distribution difference
-        
+
         Use after matching or weighting to verify balance.
-        
+
         Args:
             csv_content: CSV data as string
             treatment_col: Binary treatment column
@@ -214,7 +214,7 @@ def register_propensity_tools(mcp, stats_client):
             weights: Optional IPW weights (as list)
             smd_threshold: Threshold for acceptable SMD
             is_base64: Set True if csv_content is base64 encoded
-        
+
         Returns:
             standardized_mean_differences: SMD per covariate
             variance_ratios: Variance ratio per covariate
@@ -236,7 +236,7 @@ def register_propensity_tools(mcp, stats_client):
         except Exception as e:
             logger.error(f"assess_covariate_balance error: {e}")
             return {"status": "error", "error": str(e)}
-    
+
     @mcp.tool()
     async def run_propensity_analysis(
         csv_content: str,
@@ -250,18 +250,18 @@ def register_propensity_tools(mcp, stats_client):
     ) -> dict:
         """
         🎯 Complete propensity score analysis workflow.
-        
+
         All-in-one analysis that performs:
         1. Propensity score estimation
         2. Balance assessment (before)
         3. Matching or IPW weighting
         4. Balance assessment (after)
         5. Treatment effect estimation
-        
+
         Choose method:
         - matching: Create matched pairs (reduces sample size)
         - ipw: Use weights (keeps all data)
-        
+
         Args:
             csv_content: CSV data as string
             outcome_col: Outcome variable column
@@ -271,7 +271,7 @@ def register_propensity_tools(mcp, stats_client):
             target: 'ate' (population), 'att' (treated), 'atu' (untreated)
             caliper: For matching, max distance in std devs
             is_base64: Set True if csv_content is base64 encoded
-        
+
         Returns:
             propensity_model: PS estimation results
             balance_before: Covariate balance pre-adjustment
@@ -295,5 +295,5 @@ def register_propensity_tools(mcp, stats_client):
         except Exception as e:
             logger.error(f"run_propensity_analysis error: {e}")
             return {"status": "error", "error": str(e)}
-    
+
     logger.info("Propensity score tools registered: 5 tools")

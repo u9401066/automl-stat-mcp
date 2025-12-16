@@ -22,7 +22,7 @@ from .base import logger
 
 def register_roc_tools(mcp, stats_client):
     """Register all ROC/AUC analysis MCP tools."""
-    
+
     @mcp.tool()
     async def compute_roc_curve(
         csv_content: str,
@@ -36,19 +36,19 @@ def register_roc_tools(mcp, stats_client):
     ) -> dict:
         """
         📈 Compute ROC curve with AUC and confidence intervals.
-        
+
         Provides comprehensive ROC analysis including:
         - ROC curve points (FPR, TPR at each threshold)
         - AUC with DeLong or bootstrap confidence intervals
         - Optimal threshold selection
         - Sensitivity, specificity, PPV, NPV at optimal point
-        
+
         Threshold selection methods:
         - youden: Maximizes Youden's J (sensitivity + specificity - 1)
         - cost: Minimizes misclassification cost (specify FP/FN costs)
         - sensitivity: Target minimum sensitivity (e.g., 0.90)
         - specificity: Target minimum specificity
-        
+
         Args:
             csv_content: CSV data as string
             y_true_col: Column with true binary labels (0/1)
@@ -58,7 +58,7 @@ def register_roc_tools(mcp, stats_client):
             n_bootstrap: Bootstrap samples for CI (default 1000)
             threshold_method: How to select optimal threshold
             is_base64: Set True if csv_content is base64 encoded
-        
+
         Returns:
             auc: Area Under the ROC Curve
             auc_ci: Confidence interval {lower, upper}
@@ -84,7 +84,7 @@ def register_roc_tools(mcp, stats_client):
         except Exception as e:
             logger.error(f"compute_roc_curve error: {e}")
             return {"status": "error", "error": str(e)}
-    
+
     @mcp.tool()
     async def compare_roc_curves(
         csv_content: str,
@@ -96,19 +96,19 @@ def register_roc_tools(mcp, stats_client):
     ) -> dict:
         """
         🔬 Compare ROC curves from multiple models using DeLong test.
-        
+
         Statistical comparison of classifier performance using the
         DeLong et al. (1988) method for comparing correlated AUCs.
-        
+
         This test accounts for the fact that both models are evaluated
         on the same test set, making the comparison valid and powerful.
-        
+
         Use cases:
         - Compare new model vs baseline
         - Compare different algorithms
         - Compare different feature sets
         - Model selection with statistical evidence
-        
+
         Args:
             csv_content: CSV data as string
             y_true_col: Column with true binary labels
@@ -116,7 +116,7 @@ def register_roc_tools(mcp, stats_client):
             model_names: Optional names for models (for output clarity)
             method: 'delong' (recommended) or 'bootstrap'
             is_base64: Set True if csv_content is base64 encoded
-        
+
         Returns:
             models: Per-model results (AUC, CI, SE)
             pairwise_comparisons: DeLong test for each pair
@@ -142,7 +142,7 @@ def register_roc_tools(mcp, stats_client):
         except Exception as e:
             logger.error(f"compare_roc_curves error: {e}")
             return {"status": "error", "error": str(e)}
-    
+
     @mcp.tool()
     async def find_optimal_threshold(
         csv_content: str,
@@ -158,9 +158,9 @@ def register_roc_tools(mcp, stats_client):
     ) -> dict:
         """
         🎯 Find optimal classification threshold using various methods.
-        
+
         Different threshold selection strategies for different needs:
-        
+
         **Methods:**
         - youden: Maximizes Youden's J index (balanced accuracy)
         - cost: Minimizes expected cost given FP/FN costs
@@ -168,12 +168,12 @@ def register_roc_tools(mcp, stats_client):
         - sensitivity: Achieves target sensitivity (minimum)
         - specificity: Achieves target specificity (minimum)
         - prevalence_adjusted: Accounts for class imbalance
-        
+
         **Clinical Examples:**
         - Screening test: High sensitivity, accept lower specificity
         - Confirmatory test: High specificity to minimize false positives
         - Cost-sensitive: Different costs for FP vs FN errors
-        
+
         Args:
             csv_content: CSV data as string
             y_true_col: Column with true binary labels
@@ -185,7 +185,7 @@ def register_roc_tools(mcp, stats_client):
             target_specificity: Minimum specificity (for specificity method)
             prevalence: Disease prevalence (for prevalence_adjusted method)
             is_base64: Set True if csv_content is base64 encoded
-        
+
         Returns:
             optimal_threshold: Selected threshold value
             method_used: Which method was applied
@@ -211,7 +211,7 @@ def register_roc_tools(mcp, stats_client):
         except Exception as e:
             logger.error(f"find_optimal_threshold error: {e}")
             return {"status": "error", "error": str(e)}
-    
+
     @mcp.tool()
     async def analyze_calibration(
         csv_content: str,
@@ -223,27 +223,27 @@ def register_roc_tools(mcp, stats_client):
     ) -> dict:
         """
         📊 Analyze model calibration (predicted vs actual probabilities).
-        
+
         Calibration measures how well predicted probabilities match
         observed frequencies. A well-calibrated model should have
         predicted probability = actual probability.
-        
+
         **Metrics Provided:**
         - Brier Score: Mean squared error of probabilities (lower is better)
         - Hosmer-Lemeshow Test: Chi-square test for calibration
         - Expected Calibration Error (ECE): Average calibration gap
         - Calibration Curve: Observed vs predicted per bin
-        
+
         **Interpretation:**
         - Hosmer-Lemeshow p > 0.05: Good calibration
         - ECE < 0.1: Well calibrated
         - ECE > 0.2: Poor calibration, consider recalibration
-        
+
         **When to Use:**
         - Before using predictions for decision-making
         - When probabilities need to be interpretable
         - For medical risk prediction models
-        
+
         Args:
             csv_content: CSV data as string
             y_true_col: Column with true binary labels
@@ -251,7 +251,7 @@ def register_roc_tools(mcp, stats_client):
             n_bins: Number of bins for calibration curve
             strategy: 'uniform' (equal width) or 'quantile' (equal count)
             is_base64: Set True if csv_content is base64 encoded
-        
+
         Returns:
             brier_score: Probability accuracy measure
             hosmer_lemeshow: {statistic, p_value, interpretation}
@@ -274,7 +274,7 @@ def register_roc_tools(mcp, stats_client):
         except Exception as e:
             logger.error(f"analyze_calibration error: {e}")
             return {"status": "error", "error": str(e)}
-    
+
     @mcp.tool()
     async def full_classifier_evaluation(
         csv_content: str,
@@ -285,36 +285,36 @@ def register_roc_tools(mcp, stats_client):
     ) -> dict:
         """
         🏆 Complete classifier evaluation report.
-        
+
         Comprehensive evaluation combining all ROC analysis tools:
-        
+
         1. **Discrimination** (ROC Analysis)
            - ROC curve and AUC with CI
            - Optimal threshold selection
-        
+
         2. **Classification Metrics**
            - Confusion matrix
            - Sensitivity, Specificity
            - PPV, NPV, F1, Accuracy
-        
+
         3. **Calibration**
            - Brier score
            - Hosmer-Lemeshow test
            - Calibration curve
-        
+
         4. **Clinical Utility** (optional)
            - Net benefit analysis
            - Decision curve
-        
+
         Perfect for publication-ready classifier assessment.
-        
+
         Args:
             csv_content: CSV data as string
             y_true_col: Column with true binary labels
             y_score_col: Column with predicted probabilities
             threshold: Classification threshold (default: optimal)
             is_base64: Set True if csv_content is base64 encoded
-        
+
         Returns:
             roc_analysis: Full ROC curve results
             calibration: Calibration analysis
@@ -335,7 +335,7 @@ def register_roc_tools(mcp, stats_client):
         except Exception as e:
             logger.error(f"full_classifier_evaluation error: {e}")
             return {"status": "error", "error": str(e)}
-    
+
     @mcp.tool()
     async def compare_multiple_roc_curves(
         csv_content: str,
@@ -347,28 +347,28 @@ def register_roc_tools(mcp, stats_client):
     ) -> dict:
         """
         📊 Compare 3+ classification models simultaneously.
-        
+
         Performs comprehensive multi-model comparison:
-        
+
         1. **Individual Performance**
            - AUC with 95% CI for each model
            - Ranked by discriminative ability
-        
+
         2. **Pairwise Comparisons**
            - DeLong test between all model pairs
            - Multiple comparison correction
            - Significance matrix
-        
+
         3. **Best Model Selection**
            - Identifies top performer
            - Reports if significantly better
-        
+
         Correction Methods:
         - "bonferroni": Conservative, controls family-wise error
         - "holm": Less conservative step-down procedure
         - "bh": Benjamini-Hochberg FDR control
         - "none": No correction (not recommended)
-        
+
         Args:
             csv_content: CSV data as string
             y_true_col: Column with true binary labels
@@ -377,7 +377,7 @@ def register_roc_tools(mcp, stats_client):
             correction: Multiple comparison correction method
             alpha: Significance level (default: 0.05)
             is_base64: Set True if csv_content is base64 encoded
-        
+
         Returns:
             model_rankings: Models ranked by AUC
             pairwise_comparisons: All DeLong test results
@@ -388,7 +388,7 @@ def register_roc_tools(mcp, stats_client):
         try:
             # Parse model columns
             model_cols = json.loads(model_columns)
-            
+
             # Submit job to stats-service API
             result = await stats_client.submit_roc_compare_multiple_job(
                 csv_content=csv_content,
@@ -404,7 +404,7 @@ def register_roc_tools(mcp, stats_client):
         except Exception as e:
             logger.error(f"compare_multiple_roc_curves error: {e}")
             return {"status": "error", "error": str(e)}
-    
+
     @mcp.tool()
     async def interactive_threshold_analysis(
         csv_content: str,
@@ -417,26 +417,26 @@ def register_roc_tools(mcp, stats_client):
     ) -> dict:
         """
         🎯 Interactive threshold analysis for clinical decision support.
-        
+
         Comprehensive threshold-by-threshold analysis showing:
-        
+
         1. **Complete Metrics Table**
            - Sensitivity, Specificity, PPV, NPV at each threshold
            - F1, Accuracy, Youden's J
            - Likelihood ratios (LR+, LR-)
            - Number needed to screen (NNS)
-        
+
         2. **Target-Based Selection**
            - Find threshold for target sensitivity (screening)
            - Find threshold for target specificity (confirmation)
            - Trade-off analysis
-        
+
         3. **Recommended Thresholds**
            - Youden optimal (balanced)
            - F1 optimal (precision-recall balance)
            - High sensitivity (≥90% for screening)
            - High specificity (≥90% for confirmation)
-        
+
         Args:
             csv_content: CSV data as string
             y_true_col: Column with true binary labels
@@ -445,7 +445,7 @@ def register_roc_tools(mcp, stats_client):
             target_value: Target value (e.g., 0.95 for 95% sensitivity)
             n_thresholds: Number of thresholds to evaluate (default: 21)
             is_base64: Set True if csv_content is base64 encoded
-        
+
         Returns:
             threshold_table: Complete metrics at each threshold
             target_threshold: Threshold achieving target (if specified)
@@ -467,7 +467,7 @@ def register_roc_tools(mcp, stats_client):
         except Exception as e:
             logger.error(f"interactive_threshold_analysis error: {e}")
             return {"status": "error", "error": str(e)}
-    
+
     @mcp.tool()
     async def generate_roc_publication_report(
         csv_content: str,
@@ -481,30 +481,30 @@ def register_roc_tools(mcp, stats_client):
     ) -> dict:
         """
         📝 Generate publication-ready ROC analysis report.
-        
+
         Produces formatted text suitable for journal submission:
-        
+
         1. **Results Paragraph** (copy-paste ready)
            - AUC with 95% CI (DeLong method)
            - Optimal threshold and method
            - Sensitivity, Specificity with bootstrap CIs
            - PPV, NPV, Accuracy
            - Calibration assessment
-        
+
         2. **Methods Paragraph**
            - Statistical methods description
            - CI calculation methods
            - Software citations
-        
+
         3. **Table Data**
            - Ready for Table X (Model Performance)
            - All metrics with CIs
-        
+
         4. **Figure Data**
            - ROC curve coordinates
            - AUC annotation
            - Optimal point marker
-        
+
         Args:
             csv_content: CSV data as string
             y_true_col: Column with true binary labels
@@ -514,7 +514,7 @@ def register_roc_tools(mcp, stats_client):
             threshold_method: Method for optimal threshold ('youden', 'f1')
             decimal_places: Decimal places for reporting (default: 2)
             is_base64: Set True if csv_content is base64 encoded
-        
+
         Returns:
             results_text: Main results paragraph
             methods_text: Methods description
@@ -538,5 +538,5 @@ def register_roc_tools(mcp, stats_client):
         except Exception as e:
             logger.error(f"generate_roc_publication_report error: {e}")
             return {"status": "error", "error": str(e)}
-    
+
     logger.info("ROC/AUC analysis tools registered: 8 tools")

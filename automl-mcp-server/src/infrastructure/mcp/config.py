@@ -8,17 +8,17 @@ from dataclasses import dataclass
 @dataclass
 class McpServerConfig:
     """Configuration for MCP server"""
-    
+
     name: str = "AutoML MCP Server"
     version: str = "1.0.0"
     json_response: bool = True
-    
+
     # AutoML Service endpoint
     automl_service_url: str = os.getenv("AUTOML_SERVICE_URL", "http://localhost:8001")
-    
+
     # Timeout for HTTP requests (seconds)
     http_timeout: int = int(os.getenv("HTTP_TIMEOUT", "30"))
-    
+
     instructions: str = """
 AutoML MCP Server - 自動機器學習 MCP 伺服器
 

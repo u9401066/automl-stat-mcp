@@ -4,10 +4,10 @@ HTTP Client for Stats Service
 Handles communication with the Stats Service REST API.
 """
 import os
-import httpx
-from typing import Any, Dict, List, Optional
 from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
 
+import httpx
 
 # Stats service URL from environment
 STATS_SERVICE_URL = os.getenv("STATS_SERVICE_URL", "http://localhost:8003")
@@ -16,14 +16,14 @@ STATS_SERVICE_URL = os.getenv("STATS_SERVICE_URL", "http://localhost:8003")
 @dataclass
 class StatsClient:
     """Client for Stats Service REST API"""
-    
+
     base_url: str = STATS_SERVICE_URL
     timeout: int = 30
 
     async def _request(
-        self, 
-        method: str, 
-        path: str, 
+        self,
+        method: str,
+        path: str,
         params: Optional[Dict] = None,
         json: Optional[Dict] = None,
     ) -> Dict[str, Any]:
@@ -39,7 +39,7 @@ class StatsClient:
             return response.json()
 
     # ============== EDA Operations ==============
-    
+
     async def submit_eda_job(
         self,
         dataset_id: str,
@@ -60,7 +60,7 @@ class StatsClient:
                 "minimal": minimal,
             },
         )
-    
+
     async def preview_dataset(
         self,
         dataset_id: str,
@@ -74,7 +74,7 @@ class StatsClient:
         )
 
     # ============== TableOne Operations ==============
-    
+
     async def submit_tableone_job(
         self,
         dataset_id: str,
@@ -103,7 +103,7 @@ class StatsClient:
                 "pval": pval,
             },
         )
-    
+
     async def get_column_suggestions(
         self,
         dataset_id: str,
@@ -117,7 +117,7 @@ class StatsClient:
         )
 
     # ============== Auto-Analyze Operations ==============
-    
+
     async def submit_auto_analyze_job(
         self,
         dataset_id: str,
@@ -136,7 +136,7 @@ class StatsClient:
                 "target_column": target_column,
             },
         )
-    
+
     async def get_auto_analyze_capabilities(self) -> Dict[str, Any]:
         """Get auto-analyze capabilities"""
         return await self._request(
@@ -145,7 +145,7 @@ class StatsClient:
         )
 
     # ============== Job Operations ==============
-    
+
     async def get_job_status(
         self,
         job_id: str,
@@ -155,7 +155,7 @@ class StatsClient:
             "GET",
             f"/jobs/{job_id}",
         )
-    
+
     async def get_job_result(
         self,
         job_id: str,
@@ -165,7 +165,7 @@ class StatsClient:
             "GET",
             f"/jobs/{job_id}/result",
         )
-    
+
     async def list_jobs(
         self,
         user_id: str,
@@ -176,13 +176,13 @@ class StatsClient:
         params = {"user_id": user_id, "limit": limit}
         if job_type:
             params["job_type"] = job_type
-        
+
         return await self._request(
             "GET",
             "/jobs/",
             params=params,
         )
-    
+
     async def delete_job(
         self,
         job_id: str,
@@ -194,9 +194,9 @@ class StatsClient:
             f"/jobs/{job_id}",
             params={"user_id": user_id},
         )
-    
+
     # ============== Direct Analysis ==============
-    
+
     async def direct_analyze(
         self,
         csv_content: str,
@@ -215,7 +215,7 @@ class StatsClient:
                 "target_column": target_column,
             },
         )
-    
+
     async def quick_stats(
         self,
         csv_content: str,
@@ -232,7 +232,7 @@ class StatsClient:
         )
 
     # ============== Propensity Score Analysis ==============
-    
+
     async def submit_propensity_estimate_job(
         self,
         user_id: str,
@@ -245,7 +245,7 @@ class StatsClient:
         regularization: float = 0.0,
     ) -> Dict[str, Any]:
         """Submit propensity score estimation job
-        
+
         Supports two modes:
         - Dataset mode: Provide dataset_id
         - Direct mode: Provide csv_content
@@ -264,7 +264,7 @@ class StatsClient:
                 "regularization": regularization,
             },
         )
-    
+
     async def submit_propensity_match_job(
         self,
         user_id: str,
@@ -299,7 +299,7 @@ class StatsClient:
                 "ratio": ratio,
             },
         )
-    
+
     async def submit_treatment_effect_job(
         self,
         user_id: str,
@@ -330,7 +330,7 @@ class StatsClient:
                 "estimand": estimand,
             },
         )
-    
+
     async def submit_balance_check_job(
         self,
         user_id: str,
@@ -344,7 +344,7 @@ class StatsClient:
         threshold: float = 0.1,
     ) -> Dict[str, Any]:
         """Submit covariate balance assessment job
-        
+
         Supports dual-mode:
         - Dataset mode: Provide dataset_id
         - Direct mode: Provide csv_content
@@ -364,7 +364,7 @@ class StatsClient:
                 "threshold": threshold,
             },
         )
-    
+
     async def submit_full_propensity_job(
         self,
         user_id: str,
@@ -379,11 +379,11 @@ class StatsClient:
         caliper: float = 0.2,
     ) -> Dict[str, Any]:
         """Submit full propensity score analysis job
-        
+
         Supports dual-mode:
         - Dataset mode: Provide dataset_id
         - Direct mode: Provide csv_content
-        
+
         Args:
             target: 'ate' (Average Treatment Effect), 'att' (on Treated), 'atu' (on Untreated)
         """
@@ -403,13 +403,13 @@ class StatsClient:
                 "caliper": caliper,
             },
         )
-    
+
     async def get_propensity_methods(self) -> Dict[str, Any]:
         """Get available propensity score methods"""
         return await self._request("GET", "/propensity/methods")
 
     # ============== Survival Analysis ==============
-    
+
     async def submit_kaplan_meier_job(
         self,
         user_id: str,
@@ -423,7 +423,7 @@ class StatsClient:
         time_points: Optional[List[float]] = None,
     ) -> Dict[str, Any]:
         """Submit Kaplan-Meier analysis job
-        
+
         Supports dual-mode:
         - Dataset mode: Provide dataset_id
         - Direct mode: Provide csv_content
@@ -443,7 +443,7 @@ class StatsClient:
                 "time_points": time_points,
             },
         )
-    
+
     async def submit_cox_regression_job(
         self,
         user_id: str,
@@ -458,7 +458,7 @@ class StatsClient:
         penalizer: float = 0.0,
     ) -> Dict[str, Any]:
         """Submit Cox proportional hazards regression job
-        
+
         Supports dual-mode:
         - Dataset mode: Provide dataset_id
         - Direct mode: Provide csv_content
@@ -479,7 +479,7 @@ class StatsClient:
                 "penalizer": penalizer,
             },
         )
-    
+
     async def submit_survival_compare_job(
         self,
         user_id: str,
@@ -493,7 +493,7 @@ class StatsClient:
         confidence_level: float = 0.95,
     ) -> Dict[str, Any]:
         """Submit survival curve comparison job
-        
+
         Supports dual-mode:
         - Dataset mode: Provide dataset_id
         - Direct mode: Provide csv_content
@@ -513,7 +513,7 @@ class StatsClient:
                 "confidence_level": confidence_level,
             },
         )
-    
+
     async def submit_survival_summary_job(
         self,
         user_id: str,
@@ -525,7 +525,7 @@ class StatsClient:
         group_column: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Submit survival data summary job
-        
+
         Supports dual-mode:
         - Dataset mode: Provide dataset_id
         - Direct mode: Provide csv_content
@@ -543,13 +543,13 @@ class StatsClient:
                 "group_column": group_column,
             },
         )
-    
+
     async def get_survival_methods(self) -> Dict[str, Any]:
         """Get available survival analysis methods"""
         return await self._request("GET", "/survival/methods")
 
     # ============== ROC/AUC Analysis ==============
-    
+
     async def submit_roc_compute_job(
         self,
         user_id: str,
@@ -563,7 +563,7 @@ class StatsClient:
         confidence_level: float = 0.95,
     ) -> Dict[str, Any]:
         """Submit ROC curve computation job
-        
+
         Supports dual-mode:
         - Dataset mode: Provide dataset_id
         - Direct mode: Provide csv_content
@@ -583,7 +583,7 @@ class StatsClient:
                 "confidence_level": confidence_level,
             },
         )
-    
+
     async def submit_roc_compare_job(
         self,
         user_id: str,
@@ -596,7 +596,7 @@ class StatsClient:
         method: str = "delong",
     ) -> Dict[str, Any]:
         """Submit ROC curves comparison job
-        
+
         Supports dual-mode:
         - Dataset mode: Provide dataset_id
         - Direct mode: Provide csv_content
@@ -615,7 +615,7 @@ class StatsClient:
                 "method": method,
             },
         )
-    
+
     async def submit_threshold_analysis_job(
         self,
         user_id: str,
@@ -631,7 +631,7 @@ class StatsClient:
         min_specificity: Optional[float] = None,
     ) -> Dict[str, Any]:
         """Submit optimal threshold analysis job
-        
+
         Supports dual-mode:
         - Dataset mode: Provide dataset_id
         - Direct mode: Provide csv_content
@@ -653,7 +653,7 @@ class StatsClient:
                 "min_specificity": min_specificity,
             },
         )
-    
+
     async def submit_calibration_job(
         self,
         user_id: str,
@@ -666,7 +666,7 @@ class StatsClient:
         strategy: str = "uniform",
     ) -> Dict[str, Any]:
         """Submit calibration analysis job
-        
+
         Supports dual-mode:
         - Dataset mode: Provide dataset_id
         - Direct mode: Provide csv_content
@@ -685,7 +685,7 @@ class StatsClient:
                 "strategy": strategy,
             },
         )
-    
+
     async def submit_full_evaluation_job(
         self,
         user_id: str,
@@ -699,7 +699,7 @@ class StatsClient:
         include_precision_recall: bool = True,
     ) -> Dict[str, Any]:
         """Submit full classifier evaluation job
-        
+
         Supports dual-mode:
         - Dataset mode: Provide dataset_id
         - Direct mode: Provide csv_content
@@ -719,7 +719,7 @@ class StatsClient:
                 "include_precision_recall": include_precision_recall,
             },
         )
-    
+
     # Alias for backward compatibility
     async def submit_roc_full_eval_job(
         self,
@@ -753,13 +753,13 @@ class StatsClient:
                 "generate_visualizations": generate_visualizations,
             },
         )
-    
+
     async def get_roc_methods(self) -> Dict[str, Any]:
         """Get available ROC analysis methods"""
         return await self._request("GET", "/roc/methods")
 
     # ============== Power Analysis ==============
-    
+
     async def calculate_ttest_power(
         self,
         effect_size: Optional[float] = None,
@@ -788,7 +788,7 @@ class StatsClient:
                 "alternative": alternative,
             },
         )
-    
+
     async def calculate_proportion_power(
         self,
         p1: float,
@@ -813,7 +813,7 @@ class StatsClient:
                 "alternative": alternative,
             },
         )
-    
+
     async def calculate_anova_power(
         self,
         k: int,
@@ -838,7 +838,7 @@ class StatsClient:
                 "n": n,
             },
         )
-    
+
     async def calculate_chisquare_power(
         self,
         effect_size: Optional[float] = None,
@@ -861,7 +861,7 @@ class StatsClient:
                 "n": n,
             },
         )
-    
+
     async def calculate_survival_power(
         self,
         hazard_ratio: float,
@@ -890,7 +890,7 @@ class StatsClient:
                 "followup_time": followup_time,
             },
         )
-    
+
     async def calculate_effect_size(
         self,
         test_type: str,
@@ -917,13 +917,13 @@ class StatsClient:
                 "contingency_table": contingency_table,
             },
         )
-    
+
     async def get_power_guidelines(self) -> Dict[str, Any]:
         """Get power analysis guidelines"""
         return await self._request("GET", "/power/guidelines")
 
     # ============== Data Cleaning Operations ==============
-    
+
     async def convert_to_binary(
         self,
         csv_path: str,
@@ -944,7 +944,7 @@ class StatsClient:
                 "save_path": save_path,
             },
         )
-    
+
     async def encode_categorical(
         self,
         csv_path: str,
@@ -965,7 +965,7 @@ class StatsClient:
                 "save_path": save_path,
             },
         )
-    
+
     async def handle_missing_values(
         self,
         csv_path: str,
@@ -988,7 +988,7 @@ class StatsClient:
                 "save_path": save_path,
             },
         )
-    
+
     async def remove_columns(
         self,
         csv_path: str,
@@ -1005,7 +1005,7 @@ class StatsClient:
                 "save_path": save_path,
             },
         )
-    
+
     async def filter_rows(
         self,
         csv_path: str,
@@ -1026,7 +1026,7 @@ class StatsClient:
                 "save_path": save_path,
             },
         )
-    
+
     async def rename_columns(
         self,
         csv_path: str,
@@ -1043,7 +1043,7 @@ class StatsClient:
                 "save_path": save_path,
             },
         )
-    
+
     async def get_column_info(
         self,
         csv_path: str,
@@ -1056,7 +1056,7 @@ class StatsClient:
                 "csv_path": csv_path,
             },
         )
-    
+
     async def auto_clean_dataset(
         self,
         csv_path: str,

@@ -24,16 +24,16 @@ def register_dataset_tools(mcp: FastMCP, client: AutoMLClient) -> None:
     ) -> Dict[str, Any]:
         """
         Register a CSV dataset from MinIO for use in training.
-        
+
         The file must already exist in MinIO. This validates the file
         and registers it with the AutoML service.
-        
+
         Returns:
             dataset_id: Unique identifier for this dataset
             name: Dataset name
             columns: List of column names
             row_count: Number of rows
-            
+
         Next step: Use dataset_id in submit_automl_job or submit_specific_job
         """
         return await client.register_dataset(
@@ -51,7 +51,7 @@ def register_dataset_tools(mcp: FastMCP, client: AutoMLClient) -> None:
     ) -> List[Dict[str, Any]]:
         """
         List all datasets registered by the user.
-        
+
         Returns:
             List of datasets with their IDs, names, columns, and metadata
         """
@@ -64,7 +64,7 @@ def register_dataset_tools(mcp: FastMCP, client: AutoMLClient) -> None:
     ) -> Dict[str, Any]:
         """
         Delete a registered dataset.
-        
+
         Note: This only removes the registration, not the file in MinIO.
         """
         return await client.delete_dataset(dataset_id, user_id)

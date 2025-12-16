@@ -33,18 +33,18 @@ def register_training_tools(mcp: FastMCP, client: AutoMLClient) -> None:
     ) -> Dict[str, Any]:
         """
         Submit an AutoML training job.
-        
+
         This starts automatic model selection and hyperparameter tuning.
         The job runs in the background - this call returns IMMEDIATELY.
-        
+
         ⚠️ IMPORTANT: Training may take minutes to hours!
         Use get_job_status(job_id) to check progress.
-        
+
         Returns:
             job_id: Unique job identifier (use this to check status)
             job_type: "automl"
             status: "pending" (will change to "running", then "completed" or "failed")
-            
+
         Next steps:
             1. Tell the user training has started
             2. Use get_job_status(job_id) to check progress
@@ -79,18 +79,18 @@ def register_training_tools(mcp: FastMCP, client: AutoMLClient) -> None:
     ) -> Dict[str, Any]:
         """
         Submit a training job with specific algorithms.
-        
+
         Use this when you want to train only certain model types.
         The job runs in the background - this call returns IMMEDIATELY.
-        
+
         ⚠️ IMPORTANT: Training may take minutes to hours!
         Use get_job_status(job_id) to check progress.
-        
+
         Returns:
             job_id: Unique job identifier
             job_type: "specific"
             status: "pending"
-            
+
         Next step: Use get_job_status(job_id) to check progress
         """
         return await client.submit_specific_job(
@@ -121,19 +121,19 @@ def register_training_tools(mcp: FastMCP, client: AutoMLClient) -> None:
     ) -> Dict[str, Any]:
         """
         Submit a job to compare multiple algorithms.
-        
+
         Trains multiple models and generates a comparison leaderboard.
         Requires at least 2 algorithms.
         The job runs in the background - this call returns IMMEDIATELY.
-        
+
         ⚠️ IMPORTANT: Training may take minutes to hours!
         Use get_job_status(job_id) to check progress.
-        
+
         Returns:
             job_id: Unique job identifier
             job_type: "compare"
             status: "pending"
-            
+
         Next steps:
             1. Use get_job_status(job_id) to check progress
             2. When complete, use get_model_leaderboard(model_id) to see comparison

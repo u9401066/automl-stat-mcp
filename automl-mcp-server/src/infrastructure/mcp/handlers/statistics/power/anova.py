@@ -16,7 +16,7 @@ from ..base import logger
 
 def register_anova_power_tools(mcp, stats_client):
     """Register ANOVA and Chi-square power analysis tools."""
-    
+
     @mcp.tool()
     async def calculate_anova_sample_size(
         effect_size: Optional[float] = None,
@@ -29,10 +29,10 @@ def register_anova_power_tools(mcp, stats_client):
     ) -> dict:
         """
         📊 Calculate sample size for one-way ANOVA.
-        
+
         Determines how many participants per group for comparing
         means across multiple groups (3+ groups).
-        
+
         Args:
             effect_size: Cohen's f effect size
                 - 0.10 = small effect
@@ -44,13 +44,13 @@ def register_anova_power_tools(mcp, stats_client):
             group_means: List of expected group means (alternative)
             pooled_sd: Pooled standard deviation
             eta_squared: Eta-squared (η²) effect size (alternative)
-        
+
         Returns:
             n_per_group: Sample size per group
             total_n: Total sample size
             effect_size_f: Cohen's f
             eta_squared: Eta-squared (% variance explained)
-        
+
         Example:
             calculate_anova_sample_size(effect_size=0.25, k_groups=3)
             # Returns: n_per_group=52, total=156
@@ -71,7 +71,7 @@ def register_anova_power_tools(mcp, stats_client):
         except Exception as e:
             logger.error(f"calculate_anova_sample_size error: {e}")
             return {"status": "error", "error": str(e)}
-    
+
     @mcp.tool()
     async def calculate_anova_power(
         n_per_group: int,
@@ -84,7 +84,7 @@ def register_anova_power_tools(mcp, stats_client):
     ) -> dict:
         """
         ⚡ Calculate power for one-way ANOVA given sample size.
-        
+
         Args:
             n_per_group: Sample size per group
             effect_size: Cohen's f
@@ -93,7 +93,7 @@ def register_anova_power_tools(mcp, stats_client):
             group_means: Group means (alternative)
             pooled_sd: Pooled SD
             eta_squared: Eta-squared (alternative)
-        
+
         Returns:
             power: Statistical power (0-1)
             interpretation: Adequacy assessment
@@ -115,7 +115,7 @@ def register_anova_power_tools(mcp, stats_client):
         except Exception as e:
             logger.error(f"calculate_anova_power error: {e}")
             return {"status": "error", "error": str(e)}
-    
+
     @mcp.tool()
     async def calculate_anova_effect_size(
         group_means: List[float],
@@ -125,18 +125,18 @@ def register_anova_power_tools(mcp, stats_client):
     ) -> dict:
         """
         🧮 Calculate Cohen's f effect size for ANOVA.
-        
+
         Args:
             group_means: List of expected group means
             pooled_sd: Pooled standard deviation
             group_sds: Standard deviations per group
             eta_squared: Eta-squared to convert
-        
+
         Returns:
             cohens_f: Cohen's f effect size
             eta_squared: Equivalent eta-squared
             interpretation: small/medium/large
-        
+
         Example:
             calculate_anova_effect_size(group_means=[10, 12, 15], pooled_sd=5)
         """
@@ -153,7 +153,7 @@ def register_anova_power_tools(mcp, stats_client):
         except Exception as e:
             logger.error(f"calculate_anova_effect_size error: {e}")
             return {"status": "error", "error": str(e)}
-    
+
     @mcp.tool()
     async def calculate_chisquare_sample_size(
         effect_size: Optional[float] = None,
@@ -166,9 +166,9 @@ def register_anova_power_tools(mcp, stats_client):
     ) -> dict:
         """
         📊 Calculate sample size for chi-square test.
-        
+
         For comparing categorical distributions or testing independence.
-        
+
         Args:
             effect_size: Cohen's w effect size
                 - 0.10 = small effect
@@ -180,11 +180,11 @@ def register_anova_power_tools(mcp, stats_client):
             n_bins: Number of categories (for goodness-of-fit)
             n_rows: Rows in contingency table
             n_cols: Columns in contingency table
-        
+
         Returns:
             n: Required sample size
             effect_size_w: Cohen's w
-        
+
         Example:
             calculate_chisquare_sample_size(effect_size=0.3, n_bins=4)
         """
@@ -204,7 +204,7 @@ def register_anova_power_tools(mcp, stats_client):
         except Exception as e:
             logger.error(f"calculate_chisquare_sample_size error: {e}")
             return {"status": "error", "error": str(e)}
-    
+
     @mcp.tool()
     async def calculate_chisquare_power(
         n: int,
@@ -217,7 +217,7 @@ def register_anova_power_tools(mcp, stats_client):
     ) -> dict:
         """
         ⚡ Calculate power for chi-square test given sample size.
-        
+
         Args:
             n: Sample size
             effect_size: Cohen's w
@@ -226,7 +226,7 @@ def register_anova_power_tools(mcp, stats_client):
             n_bins: Number of categories
             n_rows: Rows in contingency table
             n_cols: Columns in contingency table
-        
+
         Returns:
             power: Statistical power
             recommendations: Suggestions if underpowered
@@ -247,7 +247,7 @@ def register_anova_power_tools(mcp, stats_client):
         except Exception as e:
             logger.error(f"calculate_chisquare_power error: {e}")
             return {"status": "error", "error": str(e)}
-    
+
     @mcp.tool()
     async def calculate_chisquare_effect_size(
         observed_proportions: List[float],
@@ -255,15 +255,15 @@ def register_anova_power_tools(mcp, stats_client):
     ) -> dict:
         """
         🧮 Calculate Cohen's w effect size for chi-square test.
-        
+
         Args:
             observed_proportions: Observed category proportions
             expected_proportions: Expected proportions (uniform if None)
-        
+
         Returns:
             cohens_w: Cohen's w effect size
             interpretation: small/medium/large
-        
+
         Example:
             calculate_chisquare_effect_size(
                 observed_proportions=[0.10, 0.20, 0.30, 0.40]
@@ -280,5 +280,5 @@ def register_anova_power_tools(mcp, stats_client):
         except Exception as e:
             logger.error(f"calculate_chisquare_effect_size error: {e}")
             return {"status": "error", "error": str(e)}
-    
+
     logger.info("ANOVA/Chi-square power tools registered: 6 tools")

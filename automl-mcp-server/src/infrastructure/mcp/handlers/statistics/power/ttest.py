@@ -17,7 +17,7 @@ from ..base import logger
 
 def register_ttest_power_tools(mcp, stats_client):
     """Register t-test and proportion power analysis tools."""
-    
+
     @mcp.tool()
     async def calculate_ttest_sample_size(
         effect_size: Optional[float] = None,
@@ -31,9 +31,9 @@ def register_ttest_power_tools(mcp, stats_client):
     ) -> Dict[str, Any]:
         """
         📊 Calculate sample size for t-test (comparing two means).
-        
+
         Use when planning a study comparing two groups on a continuous outcome.
-        
+
         Args:
             effect_size: Cohen's d effect size
                 - 0.20 = small effect
@@ -46,13 +46,13 @@ def register_ttest_power_tools(mcp, stats_client):
             power: Desired statistical power (default: 0.80)
             alternative: "two-sided", "greater", or "less"
             paired: Whether this is a paired t-test (default: False)
-        
+
         Returns:
             n_per_group: Required sample size per group
             total_n: Total sample size
             effect_size: Cohen's d used in calculation
             interpretation: Effect size interpretation
-        
+
         Example:
             calculate_ttest_sample_size(effect_size=0.5, power=0.80)
         """
@@ -73,7 +73,7 @@ def register_ttest_power_tools(mcp, stats_client):
         except Exception as e:
             logger.error(f"calculate_ttest_sample_size error: {e}")
             return {"status": "error", "error": str(e)}
-    
+
     @mcp.tool()
     async def calculate_ttest_power(
         n_per_group: int,
@@ -87,9 +87,9 @@ def register_ttest_power_tools(mcp, stats_client):
     ) -> Dict[str, Any]:
         """
         ⚡ Calculate statistical power for t-test given sample size.
-        
+
         Use to evaluate whether your existing study has adequate power.
-        
+
         Args:
             n_per_group: Sample size per group (or total n for paired)
             effect_size: Cohen's d effect size
@@ -99,12 +99,12 @@ def register_ttest_power_tools(mcp, stats_client):
             alpha: Significance level (default: 0.05)
             alternative: "two-sided", "greater", or "less"
             paired: Whether this is a paired t-test
-        
+
         Returns:
             power: Calculated statistical power (0-1)
             interpretation: Power adequacy assessment
             recommendations: Suggestions if underpowered
-        
+
         Example:
             calculate_ttest_power(n_per_group=30, effect_size=0.5)
         """
@@ -125,7 +125,7 @@ def register_ttest_power_tools(mcp, stats_client):
         except Exception as e:
             logger.error(f"calculate_ttest_power error: {e}")
             return {"status": "error", "error": str(e)}
-    
+
     @mcp.tool()
     async def calculate_effect_size(
         mean1: float,
@@ -138,9 +138,9 @@ def register_ttest_power_tools(mcp, stats_client):
     ) -> Dict[str, Any]:
         """
         🧮 Calculate Cohen's d effect size from means and SDs.
-        
+
         Use when you have pilot data or literature values.
-        
+
         Args:
             mean1: Mean of group 1
             mean2: Mean of group 2
@@ -149,13 +149,13 @@ def register_ttest_power_tools(mcp, stats_client):
             pooled_std: Pooled SD (alternative to std1/std2)
             n1: Sample size of group 1 (for weighted pooling)
             n2: Sample size of group 2 (for weighted pooling)
-        
+
         Returns:
             cohens_d: Cohen's d effect size
             interpretation: small/medium/large
             mean_difference: Absolute difference
             pooled_sd: Pooled standard deviation used
-        
+
         Example:
             calculate_effect_size(mean1=10, mean2=12, pooled_std=5)
         """
@@ -175,7 +175,7 @@ def register_ttest_power_tools(mcp, stats_client):
         except Exception as e:
             logger.error(f"calculate_effect_size error: {e}")
             return {"status": "error", "error": str(e)}
-    
+
     @mcp.tool()
     async def ttest_sensitivity_analysis(
         n_per_group: int,
@@ -186,10 +186,10 @@ def register_ttest_power_tools(mcp, stats_client):
     ) -> Dict[str, Any]:
         """
         📈 Sensitivity analysis showing power across different scenarios.
-        
+
         Generates a table showing how power changes with different
         effect sizes, sample sizes, or alpha levels.
-        
+
         Args:
             n_per_group: Base sample size per group
             effect_sizes: List of effect sizes to test
@@ -197,12 +197,12 @@ def register_ttest_power_tools(mcp, stats_client):
             powers: Target powers to show required n
             alphas: List of alpha levels to test
             alternative: "two-sided", "greater", or "less"
-        
+
         Returns:
             sensitivity_table: Power for each effect size
             detectable_effect: Minimum detectable effect at 80% power
             recommendations: Study design suggestions
-        
+
         Example:
             ttest_sensitivity_analysis(n_per_group=50)
         """
@@ -220,7 +220,7 @@ def register_ttest_power_tools(mcp, stats_client):
         except Exception as e:
             logger.error(f"ttest_sensitivity_analysis error: {e}")
             return {"status": "error", "error": str(e)}
-    
+
     @mcp.tool()
     async def calculate_proportion_sample_size(
         p1: float,
@@ -232,9 +232,9 @@ def register_ttest_power_tools(mcp, stats_client):
     ) -> Dict[str, Any]:
         """
         📊 Calculate sample size for comparing two proportions.
-        
+
         Use when comparing success rates, response rates, or binary outcomes.
-        
+
         Args:
             p1: Expected proportion in group 1 (e.g., 0.30 for 30%)
             p2: Expected proportion in group 2 (e.g., 0.50 for 50%)
@@ -242,13 +242,13 @@ def register_ttest_power_tools(mcp, stats_client):
             power: Desired statistical power (default: 0.80)
             alternative: "two-sided", "greater", or "less"
             allocation_ratio: n2/n1 ratio (default: 1.0 for equal groups)
-        
+
         Returns:
             n1: Sample size for group 1
             n2: Sample size for group 2
             total_n: Total sample size
             effect_size_h: Cohen's h effect size
-        
+
         Example:
             calculate_proportion_sample_size(p1=0.30, p2=0.50)
         """
@@ -267,7 +267,7 @@ def register_ttest_power_tools(mcp, stats_client):
         except Exception as e:
             logger.error(f"calculate_proportion_sample_size error: {e}")
             return {"status": "error", "error": str(e)}
-    
+
     @mcp.tool()
     async def calculate_proportion_power(
         p1: float,
@@ -279,7 +279,7 @@ def register_ttest_power_tools(mcp, stats_client):
     ) -> Dict[str, Any]:
         """
         ⚡ Calculate power for comparing two proportions given sample size.
-        
+
         Args:
             p1: Expected proportion in group 1
             p2: Expected proportion in group 2
@@ -287,12 +287,12 @@ def register_ttest_power_tools(mcp, stats_client):
             n2: Sample size for group 2 (default: same as n1)
             alpha: Significance level (default: 0.05)
             alternative: "two-sided", "greater", or "less"
-        
+
         Returns:
             power: Calculated statistical power
             interpretation: Power adequacy assessment
             recommendations: Suggestions if underpowered
-        
+
         Example:
             calculate_proportion_power(p1=0.30, p2=0.50, n1=100)
         """
@@ -311,7 +311,7 @@ def register_ttest_power_tools(mcp, stats_client):
         except Exception as e:
             logger.error(f"calculate_proportion_power error: {e}")
             return {"status": "error", "error": str(e)}
-    
+
     @mcp.tool()
     async def proportion_sensitivity_analysis(
         p1: float,
@@ -322,22 +322,22 @@ def register_ttest_power_tools(mcp, stats_client):
     ) -> Dict[str, Any]:
         """
         📈 Sensitivity analysis for proportion comparisons.
-        
+
         Shows how power changes across different proportions
         and sample sizes.
-        
+
         Args:
             p1: Baseline proportion (control group)
             p2_values: List of treatment proportions to evaluate
             n_values: List of sample sizes to evaluate
             alpha: Significance level
             alternative: "two-sided", "greater", or "less"
-        
+
         Returns:
             sensitivity_table: Power for each combination
             minimum_detectable: Smallest detectable difference
             recommendations: Study design suggestions
-        
+
         Example:
             proportion_sensitivity_analysis(
                 p1=0.30,
@@ -359,5 +359,5 @@ def register_ttest_power_tools(mcp, stats_client):
         except Exception as e:
             logger.error(f"proportion_sensitivity_analysis error: {e}")
             return {"status": "error", "error": str(e)}
-    
+
     logger.info("T-test/Proportion power tools registered: 7 tools")

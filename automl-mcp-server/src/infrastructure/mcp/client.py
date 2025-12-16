@@ -3,9 +3,10 @@ HTTP Client for AutoML Service
 
 Handles communication with the AutoML REST API.
 """
-import httpx
-from typing import Any, Dict, List, Optional
 from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
+
+import httpx
 
 from .config import default_config
 
@@ -13,14 +14,14 @@ from .config import default_config
 @dataclass
 class AutoMLClient:
     """Client for AutoML Service REST API"""
-    
+
     base_url: str = default_config.automl_service_url
     timeout: int = default_config.http_timeout
 
     async def _request(
-        self, 
-        method: str, 
-        path: str, 
+        self,
+        method: str,
+        path: str,
         user_id: str,
         session_id: Optional[str] = None,
         json: Optional[Dict] = None,
@@ -29,7 +30,7 @@ class AutoMLClient:
         headers = {"X-User-Id": user_id}
         if session_id:
             headers["X-Session-Id"] = session_id
-        
+
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             response = await client.request(
                 method=method,
@@ -41,7 +42,7 @@ class AutoMLClient:
             return response.json()
 
     # ============== Dataset Operations ==============
-    
+
     async def register_dataset(
         self,
         name: str,
@@ -98,7 +99,7 @@ class AutoMLClient:
     ) -> Dict[str, Any]:
         """
         Upload CSV content directly.
-        
+
         MCP Server reads the file and passes content to AutoML service.
         This avoids Copilot handling file content (saves tokens).
         """
@@ -115,7 +116,7 @@ class AutoMLClient:
         )
 
     # ============== Training Operations ==============
-    
+
     async def submit_automl_job(
         self,
         dataset_id: str,
@@ -196,7 +197,7 @@ class AutoMLClient:
         )
 
     # ============== Job Operations ==============
-    
+
     async def get_job_status(
         self,
         job_id: str,
@@ -235,7 +236,7 @@ class AutoMLClient:
         )
 
     # ============== Model Operations ==============
-    
+
     async def list_models(
         self,
         user_id: str,
@@ -291,7 +292,7 @@ class AutoMLClient:
         )
 
     # ============== Info Operations ==============
-    
+
     async def list_algorithms(self) -> Dict[str, Any]:
         """List available algorithms"""
         async with httpx.AsyncClient(timeout=self.timeout) as client:

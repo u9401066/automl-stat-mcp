@@ -3,7 +3,6 @@ Stats Client Singleton
 
 Provides a singleton instance of StatsClient for use across statistics tools.
 """
-import os
 from typing import Optional
 
 # Re-export StatsClient from the original module
@@ -15,7 +14,7 @@ _stats_client: Optional[StatsClient] = None
 def get_stats_client() -> StatsClient:
     """
     Get or create the singleton StatsClient instance.
-    
+
     Returns:
         StatsClient instance
     """

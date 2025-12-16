@@ -8,15 +8,15 @@ Supports multiple transport modes:
 Usage:
     # Local STDIO mode (default)
     python src/main.py
-    
+
     # SSE mode for remote access
     python src/main.py --mode sse --host 0.0.0.0 --port 8002
 """
 
 import argparse
+import logging
 import os
 import sys
-import logging
 from pathlib import Path
 
 # Ensure the project root is in the path
@@ -72,18 +72,18 @@ def main():
 Examples:
   # Local mode (for VS Code Copilot / Claude Desktop)
   python src/main.py
-  
+
   # Remote SSE mode (for Docker deployment)
   python src/main.py --mode sse --port 8002
-  
+
   # Enterprise HTTP mode (POST-only, for secure environments)
   python src/main.py --mode http --port 8002
-  
+
   # Development with MCP Inspector
   mcp dev src/infrastructure/mcp/server.py
         """
     )
-    
+
     parser.add_argument(
         "--mode",
         choices=["stdio", "sse", "http"],
@@ -101,9 +101,9 @@ Examples:
         default=int(os.environ.get("MCP_PORT", "8002")),
         help="Port for SSE/HTTP mode (default: 8002)"
     )
-    
+
     args = parser.parse_args()
-    
+
     if args.mode == "stdio":
         run_stdio()
     elif args.mode == "sse":
