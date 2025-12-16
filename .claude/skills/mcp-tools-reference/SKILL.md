@@ -323,3 +323,99 @@ power_ttest(mode="effect_size") → power_ttest(mode="sample_size")
 | 「存活分析」 | `kaplan_meier_survival` |
 | 「樣本數計算」 | `power_*` 工具 |
 | 「VIF/共線性」 | `check_multicollinearity` |
+
+---
+
+## 🔧 故障排除指南
+
+### 常見錯誤與解法
+
+| 錯誤訊息 | 原因 | 解法 |
+|----------|------|------|
+| `File not found` | 路徑錯誤 | 確認用 `/data/sample_data/` 開頭 |
+| `'<' not supported between NaN` | 資料有缺失值 | 先用 `handle_missing_values` 處理 |
+| `Column not found` | 欄位名錯誤 | 用 `quick_preview` 確認欄位名 |
+| `Invalid column type` | 類型不符 | 數值分析不能用文字欄位 |
+| `Job timeout` | 任務超時 | 減少資料量或增加 `time_limit` |
+| `Service unavailable` | 服務未啟動 | 執行 `docker compose up -d` |
+
+### 路徑轉換規則
+
+```
+使用者輸入                      → 正確路徑
+─────────────────────────────────────────────────
+iris.csv                       → /data/sample_data/iris.csv
+sample_data/iris.csv           → /data/sample_data/iris.csv
+/data/sample_data/iris.csv     → /data/sample_data/iris.csv (不變)
+/home/eric/.../sample_data/x.csv → /data/sample_data/x.csv
+```
+
+### 資料類型問題
+
+```python
+# ❌ 常見錯誤：對類別欄位做數值分析
+analyze_correlations(csv_path="data.csv", columns=["name", "age"])
+
+# ✅ 正確：只選數值欄位
+analyze_correlations(csv_path="data.csv", columns=["age", "income"])
+
+# 💡 用 quick_preview 先確認欄位類型
+quick_preview(csv_path="data.csv")
+```
+
+### 缺失值處理
+
+```python
+# 步驟 1：檢查缺失情況
+analyze_missing_values(csv_path="data.csv")
+
+# 步驟 2：處理缺失值
+handle_missing_values(
+    csv_path="data.csv",
+    strategy="mean",  # 或 "median", "mode", "drop"
+    columns=["age", "income"]
+)
+
+# 步驟 3：再執行分析
+smart_analyze(csv_path="processed/data_cleaned.csv")
+```
+
+### 服務狀態檢查
+
+```bash
+# 檢查服務
+docker compose ps
+
+# 查看日誌
+docker compose logs -f stats-service
+
+# 重啟服務
+docker compose restart stats-service
+```
+
+### 測試資料流
+
+```bash
+# 執行資料流測試
+./scripts/run_tests.sh dataflow
+
+# 執行所有測試
+./scripts/run_tests.sh all
+
+# 快速煙霧測試
+./scripts/run_tests.sh quick
+```
+
+---
+
+## 📊 測試資料集
+
+| 資料集 | 檔案 | 筆數 | 用途 |
+|--------|------|------|------|
+| Iris | `iris.csv` | 150 | 多類別分類 |
+| Heart Disease | `heart_disease.csv` | 297 | 二元分類 |
+| Titanic | `titanic.csv` | 891 | 有缺失值 |
+| Rossi | `rossi_recidivism.csv` | 432 | 存活分析 |
+| Breast Cancer | `breast_cancer.csv` | 569 | 二元分類 |
+| Diabetes | `diabetes.csv` | 442 | 迴歸 |
+| Medical Study | `medical_study_200.csv` | 200 | 治療效果
