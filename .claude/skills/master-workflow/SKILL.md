@@ -106,6 +106,7 @@ description: Master reference for all workflows and when to use which skill. Thi
 | **ml-training-workflow** | 訓練模型, AutoML, train | ML 模型訓練 |
 | **statistical-analysis-workflow** | 統計分析, 存活分析, PSM | 進階統計分析 |
 | **data-cleaning-workflow** | 資料清理, preprocess | 資料前處理 |
+| **result-delivery-workflow** | 下載結果, 取得報告, 傳檔案 | 結果交付與專案管理 |
 | **mcp-tools-reference** | 工具清單, MCP 工具 | 工具速查參考 |
 
 ---
@@ -266,4 +267,5 @@ description: Master reference for all workflows and when to use which skill. Thi
 | **訓練模型** | **train, AutoML, ML** | **ml-training-workflow** |
 | **存活分析, PSM, ROC** | **survival, propensity** | **statistical-analysis-workflow** |
 | **資料清理, 缺失值** | **clean, preprocess** | **data-cleaning-workflow** |
+| **下載結果, 傳檔案** | **download, report, share** | **result-delivery-workflow** |
 | **MCP 工具, 工具清單** | **tools, reference** | **mcp-tools-reference** |

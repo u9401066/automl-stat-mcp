@@ -14,7 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `.claude/skills/ml-training-workflow/` - ML 模型訓練流程 (AutoML, 預測)
 - `.claude/skills/statistical-analysis-workflow/` - 進階統計分析 (存活、PSM、ROC、Power)
 - `.claude/skills/data-cleaning-workflow/` - 資料清理前處理 (缺失值、編碼、篩選)
-- `.claude/skills/mcp-tools-reference/` - MCP 工具速查參考 (83+ 工具完整分類)
+- `.claude/skills/result-delivery-workflow/` - 結果交付與專案管理 (下載報告、MinIO API)
+- `.claude/skills/mcp-tools-reference/` - MCP 工具速查參考 (98+ 工具完整分類)
 
 #### Workflow Skills (New)
 - `.claude/skills/master-workflow/` - 工作流導航中心

@@ -163,6 +163,7 @@ docker compose exec automl-mcp ls /data/sample_data/
 - **ml-training-workflow** - ML 模型訓練流程 (AutoML)
 - **statistical-analysis-workflow** - 進階統計分析 (存活、PSM、ROC)
 - **data-cleaning-workflow** - 資料清理前處理
+- **result-delivery-workflow** - 結果交付與專案管理 (下載報告、檔案分享)
 - **mcp-tools-reference** - MCP 工具速查參考
 
 ---

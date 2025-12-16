@@ -1,6 +1,6 @@
 # AutoML MCP Server - Tools Inventory
 
-> Last Updated: 2025-12-12
+> Last Updated: 2025-12-16
 
 ## 📊 Overview
 
@@ -10,6 +10,7 @@
 | Statistics | 57+ | ✅ Ready |
 | Data Cleaning | 9 | ✅ Ready |
 | Workflow | 3 | ✅ Ready |
+| Result Management | 2 | ✅ Ready |
 | **Total** | **98+** | |
 
 ---
@@ -151,6 +152,43 @@
 |------|-------------|
 | `list_analysis_results` | 列出儲存的結果 |
 | `get_analysis_result` | 取得儲存的結果 |
+
+---
+
+## ✅ Result Management Tools (2)
+
+| Tool | Description | Parameters |
+|------|-------------|------------|
+| `list_analysis_results` | 列出使用者的分析結果 | `user_id`, `analysis_type?`, `limit?` |
+| `get_analysis_result` | 取得特定結果 | `result_id` |
+
+### Usage Example
+
+```python
+# 1. 列出使用者的所有 tableone 結果
+results = list_analysis_results(
+    user_id="eric",
+    analysis_type="tableone",
+    limit=10
+)
+# Returns: {"status": "success", "count": 5, "keys": [...]}
+
+# 2. 取得特定結果
+result = get_analysis_result(result_id="stat_tableone_abc12345")
+# Returns: {"status": "success", "metadata": {...}, "result": {...}}
+```
+
+### MinIO Direct Access
+
+透過 Stats Service API 直接存取 MinIO：
+
+```bash
+# 列出使用者的所有結果
+GET http://localhost:8003/storage/minio/list?bucket=automl-results&prefix=eric/
+
+# 下載特定結果
+GET http://localhost:8003/storage/minio/download?bucket=automl-results&path=eric/tableone/xxx.json
+```
 
 ---
 
