@@ -1,8 +1,33 @@
-# Progress (Updated: 2025-12-16)
+# Progress (Updated: 2025-12-17)
 
 ## Done
 
-- Project structure audit against CONSTITUTION.md (2025-12-16)
+### 2025-12-17 - Comprehensive Testing & Bug Fixes
+- **Static Analysis (ruff)**: Fixed 7 real bugs + 659 formatting issues
+  - B006: Mutable default argument in base.py
+  - E722: 3x bare except clauses → specific exceptions
+  - F841: 3x unused variables removed
+- **Error Scenarios Tests**: Added 36 new tests
+  - Boundary conditions (empty, single row, NaN, infinity)
+  - Invalid inputs (type mismatches, out of range)
+  - Exception handling (file not found, division by zero)
+  - Data type edge cases (bool, datetime, unicode)
+  - Numerical stability (log-sum-exp, softmax)
+  - Sample size edge cases (n=1, n=2)
+- **Service Mock Tests**: Added 29 new tests
+  - HTTP client mocks (success, errors, timeouts)
+  - Redis operations mocks (save, get, connection errors)
+  - MinIO operations mocks (upload, download)
+  - Stats worker mocks (job submission, timeout)
+  - Complete workflow scenarios
+- **Total Isolated Tests**: 421 (all passing)
+- **Commits**:
+  - `f4844c9` fix: resolve static analysis issues (ruff)
+  - `abc03a0` test: add error scenarios isolated tests (36 cases)
+  - `bdf6cea` test: add service unit tests with mocks (29 cases)
+
+### 2025-12-16 - Project Audit & Cleanup
+- Project structure audit against CONSTITUTION.md
 - Added 2 more isolated test files (smart_tools, orchestration)
 - Integrated template-is-all-you-need framework:
   - `.claude/skills/` - 12 Claude Skills for automation
@@ -10,6 +35,11 @@
   - `.github/bylaws/` - 4 bylaws (DDD, Git, Memory Bank, Python)
   - `AGENTS.md` - VS Code Copilot Agent guidelines
   - `.vscode/settings.json` - Claude Skills enabled
+- Project cleanup - removed ~3,450 lines redundant code
+- Created root pyproject.toml for unified dev environment
+- Commits: `fbf1abb`, `e8edb2a`, `44b2014`
+
+### Earlier
 - Result Persistence feature implemented (Redis + MinIO)
 - JSON serialization fixed for numpy types
 - Storage API endpoints created in stats-service
@@ -22,26 +52,14 @@
 - ROADMAP.md updated with current status
 - MCP_TOOLS_INVENTORY.md updated with result persistence
 - Test infrastructure created (pytest.ini, conftest.py, run_tests.sh)
-- 155+ isolated unit tests created for automl-mcp-server:
-  - test_result_storage_isolated.py (5 tests)
-  - test_cleaning_isolated.py (24 tests)
-  - test_statistics_isolated.py (29 tests)
-  - test_data_validator_isolated.py (23 tests)
-  - test_upload_isolated.py (21 tests)
-  - test_roc_isolated.py (16 tests)
-  - test_power_isolated.py (19 tests)
-  - test_survival_isolated.py (18 tests)
-  - test_smart_tools_isolated.py (27 tests) ← NEW
-  - test_orchestration_isolated.py (26 tests) ← NEW
 
 ## Doing
 
-- Improving test coverage for automl-mcp-server (target: 90%+)
+- Integration tests (requires Docker environment)
 - Painless delivery data analysis (Phase 5 pending)
 
 ## Next
 
 - Add pyproject.toml to other services (per python-environment bylaw)
 - Consider DDD refactoring for automl-mcp-server
-- Integration tests (requires Docker)
 - Continue Phase 5 multivariate analysis
