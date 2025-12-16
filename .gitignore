@@ -71,3 +71,17 @@ data/
 tmp/
 temp/
 *.tmp
+
+# UV (Python package manager)
+uv.lock
+.uv/
+
+# Backup files
+*_backup*
+*_old*
+*.bak
+*.orig
+
+# Local results (keep sample_results in git)
+results/
+!sample_results/
