@@ -1,5 +1,16 @@
 # Progress (Updated: 2025-12-16)
 
+## Doing
+
+### 🚧 MCP Tools 精簡 (98 → 50)
+- **目標**: 將 98+ 工具精簡到 50 個
+- **策略**:
+  1. ✅ 建立整合工具 (smart_analyze, analyze_medical_study)
+  2. ✅ 建立 MCP Resources (減少查詢類工具)
+  3. 🚧 刪除被取代的舊工具
+  4. ⏳ 更新文檔和測試
+- **進度**: 4/50 新工具完成，待刪除 ~48 個舊工具
+
 ## Done
 
 ### 2025-12-16 - MCP 資料分析 Skills 建立

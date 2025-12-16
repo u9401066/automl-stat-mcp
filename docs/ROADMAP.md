@@ -99,18 +99,23 @@
 ## 📈 MCP 工具演進
 
 ```
-v1.3 (Current) ✅
+v1.3 ✅
 ├── AutoML Tools (26)
 ├── Stats Tools (57+)
-│   ├── Core: EDA, TableOne, AutoAnalyze
-│   ├── Enhanced: Correlation, Distribution
-│   ├── Survival: KM, Cox
-│   ├── Propensity: PSM, IPTW
-│   ├── ROC/AUC: DeLong, Calibration
-│   └── Power: T-test, ANOVA, Chi-square, Survival
 ├── Cleaning Tools (9)
 ├── Workflow Tools (3)
-└── Result Persistence ✅
+└── Total: 98+ tools
+
+v1.5 (Current) 🚧 Tool Consolidation
+├── Integrated Tools (4 NEW)
+│   ├── smart_analyze (replaces 4 tools)
+│   ├── analyze_medical_study (replaces 5 tools)
+│   ├── compare_treatment_groups (simplified)
+│   └── quick_preview (replaces 2 tools)
+├── MCP Resources (6 NEW)
+│   └── Static info without tool calls
+├── REMOVED: Redundant tools (~48 tools)
+└── Target: 50 tools total
 
 v2.0 (Planned Q1/Q2 2026)
 ├── Meta-Analysis (5)
@@ -121,12 +126,13 @@ v2.0 (Planned Q1/Q2 2026)
 
 ## 🎯 Success Metrics
 
-| Metric | v1.0 | v1.3 (Current) | Target v2.0 |
-|--------|------|----------------|-------------|
-| MCP Tools | 38 | 98+ ✅ | 110+ |
-| Test Coverage | 188 | 300+ ✅ | 400+ |
-| Analysis Types | 15 | 40+ ✅ | 50+ |
-| Result Persistence | ❌ | ✅ | ✅ |
+| Metric | v1.0 | v1.3 | v1.5 (Current) | Target v2.0 |
+|--------|------|------|----------------|-------------|
+| MCP Tools | 38 | 98+ | **50** 🎯 | 55 |
+| Tool Calls/Workflow | - | 4-6 | **1** | 1 |
+| Test Coverage | 188 | 300+ | 300+ | 400+ |
+| Analysis Types | 15 | 40+ | 40+ | 50+ |
+| Result Persistence | ❌ | ✅ | ✅ | ✅ |
 
 ---
 

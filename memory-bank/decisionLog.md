@@ -130,3 +130,4 @@ C) 整合到 Stats Service（選擇）- 邏輯相關，共用環境
 - 本地開發環境連接遠端 MinIO（已在 .env 配置）
 - Agent 下載 MinIO 檔案需使用 Python minio client（不是 curl/wget） |
 | 2025-12-11 | 儲存架構改為 Redis (暫存+TTL) + MinIO (永久儲存), 完全移除本地檔案儲存 | 1. 避免重複儲存造成空間浪費和同步問題 2. Redis TTL 自動清理過期資料 3. MinIO 提供可靠的永久儲存 4. 簡化架構，減少維護負擔 |
+| 2025-12-16 | 建立 MCP 工具流程改善計畫，優先執行 AGENTS.md 強化與新增 mcp-quick-analysis Skill | 經 medical_study_200.csv 測試發現：1) 路徑混淆最常見 2) 98+工具選擇困難 3) user_id 重複輸入 4) auto_analyze 不穩定。採用漸進式改善：P0 更新 AGENTS.md 加入路徑速查表和工具選擇指南，P1 新增 mcp-quick-analysis Skill 整合自動路徑轉換和智能工具選擇。暫不修改 MCP Server 端（成本高）。 |

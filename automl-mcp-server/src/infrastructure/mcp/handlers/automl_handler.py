@@ -1,7 +1,7 @@
 """
 AutoML MCP Handler
 
-Unified handler that registers all MCP tools.
+Unified handler that registers all MCP tools and resources.
 Modular design - each tool category in its own file.
 """
 import logging
@@ -13,9 +13,11 @@ from .cleaning_tools import register_cleaning_tools
 from .dataset_tools import register_dataset_tools
 from .direct_tools import register_direct_tools
 from .info_tools import register_info_tools
+from .integrated_tools import register_integrated_tools
 from .job_tools import register_job_tools
 from .model_tools import register_model_tools
 from .orchestration_tools import register_orchestration_tools
+from .resources import register_resources
 from .smart_tools import register_smart_tools
 from .statistics_tools import register_statistics_tools
 from .training_tools import register_training_tools
@@ -51,6 +53,12 @@ class AutoMLHandler:
     - execute_analysis_ticket: Execute based on user choice (temp/persistent)
     - check_analysis_progress: Track running analysis jobs
 
+    🚀 Integrated Tools (NEW - Recommended):
+    - smart_analyze: Complete analysis in one call (stats + tableone + correlations)
+    - analyze_medical_study: Medical study pipeline (baseline + treatment effects)
+    - quick_preview: Fast data overview with auto path resolution
+    - compare_treatment_groups: Simplified group comparison
+
     🚀 Smart Orchestration (convenience tools):
     - quick_train: Fastest path from CSV to model
     - train_and_wait: Submit and wait for completion
@@ -58,20 +66,27 @@ class AutoMLHandler:
     - analyze_dataset: Get recommendations before training
     - get_training_summary: Overview of all resources
 
-    Total: 41 tools (23 AutoML + 12 Statistics + 3 Smart Workflow + 3 Upload)
+    📚 Resources (read-only info):
+    - automl://algorithms - Available ML algorithms
+    - automl://health - Service health status
+    - automl://help/upload - Upload workflow help
+    - automl://help/paths - Path resolution guide
+
+    Total: 45+ tools (23 AutoML + 12 Statistics + 4 Integrated + 3 Smart Workflow + 3 Upload)
     """
 
     def __init__(self, mcp: FastMCP):
         self._mcp = mcp
         self._client = get_client()
         self._register_all_tools()
-        logger.info("AutoML Handler initialized with 41 tools")
+        self._register_resources()
+        logger.info("AutoML Handler initialized with 45+ tools and 4 resources")
 
     def _register_all_tools(self) -> None:
         """Register all tool categories"""
         register_info_tools(self._mcp, self._client)
         register_dataset_tools(self._mcp, self._client)
-        register_upload_tools(self._mcp, self._client)  # NEW: Upload workflow
+        register_upload_tools(self._mcp, self._client)
         register_training_tools(self._mcp, self._client)
         register_job_tools(self._mcp, self._client)
         register_model_tools(self._mcp, self._client)
@@ -79,4 +94,9 @@ class AutoMLHandler:
         register_direct_tools(self._mcp, self._client)
         register_statistics_tools(self._mcp, self._client)
         register_smart_tools(self._mcp, self._client)
-        register_cleaning_tools(self._mcp, self._client)  # NEW: Data cleaning tools
+        register_cleaning_tools(self._mcp, self._client)
+        register_integrated_tools(self._mcp, self._client)  # NEW: Integrated tools
+
+    def _register_resources(self) -> None:
+        """Register MCP resources (read-only info)"""
+        register_resources(self._mcp, self._client)
