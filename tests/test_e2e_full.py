@@ -27,12 +27,15 @@ import json
 import os
 import time
 from io import BytesIO, StringIO
+from pathlib import Path
 
 import httpx
 import pandas as pd
 import pytest
 from minio import Minio
-from sklearn.datasets import load_iris, load_breast_cancer
+
+# Path to sample data
+SAMPLE_DATA_DIR = Path(__file__).parent.parent / "sample_data"
 
 # =============================================================================
 # Configuration
@@ -60,44 +63,27 @@ POLL_INTERVAL = int(os.getenv("POLL_INTERVAL", "3"))
 # =============================================================================
 
 def create_iris_dataset() -> pd.DataFrame:
-    """Create Iris dataset for classification tests."""
-    iris = load_iris()
-    df = pd.DataFrame(iris.data, columns=iris.feature_names)
-    df['target'] = iris.target
-    return df
+    """Load Iris dataset from local sample_data directory."""
+    csv_path = SAMPLE_DATA_DIR / "iris.csv"
+    if not csv_path.exists():
+        raise FileNotFoundError(f"Iris dataset not found at {csv_path}")
+    return pd.read_csv(csv_path)
 
 
 def create_breast_cancer_dataset() -> pd.DataFrame:
-    """Create breast cancer dataset for binary classification tests."""
-    data = load_breast_cancer()
-    df = pd.DataFrame(data.data, columns=data.feature_names)
-    df['target'] = data.target
-    return df
+    """Load breast cancer dataset from local sample_data directory."""
+    csv_path = SAMPLE_DATA_DIR / "breast_cancer.csv"
+    if not csv_path.exists():
+        raise FileNotFoundError(f"Breast cancer dataset not found at {csv_path}")
+    return pd.read_csv(csv_path)
 
 
 def create_clinical_dataset() -> pd.DataFrame:
-    """Create a synthetic clinical dataset for statistical analysis."""
-    import numpy as np
-    np.random.seed(42)
-    n = 200
-    
-    df = pd.DataFrame({
-        'patient_id': range(1, n + 1),
-        'age': np.random.normal(55, 15, n).astype(int).clip(18, 90),
-        'gender': np.random.choice(['Male', 'Female'], n),
-        'treatment': np.random.choice(['Control', 'Treatment'], n),
-        'blood_pressure': np.random.normal(120, 20, n).round(1),
-        'cholesterol': np.random.normal(200, 40, n).round(1),
-        'bmi': np.random.normal(26, 5, n).round(1),
-        'smoking': np.random.choice(['Never', 'Former', 'Current'], n, p=[0.5, 0.3, 0.2]),
-        'outcome': np.random.choice([0, 1], n, p=[0.7, 0.3]),
-    })
-    
-    # Add some missing values
-    df.loc[np.random.choice(n, 10, replace=False), 'cholesterol'] = np.nan
-    df.loc[np.random.choice(n, 5, replace=False), 'bmi'] = np.nan
-    
-    return df
+    """Load clinical dataset from local sample_data directory."""
+    csv_path = SAMPLE_DATA_DIR / "medical_study_200.csv"
+    if not csv_path.exists():
+        raise FileNotFoundError(f"Medical study dataset not found at {csv_path}")
+    return pd.read_csv(csv_path)
 
 
 def create_survival_dataset() -> pd.DataFrame:

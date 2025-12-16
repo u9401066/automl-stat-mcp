@@ -15,19 +15,22 @@ Prerequisites:
 - automl-worker running (for actual training)
 
 Usage:
-    pip install minio httpx pandas scikit-learn
+    pip install minio httpx pandas
     python tests/test_e2e.py
 """
 import asyncio
 import time
 from io import BytesIO
+from pathlib import Path
 
 import httpx
 import pandas as pd
 from minio import Minio
-from sklearn.datasets import load_iris
 
 import os
+
+# Path to sample data
+SAMPLE_DATA_DIR = Path(__file__).parent.parent / "sample_data"
 
 # Configuration - Override with environment variables
 MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "localhost:9000")
@@ -40,11 +43,11 @@ API_BASE_URL = "http://localhost:8001"
 
 
 def create_test_dataset() -> pd.DataFrame:
-    """Create a simple test dataset from Iris."""
-    iris = load_iris()
-    df = pd.DataFrame(iris.data, columns=iris.feature_names)
-    df['target'] = iris.target
-    return df
+    """Load Iris dataset from local sample_data directory."""
+    csv_path = SAMPLE_DATA_DIR / "iris.csv"
+    if not csv_path.exists():
+        raise FileNotFoundError(f"Iris dataset not found at {csv_path}")
+    return pd.read_csv(csv_path)
 
 
 def upload_to_minio(df: pd.DataFrame, object_name: str) -> str:
