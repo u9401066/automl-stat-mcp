@@ -104,9 +104,14 @@
 - [ ] 模型版本控制 (MLflow)
 
 ### Code Quality
-- [x] 更多 E2E 測試覆蓋 ✅ 114 passed (91%)
+- [x] 更多 E2E 測試覆蓋 ✅ 149 passed (92%)
 - [x] API 文檔自動生成 ✅ FastAPI Swagger
 - [x] Performance benchmarks ✅ ~30ms avg
+
+### Security
+- [x] 路徑遍歷漏洞修復 ✅ 2025-12-16
+- [x] 輸入驗證強化 ✅ Power Analysis validators
+- [x] 安全測試套件 ✅ 24 tests
 
 ---
 
