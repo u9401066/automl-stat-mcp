@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Comprehensive Testing Framework
+- Static analysis with `ruff`: Fixed 7 bugs (B006, E722, F841) + 659 formatting issues
+- `automl-mcp-server/tests/unit/test_error_scenarios_isolated.py` - 36 error scenario tests
+- `automl-mcp-server/tests/unit/test_service_mock_isolated.py` - 29 service mock tests
+- `tests/test_e2e.py` & `tests/test_e2e_full.py` - E2E tests (12 passed, 1 skipped)
+- Total: 421 isolated unit tests passing
+
+### Changed
+- Removed `scikit-learn` dependency from E2E tests (use local CSV files)
+- E2E tests now use remote MinIO (configurable via `.env`)
+- Fixed API formats: `x-user-id` headers, trailing slashes
+
 #### AI Development Framework Integration
 - Integrated `template-is-all-you-need` framework for AI-assisted development
 - `.claude/skills/` - 12 Claude Skills for automation:
