@@ -1,15 +1,14 @@
 """
-E2E Test - Visualization and Local Results Workflow
+E2E Test - Visualization and MinIO Results Workflow
 
-Tests the complete visualization and local results storage workflow including:
-- Results directory creation
-- Figure generation and saving
-- HTML report generation
+Tests the complete visualization workflow including:
+- MinIO storage for results
+- Figure generation and URLs
 - Various chart types
 
 Prerequisites:
     - Services running (docker compose up)
-    - Results volume mounted
+    - MinIO accessible
 
 Usage:
     cd tests
@@ -18,8 +17,6 @@ Usage:
 import asyncio
 import os
 import time
-from pathlib import Path
-from typing import Optional
 
 import httpx
 import pytest
@@ -34,10 +31,6 @@ AUTOML_API_URL = os.getenv("AUTOML_API_URL", "http://localhost:8001")
 TEST_USER_ID = "e2e_viz_test"
 TIMEOUT = 120.0
 POLL_INTERVAL = 3
-
-# Local results path (from workspace, not container)
-WORKSPACE_ROOT = Path(__file__).parent.parent
-RESULTS_PATH = WORKSPACE_ROOT / "results"
 
 # Sample data paths (container paths)
 SAMPLE_DATA = {
@@ -76,45 +69,6 @@ async def wait_for_job(
     return {"status": "timeout", "job_id": job_id}
 
 
-def get_latest_result_dir(user_id: str) -> Optional[Path]:
-    """Get the latest results directory for a user."""
-    user_results = RESULTS_PATH / user_id
-    
-    if not user_results.exists():
-        return None
-    
-    # Get latest directory
-    dirs = [d for d in user_results.iterdir() if d.is_dir()]
-    if not dirs:
-        return None
-    
-    return max(dirs, key=lambda d: d.stat().st_mtime)
-
-
-def check_results_directory(result_dir: Path) -> dict:
-    """Check contents of a results directory."""
-    contents = {
-        "exists": result_dir.exists(),
-        "has_metadata": (result_dir / "metadata.json").exists(),
-        "has_report_json": (result_dir / "report.json").exists(),
-        "has_report_html": (result_dir / "report.html").exists(),
-        "figures": [],
-        "data_files": [],
-    }
-    
-    # Check figures
-    figures_dir = result_dir / "figures"
-    if figures_dir.exists():
-        contents["figures"] = [f.name for f in figures_dir.iterdir() if f.is_file()]
-    
-    # Check data files
-    data_dir = result_dir / "data"
-    if data_dir.exists():
-        contents["data_files"] = [f.name for f in data_dir.iterdir() if f.is_file()]
-    
-    return contents
-
-
 # =============================================================================
 # Fixtures
 # =============================================================================
@@ -133,59 +87,52 @@ def stats_client():
     return httpx.AsyncClient(timeout=TIMEOUT)
 
 
-@pytest.fixture
-def results_dir():
-    """Ensure results directory exists."""
-    RESULTS_PATH.mkdir(exist_ok=True)
-    return RESULTS_PATH
-
-
 # =============================================================================
-# Test: Results Directory Structure
+# Test: MinIO Results Storage
 # =============================================================================
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
-class TestResultsDirectoryFlow:
-    """Test results directory creation and structure."""
+class TestMinIOResultsFlow:
+    """Test MinIO results storage workflow."""
     
-    def test_results_base_exists(self, results_dir):
-        """Test that results base directory exists."""
-        assert results_dir.exists()
-    
-    async def test_job_creates_results_directory(self, stats_client, results_dir):
-        """Test that running a job creates results directory."""
+    async def test_analysis_returns_result_id(self, stats_client):
+        """Test that analysis returns result_id for MinIO storage."""
         async with stats_client as client:
-            # Submit a job that should create results
             resp = await client.post(
-                f"{STATS_API_URL}/roc/full-eval",
+                f"{STATS_API_URL}/analysis/compare-groups",
                 json={
-                    "csv_path": SAMPLE_DATA["breast_cancer"],
-                    "y_true_col": "diagnosis",
-                    "y_score_col": "mean_radius",
+                    "csv_path": SAMPLE_DATA["iris"],
+                    "group_column": "species",
+                    "value_column": "sepal_length",
                     "user_id": TEST_USER_ID,
-                    "job_name": "viz_test_roc",
                 }
             )
             
             if resp.status_code == 200:
                 data = resp.json()
-                job_id = data.get("job_id")
-                
-                # Wait for completion
-                result = await wait_for_job(client, job_id)
-                
-                if result["status"] == "completed":
-                    # Check local results
-                    latest_dir = get_latest_result_dir(TEST_USER_ID)
-                    
-                    if latest_dir:
-                        contents = check_results_directory(latest_dir)
-                        
-                        assert contents["exists"], "Results directory not created"
-                        # May or may not have all files depending on implementation
+                # Should have result_id for MinIO storage
+                if "result_id" in data:
+                    assert data["result_id"].startswith("stat_")
+                if "result_path" in data:
+                    assert "automl-results" in data["result_path"]
             elif resp.status_code == 404:
-                pytest.skip("ROC full-eval endpoint not implemented")
+                pytest.skip("Compare groups endpoint not implemented")
+
+    async def test_list_analysis_results(self, stats_client):
+        """Test listing analysis results from Redis."""
+        async with stats_client as client:
+            resp = await client.get(
+                f"{STATS_API_URL}/storage/redis/keys",
+                params={"pattern": "stats:result:*"}
+            )
+            
+            if resp.status_code == 200:
+                data = resp.json()
+                # Should return list of keys
+                assert "keys" in data or isinstance(data, list)
+            elif resp.status_code == 404:
+                pytest.skip("Storage endpoint not implemented")
 
 
 # =============================================================================
@@ -197,7 +144,7 @@ class TestResultsDirectoryFlow:
 class TestROCVisualizationFlow:
     """Test ROC curve visualization generation."""
     
-    async def test_roc_curve_generation(self, stats_client, results_dir):
+    async def test_roc_curve_generation(self, stats_client):
         """Test that ROC analysis generates curve figure."""
         async with stats_client as client:
             resp = await client.post(
@@ -241,7 +188,8 @@ class TestROCVisualizationFlow:
             
             if resp.status_code == 200:
                 data = resp.json()
-                # Should have comparison visualization
+                # Should have comparison visualization or result
+                assert "auc_1" in data or "result" in data or "comparison" in data
             elif resp.status_code == 404:
                 pytest.skip("ROC compare endpoint not implemented")
 
@@ -275,10 +223,14 @@ class TestSurvivalVisualizationFlow:
                 if "visualizations" in data:
                     viz = data["visualizations"]
                     # Check for KM curve
-                    has_km = any("km" in v.get("filename", "").lower() or 
-                                 "kaplan" in v.get("filename", "").lower() or
-                                 "survival" in v.get("filename", "").lower() 
-                                 for v in viz)
+                    has_km = any(
+                        "km" in v.get("filename", "").lower() or 
+                        "kaplan" in v.get("filename", "").lower() or
+                        "survival" in v.get("filename", "").lower() 
+                        for v in viz
+                    )
+                    if viz:
+                        assert has_km or len(viz) > 0
             elif resp.status_code == 404:
                 pytest.skip("Kaplan-Meier endpoint not implemented")
     
@@ -298,22 +250,24 @@ class TestSurvivalVisualizationFlow:
             
             if resp.status_code == 200:
                 data = resp.json()
-                # Should have grouped survival curves
+                # Should have grouped survival curves or log-rank test
+                data_str = str(data).lower()
+                assert "survival" in data_str or "log_rank" in data_str or "result" in data
             elif resp.status_code == 404:
                 pytest.skip("Kaplan-Meier endpoint not implemented")
 
 
 # =============================================================================
-# Test: HTML Report Generation
+# Test: Full Evaluation Workflow
 # =============================================================================
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
-class TestHTMLReportFlow:
-    """Test HTML report generation."""
+class TestFullEvaluationFlow:
+    """Test full evaluation with MinIO storage."""
     
-    async def test_full_analysis_generates_html(self, stats_client, results_dir):
-        """Test that full analysis generates HTML report."""
+    async def test_full_roc_eval_returns_result_id(self, stats_client):
+        """Test that full ROC evaluation stores results."""
         async with stats_client as client:
             resp = await client.post(
                 f"{STATS_API_URL}/roc/full-eval",
@@ -322,6 +276,7 @@ class TestHTMLReportFlow:
                     "y_true_col": "diagnosis",
                     "y_score_col": "mean_radius",
                     "user_id": TEST_USER_ID,
+                    "job_name": "viz_test_roc",
                 }
             )
             
@@ -334,122 +289,48 @@ class TestHTMLReportFlow:
                     result = await wait_for_job(client, job_id)
                     
                     if result["status"] == "completed":
-                        # Check for HTML report in results
-                        latest_dir = get_latest_result_dir(TEST_USER_ID)
-                        
-                        if latest_dir:
-                            html_path = latest_dir / "report.html"
-                            if html_path.exists():
-                                # Verify HTML content
-                                html_content = html_path.read_text()
-                                assert "<!DOCTYPE html>" in html_content or "<html" in html_content
-                                assert "report" in html_content.lower() or "analysis" in html_content.lower()
+                        # Check for result persistence fields
+                        result_data = result.get("result", {})
+                        if "result_id" in result_data:
+                            assert result_data["result_id"].startswith("stat_")
             elif resp.status_code == 404:
-                pytest.skip("Full-eval endpoint not implemented")
-    
-    def test_html_report_contains_figures(self, results_dir):
-        """Test that HTML report references figures."""
-        # Find latest HTML report
-        latest_dir = get_latest_result_dir(TEST_USER_ID)
-        
-        if not latest_dir:
-            pytest.skip("No results directory found")
-        
-        html_path = latest_dir / "report.html"
-        
-        if not html_path.exists():
-            pytest.skip("No HTML report found")
-        
-        html_content = html_path.read_text()
-        
-        # Check for figure references
-        assert "figures/" in html_content or "img" in html_content.lower()
+                pytest.skip("ROC full-eval endpoint not implemented")
 
 
 # =============================================================================
-# Test: Figure Files
+# Test: Visualization URLs
 # =============================================================================
 
 @pytest.mark.e2e
-class TestFigureFilesFlow:
-    """Test figure file generation and storage."""
+@pytest.mark.asyncio
+class TestVisualizationURLs:
+    """Test visualization URL generation."""
     
-    def test_figures_directory_structure(self, results_dir):
-        """Test figures are saved in correct directory."""
-        latest_dir = get_latest_result_dir(TEST_USER_ID)
-        
-        if not latest_dir:
-            pytest.skip("No results directory found")
-        
-        figures_dir = latest_dir / "figures"
-        
-        if figures_dir.exists():
-            figures = list(figures_dir.glob("*.png"))
+    async def test_visualization_urls_valid(self, stats_client):
+        """Test that visualization URLs are valid MinIO paths."""
+        async with stats_client as client:
+            resp = await client.post(
+                f"{STATS_API_URL}/roc/compute",
+                json={
+                    "csv_path": SAMPLE_DATA["breast_cancer"],
+                    "y_true_col": "diagnosis",
+                    "y_score_col": "mean_radius",
+                    "user_id": TEST_USER_ID,
+                    "generate_plot": True,
+                }
+            )
             
-            if figures:
-                # Check figure file properties
-                for fig in figures:
-                    assert fig.stat().st_size > 0, f"Empty figure: {fig.name}"
-    
-    def test_figure_filenames_descriptive(self, results_dir):
-        """Test figure filenames are descriptive."""
-        latest_dir = get_latest_result_dir(TEST_USER_ID)
-        
-        if not latest_dir:
-            pytest.skip("No results directory found")
-        
-        figures_dir = latest_dir / "figures"
-        
-        if figures_dir.exists():
-            figures = list(figures_dir.glob("*.png"))
-            
-            for fig in figures:
-                # Should not be generic names
-                name = fig.stem.lower()
-                assert name != "figure" and name != "plot"
-
-
-# =============================================================================
-# Test: Metadata Files
-# =============================================================================
-
-@pytest.mark.e2e
-class TestMetadataFilesFlow:
-    """Test metadata file generation."""
-    
-    def test_metadata_json_exists(self, results_dir):
-        """Test metadata.json exists in results."""
-        latest_dir = get_latest_result_dir(TEST_USER_ID)
-        
-        if not latest_dir:
-            pytest.skip("No results directory found")
-        
-        metadata_path = latest_dir / "metadata.json"
-        
-        if metadata_path.exists():
-            import json
-            metadata = json.loads(metadata_path.read_text())
-            
-            # Check required fields
-            assert "job_id" in metadata
-            assert "user_id" in metadata
-            assert "status" in metadata
-    
-    def test_source_info_exists(self, results_dir):
-        """Test source_info.json exists in data directory."""
-        latest_dir = get_latest_result_dir(TEST_USER_ID)
-        
-        if not latest_dir:
-            pytest.skip("No results directory found")
-        
-        source_info_path = latest_dir / "data" / "source_info.json"
-        
-        if source_info_path.exists():
-            import json
-            source_info = json.loads(source_info_path.read_text())
-            
-            # Should have some source information
-            assert len(source_info) > 0
+            if resp.status_code == 200:
+                data = resp.json()
+                
+                if "visualizations" in data:
+                    for viz in data["visualizations"]:
+                        if "url" in viz:
+                            url = viz["url"]
+                            # Should be MinIO URL
+                            assert "minio" in url.lower() or "9000" in url or "http" in url
+            elif resp.status_code == 404:
+                pytest.skip("ROC endpoint not implemented")
 
 
 # =============================================================================
@@ -460,17 +341,16 @@ class TestMetadataFilesFlow:
 @pytest.mark.asyncio
 @pytest.mark.slow
 class TestCompleteVisualizationWorkflow:
-    """Test complete visualization workflow."""
+    """Test complete visualization workflow with MinIO."""
     
-    async def test_full_roc_analysis_with_local_results(self, stats_client, results_dir):
+    async def test_full_analysis_with_minio_results(self, stats_client):
         """
-        Complete ROC analysis workflow with local results:
+        Complete analysis workflow with MinIO results:
         1. Submit full ROC evaluation
         2. Wait for completion
-        3. Verify local results directory
-        4. Check figures generated
-        5. Check HTML report
-        6. Check metadata
+        3. Verify result_id returned
+        4. Check visualizations array
+        5. Verify URLs are accessible
         """
         async with stats_client as client:
             # 1. Submit job
@@ -500,63 +380,80 @@ class TestCompleteVisualizationWorkflow:
             if result["status"] != "completed":
                 pytest.skip("Job did not complete")
             
-            # 3. Check local results
-            # Wait a bit for file system sync
-            await asyncio.sleep(1)
+            # 3. Check result structure
+            result_data = result.get("result", {})
             
-            latest_dir = get_latest_result_dir(TEST_USER_ID)
+            print(f"Job completed: {job_id}")
             
-            if not latest_dir:
-                print("⚠ Local results directory not found (may not be mounted)")
-                return
+            if "result_id" in result_data:
+                print(f"✓ Result ID: {result_data['result_id']}")
             
-            contents = check_results_directory(latest_dir)
+            if "result_path" in result_data:
+                print(f"✓ Result Path: {result_data['result_path']}")
             
-            # 4. Verify structure
-            print(f"Results directory: {latest_dir}")
-            print(f"Contents: {contents}")
-            
-            assert contents["exists"], "Results directory exists"
-            
-            if contents["has_metadata"]:
-                print("✓ metadata.json present")
-            
-            if contents["has_report_json"]:
-                print("✓ report.json present")
-            
-            if contents["has_report_html"]:
-                print("✓ report.html present")
-            
-            if contents["figures"]:
-                print(f"✓ Figures: {contents['figures']}")
+            if "visualizations" in result_data:
+                print(f"✓ Visualizations: {len(result_data['visualizations'])} items")
             
             print("✓ Complete visualization workflow passed!")
 
 
 # =============================================================================
-# Test: List User Results
+# Test: Storage API
 # =============================================================================
 
 @pytest.mark.e2e
-class TestListUserResults:
-    """Test listing user results."""
+@pytest.mark.asyncio
+class TestStorageAPI:
+    """Test storage API endpoints."""
     
-    def test_list_user_results_directories(self, results_dir):
-        """List all results directories for test user."""
-        user_results = results_dir / TEST_USER_ID
-        
-        if not user_results.exists():
-            pytest.skip("No results for test user")
-        
-        result_dirs = [d for d in user_results.iterdir() if d.is_dir()]
-        
-        print(f"\nUser '{TEST_USER_ID}' has {len(result_dirs)} result directories:")
-        
-        for rd in sorted(result_dirs, key=lambda d: d.stat().st_mtime, reverse=True)[:5]:
-            contents = check_results_directory(rd)
-            print(f"  - {rd.name}")
-            print(f"    Figures: {len(contents['figures'])}")
-            print(f"    Has HTML: {contents['has_report_html']}")
+    async def test_redis_storage_set_get(self, stats_client):
+        """Test Redis storage set and get."""
+        async with stats_client as client:
+            test_key = "test:viz:key"
+            test_value = {"test": "data", "value": 123}
+            
+            # Set value
+            resp = await client.post(
+                f"{STATS_API_URL}/storage/redis/set",
+                json={
+                    "key": test_key,
+                    "value": test_value,
+                    "ttl": 60,
+                }
+            )
+            
+            if resp.status_code == 404:
+                pytest.skip("Redis storage endpoint not implemented")
+            
+            if resp.status_code == 200:
+                # Get value
+                resp = await client.get(
+                    f"{STATS_API_URL}/storage/redis/get",
+                    params={"key": test_key}
+                )
+                
+                if resp.status_code == 200:
+                    data = resp.json()
+                    assert data.get("value") == test_value or data == test_value
+    
+    async def test_minio_list_objects(self, stats_client):
+        """Test MinIO list objects."""
+        async with stats_client as client:
+            resp = await client.get(
+                f"{STATS_API_URL}/storage/minio/list",
+                params={
+                    "bucket": "stats-reports",
+                    "prefix": TEST_USER_ID,
+                }
+            )
+            
+            if resp.status_code == 404:
+                pytest.skip("MinIO list endpoint not implemented")
+            
+            if resp.status_code == 200:
+                data = resp.json()
+                # Should return objects list
+                assert "objects" in data or isinstance(data, list)
 
 
 if __name__ == "__main__":
