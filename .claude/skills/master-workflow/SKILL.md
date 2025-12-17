@@ -102,6 +102,8 @@ description: Master navigation hub showing all available workflows and when to u
 
 | Skill | 觸發詞 | 用途 |
 |-------|--------|------|
+| **project-workflow** | 新專案, 完整流程, SOP | ⭐ 專案完整操作流程 |
+| **mcp-quick-analysis** | 快速分析, 分析一下 | 快速分析（跳過專案建立） |
 | **data-analysis-workflow** | 分析資料, EDA, describe | 完整資料探索分析 |
 | **ml-training-workflow** | 訓練模型, AutoML, train | ML 模型訓練 |
 | **statistical-analysis-workflow** | 統計分析, 存活分析, PSM | 進階統計分析 |
@@ -162,7 +164,27 @@ description: Master navigation hub showing all available workflows and when to u
 │                     MCP 資料分析流程                                 │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                      │
-│  「分析這個資料」                                                     │
+│  「新專案」「完整流程」「正式研究」                                   │
+│         ↓                                                           │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │  ⭐ project-workflow (最完整！)                              │    │
+│  │  Step 0: 檢視可用資料 (list_available_files, quick_preview) │    │
+│  │  Step 1: 建立專案目錄 (create_project_workspace)            │    │
+│  │  Step 2: 上傳資料 (upload_dataset)                          │    │
+│  │  Step 3: 品質檢查 (quality_check)                           │    │
+│  │  Step 4: 執行分析 (smart_analyze / automl / survival)       │    │
+│  │  Step 5: 取得結果 (get_analysis_result)                     │    │
+│  │  Step 6: 產生報告 (generate_analysis_report)                │    │
+│  └─────────────────────────────────────────────────────────────┘    │
+│                                                                      │
+│  「快速分析」「分析一下」（不需建專案）                               │
+│         ↓                                                           │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │  🚀 mcp-quick-analysis                                       │    │
+│  │  quick_preview → smart_analyze → 結果彙整                    │    │
+│  └─────────────────────────────────────────────────────────────┘    │
+│                                                                      │
+│  「分析這個資料」「EDA」                                              │
 │         ↓                                                           │
 │  ┌─────────────────────────────────────────────────────────────┐    │
 │  │  📊 data-analysis-workflow                                   │    │
@@ -263,6 +285,8 @@ description: Master navigation hub showing all available workflows and when to u
 | 產生測試 | generate test | test-generator |
 | 重構 | refactor | code-refactor |
 | review | review | code-reviewer |
+| **新專案, 完整流程, SOP** | **full workflow, project setup** | **project-workflow** |
+| **快速分析, 分析一下** | **quick analysis** | **mcp-quick-analysis** |
 | **分析資料, 探索** | **EDA, explore, describe** | **data-analysis-workflow** |
 | **訓練模型** | **train, AutoML, ML** | **ml-training-workflow** |
 | **存活分析, PSM, ROC** | **survival, propensity** | **statistical-analysis-workflow** |

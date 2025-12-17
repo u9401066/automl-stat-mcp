@@ -120,6 +120,212 @@ docker compose exec automl-mcp ls /data/sample_data/
 
 ---
 
+## 🎯 專案操作流程（最核心！）
+
+### 標準流程概覽
+
+```
+┌──────────────────────────────────────────────────────────────────────────┐
+│                    AutoML 專案標準操作流程                                │
+├──────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│   [Step 0] 檢視可用資料                                                   │
+│       └─→ list_available_files("/data/sample_data")                     │
+│       └─→ quick_preview("iris.csv")                                     │
+│                   ↓                                                      │
+│   [Step 1] 建立專案目錄（可選）                                            │
+│       └─→ create_project_workspace(project_name, user_id, template)     │
+│       └─→ 返回: /data/projects/{project_name}/                          │
+│                   ↓                                                      │
+│   [Step 2] 移動/上傳資料                                                  │
+│       └─→ upload_dataset(source_path, storage_mode)                     │
+│       └─→ 返回: dataset_id (永久) 或 job_id (暫存)                        │
+│                   ↓                                                      │
+│   [Step 3] 資料品質檢查                                                   │
+│       └─→ quality_check 或 quick_stats (include_quality_check=True)     │
+│       └─→ 返回: warnings, transform_suggestions, analysis_readiness     │
+│                   ↓                                                      │
+│   [Step 4] 執行分析/訓練                                                  │
+│       ├─→ [分析] smart_analyze / generate_tableone_directly             │
+│       ├─→ [統計] kaplan_meier_survival / cox_proportional_hazards       │
+│       └─→ [ML] submit_automl_job / quick_train                          │
+│                   ↓                                                      │
+│   [Step 5] 取得結果與圖表                                                 │
+│       └─→ get_analysis_result(result_id)                                │
+│       └─→ get_model_leaderboard(model_id)                               │
+│       └─→ list_analysis_results(user_id)                                │
+│                   ↓                                                      │
+│   [Step 6] 產生報告（可選）                                               │
+│       └─→ generate_analysis_report(result_ids)                          │
+│       └─→ 結果儲存於 MinIO: automl-results/{user_id}/                    │
+│                                                                          │
+└──────────────────────────────────────────────────────────────────────────┘
+```
+
+### Step 0：檢視可用資料
+
+```python
+# 列出 sample_data 目錄檔案
+list_available_files(directory="/data/sample_data")
+
+# 快速預覽資料（自動路徑轉換）
+quick_preview(csv_path="iris.csv")  # → /data/sample_data/iris.csv
+```
+
+**可用範例資料集：**
+| 檔案 | 類型 | 目標變數 |
+|------|------|----------|
+| `iris.csv` | 多類別分類 | species |
+| `titanic.csv` | 二元分類 | survived |
+| `heart_disease.csv` | 二元分類 | target |
+| `breast_cancer.csv` | 二元分類 | diagnosis |
+| `medical_study_200.csv` | 醫學研究 | treatment_group |
+| `rossi_recidivism.csv` | 存活分析 | arrest, week |
+| `stanford_heart.csv` | 存活分析 | status, time |
+
+### Step 1：建立專案目錄（正式研究）
+
+```python
+create_project_workspace(
+    project_name="my_breast_cancer_study",
+    user_id="eric",
+    template="medical_study"  # default / medical_study / ml_project
+)
+```
+
+**產生目錄結構：**
+```
+/data/projects/my_breast_cancer_study/
+├── data/
+│   ├── raw/           # 原始資料
+│   └── processed/     # 清理後資料
+├── analysis/          # 分析結果
+├── reports/           # 報告
+└── figures/           # 圖表
+```
+
+### Step 2：上傳資料
+
+```python
+# 方式 A：暫存模式（快速分析用）
+upload_dataset(
+    name="quick_analysis",
+    source_type="local",
+    source_path="/data/sample_data/breast_cancer.csv",
+    storage_mode="temporary",  # 存 Redis，7天後過期
+    user_id="eric"
+)
+# 返回: job_id（用於單次分析）
+
+# 方式 B：永久模式（正式研究/ML 訓練）
+upload_dataset(
+    name="breast_cancer_study",
+    source_type="local",
+    source_path="/data/projects/my_study/data/raw/data.csv",
+    storage_mode="permanent",  # 存 MinIO，永久保留
+    user_id="eric"
+)
+# 返回: dataset_id（用於 ML 訓練）
+```
+
+### Step 3：資料品質檢查
+
+```python
+# 方式 A：專用品質檢查端點
+quality_check(csv_path="/data/sample_data/breast_cancer.csv")
+
+# 方式 B：整合在 quick_stats 中
+quick_stats(
+    csv_path="/data/sample_data/breast_cancer.csv",
+    include_quality_check=True
+)
+```
+
+**品質檢查輸出：**
+- `warnings`: 問題警告 (ALL_NAN, CONSTANT, HIGH_MISSING 等)
+- `transform_suggestions`: 轉換建議 (log, zscore 等)
+- `analysis_readiness`: ready / needs_review / not_ready
+
+### Step 4：執行分析
+
+**路徑 A：描述性分析**
+```python
+# 推薦！一站式分析
+smart_analyze(csv_path="breast_cancer.csv", group_column="diagnosis")
+
+# 或分步執行
+quick_stats(csv_path="breast_cancer.csv")
+generate_tableone_directly(csv_path="...", group_column="diagnosis")
+analyze_correlations(csv_path="...")
+```
+
+**路徑 B：統計分析**
+```python
+# 存活分析
+kaplan_meier_survival(csv_path="rossi.csv", time_col="week", event_col="arrest")
+cox_proportional_hazards(csv_path="rossi.csv", time_col="week", event_col="arrest")
+
+# ROC 分析
+compute_roc_curve(csv_path="...", y_true_col="target", y_score_col="probability")
+```
+
+**路徑 C：機器學習**
+```python
+# Step 4a: 提交訓練
+submit_automl_job(
+    dataset_id="dataset-xxx",
+    target_column="diagnosis",
+    problem_type="binary",
+    time_limit=300,
+    user_id="eric"
+)
+# 返回: job_id
+
+# Step 4b: 等待完成
+wait_for_job(job_id="job-xxx", user_id="eric")
+# 返回: model_id
+
+# Step 4c: 查看結果
+get_model_leaderboard(model_id="model-xxx", user_id="eric")
+```
+
+### Step 5：取得結果
+
+```python
+# 列出所有分析結果
+list_analysis_results(user_id="eric", analysis_type="tableone")
+
+# 取得特定結果
+get_analysis_result(result_id="stat_tableone_abc123")
+
+# ML 模型排行榜
+get_model_leaderboard(model_id="model-xxx", user_id="eric")
+```
+
+### Step 6：產生報告（可選）
+
+```python
+generate_analysis_report(
+    result_ids=["stat_tableone_xxx", "stat_roc_yyy"],
+    user_id="eric"
+)
+# 報告存於: automl-results/eric/reports/
+```
+
+### 速查：依使用者需求選流程
+
+| 使用者說... | 執行流程 |
+|-------------|----------|
+| 「看看這個資料」 | Step 0 → Step 3 |
+| 「快速分析」 | Step 0 → Step 2(暫存) → Step 4A |
+| 「正式研究專案」 | Step 0 → Step 1 → Step 2(永久) → Step 3 → Step 4 → Step 5 → Step 6 |
+| 「訓練模型」 | Step 0 → Step 2(永久) → Step 4C → Step 5 |
+| 「存活分析」 | Step 0 → Step 4B |
+
+**完整流程 Skill：** `.claude/skills/project-workflow/SKILL.md`
+
+---
+
 ## 🔄 工作流 Skills（最重要！）
 
 **每次工作必用的 Skills：**
@@ -167,7 +373,8 @@ docker compose exec automl-mcp ls /data/sample_data/
 - **project-init** - 專案初始化
 
 ### MCP 資料分析 Skills（本專案核心）
-- **mcp-quick-analysis** - 🆕 快速分析流程（自動路徑轉換、智能工具選擇）
+- **project-workflow** - 🆕 專案完整操作流程（建立→上傳→分析→報告）
+- **mcp-quick-analysis** - 快速分析流程（自動路徑轉換、智能工具選擇）
 - **data-analysis-workflow** - 資料探索分析流程 (EDA, Table One)
 - **ml-training-workflow** - ML 模型訓練流程 (AutoML)
 - **statistical-analysis-workflow** - 進階統計分析 (存活、PSM、ROC)
