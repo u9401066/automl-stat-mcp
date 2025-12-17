@@ -6,7 +6,7 @@ description: Intelligently update README.md to reflect code changes, new feature
 # README 更新技能
 
 ## 描述
-智能更新 README.md，保持與程式碼同步。
+智能更新 README.md，保持與程式碼同步，支援多語言版本維護。
 
 ## 觸發條件
 - 「更新 README」
@@ -40,6 +40,55 @@ description: Intelligently update README.md to reflect code changes, new feature
 - 貢獻指南
 - 致謝
 
+---
+
+## 🌐 多語言支援 (i18n)
+
+### 檔案結構
+```
+README.md          # 主 README（預設語言）
+README.zh-TW.md    # 繁體中文版本（可選）
+README.en.md       # 英文版本（可選）
+```
+
+### 同步規則
+```
+如果使用者提供中文內容 → 同步到英文版（如存在）
+如果使用者提供英文內容 → 同步到中文版（如存在）
+如果主 README 變更 → 同步所有語言版本
+```
+
+### 翻譯原則
+- 技術術語保持一致（使用術語表）
+- 程式碼範例不翻譯，只翻譯註解
+- 保持 Markdown 結構完全對應
+- 連結指向對應語言版本
+
+### 術語對照表
+
+| 中文 | English |
+|------|---------|
+| 憲法 | Constitution |
+| 子法 | Bylaws |
+| 技能 | Skills |
+| 記憶庫 | Memory Bank |
+| 領域驅動設計 | Domain-Driven Design (DDD) |
+| 資料存取層 | Data Access Layer (DAL) |
+| 提交 | Commit |
+| 工作流 | Workflow |
+| 架構 | Architecture |
+| 模組化 | Modular |
+
+### 同步檢查清單
+```markdown
+- [ ] 章節數量一致
+- [ ] 程式碼區塊一致
+- [ ] 連結有效性
+- [ ] 術語一致性
+```
+
+---
+
 ## 輸出格式
 
 ```
@@ -58,4 +107,7 @@ description: Intelligently update README.md to reflect code changes, new feature
   - 🤖 Claude Skills
   - 📝 Memory Bank
 + - 🔐 用戶認證（新增）
+
+多語言同步：
+  ⏭️ README.zh-TW.md - 不存在，跳過
 ```
