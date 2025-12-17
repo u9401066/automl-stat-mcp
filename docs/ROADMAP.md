@@ -1,6 +1,6 @@
 # AutoML MCP System - Roadmap
 
-> Last Updated: 2025-12-16
+> Last Updated: 2025-12-17
 
 ## 🎯 Vision
 
@@ -8,14 +8,15 @@
 
 ---
 
-## 📊 Current Status (v1.4)
+## 📊 Current Status (v1.5)
 
 ### ✅ 已完成功能
 
 | 模組 | 功能 | 工具數 | 狀態 |
 |------|------|--------|------|
-| **AI Framework** | Claude Skills, Constitution-Bylaw | 12 Skills | ✅ NEW |
-| **Project Mgmt** | 專案目錄、視覺化列表、報告產生 | 4 | ✅ NEW |
+| **Data Quality** | 品質偵測、轉換建議、準備度評估 | 2 | ✅ NEW |
+| **AI Framework** | Claude Skills, Constitution-Bylaw | 12 Skills | ✅ |
+| **Project Mgmt** | 專案目錄、視覺化列表、報告產生 | 4 | ✅ |
 | **AutoML Core** | 資料集管理、模型訓練、預測 | 26 | ✅ |
 | **Statistics Core** | EDA、TableOne、智能分析 | 12 | ✅ |
 | **Smart Workflow** | 引導式分析流程 | 3 | ✅ |
@@ -30,7 +31,21 @@
 | **Visualization** | 出版品質圖表 | - | ✅ |
 | **Result Persistence** | Redis + MinIO 儲存 | - | ✅ |
 
-**總計: 102+ MCP 工具**
+**總計: 104+ MCP 工具**
+
+### 🆕 2025-12-17 更新
+
+- **DataQualityAnalyzer 完成**
+  - 統一品質分析模組
+  - 6 種問題偵測：ALL_NAN, CONSTANT, HIGH_CARDINALITY_ID, HIGH_MISSING, SKEWED, OUTLIERS
+  - Transform 建議：log, log1p, zscore
+  - 分析準備度評估
+  - 新增 `/direct/quality-check` 端點
+
+- **測試框架強化**
+  - 214 tests passed, 12 skipped
+  - 25 個 DataQuality 專屬測試
+  - 40 個 EDA 邊界案例測試
 
 ### 🆕 2025-12-16 更新
 

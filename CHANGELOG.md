@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2025-12-17
+
+### Added
+
+#### DataQualityAnalyzer - 資料品質分析模組
+- `stats-service/src/domain/services/data_quality.py` - 統一資料品質分析模組
+- **6 種問題偵測類型：**
+  - ALL_NAN (critical) - 全空值欄位
+  - CONSTANT (warning) - 常數欄位
+  - HIGH_CARDINALITY_ID (warning) - 高基數 ID 欄位
+  - HIGH_MISSING (warning) - 高缺失率 (>30%)
+  - SKEWED (info) - 偏態分布
+  - OUTLIERS (info) - 極端異常值
+- **Transform 建議：** log, log1p, zscore 自動建議
+- **分析準備度評估：** ready / needs_review / not_ready
+- 新增 `/direct/quality-check` API 端點
+- 整合到 `/direct/quick-stats` 回應
+
+#### EDA Edge Case Testing
+- `stats-worker/tests/test_eda_edge_cases.py` - 40 個邊界案例測試
+- 覆蓋：空 DataFrame、單列/單欄、全空值、常數欄位、極端分布等
+
+### Fixed
+- numpy int64/float64 序列化問題
+- boolean 欄位在數值分析中的處理
+
 ## [1.4.0] - 2025-12-16
 
 ### Added
