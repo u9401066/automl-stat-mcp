@@ -9,11 +9,12 @@ import base64
 import io
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Optional, List, Any, Dict
 
 import pandas as pd
 
 from ..domain.models import StatsJob, StatsJobId, StatsJobType
+from ..domain.services.data_quality import DataQualityAnalyzer, analyze_data_quality
 from ..infrastructure.repositories import get_job_repository, get_job_queue
 
 router = APIRouter(prefix="/direct", tags=["Direct Analysis"])
@@ -167,6 +168,10 @@ class QuickStatsRequest(BaseModel):
     """Request for quick statistics (synchronous, no job queue)"""
     csv_content: str = Field(..., description="CSV content as string")
     is_base64: bool = Field(default=False)
+    include_quality_check: bool = Field(
+        default=True,
+        description="Include data quality warnings and recommendations"
+    )
     
 
 class QuickStatsResponse(BaseModel):
@@ -176,6 +181,10 @@ class QuickStatsResponse(BaseModel):
     column_info: List[dict]
     missing_summary: dict
     numeric_summary: Optional[dict]
+    # 新增資料品質欄位
+    quality_warnings: Optional[List[dict]] = None
+    transform_suggestions: Optional[List[dict]] = None
+    analysis_readiness: Optional[dict] = None
 
 
 @router.post("/quick-stats", response_model=QuickStatsResponse)
@@ -191,6 +200,9 @@ async def quick_stats(request: QuickStatsRequest):
         - Column types and info
         - Missing value summary
         - Basic numeric statistics
+        - Data quality warnings (if include_quality_check=True)
+        - Transform suggestions (if include_quality_check=True)
+        - Analysis readiness assessment (if include_quality_check=True)
     """
     try:
         # Decode CSV
@@ -234,16 +246,100 @@ async def quick_stats(request: QuickStatsRequest):
             desc = df[numeric_cols].describe()
             numeric_summary = desc.to_dict()
         
+        # Data quality check
+        quality_warnings = None
+        transform_suggestions = None
+        analysis_readiness = None
+        
+        if request.include_quality_check:
+            quality_report = analyze_data_quality(df)
+            quality_warnings = quality_report.get("quality_warnings", [])
+            transform_suggestions = quality_report.get("transform_suggestions", [])
+            analysis_readiness = quality_report.get("analysis_readiness", {})
+        
         return QuickStatsResponse(
             rows=len(df),
             columns=len(df.columns),
             column_info=column_info,
             missing_summary=missing_summary,
             numeric_summary=numeric_summary,
+            quality_warnings=quality_warnings,
+            transform_suggestions=transform_suggestions,
+            analysis_readiness=analysis_readiness,
         )
         
     except Exception as e:
         raise HTTPException(
             status_code=400,
             detail=f"Failed to parse CSV: {str(e)}"
+        )
+
+
+# ============================================================================
+# Data Quality Check Endpoint
+# ============================================================================
+
+class QualityCheckRequest(BaseModel):
+    """Request for data quality check"""
+    csv_content: str = Field(..., description="CSV content as string")
+    is_base64: bool = Field(default=False)
+
+
+class QualityCheckResponse(BaseModel):
+    """Data quality check response"""
+    rows: int
+    columns: int
+    quality_warnings: List[dict]
+    transform_suggestions: List[dict]
+    analysis_readiness: dict
+    summary: dict
+
+
+@router.post("/quality-check", response_model=QualityCheckResponse)
+async def quality_check(request: QualityCheckRequest):
+    """
+    🔍 資料品質檢查
+    
+    偵測資料品質問題並提供建議：
+    - 全 NaN 欄 (ALL_NAN)
+    - 常數欄 (CONSTANT)
+    - 高基數 ID 欄 (HIGH_CARDINALITY_ID)
+    - 高缺失值欄 (HIGH_MISSING)
+    - 偏態資料 (SKEWED)
+    - 極端值 (OUTLIERS)
+    
+    Returns:
+        quality_warnings: 品質警告列表
+        transform_suggestions: Transform 建議
+        analysis_readiness: 分析可行性評估
+        summary: 快速摘要
+    """
+    try:
+        # Decode CSV
+        if request.is_base64:
+            csv_bytes = base64.b64decode(request.csv_content)
+            csv_str = csv_bytes.decode('utf-8')
+        else:
+            csv_str = request.csv_content
+        
+        df = pd.read_csv(io.StringIO(csv_str))
+        
+        # Run quality analysis
+        analyzer = DataQualityAnalyzer()
+        report = analyzer.analyze(df)
+        quick_summary = analyzer.quick_check(df)
+        
+        return QualityCheckResponse(
+            rows=len(df),
+            columns=len(df.columns),
+            quality_warnings=[w.to_dict() for w in report.warnings],
+            transform_suggestions=[t.to_dict() for t in report.transform_suggestions],
+            analysis_readiness=report.analysis_readiness.to_dict(),
+            summary=quick_summary,
+        )
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Failed to analyze CSV: {str(e)}"
         )
