@@ -84,10 +84,7 @@ description: Master navigation hub showing all available workflows and when to u
 
 | Skill | 觸發詞 | 用途 |
 |-------|--------|------|
-| **memory-updater** | 更新 memory | Memory Bank 同步 |
 | **readme-updater** | 更新 readme | README 更新 |
-| **changelog-updater** | 更新 changelog | CHANGELOG 更新 |
-| **roadmap-updater** | 更新 roadmap | ROADMAP 更新 |
 
 ### 程式碼品質
 
@@ -102,13 +99,12 @@ description: Master navigation hub showing all available workflows and when to u
 
 | Skill | 觸發詞 | 用途 |
 |-------|--------|------|
-| **project-workflow** | 新專案, 完整流程, SOP | ⭐ 專案完整操作流程 |
-| **mcp-quick-analysis** | 快速分析, 分析一下 | 快速分析（跳過專案建立） |
-| **data-analysis-workflow** | 分析資料, EDA, describe | 完整資料探索分析 |
-| **ml-training-workflow** | 訓練模型, AutoML, train | ML 模型訓練 |
-| **statistical-analysis-workflow** | 統計分析, 存活分析, PSM | 進階統計分析 |
-| **data-cleaning-workflow** | 資料清理, preprocess | 資料前處理 |
-| **result-delivery-workflow** | 下載結果, 取得報告, 傳檔案 | 結果交付與專案管理 |
+| **mcp-project-workflow** | 新專案, 完整流程, SOP | ⭐ 專案完整操作流程 |
+| **mcp-data-analysis** | 分析資料, EDA, 快速分析 | 資料探索分析 |
+| **mcp-ml-training** | 訓練模型, AutoML, train | ML 模型訓練 |
+| **mcp-statistical-analysis** | 統計分析, 存活分析, PSM | 進階統計分析 |
+| **mcp-data-cleaning** | 資料清理, preprocess | 資料前處理 |
+| **mcp-result-delivery** | 下載結果, 取得報告, 傳檔案 | 結果交付與專案管理 |
 | **mcp-tools-reference** | 工具清單, MCP 工具 | 工具速查參考 |
 
 ---
@@ -167,7 +163,7 @@ description: Master navigation hub showing all available workflows and when to u
 │  「新專案」「完整流程」「正式研究」                                   │
 │         ↓                                                           │
 │  ┌─────────────────────────────────────────────────────────────┐    │
-│  │  ⭐ project-workflow (最完整！)                              │    │
+│  │  ⭐ mcp-project-workflow (最完整！)                          │    │
 │  │  Step 0: 檢視可用資料 (list_available_files, quick_preview) │    │
 │  │  Step 1: 建立專案目錄 (create_project_workspace)            │    │
 │  │  Step 2: 上傳資料 (upload_dataset)                          │    │
@@ -180,21 +176,21 @@ description: Master navigation hub showing all available workflows and when to u
 │  「快速分析」「分析一下」（不需建專案）                               │
 │         ↓                                                           │
 │  ┌─────────────────────────────────────────────────────────────┐    │
-│  │  🚀 mcp-quick-analysis                                       │    │
+│  │  🚀 mcp-data-analysis (含快速分析功能)                       │    │
 │  │  quick_preview → smart_analyze → 結果彙整                    │    │
 │  └─────────────────────────────────────────────────────────────┘    │
 │                                                                      │
 │  「分析這個資料」「EDA」                                              │
 │         ↓                                                           │
 │  ┌─────────────────────────────────────────────────────────────┐    │
-│  │  📊 data-analysis-workflow                                   │    │
+│  │  📊 mcp-data-analysis                                        │    │
 │  │  list_available_files → direct_preview_data → auto_analyze  │    │
 │  └─────────────────────────────────────────────────────────────┘    │
 │                                                                      │
 │  「我要訓練模型」                                                     │
 │         ↓                                                           │
 │  ┌─────────────────────────────────────────────────────────────┐    │
-│  │  🤖 ml-training-workflow                                    │    │
+│  │  🤖 mcp-ml-training                                         │    │
 │  │  upload_dataset → submit_automl_job → get_job_status →      │    │
 │  │  get_model_leaderboard → predict                            │    │
 │  └─────────────────────────────────────────────────────────────┘    │
@@ -202,14 +198,14 @@ description: Master navigation hub showing all available workflows and when to u
 │  「做存活分析/傾向分數/ROC」                                          │
 │         ↓                                                           │
 │  ┌─────────────────────────────────────────────────────────────┐    │
-│  │  🔬 statistical-analysis-workflow                           │    │
+│  │  🔬 mcp-statistical-analysis                                │    │
 │  │  Survival / PSM / ROC / Power Analysis                      │    │
 │  └─────────────────────────────────────────────────────────────┘    │
 │                                                                      │
 │  「清理資料」                                                        │
 │         ↓                                                           │
 │  ┌─────────────────────────────────────────────────────────────┐    │
-│  │  🧹 data-cleaning-workflow                                  │    │
+│  │  🧹 mcp-data-cleaning                                       │    │
 │  │  handle_missing_values → encode_categorical → filter_rows   │    │
 │  └─────────────────────────────────────────────────────────────┘    │
 │                                                                      │
@@ -281,15 +277,13 @@ description: Master navigation hub showing all available workflows and when to u
 | 交付, 完成功能 | deliver, ship | feature-delivery |
 | 審計, 檢查專案 | audit, review | project-audit |
 | 準備 commit, 要提交 | commit, push | git-precommit |
-| 更新 memory | update memory | memory-updater |
 | 產生測試 | generate test | test-generator |
 | 重構 | refactor | code-refactor |
 | review | review | code-reviewer |
-| **新專案, 完整流程, SOP** | **full workflow, project setup** | **project-workflow** |
-| **快速分析, 分析一下** | **quick analysis** | **mcp-quick-analysis** |
-| **分析資料, 探索** | **EDA, explore, describe** | **data-analysis-workflow** |
-| **訓練模型** | **train, AutoML, ML** | **ml-training-workflow** |
-| **存活分析, PSM, ROC** | **survival, propensity** | **statistical-analysis-workflow** |
-| **資料清理, 缺失值** | **clean, preprocess** | **data-cleaning-workflow** |
-| **下載結果, 傳檔案** | **download, report, share** | **result-delivery-workflow** |
+| **新專案, 完整流程, SOP** | **full workflow, project setup** | **mcp-project-workflow** |
+| **分析資料, 快速分析, 探索** | **EDA, explore, quick analysis** | **mcp-data-analysis** |
+| **訓練模型** | **train, AutoML, ML** | **mcp-ml-training** |
+| **存活分析, PSM, ROC** | **survival, propensity** | **mcp-statistical-analysis** |
+| **資料清理, 缺失值** | **clean, preprocess** | **mcp-data-cleaning** |
+| **下載結果, 傳檔案** | **download, report, share** | **mcp-result-delivery** |
 | **MCP 工具, 工具清單** | **tools, reference** | **mcp-tools-reference** |

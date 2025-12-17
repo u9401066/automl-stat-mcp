@@ -1,5 +1,5 @@
 ---
-name: project-workflow
+name: mcp-project-workflow
 description: Complete project workflow from creation to report generation. Covers project setup, data upload, quality check, analysis execution, and result delivery. Use when user wants to run a full research project or needs guidance on the standard operating procedure. Triggers: 新專案, 建立專案, 完整流程, 研究流程, full workflow, project setup, 從頭開始, start project, SOP, 標準流程.
 ---
 

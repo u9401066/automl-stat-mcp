@@ -1,5 +1,5 @@
 ---
-name: ml-training-workflow
+name: mcp-ml-training
 description: Machine learning model training workflow using AutoML including data upload, model training, evaluation, and prediction. Use when training classification or regression models, comparing algorithms, or making predictions on new data. Triggers: 訓練模型, train model, ML, 機器學習, AutoML, prediction, 預測, classification, regression, 分類, 迴歸, XGBoost, random forest, neural network, 模型比較.
 ---
 

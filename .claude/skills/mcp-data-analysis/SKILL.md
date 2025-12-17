@@ -1,17 +1,69 @@
 ---
-name: data-analysis-workflow
-description: Complete data analysis workflow including EDA, Table One, descriptive statistics, and correlation analysis using MCP AutoML tools. Use when analyzing CSV data, exploring datasets, generating summary statistics, or creating publication-ready Table One reports. Triggers: 分析資料, analyze data, EDA, 探索資料, 資料分析, describe data, 資料探索, 基本統計, summary statistics, Table One, 敘述統計, 看看資料.
+name: mcp-data-analysis
+description: Complete data analysis workflow including EDA, Table One, descriptive statistics, and correlation analysis using MCP AutoML tools. Use when analyzing CSV data, exploring datasets, generating summary statistics, or creating publication-ready Table One reports. Triggers: 分析資料, analyze data, EDA, 探索資料, 資料分析, describe data, 資料探索, 基本統計, summary statistics, Table One, 敘述統計, 看看資料, 快速分析, quick analysis, 分析一下, 幫我分析.
 ---
 
-# Data Analysis Workflow 技能 (資料分析流程)
+# MCP Data Analysis 技能 (資料分析流程)
 
 ## 描述
-使用 MCP 工具進行完整資料分析的標準流程。
+使用 MCP 工具進行完整資料分析的標準流程，支援自動路徑轉換和智能工具選擇。
 
 ## 觸發條件
 - 「分析這個資料」「分析 {dataset}」
 - 「EDA」「探索資料」「資料分析」
 - 「看看這個資料」「資料概覽」
+- 「快速分析」「分析一下」「幫我分析」
+
+---
+
+## 🔄 路徑自動轉換（重要！）
+
+**黃金規則：MCP csv_path 永遠用 `/data/` 開頭**
+
+| 使用者輸入 | 自動轉換為 |
+|------------|-----------|
+| `iris.csv` | `/data/sample_data/iris.csv` |
+| `sample_data/medical.csv` | `/data/sample_data/medical.csv` |
+| `projects/study1/data.csv` | `/data/projects/study1/data.csv` |
+| `/home/eric/.../sample_data/xxx.csv` | `/data/sample_data/xxx.csv` |
+| `/home/eric/.../projects/study1/data.csv` | `/data/projects/study1/data.csv` |
+| `uploads/my_data.csv` | `/data/uploads/my_data.csv` |
+
+**轉換邏輯：**
+```python
+def convert_to_container_path(user_path: str) -> str:
+    """將任意路徑轉為 Container 路徑"""
+    # 1. 已經是正確格式
+    if user_path.startswith("/data/"):
+        return user_path
+    
+    # 2. 只有檔名 → 預設 sample_data
+    if "/" not in user_path:
+        return f"/data/sample_data/{user_path}"
+    
+    # 3. 包含 projects → 保持專案結構
+    if "projects" in user_path:
+        return f"/data/projects/{user_path.split('projects/')[-1]}"
+    
+    # 4. 包含 sample_data
+    if "sample_data" in user_path:
+        return f"/data/sample_data/{user_path.split('sample_data/')[-1]}"
+    
+    # 5. 包含 uploads
+    if "uploads" in user_path:
+        return f"/data/uploads/{user_path.split('uploads/')[-1]}"
+    
+    # 6. Host 絕對路徑（無法判斷歸屬）→ 提示用戶確認
+    if "/home/" in user_path:
+        filename = os.path.basename(user_path)
+        # 預設放 sample_data，但應提示用戶確認
+        return f"/data/sample_data/{filename}"
+    
+    # 7. 預設
+    return f"/data/sample_data/{user_path}"
+```
+
+**⚠️ 注意：** Host 路徑 `/home/eric/...` 如果沒有 `projects/` 或 `sample_data/` 關鍵字，會預設放到 `sample_data`，建議用戶明確指定目標位置。
 
 ---
 
@@ -280,6 +332,17 @@ csv_path="/home/eric/workspace251204/sample_data/iris.csv"
 
 # ✅ 正確：使用 Container 路徑
 csv_path="/data/sample_data/iris.csv"
+
+# ✅ 更簡單：只提供檔名（自動轉換到 sample_data）
+csv_path="iris.csv"  # → /data/sample_data/iris.csv
+
+# ✅ 專案內檔案：保持專案結構
+csv_path="projects/my_study/data/raw/patient_data.csv"
+# → /data/projects/my_study/data/raw/patient_data.csv
+
+# ✅ Host 專案路徑會自動識別
+csv_path="/home/eric/workspace251204/projects/study1/data.csv"
+# → /data/projects/study1/data.csv（保持專案結構）
 ```
 
 ### 欄位名稱錯誤
@@ -297,4 +360,48 @@ mcp_automl_compare_groups(
     save_result=True,
     user_id="eric"  # 必要！
 )
+```
+
+---
+
+## 📝 預設參數
+
+```python
+# 除非使用者指定，自動帶入：
+DEFAULT_PARAMS = {
+    "user_id": "eric",
+    "storage_mode": "temporary",
+    "method": "auto",
+    "pval": True,
+    "n_rows": 10,
+}
+```
+
+---
+
+## 🎯 工具選擇決策樹
+
+```
+使用者需求
+    │
+    ├─→ 「看看資料」「概覽」
+    │       └─→ quick_preview / direct_preview_data
+    │
+    ├─→ 「分析這個資料」
+    │       └─→ smart_analyze（推薦！整合 stats + tableone + correlations）
+    │
+    ├─→ 「比較兩組」「治療效果」
+    │       └─→ compare_treatment_groups / compare_groups
+    │
+    ├─→ 「相關性」「變數關係」
+    │       └─→ analyze_correlations
+    │
+    ├─→ 「Table One」「臨床基準表」
+    │       └─→ generate_tableone_directly
+    │
+    ├─→ 「VIF」「共線性」
+    │       └─→ check_multicollinearity
+    │
+    └─→ 「醫學研究完整分析」
+            └─→ analyze_medical_study
 ```

@@ -87,6 +87,7 @@ csv_path="/data/sample_data/iris.csv"
 | `sample_data/xxx.csv` | `/data/sample_data/xxx.csv` |
 | `projects/study1/data.csv` | `/data/projects/study1/data.csv` |
 | `/home/eric/.../sample_data/xxx.csv` | `/data/sample_data/xxx.csv` |
+| `/home/eric/.../projects/study1/data.csv` | `/data/projects/study1/data.csv` |
 
 **測試檔案位置：**
 - ✅ `tests/` - 整合/E2E 測試
@@ -359,11 +360,8 @@ generate_analysis_report(
 
 ### 文檔維護 Skills
 - **git-precommit** - Git 提交前編排器
-- **memory-updater** - Memory Bank 同步
 - **memory-checkpoint** - 記憶檢查點（Summarize 前外部化）
 - **readme-updater** - README 智能更新
-- **changelog-updater** - CHANGELOG 自動更新
-- **roadmap-updater** - ROADMAP 狀態追蹤
 
 ### 程式碼品質 Skills
 - **ddd-architect** - DDD 架構輔助與檢查
@@ -373,13 +371,12 @@ generate_analysis_report(
 - **project-init** - 專案初始化
 
 ### MCP 資料分析 Skills（本專案核心）
-- **project-workflow** - 🆕 專案完整操作流程（建立→上傳→分析→報告）
-- **mcp-quick-analysis** - 快速分析流程（自動路徑轉換、智能工具選擇）
-- **data-analysis-workflow** - 資料探索分析流程 (EDA, Table One)
-- **ml-training-workflow** - ML 模型訓練流程 (AutoML)
-- **statistical-analysis-workflow** - 進階統計分析 (存活、PSM、ROC)
-- **data-cleaning-workflow** - 資料清理前處理
-- **result-delivery-workflow** - 結果交付與專案管理 (下載報告、檔案分享)
+- **mcp-project-workflow** - 專案完整操作流程（建立→上傳→分析→報告）
+- **mcp-data-analysis** - 資料探索分析流程 (EDA, Table One, 快速分析)
+- **mcp-ml-training** - ML 模型訓練流程 (AutoML)
+- **mcp-statistical-analysis** - 進階統計分析 (存活、PSM、ROC)
+- **mcp-data-cleaning** - 資料清理前處理
+- **mcp-result-delivery** - 結果交付與專案管理 (下載報告、檔案分享)
 - **mcp-tools-reference** - MCP 工具速查參考 (51 個工具)
 
 ---

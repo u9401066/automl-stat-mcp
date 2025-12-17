@@ -1,5 +1,5 @@
 ---
-name: data-cleaning-workflow
+name: mcp-data-cleaning
 description: Data cleaning and preprocessing workflow including handling missing values, encoding categorical variables, filtering rows, removing columns, and checking multicollinearity (VIF). Use when preparing data for analysis, cleaning messy datasets, or transforming variables. Triggers: 資料清理, data cleaning, 缺失值, 處理資料, preprocess, missing values, 遺漏值, encoding, 編碼, VIF, multicollinearity, 共線性, filter, 過濾, rename columns.
 ---
 
