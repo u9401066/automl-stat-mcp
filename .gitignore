@@ -85,3 +85,8 @@ uv.lock
 # Local results (keep sample_results in git)
 results/
 !sample_results/
+
+# User projects and research data
+projects/
+!projects/README.md
+!projects/.gitkeep
