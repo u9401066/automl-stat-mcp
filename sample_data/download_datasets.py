@@ -26,6 +26,7 @@ Run:
     python3 download_datasets.py
 """
 import os
+
 import numpy as np
 import pandas as pd
 
@@ -36,7 +37,7 @@ def save_with_metadata(df: pd.DataFrame, filename: str, source: str, description
     """Save dataset and create metadata file."""
     filepath = os.path.join(OUTPUT_DIR, filename)
     df.to_csv(filepath, index=False)
-    
+
     # Create metadata
     meta_path = filepath.replace('.csv', '_README.txt')
     with open(meta_path, 'w') as f:
@@ -46,10 +47,10 @@ def save_with_metadata(df: pd.DataFrame, filename: str, source: str, description
         f.write(f"Rows: {len(df)}\n")
         f.write(f"Columns: {len(df.columns)}\n")
         f.write(f"Column Names: {', '.join(df.columns)}\n")
-        f.write(f"\nColumn Types:\n")
+        f.write("\nColumn Types:\n")
         for col in df.columns:
             f.write(f"  - {col}: {df[col].dtype}\n")
-    
+
     print(f"✅ Saved: {filename} ({len(df)} rows, {len(df.columns)} cols)")
 
 
@@ -60,9 +61,9 @@ def download_iris():
     df = pd.DataFrame(data.data, columns=['sepal_length', 'sepal_width', 'petal_length', 'petal_width'])
     df['species'] = pd.Categorical.from_codes(data.target, ['setosa', 'versicolor', 'virginica'])
     df['target'] = data.target
-    
+
     save_with_metadata(
-        df, 
+        df,
         "iris.csv",
         "sklearn.datasets.load_iris (Fisher, 1936)",
         "150 iris flowers, 4 features, 3 species. Classic multi-class classification."
@@ -75,7 +76,7 @@ def download_breast_cancer():
     data = load_breast_cancer()
     df = pd.DataFrame(data.data, columns=[c.replace(' ', '_') for c in data.feature_names])
     df['diagnosis'] = data.target  # 0=malignant, 1=benign
-    
+
     save_with_metadata(
         df,
         "breast_cancer.csv",
@@ -90,7 +91,7 @@ def download_diabetes():
     data = load_diabetes()
     df = pd.DataFrame(data.data, columns=['age', 'sex', 'bmi', 'bp', 's1', 's2', 's3', 's4', 's5', 's6'])
     df['progression'] = data.target  # Disease progression after 1 year
-    
+
     save_with_metadata(
         df,
         "diabetes.csv",
@@ -103,14 +104,14 @@ def download_heart_disease():
     """4. Heart Disease - Binary classification from UCI."""
     # Use processed Cleveland dataset
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/heart-disease/processed.cleveland.data"
-    columns = ['age', 'sex', 'cp', 'trestbps', 'chol', 'fbs', 'restecg', 
+    columns = ['age', 'sex', 'cp', 'trestbps', 'chol', 'fbs', 'restecg',
                'thalach', 'exang', 'oldpeak', 'slope', 'ca', 'thal', 'target']
-    
+
     try:
         df = pd.read_csv(url, names=columns, na_values='?')
         df['target'] = (df['target'] > 0).astype(int)  # Binary: presence of heart disease
         df = df.dropna()  # Remove rows with missing values
-        
+
         save_with_metadata(
             df,
             "heart_disease.csv",
@@ -159,7 +160,7 @@ def download_titanic():
         df = df[['survived', 'pclass', 'sex', 'age', 'sibsp', 'parch', 'fare', 'embarked', 'class', 'adult_male', 'alone']].copy()
         df['sex'] = df['sex'].map({'male': 1, 'female': 0})
         df['embarked'] = df['embarked'].map({'S': 0, 'C': 1, 'Q': 2})
-        
+
         save_with_metadata(
             df,
             "titanic.csv",
@@ -176,10 +177,10 @@ def download_housing():
     data = fetch_california_housing()
     df = pd.DataFrame(data.data, columns=data.feature_names)
     df['median_house_value'] = data.target
-    
+
     # Sample to reasonable size for testing
     df = df.sample(n=1000, random_state=42)
-    
+
     save_with_metadata(
         df,
         "california_housing.csv",
@@ -191,12 +192,12 @@ def download_housing():
 def download_wine_quality():
     """7. Wine Quality - Multi-class classification / Regression."""
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-red.csv"
-    
+
     try:
         df = pd.read_csv(url, sep=';')
         # Rename columns to remove spaces
         df.columns = [c.replace(' ', '_') for c in df.columns]
-        
+
         save_with_metadata(
             df,
             "wine_quality.csv",
@@ -240,14 +241,14 @@ def download_adult_income():
     columns = ['age', 'workclass', 'fnlwgt', 'education', 'education_num', 'marital_status',
                'occupation', 'relationship', 'race', 'sex', 'capital_gain', 'capital_loss',
                'hours_per_week', 'native_country', 'income']
-    
+
     try:
         df = pd.read_csv(url, names=columns, skipinitialspace=True, na_values='?')
         df = df.dropna()
         df['income'] = (df['income'] == '>50K').astype(int)
         # Sample for manageable size
         df = df.sample(n=2000, random_state=42)
-        
+
         save_with_metadata(
             df,
             "adult_income.csv",
@@ -263,7 +264,7 @@ def download_rossi_recidivism():
     try:
         from lifelines.datasets import load_rossi
         df = load_rossi()
-        
+
         save_with_metadata(
             df,
             "rossi_recidivism.csv",
@@ -280,7 +281,7 @@ def download_pbc():
         from lifelines.datasets import load_stanford_heart_transplants
         # Use Stanford Heart Transplants as alternative (PBC sometimes unavailable)
         df = load_stanford_heart_transplants()
-        
+
         save_with_metadata(
             df,
             "stanford_heart.csv",
@@ -289,12 +290,12 @@ def download_pbc():
         )
     except:
         pass
-    
+
     # Also try lung cancer dataset
     try:
         from lifelines.datasets import load_lung
         df = load_lung()
-        
+
         save_with_metadata(
             df,
             "lung_cancer.csv",
@@ -311,7 +312,7 @@ def main():
     print("Downloading 10 Classic Public Datasets for E2E Testing")
     print("=" * 60)
     print()
-    
+
     download_iris()
     download_breast_cancer()
     download_diabetes()
@@ -322,7 +323,7 @@ def main():
     download_adult_income()
     download_rossi_recidivism()
     download_pbc()
-    
+
     print()
     print("=" * 60)
     print("Download Complete!")

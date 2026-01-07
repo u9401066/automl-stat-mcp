@@ -2,16 +2,17 @@
 Domain Services - Business logic that doesn't belong to a single entity
 """
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Tuple, Callable, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
+
 import pandas as pd
 
-from .models import TrainingConfig, LeaderboardEntry
+from .models import LeaderboardEntry, TrainingConfig
 
 
 class MLEngineService(ABC):
     """
     Domain Service Interface for ML Engine
-    
+
     Defines the contract for ML training operations.
     Implementation will use AutoGluon.
     """
@@ -26,13 +27,13 @@ class MLEngineService(ABC):
     ) -> Tuple[str, float, List[LeaderboardEntry], Dict[str, float]]:
         """
         Train a model using the provided configuration.
-        
+
         Args:
             data: Training DataFrame
             config: Training configuration
             model_save_path: Path to save the trained model
             progress_callback: Optional callback for progress updates
-            
+
         Returns:
             Tuple of (best_model_name, best_score, leaderboard, feature_importance)
         """
@@ -46,11 +47,11 @@ class MLEngineService(ABC):
     ) -> List[Any]:
         """
         Make predictions using a trained model.
-        
+
         Args:
             model_path: Path to the saved model
             data: DataFrame for prediction
-            
+
         Returns:
             List of predictions
         """
@@ -64,11 +65,11 @@ class MLEngineService(ABC):
     ) -> List[List[float]]:
         """
         Get prediction probabilities.
-        
+
         Args:
             model_path: Path to the saved model
             data: DataFrame for prediction
-            
+
         Returns:
             List of probability arrays
         """
@@ -78,7 +79,7 @@ class MLEngineService(ABC):
 class FileStorageService(ABC):
     """
     Domain Service Interface for File Storage
-    
+
     Defines the contract for file operations.
     Implementation will use MinIO.
     """
@@ -107,7 +108,7 @@ class FileStorageService(ABC):
     async def validate_csv(self, path: str) -> Tuple[bool, List[str], int]:
         """
         Validate CSV file format.
-        
+
         Returns:
             Tuple of (is_valid, columns, row_count)
         """

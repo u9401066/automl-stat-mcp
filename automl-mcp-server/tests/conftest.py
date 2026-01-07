@@ -1,14 +1,15 @@
 """
 Shared test fixtures for automl-mcp-server tests
 """
-import pytest
-import pandas as pd
-import numpy as np
-from pathlib import Path
-from unittest.mock import Mock, AsyncMock
-import tempfile
 import os
 import sys
+import tempfile
+from pathlib import Path
+from unittest.mock import AsyncMock, Mock
+
+import numpy as np
+import pandas as pd
+import pytest
 
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
@@ -113,13 +114,13 @@ def mock_mcp():
     """Mock MCP server for tool registration"""
     mcp = Mock()
     tools = {}
-    
+
     def tool_decorator():
         def inner(func):
             tools[func.__name__] = func
             return func
         return inner
-    
+
     mcp.tool = tool_decorator
     mcp._registered_tools = tools
     return mcp
@@ -142,13 +143,13 @@ def mock_httpx_client():
 def mock_result_storage():
     """Mock ResultStorage for testing tools with persistence"""
     from unittest.mock import MagicMock
-    
+
     mock_storage = MagicMock()
     mock_metadata = MagicMock()
     mock_metadata.result_id = "stat_test_abc12345"
     mock_metadata.minio_path = "bucket/user/test/file.json"
     mock_storage.save_result = AsyncMock(return_value=mock_metadata)
-    
+
     return mock_storage
 
 
@@ -169,7 +170,7 @@ def mock_redis():
 
 class DataFactory:
     """Factory for creating test data"""
-    
+
     @staticmethod
     def create_group_comparison_data(
         n_per_group: int = 50,
@@ -187,7 +188,7 @@ class DataFactory:
             })
             data.append(group_data)
         return pd.concat(data, ignore_index=True)
-    
+
     @staticmethod
     def create_survival_data(
         n: int = 100,
@@ -206,7 +207,7 @@ class DataFactory:
             'age': np.random.normal(50, 10, n),
             'score': np.random.randn(n)
         })
-    
+
     @staticmethod
     def create_roc_data(
         n: int = 200,
@@ -216,12 +217,12 @@ class DataFactory:
         """Create ROC analysis test data"""
         np.random.seed(seed)
         y_true = np.random.binomial(1, 0.3, n)
-        
+
         # Generate scores that achieve approximately target AUC
         noise = np.random.randn(n) * (1 - auc)
         y_score = y_true * auc + noise
         y_score = (y_score - y_score.min()) / (y_score.max() - y_score.min())
-        
+
         return pd.DataFrame({
             'y_true': y_true,
             'y_score': y_score
@@ -240,17 +241,17 @@ def data_factory():
 
 class Assertions:
     """Custom assertion helpers"""
-    
+
     @staticmethod
     def assert_valid_result(result: dict, required_keys: list = None):
         """Assert that result has expected structure"""
         assert isinstance(result, dict)
         assert 'status' in result
-        
+
         if result['status'] == 'success' and required_keys:
             for key in required_keys:
                 assert key in result, f"Missing key: {key}"
-    
+
     @staticmethod
     def assert_valid_statistics(stats: dict):
         """Assert that statistics dict is valid"""
@@ -258,7 +259,7 @@ class Assertions:
             if isinstance(value, float):
                 assert not np.isnan(value), f"{key} is NaN"
                 assert not np.isinf(value), f"{key} is infinite"
-    
+
     @staticmethod
     def assert_p_value_valid(p_value: float):
         """Assert that p-value is valid"""

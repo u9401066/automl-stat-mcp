@@ -10,8 +10,8 @@ Contains:
     - ks_test_two_samples: Kolmogorov-Smirnov test
 """
 import logging
-from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -24,7 +24,6 @@ logger = logging.getLogger(__name__)
 # Optional visualization support
 try:
     from src.visualization.group_comparison import (
-        create_group_comparison_visualizations,
         plot_group_comparison,
     )
     from src.visualization.storage import save_figure_to_minio
@@ -42,7 +41,7 @@ class DistributionComparisonResult:
     p_value: float
     interpretation: str
     details: Dict[str, Any] = field(default_factory=dict)
-    
+
     def to_dict(self) -> Dict:
         return {
             "test": self.test_name,
@@ -58,25 +57,25 @@ class GroupComparisonResult:
     """Result of group comparison analysis."""
     groups: List[str]
     n_groups: int
-    
+
     # Normality tests per group
     normality_tests: Dict[str, Dict] = field(default_factory=dict)
-    
+
     # Homogeneity of variance
     variance_test: Optional[DistributionComparisonResult] = None
-    
+
     # Main comparison test
     main_test: Optional[DistributionComparisonResult] = None
-    
+
     # Post-hoc tests (if applicable)
     post_hoc_tests: List[Dict] = field(default_factory=list)
-    
+
     # Descriptive stats per group
     group_stats: Dict[str, Dict] = field(default_factory=dict)
-    
+
     # Visualizations (if generated)
     visualizations: List[Dict] = field(default_factory=list)
-    
+
     def to_dict(self) -> Dict:
         result = {
             "groups": self.groups,
@@ -103,12 +102,12 @@ def compare_distributions(
 ) -> GroupComparisonResult:
     """
     Compare distributions of a numeric variable across groups.
-    
+
     Automatically selects appropriate tests based on:
     - Number of groups (2 vs >2)
     - Normality of distributions
     - Homogeneity of variance
-    
+
     Args:
         df: DataFrame
         numeric_col: Column with numeric values to compare
@@ -117,29 +116,29 @@ def compare_distributions(
         generate_visualizations: If True, generate plots and save to MinIO
         user_id: User ID for MinIO storage path
         job_id: Job ID for MinIO storage path
-    
+
     Returns:
         GroupComparisonResult with all test results
     """
     # Get groups
     groups = df[group_col].dropna().unique().tolist()
     n_groups = len(groups)
-    
+
     result = GroupComparisonResult(groups=groups, n_groups=n_groups)
-    
+
     if n_groups < 2:
         return result
-    
+
     # Get data per group
     group_data = {}
     for g in groups:
         data = df[df[group_col] == g][numeric_col].dropna()
         if len(data) >= 3:
             group_data[str(g)] = data.values
-    
+
     if len(group_data) < 2:
         return result
-    
+
     # Compute group statistics
     for g, data in group_data.items():
         result.group_stats[g] = {
@@ -150,7 +149,7 @@ def compare_distributions(
             "min": safe_round(np.min(data), 4),
             "max": safe_round(np.max(data), 4),
         }
-    
+
     # Normality tests per group
     all_normal = True
     for g, data in group_data.items():
@@ -162,10 +161,10 @@ def compare_distributions(
                 else:
                     stat, p = stats.normaltest(data)
                     test_name = "D'Agostino-Pearson"
-                
+
                 is_normal = p > alpha
                 all_normal = all_normal and is_normal
-                
+
                 result.normality_tests[g] = {
                     "test": test_name,
                     "statistic": safe_round(stat, 4),
@@ -174,7 +173,7 @@ def compare_distributions(
                 }
             except Exception as e:
                 result.normality_tests[g] = {"error": str(e)}
-    
+
     # Homogeneity of variance (Levene's test)
     try:
         stat, p = stats.levene(*group_data.values())
@@ -188,16 +187,16 @@ def compare_distributions(
         )
     except Exception as e:
         logger.warning(f"Levene's test failed: {e}")
-    
+
     # Main comparison test
-    use_parametric = all_normal and (result.variance_test and result.variance_test.details.get("equal_variance", False))
-    
+    use_parametric = all_normal and bool(result.variance_test and result.variance_test.details.get("equal_variance", False))
+
     group_arrays = list(group_data.values())
-    
+
     if n_groups == 2:
         # Two-group comparison
         g1, g2 = group_arrays[0], group_arrays[1]
-        
+
         if use_parametric:
             stat, p = stats.ttest_ind(g1, g2)
             test_name = "Independent t-test"
@@ -212,7 +211,7 @@ def compare_distributions(
             n1, n2 = len(g1), len(g2)
             effect_size = 1 - (2*stat)/(n1*n2)
             effect_name = "rank-biserial r"
-        
+
         result.main_test = DistributionComparisonResult(
             test_name=test_name,
             statistic=stat,
@@ -224,7 +223,7 @@ def compare_distributions(
                 "effect_interpretation": _interpret_effect(effect_size, effect_name),
             }
         )
-    
+
     else:
         # Multi-group comparison
         if use_parametric:
@@ -243,7 +242,7 @@ def compare_distributions(
             n = sum(len(arr) for arr in group_arrays)
             effect_size = (stat - n_groups + 1) / (n - n_groups) if n > n_groups else 0
             effect_name = "ε² (epsilon-squared)"
-        
+
         result.main_test = DistributionComparisonResult(
             test_name=test_name,
             statistic=stat,
@@ -255,16 +254,16 @@ def compare_distributions(
                 "effect_interpretation": _interpret_effect(effect_size, effect_name),
             }
         )
-        
+
         # Post-hoc tests if significant
         if p < alpha:
             result.post_hoc_tests = _compute_post_hoc(group_data, use_parametric, alpha)
-    
+
     # Generate visualizations if requested
     if generate_visualizations and HAS_VISUALIZATION and user_id and job_id:
         try:
             import matplotlib.pyplot as plt
-            
+
             # Create box plot with p-value
             fig = plot_group_comparison(
                 data=df,
@@ -275,7 +274,7 @@ def compare_distributions(
                 show_data_points=True,
                 title=f"{numeric_col} by {group_col}",
             )
-            
+
             # Add test result annotation
             ax = fig.axes[0]
             if result.main_test:
@@ -284,29 +283,29 @@ def compare_distributions(
                 stat = result.main_test.statistic
                 effect = result.main_test.details.get('effect_size', 0)
                 effect_name = result.main_test.details.get('effect_size_name', 'effect size')
-                
+
                 sig = "***" if p_value < 0.001 else "**" if p_value < 0.01 else "*" if p_value < 0.05 else "ns"
                 annotation = f"{test_name}\nstat = {stat:.3f}, p = {p_value:.4f} {sig}\n{effect_name} = {effect:.3f}"
-                
+
                 ax.text(0.95, 0.95, annotation, transform=ax.transAxes,
                         ha='right', va='top', fontsize=10,
-                        bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
-            
+                        bbox={"boxstyle": 'round', "facecolor": 'white', "alpha": 0.8})
+
             # Save to MinIO
             url = save_figure_to_minio(fig, "group_comparison.png", user_id, job_id)
-            
+
             # Store visualization info in result
             result.visualizations = [{
                 "type": "boxplot",
                 "url": url,
                 "title": f"{numeric_col} by {group_col}",
             }]
-            
+
             plt.close(fig)
-            
+
         except Exception as e:
             logger.warning(f"Failed to generate group comparison visualization: {e}")
-    
+
     return result
 
 
@@ -316,18 +315,18 @@ def ks_test_two_samples(
 ) -> DistributionComparisonResult:
     """
     Perform two-sample Kolmogorov-Smirnov test.
-    
+
     Tests whether two samples come from the same distribution.
-    
+
     Args:
         sample1: First sample
         sample2: Second sample
-        
+
     Returns:
         DistributionComparisonResult with test results
     """
     stat, p = stats.ks_2samp(sample1, sample2)
-    
+
     return DistributionComparisonResult(
         test_name="Kolmogorov-Smirnov (2-sample)",
         statistic=stat,
@@ -376,15 +375,15 @@ def _compute_post_hoc(
     """Compute pairwise post-hoc comparisons."""
     post_hoc = []
     groups = list(group_data.keys())
-    
+
     # Bonferroni correction
     n_comparisons = len(groups) * (len(groups) - 1) // 2
     corrected_alpha = alpha / n_comparisons if n_comparisons > 0 else alpha
-    
+
     for i, g1 in enumerate(groups):
         for g2 in groups[i+1:]:
             data1, data2 = group_data[g1], group_data[g2]
-            
+
             try:
                 if parametric:
                     stat, p = stats.ttest_ind(data1, data2)
@@ -392,7 +391,7 @@ def _compute_post_hoc(
                 else:
                     stat, p = stats.mannwhitneyu(data1, data2, alternative='two-sided')
                     test = "Mann-Whitney U"
-                
+
                 post_hoc.append({
                     "group1": g1,
                     "group2": g2,
@@ -405,5 +404,5 @@ def _compute_post_hoc(
                 })
             except Exception as e:
                 logger.warning(f"Post-hoc {g1} vs {g2} failed: {e}")
-    
+
     return post_hoc

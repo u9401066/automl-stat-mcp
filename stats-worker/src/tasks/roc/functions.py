@@ -15,29 +15,27 @@ Contains:
     - generate_publication_report: Publication-ready report
 """
 import logging
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union, cast
+
 import numpy as np
 import pandas as pd
 
-from .types import ROCCurveResult
-from .core import ROCAnalyzer, DeLongTest
 from .calibration import CalibrationAnalyzer
-from .precision_recall import PrecisionRecallAnalyzer, NetBenefitAnalyzer
+from .core import DeLongTest, ROCAnalyzer
+from .precision_recall import NetBenefitAnalyzer, PrecisionRecallAnalyzer
 
 logger = logging.getLogger(__name__)
 
 # Optional visualization support
 try:
     from src.visualization.roc import (
-        plot_roc_curve,
-        plot_pr_curve,
         plot_calibration_curve,
         plot_confusion_matrix,
+        plot_pr_curve,
+        plot_roc_curve,
         plot_threshold_analysis,
-        create_roc_visualizations,
     )
     from src.visualization.storage import save_figure_to_minio
-    from src.visualization.schemas import VisualizationResult, VisualizationType
     HAS_VISUALIZATION = True
 except ImportError:
     HAS_VISUALIZATION = False
@@ -56,7 +54,7 @@ def compute_roc_curve(
 ) -> Dict[str, Any]:
     """
     Compute ROC curve with AUC and confidence interval.
-    
+
     Args:
         y_true: True binary labels (0/1)
         y_scores: Predicted probabilities or scores
@@ -66,22 +64,22 @@ def compute_roc_curve(
         user_id: User ID for MinIO path
         job_id: Job ID for MinIO path
         model_name: Name for the model in plot
-        
+
     Returns:
         Dictionary with ROC curve data, AUC, CI, optimal threshold
     """
-    y_true = np.asarray(y_true)
-    y_scores = np.asarray(y_scores)
-    
+    y_true_arr = np.asarray(y_true)
+    y_scores_arr = np.asarray(y_scores)
+
     analyzer = ROCAnalyzer(alpha=alpha)
-    result = analyzer.compute_roc(y_true, y_scores, threshold_method)
-    
-    output = {
+    result = analyzer.compute_roc(y_true_arr, y_scores_arr, threshold_method)
+
+    output: Dict[str, Any] = {
         "status": "success",
         "analysis_type": "roc_curve",
         **result.to_dict(),
     }
-    
+
     # Generate visualizations if requested
     if generate_visualizations and HAS_VISUALIZATION and user_id and job_id:
         try:
@@ -89,9 +87,9 @@ def compute_roc_curve(
             fig = plot_roc_curve(
                 result.to_dict(),
                 title=f"ROC Curve - {model_name}",
-                show_optimal_point=True,
+                show_optimal=True,
             )
-            
+
             # Save to MinIO
             url = save_figure_to_minio(
                 fig,
@@ -99,19 +97,19 @@ def compute_roc_curve(
                 user_id=user_id,
                 job_id=job_id,
             )
-            
+
             output["visualizations"] = [{
                 "type": "roc_curve",
                 "url": url,
                 "title": f"ROC Curve - {model_name} (AUC={result.auc:.3f})",
             }]
-            
+
             import matplotlib.pyplot as plt
             plt.close(fig)
-            
+
         except Exception as e:
             logger.warning(f"Failed to generate ROC curve visualization: {e}")
-    
+
     return output
 
 
@@ -128,7 +126,7 @@ def compare_roc_curves(
 ) -> Dict[str, Any]:
     """
     Compare two ROC curves using DeLong test.
-    
+
     Args:
         y_true: True binary labels
         scores1: Predicted probabilities from model 1
@@ -139,23 +137,23 @@ def compare_roc_curves(
         generate_visualizations: If True, generate comparison plot
         user_id: User ID for MinIO path
         job_id: Job ID for MinIO path
-        
+
     Returns:
         Dictionary with comparison results
     """
-    y_true = np.asarray(y_true)
-    scores1 = np.asarray(scores1)
-    scores2 = np.asarray(scores2)
-    
+    y_true_arr = np.asarray(y_true)
+    scores1_arr = np.asarray(scores1)
+    scores2_arr = np.asarray(scores2)
+
     test = DeLongTest(alpha=alpha)
-    result = test.compare(y_true, scores1, scores2)
-    
+    result = test.compare(y_true_arr, scores1_arr, scores2_arr)
+
     # Also compute individual ROC curves
     analyzer = ROCAnalyzer(alpha=alpha)
-    roc1 = analyzer.compute_roc(y_true, scores1)
-    roc2 = analyzer.compute_roc(y_true, scores2)
-    
-    output = {
+    roc1 = analyzer.compute_roc(y_true_arr, scores1_arr)
+    roc2 = analyzer.compute_roc(y_true_arr, scores2_arr)
+
+    output: Dict[str, Any] = {
         "status": "success",
         "analysis_type": "roc_comparison",
         "model1": {
@@ -171,16 +169,16 @@ def compare_roc_curves(
         "comparison": result.to_dict(),
         "conclusion": f"{model1_name} {'significantly better' if result.significant and result.difference > 0 else 'significantly worse' if result.significant and result.difference < 0 else 'not significantly different'} than {model2_name}",
     }
-    
+
     # Generate visualizations if requested
     if generate_visualizations and HAS_VISUALIZATION and user_id and job_id:
         try:
             from src.visualization.roc import plot_roc_curves_comparison
-            
+
             # Convert ROC results to dict format for plotting
             roc1_dict = roc1.to_dict()
             roc2_dict = roc2.to_dict()
-            
+
             # Create comparison plot
             fig = plot_roc_curves_comparison(
                 [roc1_dict, roc2_dict],
@@ -190,7 +188,7 @@ def compare_roc_curves(
                     "p_value": float(result.p_value),
                 }
             )
-            
+
             # Save to MinIO
             url = save_figure_to_minio(
                 fig,
@@ -198,19 +196,19 @@ def compare_roc_curves(
                 user_id=user_id,
                 job_id=job_id,
             )
-            
+
             output["visualizations"] = [{
                 "type": "roc_comparison",
                 "url": url,
                 "title": f"ROC Curve Comparison: {model1_name} vs {model2_name}",
             }]
-            
+
             import matplotlib.pyplot as plt
             plt.close(fig)
-            
+
         except Exception as e:
             logger.warning(f"Failed to generate ROC comparison visualization: {e}")
-    
+
     return output
 
 
@@ -221,21 +219,21 @@ def analyze_calibration(
 ) -> Dict[str, Any]:
     """
     Analyze calibration of predicted probabilities.
-    
+
     Args:
         y_true: True binary labels
         y_prob: Predicted probabilities
         n_bins: Number of bins for calibration
-        
+
     Returns:
         Dictionary with calibration metrics
     """
-    y_true = np.asarray(y_true)
-    y_prob = np.asarray(y_prob)
-    
+    y_true_arr = np.asarray(y_true)
+    y_prob_arr = np.asarray(y_prob)
+
     analyzer = CalibrationAnalyzer(n_bins=n_bins)
-    result = analyzer.analyze(y_true, y_prob)
-    
+    result = analyzer.analyze(y_true_arr, y_prob_arr)
+
     return {
         "status": "success",
         "analysis_type": "calibration",
@@ -249,20 +247,20 @@ def compute_precision_recall(
 ) -> Dict[str, Any]:
     """
     Compute Precision-Recall curve.
-    
+
     Args:
         y_true: True binary labels
         y_scores: Predicted probabilities
-        
+
     Returns:
         Dictionary with PR curve and metrics
     """
-    y_true = np.asarray(y_true)
-    y_scores = np.asarray(y_scores)
-    
+    y_true_arr = np.asarray(y_true)
+    y_scores_arr = np.asarray(y_scores)
+
     analyzer = PrecisionRecallAnalyzer()
-    result = analyzer.compute(y_true, y_scores)
-    
+    result = analyzer.compute(y_true_arr, y_scores_arr)
+
     return {
         "status": "success",
         "analysis_type": "precision_recall",
@@ -279,49 +277,49 @@ def find_optimal_threshold(
 ) -> Dict[str, Any]:
     """
     Find optimal classification threshold.
-    
+
     Methods:
     - youden: Maximize Youden's J (sensitivity + specificity - 1)
     - closest_to_01: Minimize distance to (0, 1) on ROC
     - target_sensitivity: Achieve specific sensitivity
     - target_specificity: Achieve specific specificity
     - f1: Maximize F1 score
-    
+
     Args:
         y_true: True binary labels
         y_scores: Predicted probabilities
         method: Optimization method
         target_metric: 'sensitivity' or 'specificity' for target-based
         target_value: Target value (e.g., 0.90)
-        
+
     Returns:
         Dictionary with optimal threshold and metrics at that threshold
     """
-    y_true = np.asarray(y_true)
-    y_scores = np.asarray(y_scores)
-    
+    y_true_arr = np.asarray(y_true)
+    y_scores_arr = np.asarray(y_scores)
+
     analyzer = ROCAnalyzer()
-    
+
     if method == "target_sensitivity" or target_metric == "sensitivity":
         if target_value is None:
             target_value = 0.90
-        result = analyzer.find_threshold_for_sensitivity(y_true, y_scores, target_value)
+        result = analyzer.find_threshold_for_sensitivity(y_true_arr, y_scores_arr, target_value)
         method_desc = f"Target sensitivity = {target_value}"
-        
+
     elif method == "target_specificity" or target_metric == "specificity":
         if target_value is None:
             target_value = 0.90
-        result = analyzer.find_threshold_for_specificity(y_true, y_scores, target_value)
+        result = analyzer.find_threshold_for_specificity(y_true_arr, y_scores_arr, target_value)
         method_desc = f"Target specificity = {target_value}"
-        
+
     elif method == "f1":
         pr_analyzer = PrecisionRecallAnalyzer()
-        pr_result = pr_analyzer.compute(y_true, y_scores)
-        
+        pr_result = pr_analyzer.compute(y_true_arr, y_scores_arr)
+
         threshold = pr_result.f1_optimal_threshold
-        
+
         # Get sensitivity/specificity at this threshold
-        roc_result = analyzer.compute_roc(y_true, y_scores)
+        roc_result = analyzer.compute_roc(y_true_arr, y_scores_arr)
         for point in roc_result.curve_points:
             if abs(point.threshold - threshold) < 0.001:
                 result = {
@@ -334,11 +332,11 @@ def find_optimal_threshold(
         else:
             result = {"threshold": threshold, "f1": pr_result.f1_max}
         method_desc = "Maximize F1 score"
-        
+
     else:  # youden or closest_to_01
-        roc_result = analyzer.compute_roc(y_true, y_scores, threshold_method=method)
+        roc_result = analyzer.compute_roc(y_true_arr, y_scores_arr, threshold_method=method)
         threshold = roc_result.optimal_threshold
-        
+
         for point in roc_result.curve_points:
             if abs(point.threshold - threshold) < 0.001:
                 result = {
@@ -349,16 +347,17 @@ def find_optimal_threshold(
                 break
         else:
             result = {"threshold": threshold}
-            
+
         method_desc = "Youden's J" if method == "youden" else "Closest to (0,1)"
-    
+
     # Compute confusion matrix at optimal threshold
-    y_pred = (y_scores >= result["threshold"]).astype(int)
-    tp = np.sum((y_pred == 1) & (y_true == 1))
-    tn = np.sum((y_pred == 0) & (y_true == 0))
-    fp = np.sum((y_pred == 1) & (y_true == 0))
-    fn = np.sum((y_pred == 0) & (y_true == 1))
-    
+    threshold_val = float(result.get("threshold", 0.5))
+    y_pred = (y_scores_arr >= threshold_val).astype(int)
+    tp = np.sum((y_pred == 1) & (y_true_arr == 1))
+    tn = np.sum((y_pred == 0) & (y_true_arr == 0))
+    fp = np.sum((y_pred == 1) & (y_true_arr == 0))
+    fn = np.sum((y_pred == 0) & (y_true_arr == 1))
+
     return {
         "status": "success",
         "analysis_type": "optimal_threshold",
@@ -386,7 +385,7 @@ def full_classifier_evaluation(
 ) -> Dict[str, Any]:
     """
     Complete classifier evaluation including ROC, PR, and calibration.
-    
+
     Args:
         y_true: True binary labels
         y_scores: Predicted probabilities
@@ -394,37 +393,37 @@ def full_classifier_evaluation(
         generate_visualizations: Whether to generate plot images
         user_id: User ID for MinIO storage
         job_id: Job ID for MinIO storage
-        
+
     Returns:
         Dictionary with complete evaluation results and optional visualizations
     """
-    y_true = np.asarray(y_true)
-    y_scores = np.asarray(y_scores)
-    
+    y_true_arr = np.asarray(y_true)
+    y_scores_arr = np.asarray(y_scores)
+
     # ROC analysis
     roc_analyzer = ROCAnalyzer()
-    roc_result = roc_analyzer.compute_roc(y_true, y_scores)
-    
+    roc_result = roc_analyzer.compute_roc(y_true_arr, y_scores_arr)
+
     # PR analysis
     pr_analyzer = PrecisionRecallAnalyzer()
-    pr_result = pr_analyzer.compute(y_true, y_scores)
-    
+    pr_result = pr_analyzer.compute(y_true_arr, y_scores_arr)
+
     # Calibration analysis
     cal_analyzer = CalibrationAnalyzer()
-    cal_result = cal_analyzer.analyze(y_true, y_scores)
-    
+    cal_result = cal_analyzer.analyze(y_true_arr, y_scores_arr)
+
     # Decision curve
     nb_analyzer = NetBenefitAnalyzer()
-    nb_result = nb_analyzer.compute(y_true, y_scores)
-    
-    result = {
+    nb_analyzer.compute(y_true_arr, y_scores_arr)
+
+    result: Dict[str, Any] = {
         "status": "success",
         "analysis_type": "full_classifier_evaluation",
         "model_name": model_name,
-        "n_samples": len(y_true),
-        "n_positive": int(np.sum(y_true)),
-        "n_negative": int(np.sum(1 - y_true)),
-        "prevalence": float(np.mean(y_true)),
+        "n_samples": len(y_true_arr),
+        "n_positive": int(np.sum(y_true_arr)),
+        "n_negative": int(np.sum(1 - y_true_arr)),
+        "prevalence": float(np.mean(y_true_arr)),
         "discrimination": {
             "auc_roc": float(roc_result.auc),
             "auc_roc_ci": {
@@ -449,14 +448,14 @@ def full_classifier_evaluation(
             "calibration": "Good" if cal_result.well_calibrated else "Needs recalibration",
         },
     }
-    
+
     # Generate visualizations if requested
     if generate_visualizations and HAS_VISUALIZATION:
         try:
             import matplotlib.pyplot as plt
-            
+
             visualizations = []
-            
+
             # ROC curve
             fig_roc = plot_roc_curve(roc_result.to_dict())
             if user_id and job_id:
@@ -468,7 +467,7 @@ def full_classifier_evaluation(
                     "description": f"AUC = {roc_result.auc:.3f} (95% CI: {roc_result.auc_ci_lower:.3f}-{roc_result.auc_ci_upper:.3f})",
                 })
             plt.close(fig_roc)
-            
+
             # PR curve
             fig_pr = plot_pr_curve(pr_result.to_dict())
             if user_id and job_id:
@@ -480,7 +479,7 @@ def full_classifier_evaluation(
                     "description": f"AUC-PR = {pr_result.auc_pr:.3f}",
                 })
             plt.close(fig_pr)
-            
+
             # Calibration curve
             fig_cal = plot_calibration_curve(cal_result.to_dict())
             if user_id and job_id:
@@ -492,7 +491,7 @@ def full_classifier_evaluation(
                     "description": f"Brier score = {cal_result.brier_score:.3f}",
                 })
             plt.close(fig_cal)
-            
+
             # Threshold analysis
             fig_thresh = plot_threshold_analysis(roc_result.to_dict())
             if user_id and job_id:
@@ -504,16 +503,16 @@ def full_classifier_evaluation(
                     "description": "Sensitivity, specificity, PPV, NPV vs threshold",
                 })
             plt.close(fig_thresh)
-            
+
             # Confusion matrix at optimal threshold
-            optimal_thresh = roc_result.optimal_threshold
-            y_pred = (y_scores >= optimal_thresh).astype(int)
-            tp = int(np.sum((y_pred == 1) & (y_true == 1)))
-            tn = int(np.sum((y_pred == 0) & (y_true == 0)))
-            fp = int(np.sum((y_pred == 1) & (y_true == 0)))
-            fn = int(np.sum((y_pred == 0) & (y_true == 1)))
-            
-            cm_dict = {"tp": tp, "tn": tn, "fp": fp, "fn": fn}
+            optimal_thresh_val = float(roc_result.optimal_threshold)
+            y_pred_val = (y_scores_arr >= optimal_thresh_val).astype(int)
+            tp_val = int(np.sum((y_pred_val == 1) & (y_true_arr == 1)))
+            tn_val = int(np.sum((y_pred_val == 0) & (y_true_arr == 0)))
+            fp_val = int(np.sum((y_pred_val == 1) & (y_true_arr == 0)))
+            fn_val = int(np.sum((y_pred_val == 0) & (y_true_arr == 1)))
+
+            cm_dict = {"tp": tp_val, "tn": tn_val, "fp": fp_val, "fn": fn_val}
             fig_cm = plot_confusion_matrix(cm_dict)
             if user_id and job_id:
                 url = save_figure_to_minio(fig_cm, user_id, job_id, "confusion_matrix.png")
@@ -521,16 +520,16 @@ def full_classifier_evaluation(
                     "type": "confusion_matrix",
                     "url": url,
                     "title": "Confusion Matrix",
-                    "description": f"At optimal threshold = {optimal_thresh:.2f}",
+                    "description": f"At optimal threshold = {optimal_thresh_val:.2f}",
                 })
             plt.close(fig_cm)
-            
+
             result["visualizations"] = visualizations
-            
+
         except Exception as e:
             logger.error(f"Error generating classifier visualizations: {e}")
             result["visualization_error"] = str(e)
-    
+
     return result
 
 
@@ -559,13 +558,13 @@ def compare_multiple_models(
 ) -> Dict[str, Any]:
     """
     Compare 3+ models simultaneously with pairwise AUC comparisons.
-    
+
     Performs:
     - Individual AUC with 95% CI for each model
     - Pairwise DeLong tests between all models
     - Multiple comparison correction (Bonferroni, Holm, BH)
     - Model ranking by AUC
-    
+
     Args:
         y_true: True binary labels
         models: Dict mapping model names to predicted probabilities
@@ -579,7 +578,7 @@ def compare_multiple_models(
         generate_visualizations: If True, generate comparison plots
         user_id: User ID for MinIO path
         job_id: Job ID for MinIO path
-        
+
     Returns:
         Dictionary with:
         - model_rankings: List of models ranked by AUC
@@ -588,7 +587,7 @@ def compare_multiple_models(
         - comparison_matrix: P-value matrix
         - best_model: Recommended best model
         - interpretation: Human-readable summary
-    
+
     Example:
         >>> result = compare_multiple_models(
         ...     y_true,
@@ -596,20 +595,20 @@ def compare_multiple_models(
         ... )
         >>> print(result["interpretation"])
     """
-    y_true = np.asarray(y_true)
+    y_true_arr = np.asarray(y_true)
     model_names = list(models.keys())
     n_models = len(model_names)
-    
+
     if n_models < 2:
         raise ValueError("Need at least 2 models to compare")
-    
+
     # Compute individual AUCs
     analyzer = ROCAnalyzer(alpha=alpha)
     individual_aucs = {}
-    
+
     for name, scores in models.items():
         scores_arr = np.asarray(scores)
-        roc_result = analyzer.compute_roc(y_true, scores_arr)
+        roc_result = analyzer.compute_roc(y_true_arr, scores_arr)
         individual_aucs[name] = {
             "auc": float(roc_result.auc),
             "auc_ci_lower": float(roc_result.auc_ci_lower),
@@ -617,9 +616,9 @@ def compare_multiple_models(
             "auc_se": float(roc_result.auc_se),
             "optimal_threshold": float(roc_result.optimal_threshold),
         }
-    
+
     # Rank models by AUC
-    model_rankings = sorted(
+    model_rankings_list = sorted(
         individual_aucs.items(),
         key=lambda x: x[1]["auc"],
         reverse=True
@@ -631,111 +630,112 @@ def compare_multiple_models(
             "auc": data["auc"],
             "auc_ci": f"[{data['auc_ci_lower']:.3f}, {data['auc_ci_upper']:.3f}]"
         }
-        for i, (name, data) in enumerate(model_rankings)
+        for i, (name, data) in enumerate(model_rankings_list)
     ]
-    
+
     # Pairwise DeLong tests
     delong = DeLongTest(alpha=alpha)
-    pairwise_comparisons = []
+    pairwise_comparisons: List[Dict[str, Any]] = []
     p_values = []
-    
+
     for i in range(n_models):
         for j in range(i + 1, n_models):
             name1 = model_names[i]
             name2 = model_names[j]
-            scores1 = np.asarray(models[name1])
-            scores2 = np.asarray(models[name2])
-            
-            result = delong.compare(y_true, scores1, scores2)
-            
+            scores1_arr = np.asarray(models[name1])
+            scores2_arr = np.asarray(models[name2])
+
+            pair_result = delong.compare(y_true_arr, scores1_arr, scores2_arr)
+
             pairwise_comparisons.append({
                 "model1": name1,
                 "model2": name2,
-                "auc1": float(result.auc1),
-                "auc2": float(result.auc2),
-                "difference": float(result.difference),
-                "se_difference": float(result.se_difference),
-                "z_statistic": float(result.z_statistic),
-                "p_value": float(result.p_value),
-                "p_value_raw": float(result.p_value),
+                "auc1": float(pair_result.auc1),
+                "auc2": float(pair_result.auc2),
+                "difference": float(pair_result.difference),
+                "se_difference": float(pair_result.se_difference),
+                "z_statistic": float(pair_result.z_statistic),
+                "p_value": float(pair_result.p_value),
+                "p_value_raw": float(pair_result.p_value),
             })
-            p_values.append(result.p_value)
-    
+            p_values.append(pair_result.p_value)
+
     # Apply multiple comparison correction
     n_comparisons = len(p_values)
-    
+    adjusted_p_values: List[float] = []
+
     if correction == "bonferroni":
         adjusted_alpha = alpha / n_comparisons
         adjusted_p_values = [min(p * n_comparisons, 1.0) for p in p_values]
-        
+
     elif correction == "holm":
         # Holm-Bonferroni step-down procedure
         indexed = [(p, i) for i, p in enumerate(p_values)]
         indexed.sort(key=lambda x: x[0])
-        
+
         adjusted_p_values = [0.0] * n_comparisons
         for rank, (p, orig_idx) in enumerate(indexed):
-            multiplier = n_comparisons - rank
-            adjusted_p = min(p * multiplier, 1.0)
+            multiplier_val = float(n_comparisons - rank)
+            adjusted_p = min(p * multiplier_val, 1.0)
             adjusted_p_values[orig_idx] = adjusted_p
         adjusted_alpha = alpha
-        
+
     elif correction == "bh":
         # Benjamini-Hochberg FDR control
         indexed = [(p, i) for i, p in enumerate(p_values)]
         indexed.sort(key=lambda x: x[0])
-        
+
         adjusted_p_values = [0.0] * n_comparisons
         for rank, (p, orig_idx) in enumerate(indexed):
-            multiplier = n_comparisons / (rank + 1)
-            adjusted_p = min(p * multiplier, 1.0)
+            multiplier_bh = float(n_comparisons / (rank + 1))
+            adjusted_p = min(p * multiplier_bh, 1.0)
             adjusted_p_values[orig_idx] = adjusted_p
         adjusted_alpha = alpha
-        
+
     else:  # no correction
-        adjusted_p_values = p_values
+        adjusted_p_values = list(p_values)
         adjusted_alpha = alpha
-    
+
     # Update pairwise comparisons with adjusted p-values
     for i, comp in enumerate(pairwise_comparisons):
         comp["p_value_adjusted"] = float(adjusted_p_values[i])
-        comp["significant"] = adjusted_p_values[i] < adjusted_alpha
-    
+        comp["significant"] = bool(adjusted_p_values[i] < adjusted_alpha)
+
     # Create comparison matrix
-    comparison_matrix = {name: {name2: None for name2 in model_names} for name in model_names}
+    comparison_matrix: Dict[str, Dict[str, Optional[float]]] = {name: dict.fromkeys(model_names) for name in model_names}
     for comp in pairwise_comparisons:
-        comparison_matrix[comp["model1"]][comp["model2"]] = comp["p_value_adjusted"]
-        comparison_matrix[comp["model2"]][comp["model1"]] = comp["p_value_adjusted"]
-    
+        comparison_matrix[str(comp["model1"])][str(comp["model2"])] = comp["p_value_adjusted"]
+        comparison_matrix[str(comp["model2"])][str(comp["model1"])] = comp["p_value_adjusted"]
+
     # Determine best model
-    best_model = model_rankings[0]
-    second_best = model_rankings[1] if len(model_rankings) > 1 else None
-    
+    best_model_entry = model_rankings[0]
+    second_best_entry = model_rankings[1] if len(model_rankings) > 1 else None
+
     # Check if best is significantly better than second best
     best_significantly_better = False
-    if second_best:
+    if second_best_entry:
         for comp in pairwise_comparisons:
-            if (comp["model1"] == best_model["model"] and comp["model2"] == second_best["model"]) or \
-               (comp["model2"] == best_model["model"] and comp["model1"] == second_best["model"]):
-                best_significantly_better = comp["significant"]
+            if (comp["model1"] == best_model_entry["model"] and comp["model2"] == second_best_entry["model"]) or \
+               (comp["model2"] == best_model_entry["model"] and comp["model1"] == second_best_entry["model"]):
+                best_significantly_better = bool(comp["significant"])
                 break
-    
+
     # Generate interpretation
     significant_pairs = [c for c in pairwise_comparisons if c["significant"]]
-    
+
     interpretation_lines = [
-        f"## Multi-Model Comparison Results",
-        f"",
-        f"**Best Model**: {best_model['model']} (AUC = {best_model['auc']:.3f})",
-        f"",
-        f"### Rankings",
+        "## Multi-Model Comparison Results",
+        "",
+        f"**Best Model**: {best_model_entry['model']} (AUC = {best_model_entry['auc']:.3f})",
+        "",
+        "### Rankings",
     ]
     for r in model_rankings:
         interpretation_lines.append(f"{r['rank']}. {r['model']}: AUC = {r['auc']:.3f} {r['auc_ci']}")
-    
+
     interpretation_lines.append("")
     interpretation_lines.append(f"### Statistical Comparisons (correction: {correction})")
-    
+
     if significant_pairs:
         interpretation_lines.append(f"**{len(significant_pairs)} significant difference(s) found:**")
         for pair in significant_pairs:
@@ -746,15 +746,15 @@ def compare_multiple_models(
             )
     else:
         interpretation_lines.append("No significant differences found between models.")
-    
+
     if best_significantly_better:
         interpretation_lines.append("")
-        interpretation_lines.append(f"✅ **{best_model['model']}** is significantly better than the second-best model.")
+        interpretation_lines.append(f"✅ **{best_model_entry['model']}** is significantly better than the second-best model.")
     else:
         interpretation_lines.append("")
-        interpretation_lines.append(f"⚠️ Top models are not significantly different - consider other factors.")
-    
-    return {
+        interpretation_lines.append("⚠️ Top models are not significantly different - consider other factors.")
+
+    output: Dict[str, Any] = {
         "status": "success",
         "analysis_type": "multi_model_comparison",
         "n_models": n_models,
@@ -765,34 +765,34 @@ def compare_multiple_models(
         "pairwise_comparisons": pairwise_comparisons,
         "comparison_matrix": comparison_matrix,
         "best_model": {
-            "name": best_model["model"],
-            "auc": best_model["auc"],
+            "name": best_model_entry["model"],
+            "auc": best_model_entry["auc"],
             "significantly_better": best_significantly_better,
         },
         "interpretation": "\n".join(interpretation_lines),
     }
-    
+
     # Generate visualizations if requested
     if generate_visualizations and HAS_VISUALIZATION and user_id and job_id:
         try:
             from src.visualization.roc import plot_roc_curves_comparison
-            
+
             # Compute full ROC results for each model for plotting
             roc_results = []
             model_names_list = list(models.keys())
-            
+
             for name in model_names_list:
-                scores = np.asarray(models[name])
-                roc_result = analyzer.compute_roc(y_true, scores)
-                roc_results.append(roc_result.to_dict())
-            
+                scores_arr = np.asarray(models[name])
+                roc_result_plotting = analyzer.compute_roc(y_true_arr, scores_arr)
+                roc_results.append(roc_result_plotting.to_dict())
+
             # Create multi-model comparison plot
             fig = plot_roc_curves_comparison(
                 roc_results,
                 labels=model_names_list,
                 title=f"Multi-Model ROC Comparison ({n_models} models)"
             )
-            
+
             # Save to MinIO
             url = save_figure_to_minio(
                 fig,
@@ -800,55 +800,20 @@ def compare_multiple_models(
                 user_id=user_id,
                 job_id=job_id,
             )
-            
-            output = {
-                "status": "success",
-                "analysis_type": "multi_model_comparison",
-                "n_models": n_models,
-                "n_comparisons": n_comparisons,
-                "correction_method": correction,
-                "model_rankings": model_rankings,
-                "individual_aucs": individual_aucs,
-                "pairwise_comparisons": pairwise_comparisons,
-                "comparison_matrix": comparison_matrix,
-                "best_model": {
-                    "name": best_model["model"],
-                    "auc": best_model["auc"],
-                    "significantly_better": best_significantly_better,
-                },
-                "interpretation": "\n".join(interpretation_lines),
-                "visualizations": [{
-                    "type": "multi_model_roc_comparison",
-                    "url": url,
-                    "title": f"ROC Comparison: {n_models} Models",
-                }]
-            }
-            
+
+            output["visualizations"] = [{
+                "type": "multi_model_roc_comparison",
+                "url": url,
+                "title": f"ROC Comparison: {n_models} Models",
+            }]
+
             import matplotlib.pyplot as plt
             plt.close(fig)
-            
-            return output
-            
+
         except Exception as e:
             logger.warning(f"Failed to generate multi-model ROC comparison visualization: {e}")
-    
-    return {
-        "status": "success",
-        "analysis_type": "multi_model_comparison",
-        "n_models": n_models,
-        "n_comparisons": n_comparisons,
-        "correction_method": correction,
-        "model_rankings": model_rankings,
-        "individual_aucs": individual_aucs,
-        "pairwise_comparisons": pairwise_comparisons,
-        "comparison_matrix": comparison_matrix,
-        "best_model": {
-            "name": best_model["model"],
-            "auc": best_model["auc"],
-            "significantly_better": best_significantly_better,
-        },
-        "interpretation": "\n".join(interpretation_lines),
-    }
+
+    return output
 
 
 def threshold_analysis(
@@ -861,9 +826,9 @@ def threshold_analysis(
 ) -> Dict[str, Any]:
     """
     Comprehensive threshold analysis for clinical decision support.
-    
+
     Provides complete metrics at each threshold to support clinical decisions.
-    
+
     Args:
         y_true: True binary labels
         y_scores: Predicted probabilities
@@ -871,14 +836,14 @@ def threshold_analysis(
         target_metric: Metric to optimize ('sensitivity', 'specificity', 'ppv', 'npv', 'f1')
         target_value: Target value for the metric (e.g., 0.95)
         n_thresholds: Number of thresholds if not specified (default 21: 0.0, 0.05, ..., 1.0)
-        
+
     Returns:
         Dictionary with:
         - threshold_table: Complete metrics at each threshold
         - target_threshold: Threshold achieving target metric (if specified)
         - recommended_thresholds: Thresholds for common clinical scenarios
         - clinical_interpretation: Decision support text
-        
+
     Example:
         >>> # Find threshold for 95% sensitivity (screening test)
         >>> result = threshold_analysis(
@@ -888,55 +853,55 @@ def threshold_analysis(
         ... )
         >>> print(f"Use threshold {result['target_threshold']['threshold']:.2f}")
     """
-    y_true = np.asarray(y_true)
-    y_scores = np.asarray(y_scores)
-    
-    n = len(y_true)
-    n_pos = np.sum(y_true)
+    y_true_arr = np.asarray(y_true)
+    y_scores_arr = np.asarray(y_scores)
+
+    n = len(y_true_arr)
+    n_pos = np.sum(y_true_arr)
     n_neg = n - n_pos
-    prevalence = n_pos / n
-    
+    prevalence = float(n_pos / n) if n > 0 else 0.0
+
     # Generate thresholds if not provided
     if thresholds is None:
         thresholds = np.linspace(0, 1, n_thresholds).tolist()
-    
+
     # Compute metrics at each threshold
     threshold_table = []
-    
-    for thresh in thresholds:
-        y_pred = (y_scores >= thresh).astype(int)
-        
-        tp = np.sum((y_pred == 1) & (y_true == 1))
-        tn = np.sum((y_pred == 0) & (y_true == 0))
-        fp = np.sum((y_pred == 1) & (y_true == 0))
-        fn = np.sum((y_pred == 0) & (y_true == 1))
-        
-        sensitivity = tp / n_pos if n_pos > 0 else 0
-        specificity = tn / n_neg if n_neg > 0 else 0
-        ppv = tp / (tp + fp) if (tp + fp) > 0 else 0
-        npv = tn / (tn + fn) if (tn + fn) > 0 else 0
-        accuracy = (tp + tn) / n
-        f1 = 2 * tp / (2 * tp + fp + fn) if (2 * tp + fp + fn) > 0 else 0
-        
+
+    for thresh in cast(List[float], thresholds):
+        y_pred = (y_scores_arr >= thresh).astype(int)
+
+        tp = np.sum((y_pred == 1) & (y_true_arr == 1))
+        tn = np.sum((y_pred == 0) & (y_true_arr == 0))
+        fp = np.sum((y_pred == 1) & (y_true_arr == 0))
+        fn = np.sum((y_pred == 0) & (y_true_arr == 1))
+
+        sensitivity = float(tp / n_pos) if n_pos > 0 else 0.0
+        specificity = float(tn / n_neg) if n_neg > 0 else 0.0
+        ppv = float(tp / (tp + fp)) if (tp + fp) > 0 else 0.0
+        npv = float(tn / (tn + fn)) if (tn + fn) > 0 else 0.0
+        accuracy = float((tp + tn) / n) if n > 0 else 0.0
+        f1 = float(2 * tp / (2 * tp + fp + fn)) if (2 * tp + fp + fn) > 0 else 0.0
+
         # Youden's J
         youden_j = sensitivity + specificity - 1
-        
+
         # Diagnostic odds ratio
         if fp > 0 and fn > 0:
             dor = (tp * tn) / (fp * fn)
         else:
             dor = float('inf') if tp > 0 and tn > 0 else 0
-        
+
         # Likelihood ratios
         lr_pos = sensitivity / (1 - specificity) if specificity < 1 else float('inf')
         lr_neg = (1 - sensitivity) / specificity if specificity > 0 else float('inf')
-        
+
         # Number needed to screen/diagnose
         if ppv > 0:
             nns = 1 / ppv  # Number needed to screen
         else:
             nns = float('inf')
-        
+
         threshold_table.append({
             "threshold": float(thresh),
             "sensitivity": float(sensitivity),
@@ -952,98 +917,99 @@ def threshold_analysis(
             "nns": float(nns) if nns != float('inf') else None,
             "confusion_matrix": {"tp": int(tp), "tn": int(tn), "fp": int(fp), "fn": int(fn)},
         })
-    
+
     # Find threshold for target metric
     target_threshold = None
     if target_metric and target_value is not None:
         metric_key = target_metric.lower()
-        
+
         # Find threshold that achieves target
         candidates = []
         for row in threshold_table:
-            if row[metric_key] >= target_value:
+            metric_val = row.get(metric_key)
+            if isinstance(metric_val, (int, float)) and metric_val >= target_value:
                 candidates.append(row)
-        
+
         if candidates:
             # For sensitivity, prefer lower threshold (more permissive)
             # For specificity, prefer higher threshold (more restrictive)
             if metric_key in ["sensitivity", "npv"]:
-                target_row = max(candidates, key=lambda x: x["threshold"])
+                target_row = max(candidates, key=lambda x: float(cast(float, x["threshold"])))
             else:
-                target_row = min(candidates, key=lambda x: x["threshold"])
-            
+                target_row = min(candidates, key=lambda x: float(cast(float, x["threshold"])))
+
             target_threshold = {
-                "threshold": target_row["threshold"],
-                "achieved_value": target_row[metric_key],
+                "threshold": float(cast(float, target_row["threshold"])),
+                "achieved_value": float(cast(float, target_row[metric_key])),
                 "target_metric": target_metric,
                 "target_value": target_value,
                 "trade_offs": {
-                    "sensitivity": target_row["sensitivity"],
-                    "specificity": target_row["specificity"],
-                    "ppv": target_row["ppv"],
-                    "npv": target_row["npv"],
-                    "f1": target_row["f1"],
+                    "sensitivity": float(cast(float, target_row["sensitivity"])),
+                    "specificity": float(cast(float, target_row["specificity"])),
+                    "ppv": float(cast(float, target_row["ppv"])),
+                    "npv": float(cast(float, target_row["npv"])),
+                    "f1": float(cast(float, target_row["f1"])),
                 },
             }
         else:
             # Target not achievable
-            best_row = max(threshold_table, key=lambda x: x[metric_key])
+            best_row = max(threshold_table, key=lambda x: float(cast(float, x[metric_key]) if x[metric_key] is not None else 0))
             target_threshold = {
-                "threshold": best_row["threshold"],
-                "achieved_value": best_row[metric_key],
+                "threshold": float(cast(float, best_row["threshold"])),
+                "achieved_value": float(cast(float, best_row[metric_key])) if best_row[metric_key] is not None else None,
                 "target_metric": target_metric,
                 "target_value": target_value,
                 "target_achieved": False,
-                "message": f"Target {target_metric} of {target_value} not achievable. Best: {best_row[metric_key]:.3f}",
+                "message": f"Target {target_metric} of {target_value} not achievable. Best: {float(cast(float, best_row[metric_key])):.3f}",
             }
-    
+
     # Recommended thresholds for common scenarios
     # Youden's J maximum
-    youden_optimal = max(threshold_table, key=lambda x: x["youden_j"])
-    
+    youden_optimal = max(threshold_table, key=lambda x: float(cast(float, x["youden_j"])))
+
     # F1 maximum
-    f1_optimal = max(threshold_table, key=lambda x: x["f1"])
-    
+    f1_optimal = max(threshold_table, key=lambda x: float(cast(float, x["f1"])))
+
     # High sensitivity (>= 0.90) with best specificity
-    high_sens_candidates = [r for r in threshold_table if r["sensitivity"] >= 0.90]
-    high_sens_optimal = max(high_sens_candidates, key=lambda x: x["specificity"]) if high_sens_candidates else None
-    
+    high_sens_candidates = [r for r in threshold_table if float(cast(float, r["sensitivity"])) >= 0.90]
+    high_sens_optimal = max(high_sens_candidates, key=lambda x: float(cast(float, x["specificity"]))) if high_sens_candidates else None
+
     # High specificity (>= 0.90) with best sensitivity
-    high_spec_candidates = [r for r in threshold_table if r["specificity"] >= 0.90]
-    high_spec_optimal = max(high_spec_candidates, key=lambda x: x["sensitivity"]) if high_spec_candidates else None
-    
+    high_spec_candidates = [r for r in threshold_table if float(cast(float, r["specificity"])) >= 0.90]
+    high_spec_optimal = max(high_spec_candidates, key=lambda x: float(cast(float, x["sensitivity"]))) if high_spec_candidates else None
+
     recommended_thresholds = {
         "youden_optimal": {
-            "threshold": youden_optimal["threshold"],
-            "sensitivity": youden_optimal["sensitivity"],
-            "specificity": youden_optimal["specificity"],
+            "threshold": float(cast(float, youden_optimal["threshold"])),
+            "sensitivity": float(cast(float, youden_optimal["sensitivity"])),
+            "specificity": float(cast(float, youden_optimal["specificity"])),
             "description": "Balances sensitivity and specificity (Youden's J)",
         },
         "f1_optimal": {
-            "threshold": f1_optimal["threshold"],
-            "f1": f1_optimal["f1"],
-            "sensitivity": f1_optimal["sensitivity"],
-            "specificity": f1_optimal["specificity"],
+            "threshold": float(cast(float, f1_optimal["threshold"])),
+            "f1": float(cast(float, f1_optimal["f1"])),
+            "sensitivity": float(cast(float, f1_optimal["sensitivity"])),
+            "specificity": float(cast(float, f1_optimal["specificity"])),
             "description": "Maximizes F1 score (precision-recall balance)",
         },
     }
-    
+
     if high_sens_optimal:
         recommended_thresholds["high_sensitivity"] = {
-            "threshold": high_sens_optimal["threshold"],
-            "sensitivity": high_sens_optimal["sensitivity"],
-            "specificity": high_sens_optimal["specificity"],
+            "threshold": float(cast(float, high_sens_optimal["threshold"])),
+            "sensitivity": float(cast(float, high_sens_optimal["sensitivity"])),
+            "specificity": float(cast(float, high_sens_optimal["specificity"])),
             "description": "For screening: ≥90% sensitivity with best specificity",
         }
-    
+
     if high_spec_optimal:
         recommended_thresholds["high_specificity"] = {
-            "threshold": high_spec_optimal["threshold"],
-            "sensitivity": high_spec_optimal["sensitivity"],
-            "specificity": high_spec_optimal["specificity"],
+            "threshold": float(cast(float, high_spec_optimal["threshold"])),
+            "sensitivity": float(cast(float, high_spec_optimal["sensitivity"])),
+            "specificity": float(cast(float, high_spec_optimal["specificity"])),
             "description": "For confirmation: ≥90% specificity with best sensitivity",
         }
-    
+
     # Generate clinical interpretation
     interpretation_lines = [
         "## Threshold Analysis for Clinical Decision Support",
@@ -1056,7 +1022,7 @@ def threshold_analysis(
         f"  - Sensitivity: {youden_optimal['sensitivity']:.1%}, Specificity: {youden_optimal['specificity']:.1%}",
         "",
     ]
-    
+
     if high_sens_optimal:
         interpretation_lines.extend([
             f"**Screening Test** (≥90% sensitivity): threshold = {high_sens_optimal['threshold']:.2f}",
@@ -1064,7 +1030,7 @@ def threshold_analysis(
             f"  - NPV: {high_sens_optimal['npv']:.1%} (negative test rules out disease)",
             "",
         ])
-    
+
     if high_spec_optimal:
         interpretation_lines.extend([
             f"**Confirmatory Test** (≥90% specificity): threshold = {high_spec_optimal['threshold']:.2f}",
@@ -1072,7 +1038,7 @@ def threshold_analysis(
             f"  - PPV: {high_spec_optimal['ppv']:.1%} (positive test rules in disease)",
             "",
         ])
-    
+
     if target_threshold:
         interpretation_lines.extend([
             "### Your Target Analysis",
@@ -1080,7 +1046,7 @@ def threshold_analysis(
             f"Recommended threshold: {target_threshold['threshold']:.2f}",
             "",
         ])
-    
+
     return {
         "status": "success",
         "analysis_type": "threshold_analysis",
@@ -1106,13 +1072,13 @@ def generate_publication_report(
 ) -> Dict[str, Any]:
     """
     Generate publication-ready statistical report for model performance.
-    
+
     Produces formatted text suitable for journal submission, including:
     - AUC with 95% confidence intervals
     - Optimal threshold and associated metrics with CIs
     - Calibration assessment
     - Results formatted per TRIPOD/PROBAST guidelines
-    
+
     Args:
         y_true: True binary labels
         y_scores: Predicted probabilities
@@ -1121,7 +1087,7 @@ def generate_publication_report(
         threshold_method: Method for optimal threshold ('youden', 'f1')
         alpha: Significance level for confidence intervals
         decimal_places: Number of decimal places for reporting
-        
+
     Returns:
         Dictionary with:
         - results_text: Main results paragraph (copy-paste ready)
@@ -1129,7 +1095,7 @@ def generate_publication_report(
         - table_data: Data for Table X (model performance)
         - figure_data: Data for ROC curve figure
         - all_metrics: Complete metrics dictionary
-    
+
     Example:
         >>> report = generate_publication_report(
         ...     y_true, y_scores,
@@ -1138,107 +1104,107 @@ def generate_publication_report(
         ... )
         >>> print(report["results_text"])
     """
-    y_true = np.asarray(y_true)
-    y_scores = np.asarray(y_scores)
-    
-    n = len(y_true)
-    n_pos = int(np.sum(y_true))
+    y_true_arr = np.asarray(y_true)
+    y_scores_arr = np.asarray(y_scores)
+
+    n = len(y_true_arr)
+    n_pos = int(np.sum(y_true_arr))
     n_neg = n - n_pos
-    prevalence = n_pos / n
-    
+    prevalence = float(n_pos / n) if n > 0 else 0.0
+
     # Compute ROC
     analyzer = ROCAnalyzer(alpha=alpha)
-    roc_result = analyzer.compute_roc(y_true, y_scores, threshold_method=threshold_method)
-    
+    roc_result = analyzer.compute_roc(y_true_arr, y_scores_arr, threshold_method=threshold_method)
+
     # Compute PR
     pr_analyzer = PrecisionRecallAnalyzer()
-    pr_result = pr_analyzer.compute(y_true, y_scores)
-    
+    pr_result = pr_analyzer.compute(y_true_arr, y_scores_arr)
+
     # Compute calibration
     cal_analyzer = CalibrationAnalyzer(n_bins=10)
-    cal_result = cal_analyzer.analyze(y_true, y_scores)
-    
+    cal_result = cal_analyzer.analyze(y_true_arr, y_scores_arr)
+
     # Get optimal threshold metrics
-    optimal_thresh = roc_result.optimal_threshold
-    y_pred = (y_scores >= optimal_thresh).astype(int)
-    
-    tp = np.sum((y_pred == 1) & (y_true == 1))
-    tn = np.sum((y_pred == 0) & (y_true == 0))
-    fp = np.sum((y_pred == 1) & (y_true == 0))
-    fn = np.sum((y_pred == 0) & (y_true == 1))
-    
-    sensitivity = tp / n_pos if n_pos > 0 else 0
-    specificity = tn / n_neg if n_neg > 0 else 0
-    ppv = tp / (tp + fp) if (tp + fp) > 0 else 0
-    npv = tn / (tn + fn) if (tn + fn) > 0 else 0
-    accuracy = (tp + tn) / n
-    f1 = 2 * tp / (2 * tp + fp + fn) if (2 * tp + fp + fn) > 0 else 0
-    
+    optimal_thresh = float(roc_result.optimal_threshold)
+    y_pred = (y_scores_arr >= optimal_thresh).astype(int)
+
+    tp = np.sum((y_pred == 1) & (y_true_arr == 1))
+    tn = np.sum((y_pred == 0) & (y_true_arr == 0))
+    fp = np.sum((y_pred == 1) & (y_true_arr == 0))
+    fn = np.sum((y_pred == 0) & (y_true_arr == 1))
+
+    sensitivity = float(tp / n_pos) if n_pos > 0 else 0.0
+    specificity = float(tn / n_neg) if n_neg > 0 else 0.0
+    ppv = float(tp / (tp + fp)) if (tp + fp) > 0 else 0.0
+    npv = float(tn / (tn + fn)) if (tn + fn) > 0 else 0.0
+    accuracy = float((tp + tn) / n) if n > 0 else 0.0
+    f1 = float(2 * tp / (2 * tp + fp + fn)) if (2 * tp + fp + fn) > 0 else 0.0
+
     # Bootstrap CIs for sensitivity, specificity, PPV, NPV
-    def bootstrap_ci(y_true, y_scores, metric_func, n_bootstrap=1000, ci=0.95):
+    def bootstrap_ci(yt_boot: np.ndarray, ys_boot: np.ndarray, metric_func: Any, n_bootstrap: int = 1000, ci: float = 0.95) -> Tuple[Optional[float], Optional[float]]:
         """Compute bootstrap CI for a metric."""
-        n = len(y_true)
+        n_val = len(yt_boot)
         metrics = []
         for _ in range(n_bootstrap):
-            idx = np.random.randint(0, n, size=n)
+            idx = np.random.randint(0, n_val, size=n_val)
             try:
-                m = metric_func(y_true[idx], y_scores[idx])
+                m = metric_func(yt_boot[idx], ys_boot[idx])
                 if np.isfinite(m):
                     metrics.append(m)
             except Exception:
                 continue
-        
+
         if len(metrics) < 100:
             return None, None
-        
-        lower = np.percentile(metrics, (1 - ci) / 2 * 100)
-        upper = np.percentile(metrics, (1 + ci) / 2 * 100)
+
+        lower = float(np.percentile(metrics, (1 - ci) / 2 * 100))
+        upper = float(np.percentile(metrics, (1 + ci) / 2 * 100))
         return lower, upper
-    
+
     # Bootstrap for key metrics
-    def sens_func(yt, ys):
+    def sens_func(yt: np.ndarray, ys: np.ndarray) -> float:
         yp = (ys >= optimal_thresh).astype(int)
-        tp = np.sum((yp == 1) & (yt == 1))
+        tp_val = np.sum((yp == 1) & (yt == 1))
         pos = np.sum(yt)
-        return tp / pos if pos > 0 else 0
-    
-    def spec_func(yt, ys):
+        return float(tp_val / pos) if pos > 0 else 0.0
+
+    def spec_func(yt: np.ndarray, ys: np.ndarray) -> float:
         yp = (ys >= optimal_thresh).astype(int)
-        tn = np.sum((yp == 0) & (yt == 0))
+        tn_val = np.sum((yp == 0) & (yt == 0))
         neg = np.sum(yt == 0)
-        return tn / neg if neg > 0 else 0
-    
-    def ppv_func(yt, ys):
+        return float(tn_val / neg) if neg > 0 else 0.0
+
+    def ppv_func(yt: np.ndarray, ys: np.ndarray) -> float:
         yp = (ys >= optimal_thresh).astype(int)
-        tp = np.sum((yp == 1) & (yt == 1))
+        tp_val = np.sum((yp == 1) & (yt == 1))
         pred_pos = np.sum(yp)
-        return tp / pred_pos if pred_pos > 0 else 0
-    
-    def npv_func(yt, ys):
+        return float(tp_val / pred_pos) if pred_pos > 0 else 0.0
+
+    def npv_func(yt: np.ndarray, ys: np.ndarray) -> float:
         yp = (ys >= optimal_thresh).astype(int)
-        tn = np.sum((yp == 0) & (yt == 0))
+        tn_val = np.sum((yp == 0) & (yt == 0))
         pred_neg = np.sum(yp == 0)
-        return tn / pred_neg if pred_neg > 0 else 0
-    
-    sens_ci = bootstrap_ci(y_true, y_scores, sens_func, n_bootstrap=500)
-    spec_ci = bootstrap_ci(y_true, y_scores, spec_func, n_bootstrap=500)
-    ppv_ci = bootstrap_ci(y_true, y_scores, ppv_func, n_bootstrap=500)
-    npv_ci = bootstrap_ci(y_true, y_scores, npv_func, n_bootstrap=500)
-    
+        return float(tn_val / pred_neg) if pred_neg > 0 else 0.0
+
+    sens_ci = bootstrap_ci(y_true_arr, y_scores_arr, sens_func, n_bootstrap=500)
+    spec_ci = bootstrap_ci(y_true_arr, y_scores_arr, spec_func, n_bootstrap=500)
+    ppv_ci = bootstrap_ci(y_true_arr, y_scores_arr, ppv_func, n_bootstrap=500)
+    npv_ci = bootstrap_ci(y_true_arr, y_scores_arr, npv_func, n_bootstrap=500)
+
     # Format numbers
     dp = decimal_places
-    
+
     def fmt(val, ci_low=None, ci_high=None):
         if ci_low is not None and ci_high is not None:
             return f"{val:.{dp}f} (95% CI: {ci_low:.{dp}f}-{ci_high:.{dp}f})"
         return f"{val:.{dp}f}"
-    
+
     # Generate results text
     auc_text = fmt(roc_result.auc, roc_result.auc_ci_lower, roc_result.auc_ci_upper)
-    
+
     sens_text = fmt(sensitivity, sens_ci[0], sens_ci[1]) if sens_ci[0] else f"{sensitivity:.{dp}f}"
     spec_text = fmt(specificity, spec_ci[0], spec_ci[1]) if spec_ci[0] else f"{specificity:.{dp}f}"
-    
+
     # Threshold method description
     if threshold_method == "youden":
         thresh_desc = "Youden's J statistic"
@@ -1246,7 +1212,7 @@ def generate_publication_report(
         thresh_desc = "maximum F1 score"
     else:
         thresh_desc = threshold_method
-    
+
     results_text = f"""{model_name} achieved an area under the receiver operating characteristic curve (AUC) of {auc_text} for predicting {outcome_name}. Using {thresh_desc}, the optimal probability threshold was {optimal_thresh:.{dp}f}, yielding a sensitivity of {sens_text} and specificity of {spec_text}. At this threshold, the positive predictive value was {ppv:.{dp}f} and negative predictive value was {npv:.{dp}f}. The model showed {'good' if cal_result.well_calibrated else 'suboptimal'} calibration (Hosmer-Lemeshow p{'>' if cal_result.hosmer_lemeshow_pvalue > 0.05 else '<'}0.05, Brier score={cal_result.brier_score:.3f})."""
 
     methods_text = f"""We evaluated the discriminative ability of the prediction model using the area under the receiver operating characteristic curve (AUC) with 95% confidence intervals calculated using the DeLong method. Model calibration was assessed using the Hosmer-Lemeshow goodness-of-fit test and Brier score. The optimal probability threshold was determined using {thresh_desc}. Sensitivity, specificity, positive predictive value, and negative predictive value were calculated at the optimal threshold with 95% confidence intervals from 500 bootstrap resamples. Statistical analyses were performed using Python with scipy and numpy packages."""
@@ -1269,7 +1235,7 @@ def generate_publication_report(
             {"metric": "H-L p-value", "value": f"{cal_result.hosmer_lemeshow_pvalue:.3f}", "ci": ""},
         ],
     }
-    
+
     # Figure data for ROC curve
     roc_curve_data = []
     for point in roc_result.curve_points:
@@ -1278,7 +1244,7 @@ def generate_publication_report(
             "tpr": point.tpr,
             "threshold": point.threshold,
         })
-    
+
     figure_data = {
         "title": f"Figure X. Receiver operating characteristic curve for {model_name}",
         "roc_curve": roc_curve_data,
@@ -1290,7 +1256,7 @@ def generate_publication_report(
             "threshold": optimal_thresh,
         },
     }
-    
+
     # All metrics
     all_metrics = {
         "n": n,
@@ -1320,7 +1286,7 @@ def generate_publication_report(
         "calibration_slope": cal_result.calibration_slope,
         "well_calibrated": cal_result.well_calibrated,
     }
-    
+
     return {
         "status": "success",
         "analysis_type": "publication_report",

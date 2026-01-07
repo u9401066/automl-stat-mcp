@@ -15,9 +15,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from .config import SERVICE_HOST, SERVICE_PORT
-from .infrastructure.redis_client import redis_client
 from .infrastructure.minio_client import minio_client
-from .routes import eda, tableone, jobs, auto_analyze, direct, propensity, survival, roc, power, cleaning, storage
+from .infrastructure.redis_client import redis_client
+from .routes import auto_analyze, cleaning, direct, eda, jobs, power, propensity, roc, storage, survival, tableone
 
 # Configure logging
 log_level = os.environ.get("LOG_LEVEL", "INFO")
@@ -33,13 +33,13 @@ async def lifespan(app: FastAPI):
     """Application lifespan - startup and shutdown"""
     # Startup
     logger.info("Starting Stats Service...")
-    
+
     # Ensure MinIO buckets exist
     minio_client.ensure_buckets()
     logger.info("MinIO buckets verified")
-    
+
     yield
-    
+
     # Shutdown
     logger.info("Shutting down Stats Service...")
     await redis_client.close()

@@ -4,12 +4,13 @@ FastAPI Router - Dataset endpoints
 import io
 import uuid
 from typing import List, Optional
-from fastapi import APIRouter, HTTPException, Header
 
-from ..schemas import DatasetResponse, RegisterDatasetRequest, UploadDatasetRequest, ErrorResponse
-from ..dependencies import get_container
-from ....application.use_cases import RegisterDatasetUseCase, ListDatasetsUseCase
+from fastapi import APIRouter, Header, HTTPException
+
 from ....application.dto import RegisterDatasetRequest as RegisterDatasetDTO
+from ....application.use_cases import ListDatasetsUseCase, RegisterDatasetUseCase
+from ..dependencies import get_container
+from ..schemas import DatasetResponse, ErrorResponse, RegisterDatasetRequest, UploadDatasetRequest
 
 router = APIRouter(prefix="/datasets", tags=["Datasets"])
 
@@ -26,17 +27,17 @@ async def register_dataset(
 ):
     """
     Register a dataset from MinIO.
-    
+
     The file must already exist in MinIO. This endpoint validates the file
     and registers it for use in training.
     """
     container = get_container()
-    
+
     use_case = RegisterDatasetUseCase(
         dataset_repo=container.dataset_repo,
         file_storage=container.file_storage,
     )
-    
+
     try:
         result = await use_case.execute(
             RegisterDatasetDTO(
@@ -47,7 +48,7 @@ async def register_dataset(
                 description=request.description,
             )
         )
-        
+
         return DatasetResponse(
             dataset_id=result.dataset_id,
             name=result.name,
@@ -58,9 +59,9 @@ async def register_dataset(
             created_at=result.created_at,
             description=result.description,
         )
-    
+
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.post(
@@ -75,19 +76,19 @@ async def upload_dataset(
 ):
     """
     Upload CSV content directly (for MCP Server file uploads).
-    
+
     This endpoint receives CSV content from MCP Server (which reads local files),
     stores it in MinIO, and registers the dataset.
-    
+
     Key benefit: Copilot doesn't need to handle file content (saves tokens).
     """
     container = get_container()
-    
+
     # Generate unique MinIO path
     file_id = str(uuid.uuid4())[:8]
     safe_name = "".join(c if c.isalnum() or c in "-_" else "_" for c in request.name)
     minio_path = f"{container.dataset_bucket}/{x_user_id}/uploads/{safe_name}_{file_id}.csv"
-    
+
     try:
         # Upload content to MinIO
         csv_bytes = request.csv_content.encode('utf-8')
@@ -96,13 +97,13 @@ async def upload_dataset(
             content=io.BytesIO(csv_bytes),
             content_type="text/csv",
         )
-        
+
         # Register the dataset (reuse existing logic)
         use_case = RegisterDatasetUseCase(
             dataset_repo=container.dataset_repo,
             file_storage=container.file_storage,
         )
-        
+
         result = await use_case.execute(
             RegisterDatasetDTO(
                 name=request.name,
@@ -112,7 +113,7 @@ async def upload_dataset(
                 description=request.description or "Uploaded via MCP",
             )
         )
-        
+
         return DatasetResponse(
             dataset_id=result.dataset_id,
             name=result.name,
@@ -123,9 +124,9 @@ async def upload_dataset(
             created_at=result.created_at,
             description=result.description,
         )
-    
+
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Upload failed: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Upload failed: {str(e)}") from e
 
 
 @router.get(
@@ -140,11 +141,11 @@ async def list_datasets(
     List all datasets for the current user/session.
     """
     container = get_container()
-    
+
     use_case = ListDatasetsUseCase(dataset_repo=container.dataset_repo)
-    
+
     results = await use_case.execute(x_user_id, x_session_id)
-    
+
     return [
         DatasetResponse(
             dataset_id=r.dataset_id,
@@ -171,21 +172,21 @@ async def delete_dataset(
 ):
     """Delete a dataset."""
     container = get_container()
-    
+
     from ...domain.models import DatasetId
-    
+
     try:
         ds_id = DatasetId.from_string(dataset_id)
         dataset = await container.dataset_repo.get_by_id(ds_id)
-        
+
         if not dataset:
             raise HTTPException(status_code=404, detail="Dataset not found")
-        
+
         if not dataset.belongs_to(x_user_id):
             raise HTTPException(status_code=403, detail="Access denied")
-        
+
         await container.dataset_repo.delete(ds_id)
         return {"message": "Dataset deleted successfully"}
-    
+
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e

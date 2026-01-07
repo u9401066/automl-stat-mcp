@@ -1,20 +1,26 @@
 """
 Use Cases - Application Layer Business Logic
 """
-from typing import Optional, List
-from datetime import datetime
+from typing import List, Optional
 
 from ..domain.models import (
-    Dataset, DatasetId,
-    Job, JobId, JobStatus, JobType,
-    TrainingConfig, ProblemType,
+    Dataset,
+    DatasetId,
+    Job,
+    JobId,
+    JobType,
+    ProblemType,
+    TrainingConfig,
 )
 from ..domain.repositories import DatasetRepository, JobRepository
 from ..domain.services import FileStorageService
 from .dto import (
-    RegisterDatasetRequest, DatasetResponse,
-    AutoMLTrainRequest, SpecificTrainRequest, CompareModelsRequest,
+    AutoMLTrainRequest,
+    CompareModelsRequest,
+    DatasetResponse,
     JobResponse,
+    RegisterDatasetRequest,
+    SpecificTrainRequest,
 )
 
 
@@ -80,12 +86,12 @@ class ListDatasetsUseCase:
         self.dataset_repo = dataset_repo
 
     async def execute(
-        self, 
-        user_id: str, 
+        self,
+        user_id: str,
         session_id: Optional[str] = None
     ) -> List[DatasetResponse]:
         datasets = await self.dataset_repo.find_by_user(user_id, session_id)
-        
+
         return [
             DatasetResponse(
                 dataset_id=str(ds.id),
@@ -116,10 +122,10 @@ class SubmitAutoMLJobUseCase:
         # 1. Validate dataset exists
         dataset_id = DatasetId.from_string(request.dataset_id)
         dataset = await self.dataset_repo.get_by_id(dataset_id)
-        
+
         if not dataset:
             raise ValueError(f"Dataset not found: {request.dataset_id}")
-        
+
         if not dataset.belongs_to(request.user_id, request.session_id):
             raise PermissionError("Access denied to dataset")
 
@@ -176,10 +182,10 @@ class SubmitSpecificTrainJobUseCase:
         # 1. Validate dataset exists
         dataset_id = DatasetId.from_string(request.dataset_id)
         dataset = await self.dataset_repo.get_by_id(dataset_id)
-        
+
         if not dataset:
             raise ValueError(f"Dataset not found: {request.dataset_id}")
-        
+
         if not dataset.belongs_to(request.user_id, request.session_id):
             raise PermissionError("Access denied to dataset")
 
@@ -235,10 +241,10 @@ class SubmitCompareJobUseCase:
         # 1. Validate dataset exists
         dataset_id = DatasetId.from_string(request.dataset_id)
         dataset = await self.dataset_repo.get_by_id(dataset_id)
-        
+
         if not dataset:
             raise ValueError(f"Dataset not found: {request.dataset_id}")
-        
+
         if not dataset.belongs_to(request.user_id, request.session_id):
             raise PermissionError("Access denied to dataset")
 
@@ -292,10 +298,10 @@ class GetJobStatusUseCase:
     async def execute(self, job_id: str, user_id: str) -> JobResponse:
         job_id_obj = JobId.from_string(job_id)
         job = await self.job_repo.get_by_id(job_id_obj)
-        
+
         if not job:
             raise ValueError(f"Job not found: {job_id}")
-        
+
         if not job.belongs_to(user_id):
             raise PermissionError("Access denied to job")
 

@@ -36,22 +36,22 @@ SAMPLE_DATA = {
 @pytest.mark.benchmark
 class TestHealthBenchmark:
     """Benchmark health check endpoints."""
-    
+
     def test_stats_health(self, benchmark):
         """Benchmark stats service health check."""
         def call_health():
             with httpx.Client(timeout=10) as client:
                 return client.get(f"{STATS_API_URL}/health")
-        
+
         result = benchmark(call_health)
         assert result.status_code == 200
-    
+
     def test_automl_health(self, benchmark):
         """Benchmark automl service health check."""
         def call_health():
             with httpx.Client(timeout=10) as client:
                 return client.get(f"{AUTOML_API_URL}/health")
-        
+
         result = benchmark(call_health)
         assert result.status_code == 200
 
@@ -63,7 +63,7 @@ class TestHealthBenchmark:
 @pytest.mark.benchmark
 class TestDirectAnalysisBenchmark:
     """Benchmark synchronous analysis endpoints."""
-    
+
     def test_column_info(self, benchmark):
         """Benchmark column info endpoint."""
         def call_column_info():
@@ -72,10 +72,10 @@ class TestDirectAnalysisBenchmark:
                     f"{STATS_API_URL}/cleaning/column-info",
                     json={"csv_path": SAMPLE_DATA["iris"]}
                 )
-        
+
         result = benchmark(call_column_info)
         assert result.status_code == 200
-    
+
     def test_eda_preview(self, benchmark):
         """Benchmark EDA preview endpoint (requires user_id)."""
         def call_preview():
@@ -84,7 +84,7 @@ class TestDirectAnalysisBenchmark:
                     f"{STATS_API_URL}/eda/preview",
                     json={"csv_path": SAMPLE_DATA["iris"], "user_id": "benchmark"}
                 )
-        
+
         result = benchmark(call_preview)
         # Skip assertion if endpoint requires different params
         assert result.status_code in [200, 422]
@@ -97,7 +97,7 @@ class TestDirectAnalysisBenchmark:
 @pytest.mark.benchmark
 class TestCleaningBenchmark:
     """Benchmark data cleaning endpoints."""
-    
+
     def test_tableone_columns(self, benchmark):
         """Benchmark tableone columns endpoint (requires user_id)."""
         def call_columns():
@@ -106,7 +106,7 @@ class TestCleaningBenchmark:
                     f"{STATS_API_URL}/tableone/columns",
                     json={"csv_path": SAMPLE_DATA["heart"], "user_id": "benchmark"}
                 )
-        
+
         result = benchmark(call_columns)
         # Skip assertion if endpoint requires different params
         assert result.status_code in [200, 422]
@@ -119,7 +119,7 @@ class TestCleaningBenchmark:
 @pytest.mark.benchmark
 class TestPowerBenchmark:
     """Benchmark power analysis endpoints."""
-    
+
     def test_power_ttest(self, benchmark):
         """Benchmark t-test power analysis."""
         def call_power():
@@ -133,10 +133,10 @@ class TestPowerBenchmark:
                         "alpha": 0.05,
                     }
                 )
-        
+
         result = benchmark(call_power)
         assert result.status_code == 200
-    
+
     def test_power_anova(self, benchmark):
         """Benchmark ANOVA power analysis."""
         def call_power():
@@ -151,7 +151,7 @@ class TestPowerBenchmark:
                         "alpha": 0.05,
                     }
                 )
-        
+
         result = benchmark(call_power)
         assert result.status_code == 200
 
@@ -163,13 +163,13 @@ class TestPowerBenchmark:
 @pytest.mark.benchmark
 class TestAutoMLBenchmark:
     """Benchmark AutoML service endpoints."""
-    
+
     def test_list_algorithms(self, benchmark):
         """Benchmark list algorithms endpoint."""
         def call_list():
             with httpx.Client(timeout=30, follow_redirects=True) as client:
                 return client.get(f"{AUTOML_API_URL}/algorithms")
-        
+
         result = benchmark(call_list)
         assert result.status_code == 200
 
@@ -181,12 +181,12 @@ class TestAutoMLBenchmark:
 @pytest.mark.benchmark
 class TestStorageBenchmark:
     """Benchmark storage endpoints."""
-    
+
     def test_redis_set_get(self, benchmark):
         """Benchmark Redis set/get cycle."""
         import time
         test_key = f"benchmark:test:{time.time()}"
-        
+
         def call_redis():
             with httpx.Client(timeout=30) as client:
                 # Set
@@ -199,10 +199,10 @@ class TestStorageBenchmark:
                     f"{STATS_API_URL}/storage/redis/get",
                     params={"key": test_key}
                 )
-        
+
         result = benchmark(call_redis)
         assert result.status_code == 200
-    
+
     def test_minio_list(self, benchmark):
         """Benchmark MinIO list objects."""
         def call_list():
@@ -211,7 +211,7 @@ class TestStorageBenchmark:
                     f"{STATS_API_URL}/storage/minio/list",
                     params={"bucket": "automl-results", "prefix": "test"}
                 )
-        
+
         result = benchmark(call_list)
         # May return 200 or 404 if bucket doesn't exist
         assert result.status_code in [200, 404, 500]
@@ -225,7 +225,7 @@ class TestStorageBenchmark:
 def test_benchmark_summary(benchmark):
     """
     Summary of all benchmarks.
-    
+
     Expected baseline performance (local Docker):
     - Health checks: < 10ms
     - Quick stats: < 100ms
@@ -235,7 +235,7 @@ def test_benchmark_summary(benchmark):
     """
     def noop():
         pass
-    
+
     benchmark(noop)
 
 

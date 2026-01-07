@@ -36,6 +36,8 @@ dependencies = [
     
     # Utilities
     "python-dotenv>=1.0.0",
+    "websockets>=12.0",
+    "python-dateutil>=2.8.0",
 ]
 
 # =============================================================================
@@ -74,6 +76,15 @@ all = [
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = [
+    "automl-mcp-server/src",
+    "automl-service/src",
+    "automl-worker/src",
+    "stats-service/src",
+    "stats-worker/src",
+]
 
 # =============================================================================
 # Tool Configurations

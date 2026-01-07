@@ -12,17 +12,13 @@ Supports two modes:
 1. Dataset mode: Provide dataset_id (pre-uploaded to MinIO)
 2. Direct mode: Provide csv_path for local file
 """
-import io
 import os
-import uuid
-import json
 from datetime import datetime
-from typing import Optional, List, Dict, Any, Union
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
+from typing import Any, Dict, List, Optional
 
 import pandas as pd
-import numpy as np
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field
 
 router = APIRouter(prefix="/cleaning", tags=["Data Cleaning"])
 
@@ -138,30 +134,29 @@ ALLOWED_PATHS = [
 def _validate_path(csv_path: str) -> str:
     """
     驗證並正規化路徑，防止路徑遍歷攻擊
-    
+
     安全檢查：
     1. 解析真實路徑 (resolve symlinks, .., etc)
     2. 確認在允許的目錄內
     3. 拒絕讀取系統檔案
     """
-    import os
     from pathlib import Path
-    
+
     # 解析真實路徑
     try:
         real_path = str(Path(csv_path).resolve())
     except Exception:
-        raise HTTPException(status_code=400, detail=f"Invalid path: {csv_path}")
-    
+        raise HTTPException(status_code=400, detail=f"Invalid path: {csv_path}") from None
+
     # 檢查是否在允許的目錄內
     is_allowed = any(real_path.startswith(allowed) for allowed in ALLOWED_PATHS)
-    
+
     if not is_allowed:
         raise HTTPException(
-            status_code=403, 
+            status_code=403,
             detail=f"Access denied: Path must be within allowed directories ({', '.join(ALLOWED_PATHS)})"
         )
-    
+
     return real_path
 
 
@@ -169,14 +164,14 @@ def _load_csv(csv_path: str) -> pd.DataFrame:
     """Load CSV file with security validation"""
     # 安全驗證
     safe_path = _validate_path(csv_path)
-    
+
     if not os.path.exists(safe_path):
         raise HTTPException(status_code=404, detail=f"File not found: {csv_path}")
-    
+
     try:
         return pd.read_csv(safe_path)
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Failed to read CSV: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Failed to read CSV: {str(e)}") from e
 
 
 def _save_csv(df: pd.DataFrame, save_path: Optional[str], original_path: str) -> str:
@@ -186,10 +181,10 @@ def _save_csv(df: pd.DataFrame, save_path: Optional[str], original_path: str) ->
         base, ext = os.path.splitext(original_path)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         save_path = f"{base}_cleaned_{timestamp}{ext}"
-    
+
     # Ensure directory exists
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
-    
+
     df.to_csv(save_path, index=False)
     return save_path
 
@@ -207,7 +202,7 @@ def _get_column_info(df: pd.DataFrame) -> List[Dict[str, Any]]:
             "unique_count": int(df[col].nunique()),
             "unique_percentage": round(df[col].nunique() / len(df) * 100, 2) if len(df) > 0 else 0,
         }
-        
+
         # Add type-specific info
         if pd.api.types.is_numeric_dtype(df[col]):
             col_info["type"] = "numeric"
@@ -219,9 +214,9 @@ def _get_column_info(df: pd.DataFrame) -> List[Dict[str, Any]]:
             col_info["type"] = "categorical"
             value_counts = df[col].value_counts().head(10).to_dict()
             col_info["top_values"] = {str(k): int(v) for k, v in value_counts.items()}
-        
+
         info.append(col_info)
-    
+
     return info
 
 
@@ -233,12 +228,12 @@ def _get_column_info(df: pd.DataFrame) -> List[Dict[str, Any]]:
 async def convert_to_binary(request: ConvertBinaryRequest):
     """
     Convert a column to binary (0/1) values.
-    
+
     Useful for:
     - Converting treatment columns (e.g., 200/400 → 0/1)
     - Converting Yes/No to 0/1
     - Creating binary indicators from categorical values
-    
+
     Example:
     ```json
     {
@@ -251,14 +246,14 @@ async def convert_to_binary(request: ConvertBinaryRequest):
     df = _load_csv(request.csv_path)
     rows_before = len(df)
     cols_before = len(df.columns)
-    
+
     if request.column not in df.columns:
         raise HTTPException(status_code=400, detail=f"Column '{request.column}' not found")
-    
+
     # Convert mapping keys to match column dtype
     original_values = df[request.column].unique()
     mapping = {}
-    
+
     for key, value in request.mapping.items():
         # Try to match the key type with column values
         matched = False
@@ -275,23 +270,23 @@ async def convert_to_binary(request: ConvertBinaryRequest):
                     mapping[numeric_key] = value
             except ValueError:
                 pass
-    
+
     if not mapping:
         raise HTTPException(
-            status_code=400, 
+            status_code=400,
             detail=f"No mapping matches found. Column values: {list(original_values)[:10]}"
         )
-    
+
     # Create new column
     output_col = request.output_column or f"{request.column}_binary"
     df[output_col] = df[request.column].map(mapping)
-    
+
     # Count unmapped values
     unmapped = df[output_col].isna().sum() - df[request.column].isna().sum()
-    
+
     # Save
     output_path = _save_csv(df, request.save_path, request.csv_path)
-    
+
     return CleaningResponse(
         success=True,
         message=f"Converted '{request.column}' to binary column '{output_col}'",
@@ -314,7 +309,7 @@ async def convert_to_binary(request: ConvertBinaryRequest):
 async def encode_categorical(request: EncodeCategoricalRequest):
     """
     Encode categorical variables.
-    
+
     Methods:
     - label: Label encoding (0, 1, 2, ...)
     - onehot: One-hot encoding (creates multiple columns)
@@ -322,13 +317,13 @@ async def encode_categorical(request: EncodeCategoricalRequest):
     df = _load_csv(request.csv_path)
     rows_before = len(df)
     cols_before = len(df.columns)
-    
+
     missing_cols = [c for c in request.columns if c not in df.columns]
     if missing_cols:
         raise HTTPException(status_code=400, detail=f"Columns not found: {missing_cols}")
-    
-    changes = {"encoded_columns": {}}
-    
+
+    changes: Dict[str, Any] = {"encoded_columns": {}}
+
     for col in request.columns:
         if request.method == "label":
             # Label encoding
@@ -347,9 +342,9 @@ async def encode_categorical(request: EncodeCategoricalRequest):
                 "method": "onehot",
                 "new_columns": list(dummies.columns)
             }
-    
+
     output_path = _save_csv(df, request.save_path, request.csv_path)
-    
+
     return CleaningResponse(
         success=True,
         message=f"Encoded {len(request.columns)} categorical column(s)",
@@ -367,7 +362,7 @@ async def encode_categorical(request: EncodeCategoricalRequest):
 async def handle_missing_values(request: HandleMissingRequest):
     """
     Handle missing values in the dataset.
-    
+
     Strategies:
     - auto: Smart handling based on column type
     - drop: Drop rows with missing values
@@ -379,14 +374,14 @@ async def handle_missing_values(request: HandleMissingRequest):
     df = _load_csv(request.csv_path)
     rows_before = len(df)
     cols_before = len(df.columns)
-    
+
     columns = request.columns or df.columns.tolist()
     missing_cols = [c for c in columns if c not in df.columns]
     if missing_cols:
         raise HTTPException(status_code=400, detail=f"Columns not found: {missing_cols}")
-    
-    changes = {"columns_processed": {}, "columns_dropped": [], "rows_dropped": 0}
-    
+
+    changes: Dict[str, Any] = {"columns_processed": {}, "columns_dropped": [], "rows_dropped": 0}
+
     if request.strategy == "auto":
         # Drop columns with too many missing values
         for col in columns:
@@ -404,12 +399,12 @@ async def handle_missing_values(request: HandleMissingRequest):
                     fill_value = df[col].mode().iloc[0] if not df[col].mode().empty else "Unknown"
                     df[col] = df[col].fillna(fill_value)
                     changes["columns_processed"][col] = {"strategy": "mode", "fill_value": str(fill_value)}
-    
+
     elif request.strategy == "drop":
         rows_with_na = df[columns].isna().any(axis=1).sum()
         df = df.dropna(subset=columns)
         changes["rows_dropped"] = int(rows_with_na)
-    
+
     elif request.strategy in ["mean", "median", "mode"]:
         for col in columns:
             if df[col].isna().any():
@@ -428,15 +423,15 @@ async def handle_missing_values(request: HandleMissingRequest):
                     if fill_value is not None:
                         df[col] = df[col].fillna(fill_value)
                         changes["columns_processed"][col] = {"strategy": "mode", "fill_value": str(fill_value)}
-    
+
     elif request.strategy == "constant":
         for col in columns:
             if df[col].isna().any():
                 df[col] = df[col].fillna(request.fill_value)
                 changes["columns_processed"][col] = {"strategy": "constant", "fill_value": request.fill_value}
-    
+
     output_path = _save_csv(df, request.save_path, request.csv_path)
-    
+
     return CleaningResponse(
         success=True,
         message=f"Handled missing values with strategy '{request.strategy}'",
@@ -458,18 +453,18 @@ async def remove_columns(request: RemoveColumnsRequest):
     df = _load_csv(request.csv_path)
     rows_before = len(df)
     cols_before = len(df.columns)
-    
+
     # Find existing columns
     existing_cols = [c for c in request.columns if c in df.columns]
     missing_cols = [c for c in request.columns if c not in df.columns]
-    
+
     if not existing_cols:
         raise HTTPException(status_code=400, detail=f"No specified columns found. Available: {list(df.columns)[:20]}")
-    
+
     df = df.drop(columns=existing_cols)
-    
+
     output_path = _save_csv(df, request.save_path, request.csv_path)
-    
+
     return CleaningResponse(
         success=True,
         message=f"Removed {len(existing_cols)} column(s)",
@@ -490,7 +485,7 @@ async def remove_columns(request: RemoveColumnsRequest):
 async def filter_rows(request: FilterRowsRequest):
     """
     Filter rows based on column values.
-    
+
     Operators:
     - eq: Equal to value
     - ne: Not equal to value
@@ -503,12 +498,12 @@ async def filter_rows(request: FilterRowsRequest):
     df = _load_csv(request.csv_path)
     rows_before = len(df)
     cols_before = len(df.columns)
-    
+
     if request.column not in df.columns:
         raise HTTPException(status_code=400, detail=f"Column '{request.column}' not found")
-    
+
     col = df[request.column]
-    
+
     if request.operator == "eq":
         mask = col == request.value
     elif request.operator == "ne":
@@ -531,11 +526,11 @@ async def filter_rows(request: FilterRowsRequest):
         mask = col.notna()
     else:
         raise HTTPException(status_code=400, detail=f"Unknown operator: {request.operator}")
-    
+
     df = df[mask]
-    
+
     output_path = _save_csv(df, request.save_path, request.csv_path)
-    
+
     return CleaningResponse(
         success=True,
         message=f"Filtered rows where {request.column} {request.operator} {request.value}",
@@ -561,18 +556,18 @@ async def rename_columns(request: RenameColumnsRequest):
     df = _load_csv(request.csv_path)
     rows_before = len(df)
     cols_before = len(df.columns)
-    
+
     # Find existing columns
     rename_map = {k: v for k, v in request.mapping.items() if k in df.columns}
     not_found = [k for k in request.mapping.keys() if k not in df.columns]
-    
+
     if not rename_map:
         raise HTTPException(status_code=400, detail=f"No specified columns found. Available: {list(df.columns)[:20]}")
-    
+
     df = df.rename(columns=rename_map)
-    
+
     output_path = _save_csv(df, request.save_path, request.csv_path)
-    
+
     return CleaningResponse(
         success=True,
         message=f"Renamed {len(rename_map)} column(s)",
@@ -593,7 +588,7 @@ async def rename_columns(request: RenameColumnsRequest):
 async def get_column_info(request: ColumnInfoRequest):
     """
     Get detailed information about all columns in the dataset.
-    
+
     Returns for each column:
     - Data type
     - Null count and percentage
@@ -602,7 +597,7 @@ async def get_column_info(request: ColumnInfoRequest):
     - For categorical: top 10 value counts
     """
     df = _load_csv(request.csv_path)
-    
+
     return ColumnInfoResponse(
         success=True,
         csv_path=request.csv_path,
@@ -616,44 +611,44 @@ async def get_column_info(request: ColumnInfoRequest):
 async def auto_clean_dataset(request: AutoCleanRequest):
     """
     Automatically clean the dataset.
-    
+
     Operations (configurable):
     1. Remove duplicate rows
     2. Handle missing values (drop columns > threshold, impute others)
     3. Remove constant columns (all same value)
     4. Remove high-cardinality ID-like columns
-    
+
     Always preserves the target column if specified.
     """
     df = _load_csv(request.csv_path)
     rows_before = len(df)
     cols_before = len(df.columns)
-    
-    changes = {
+
+    changes: Dict[str, Any] = {
         "duplicates_removed": 0,
         "columns_dropped_missing": [],
         "columns_dropped_constant": [],
         "columns_dropped_high_cardinality": [],
         "missing_values_imputed": {}
     }
-    
+
     # Columns to protect
     protected = [request.target_column] if request.target_column else []
-    
+
     # 1. Remove duplicates
     if request.remove_duplicates:
         before = len(df)
         df = df.drop_duplicates()
         changes["duplicates_removed"] = before - len(df)
-    
+
     # 2. Handle missing values
     if request.handle_missing:
         for col in df.columns:
             if col in protected:
                 continue
-            
+
             missing_ratio = df[col].isna().mean()
-            
+
             if missing_ratio > request.missing_threshold:
                 df = df.drop(columns=[col])
                 changes["columns_dropped_missing"].append(col)
@@ -667,34 +662,34 @@ async def auto_clean_dataset(request: AutoCleanRequest):
                     fill_value = df[col].mode().iloc[0] if not df[col].mode().empty else "Unknown"
                     df[col] = df[col].fillna(fill_value)
                     changes["missing_values_imputed"][col] = {"strategy": "mode", "value": str(fill_value)}
-    
+
     # 3. Remove constant columns
     if request.remove_constant:
         for col in df.columns:
             if col in protected:
                 continue
-            
+
             if df[col].nunique() <= 1:
                 df = df.drop(columns=[col])
                 changes["columns_dropped_constant"].append(col)
-    
+
     # 4. Remove high-cardinality ID-like columns
     if request.remove_high_cardinality:
         for col in df.columns:
             if col in protected:
                 continue
-            
+
             # Check if likely an ID column
             unique_ratio = df[col].nunique() / len(df)
             if unique_ratio > request.cardinality_threshold:
                 # Additional checks: is it string-like or numeric sequential?
-                if df[col].dtype == 'object' or (pd.api.types.is_numeric_dtype(df[col]) and 
+                if df[col].dtype == 'object' or (pd.api.types.is_numeric_dtype(df[col]) and
                     df[col].is_monotonic_increasing):
                     df = df.drop(columns=[col])
                     changes["columns_dropped_high_cardinality"].append(col)
-    
+
     output_path = _save_csv(df, request.save_path, request.csv_path)
-    
+
     return CleaningResponse(
         success=True,
         message="Auto-cleaned dataset",

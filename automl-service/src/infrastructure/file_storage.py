@@ -3,17 +3,15 @@ MinIO File Storage Service Implementation
 
 All file storage is on MinIO - no local file storage.
 """
-from typing import Any, Dict, List, Tuple
 import io
+from typing import Any, Dict, List, Tuple
+
 import pandas as pd
 from minio import Minio
 from minio.error import S3Error
 
+from ..config import MINIO_ACCESS_KEY, MINIO_BUCKET, MINIO_ENDPOINT, MINIO_SECRET_KEY, MINIO_SECURE
 from ..domain.services import FileStorageService
-from ..config import (
-    MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, 
-    MINIO_SECURE, MINIO_BUCKET
-)
 
 
 class MinIOStorageService(FileStorageService):
@@ -40,7 +38,7 @@ class MinIOStorageService(FileStorageService):
     def _parse_path(self, path: str) -> Tuple[str, str]:
         """
         Parse path into bucket and object name.
-        
+
         Supports formats:
         - "s3://bucket/path/to/file.csv"
         - "minio://bucket/path/to/file.csv"
@@ -52,7 +50,7 @@ class MinIOStorageService(FileStorageService):
             path = path[5:]
         elif path.startswith("minio://"):
             path = path[8:]
-        
+
         if "/" in path:
             parts = path.split("/", 1)
             # Check if first part is a valid bucket
@@ -63,7 +61,7 @@ class MinIOStorageService(FileStorageService):
                 pass
             # Use default bucket
             return self.default_bucket, path
-        
+
         return self.default_bucket, path
 
     async def file_exists(self, path: str) -> bool:
@@ -92,7 +90,7 @@ class MinIOStorageService(FileStorageService):
                 "content_type": stat.content_type,
             }
         except S3Error as e:
-            raise ValueError(f"Failed to get file info: {e}")
+            raise ValueError(f"Failed to get file info: {e}") from e
 
     async def read_csv(self, path: str) -> pd.DataFrame:
         """Read CSV file from MinIO into DataFrame"""
@@ -102,15 +100,15 @@ class MinIOStorageService(FileStorageService):
             data = response.read()
             response.close()
             response.release_conn()
-            
+
             return pd.read_csv(io.BytesIO(data))
         except S3Error as e:
-            raise ValueError(f"Failed to read CSV: {e}")
+            raise ValueError(f"Failed to read CSV: {e}") from e
 
     async def validate_csv(self, path: str) -> Tuple[bool, List[str], int]:
         """
         Validate CSV file format.
-        
+
         Returns:
             Tuple of (is_valid, columns, row_count)
         """
@@ -119,37 +117,37 @@ class MinIOStorageService(FileStorageService):
             columns = df.columns.tolist()
             row_count = len(df)
             return True, columns, row_count
-        except Exception as e:
+        except Exception:
             return False, [], 0
 
     async def upload_content(
-        self, 
-        path: str, 
-        content: io.BytesIO, 
+        self,
+        path: str,
+        content: io.BytesIO,
         content_type: str = "application/octet-stream"
     ) -> None:
         """
         Upload content to MinIO.
-        
+
         Args:
             path: Destination path (bucket/object_name)
             content: BytesIO content to upload
             content_type: MIME type of content
         """
         bucket, object_name = self._parse_path(path)
-        
+
         # Ensure bucket exists
         try:
             if not self.client.bucket_exists(bucket):
                 self.client.make_bucket(bucket)
         except S3Error:
             pass
-        
+
         # Get content size
         content.seek(0, 2)  # Seek to end
         size = content.tell()
         content.seek(0)  # Seek back to start
-        
+
         # Upload
         self.client.put_object(
             bucket,
@@ -175,7 +173,6 @@ class LocalFileStorageService(FileStorageService):
 
     async def get_file_info(self, path: str) -> Dict[str, Any]:
         from pathlib import Path
-        import os
         p = Path(path)
         if not p.exists():
             raise ValueError(f"File not found: {path}")

@@ -15,14 +15,14 @@ import base64
 import json
 import uuid
 from datetime import datetime
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import List, Optional
 
 import redis.asyncio as redis
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field
 
+from ..config import REDIS_DB, REDIS_HOST, REDIS_PORT, STATS_JOBS_PENDING, STATS_JOBS_PREFIX
 from ..infrastructure.redis_dataset_store import redis_dataset_store
-from ..config import REDIS_HOST, REDIS_PORT, REDIS_DB, STATS_JOBS_PENDING, STATS_JOBS_PREFIX
 
 router = APIRouter(prefix="/survival", tags=["Survival Analysis"])
 
@@ -33,7 +33,7 @@ router = APIRouter(prefix="/survival", tags=["Survival Analysis"])
 
 class KaplanMeierRequest(BaseModel):
     """Request for Kaplan-Meier analysis
-    
+
     Supports dual-mode:
     - Dataset mode: Provide dataset_id (pre-uploaded data)
     - Direct mode: Provide csv_content (inline data)
@@ -52,7 +52,7 @@ class KaplanMeierRequest(BaseModel):
 
 class CoxRegressionRequest(BaseModel):
     """Request for Cox proportional hazards regression
-    
+
     Supports dual-mode:
     - Dataset mode: Provide dataset_id (pre-uploaded data)
     - Direct mode: Provide csv_content (inline data)
@@ -72,7 +72,7 @@ class CoxRegressionRequest(BaseModel):
 
 class SurvivalCompareRequest(BaseModel):
     """Request for survival curve comparison
-    
+
     Supports dual-mode:
     - Dataset mode: Provide dataset_id (pre-uploaded data)
     - Direct mode: Provide csv_content (inline data)
@@ -91,7 +91,7 @@ class SurvivalCompareRequest(BaseModel):
 
 class SurvivalSummaryRequest(BaseModel):
     """Request for survival data summary
-    
+
     Supports dual-mode:
     - Dataset mode: Provide dataset_id (pre-uploaded data)
     - Direct mode: Provide csv_content (inline data)
@@ -140,7 +140,7 @@ async def _submit_survival_job(
     is_base64: bool = False,
 ) -> JobResponse:
     """Submit a survival analysis job to the queue
-    
+
     Supports dual-mode:
     - Dataset mode: Provide dataset_id (pre-uploaded data)
     - Direct mode: Provide csv_content (inline data)
@@ -148,10 +148,10 @@ async def _submit_survival_job(
     # Validate: must provide either dataset_id OR csv_content
     if not dataset_id and not csv_content:
         raise HTTPException(
-            status_code=400, 
+            status_code=400,
             detail="Must provide either dataset_id or csv_content"
         )
-    
+
     # Dataset mode: verify dataset exists
     minio_path = None
     if dataset_id:
@@ -159,10 +159,10 @@ async def _submit_survival_job(
         if not dataset:
             raise HTTPException(status_code=404, detail=f"Dataset {dataset_id} not found")
         minio_path = dataset.get("minio_path")
-    
+
     # Create job
     job_id = f"survival-{uuid.uuid4().hex[:12]}"
-    
+
     # Prepare params for worker
     params = {**config}
     if csv_content:
@@ -170,7 +170,7 @@ async def _submit_survival_job(
         if is_base64:
             csv_content = base64.b64decode(csv_content).decode('utf-8')
         params["csv_content"] = csv_content
-    
+
     job_data = {
         "job_id": job_id,
         "job_type": job_type,
@@ -181,20 +181,20 @@ async def _submit_survival_job(
         "status": "pending",
         "created_at": datetime.utcnow().isoformat(),
     }
-    
+
     # Get Redis client
     client = await _get_redis()
-    
+
     # Save job metadata
     await client.set(
         f"{STATS_JOBS_PREFIX}{job_id}",
         json.dumps(job_data),
         ex=86400 * 7  # 7 days TTL
     )
-    
+
     # Queue for processing
     await client.lpush(STATS_JOBS_PENDING, json.dumps(job_data))
-    
+
     return JobResponse(
         job_id=job_id,
         job_type=job_type,
@@ -211,16 +211,16 @@ async def _submit_survival_job(
 async def submit_kaplan_meier_job(request: KaplanMeierRequest):
     """
     📈 Submit Kaplan-Meier survival analysis job.
-    
+
     Non-parametric estimation of survival function S(t).
-    
+
     Output includes:
     - Survival function estimates at each time point
     - Confidence intervals (Greenwood's formula)
     - Median survival time
     - Restricted mean survival time (RMST)
     - Survival plot data
-    
+
     Args:
         time_column: Follow-up time
         event_column: 1 if event occurred, 0 if censored
@@ -236,7 +236,7 @@ async def submit_kaplan_meier_job(request: KaplanMeierRequest):
         "time_points": request.time_points,
         "generate_visualizations": request.generate_visualizations,
     }
-    
+
     return await _submit_survival_job(
         job_type="kaplan_meier",
         user_id=request.user_id,
@@ -251,9 +251,9 @@ async def submit_kaplan_meier_job(request: KaplanMeierRequest):
 async def submit_cox_regression_job(request: CoxRegressionRequest):
     """
     📊 Submit Cox proportional hazards regression job.
-    
+
     Semi-parametric model: h(t|X) = h₀(t) × exp(β'X)
-    
+
     Output includes:
     - Hazard ratios with confidence intervals
     - P-values for each covariate
@@ -261,7 +261,7 @@ async def submit_cox_regression_job(request: CoxRegressionRequest):
     - Log-likelihood and AIC/BIC
     - Schoenfeld residuals for PH assumption check
     - Martingale residuals for functional form
-    
+
     Args:
         time_column: Follow-up time
         event_column: Event indicator
@@ -279,7 +279,7 @@ async def submit_cox_regression_job(request: CoxRegressionRequest):
         "penalizer": request.penalizer,
         "generate_visualizations": request.generate_visualizations,
     }
-    
+
     return await _submit_survival_job(
         job_type="cox_regression",
         user_id=request.user_id,
@@ -294,14 +294,14 @@ async def submit_cox_regression_job(request: CoxRegressionRequest):
 async def submit_survival_comparison_job(request: SurvivalCompareRequest):
     """
     🔬 Submit survival curve comparison job.
-    
+
     Compares survival distributions between groups.
-    
+
     Tests available:
     - Log-rank: Equal weights across time
     - Wilcoxon: Weights early differences more
     - Tarone-Ware: Compromise between log-rank and Wilcoxon
-    
+
     Output includes:
     - Test statistic and p-value
     - Hazard ratio estimate
@@ -317,7 +317,7 @@ async def submit_survival_comparison_job(request: SurvivalCompareRequest):
         "confidence_level": request.confidence_level,
         "generate_visualizations": request.generate_visualizations,
     }
-    
+
     return await _submit_survival_job(
         job_type="survival_compare",
         user_id=request.user_id,
@@ -332,13 +332,13 @@ async def submit_survival_comparison_job(request: SurvivalCompareRequest):
 async def submit_survival_summary_job(request: SurvivalSummaryRequest):
     """
     📋 Submit survival data summary job.
-    
+
     Quick overview of survival dataset:
     - Total subjects, events, censoring rate
     - Follow-up time distribution
     - Event rate over time
     - Summary by group (if provided)
-    
+
     Useful before running detailed analyses.
     """
     config = {
@@ -346,7 +346,7 @@ async def submit_survival_summary_job(request: SurvivalSummaryRequest):
         "event_col": request.event_column,
         "group_col": request.group_column,
     }
-    
+
     return await _submit_survival_job(
         job_type="survival_summary",
         user_id=request.user_id,

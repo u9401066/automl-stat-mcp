@@ -17,26 +17,26 @@ Package structure:
 """
 # Re-export everything from the analysis package for backward compatibility
 from .analysis import (
-    # Base
-    safe_round,
     # Correlation
     CorrelationPair,
-    EnhancedCorrelationResult,
-    compute_enhanced_correlation,
     # Distribution
     DistributionComparisonResult,
+    EnhancedCorrelationResult,
     GroupComparisonResult,
-    compare_distributions,
-    ks_test_two_samples,
     # Missing data
     MissingValueAnalysis,
-    analyze_missing_values,
+    MulticollinearityAnalysis,
     # Multicollinearity
     VIFResult,
-    MulticollinearityAnalysis,
+    analyze_missing_values,
+    compare_distributions,
+    compute_enhanced_correlation,
     compute_vif,
+    ks_test_two_samples,
     # Functions
     run_enhanced_analysis,
+    # Base
+    safe_round,
 )
 
 __all__ = [

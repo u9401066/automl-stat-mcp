@@ -10,9 +10,8 @@
 #
 # =============================================================================
 
-from fastapi import APIRouter, Request, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
-from typing import Optional, List, Any
 
 router = APIRouter(prefix="/v1", tags=["POST-Only API"])
 
@@ -89,7 +88,7 @@ async def list_datasets_post(
 ):
     """
     List all datasets (POST wrapper for GET /datasets)
-    
+
     This endpoint accepts POST requests for enterprise compliance.
     """
     # Import here to avoid circular imports

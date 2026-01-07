@@ -16,14 +16,14 @@ import base64
 import json
 import uuid
 from datetime import datetime
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import List, Optional
 
 import redis.asyncio as redis
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field
 
+from ..config import REDIS_DB, REDIS_HOST, REDIS_PORT, STATS_JOBS_PENDING, STATS_JOBS_PREFIX
 from ..infrastructure.redis_dataset_store import redis_dataset_store
-from ..config import REDIS_HOST, REDIS_PORT, REDIS_DB, STATS_JOBS_PENDING, STATS_JOBS_PREFIX
 
 router = APIRouter(prefix="/roc", tags=["ROC/AUC Analysis"])
 
@@ -34,7 +34,7 @@ router = APIRouter(prefix="/roc", tags=["ROC/AUC Analysis"])
 
 class ROCComputeRequest(BaseModel):
     """Request for ROC curve computation
-    
+
     Supports dual-mode:
     - Dataset mode: Provide dataset_id (pre-uploaded data)
     - Direct mode: Provide csv_content (inline data)
@@ -53,7 +53,7 @@ class ROCComputeRequest(BaseModel):
 
 class ROCCompareRequest(BaseModel):
     """Request for ROC curve comparison
-    
+
     Supports dual-mode:
     - Dataset mode: Provide dataset_id (pre-uploaded data)
     - Direct mode: Provide csv_content (inline data)
@@ -71,7 +71,7 @@ class ROCCompareRequest(BaseModel):
 
 class ThresholdRequest(BaseModel):
     """Request for optimal threshold analysis
-    
+
     Supports dual-mode:
     - Dataset mode: Provide dataset_id (pre-uploaded data)
     - Direct mode: Provide csv_content (inline data)
@@ -91,7 +91,7 @@ class ThresholdRequest(BaseModel):
 
 class CalibrationRequest(BaseModel):
     """Request for calibration analysis
-    
+
     Supports dual-mode:
     - Dataset mode: Provide dataset_id (pre-uploaded data)
     - Direct mode: Provide csv_content (inline data)
@@ -108,7 +108,7 @@ class CalibrationRequest(BaseModel):
 
 class FullEvalRequest(BaseModel):
     """Request for full classifier evaluation
-    
+
     Supports dual-mode:
     - Dataset mode: Provide dataset_id (pre-uploaded data)
     - Direct mode: Provide csv_content (inline data)
@@ -160,7 +160,7 @@ async def _submit_roc_job(
     is_base64: bool = False,
 ) -> JobResponse:
     """Submit a ROC analysis job to the queue
-    
+
     Supports dual-mode:
     - Dataset mode: Provide dataset_id (pre-uploaded data)
     - Direct mode: Provide csv_content (inline data)
@@ -168,10 +168,10 @@ async def _submit_roc_job(
     # Validate: must provide either dataset_id OR csv_content
     if not dataset_id and not csv_content:
         raise HTTPException(
-            status_code=400, 
+            status_code=400,
             detail="Must provide either dataset_id or csv_content"
         )
-    
+
     # Dataset mode: verify dataset exists
     minio_path = None
     if dataset_id:
@@ -179,10 +179,10 @@ async def _submit_roc_job(
         if not dataset:
             raise HTTPException(status_code=404, detail=f"Dataset {dataset_id} not found")
         minio_path = dataset.get("minio_path")
-    
+
     # Create job
     job_id = f"roc-{uuid.uuid4().hex[:12]}"
-    
+
     # Prepare params for worker
     params = {**config}
     if csv_content:
@@ -190,7 +190,7 @@ async def _submit_roc_job(
         if is_base64:
             csv_content = base64.b64decode(csv_content).decode('utf-8')
         params["csv_content"] = csv_content
-    
+
     job_data = {
         "job_id": job_id,
         "job_type": job_type,
@@ -201,20 +201,20 @@ async def _submit_roc_job(
         "status": "pending",
         "created_at": datetime.utcnow().isoformat(),
     }
-    
+
     # Get Redis client
     client = await _get_redis()
-    
+
     # Save job metadata
     await client.set(
         f"{STATS_JOBS_PREFIX}{job_id}",
         json.dumps(job_data),
         ex=86400 * 7  # 7 days TTL
     )
-    
+
     # Queue for processing
     await client.lpush(STATS_JOBS_PENDING, json.dumps(job_data))
-    
+
     return JobResponse(
         job_id=job_id,
         job_type=job_type,
@@ -231,18 +231,18 @@ async def _submit_roc_job(
 async def submit_roc_compute_job(request: ROCComputeRequest):
     """
     📈 Submit ROC curve computation job.
-    
+
     Computes ROC curve and related metrics:
     - FPR, TPR at multiple thresholds
     - AUC with confidence interval (bootstrap or DeLong)
     - Partial AUC at specific FPR ranges
-    
+
     Args:
         true_column: Binary true labels (0/1)
         score_column: Predicted probabilities
         n_bootstrap: Iterations for CI estimation
         confidence_level: CI level (default 0.95)
-    
+
     Returns:
         ROC curve points, AUC, CI, optimal threshold
     """
@@ -254,7 +254,7 @@ async def submit_roc_compute_job(request: ROCComputeRequest):
         "confidence_level": request.confidence_level,
         "generate_visualizations": request.generate_visualizations,
     }
-    
+
     return await _submit_roc_job(
         job_type="roc_compute",
         user_id=request.user_id,
@@ -269,11 +269,11 @@ async def submit_roc_compute_job(request: ROCComputeRequest):
 async def submit_roc_compare_job(request: ROCCompareRequest):
     """
     🔬 Submit ROC curves comparison job.
-    
+
     Compares AUC between multiple models using:
     - DeLong test: Non-parametric, accounts for correlation
     - Bootstrap: More flexible, handles complex cases
-    
+
     Output includes:
     - AUC for each model
     - Pairwise AUC differences with CI
@@ -287,7 +287,7 @@ async def submit_roc_compare_job(request: ROCCompareRequest):
         "method": request.method,
         "generate_visualizations": request.generate_visualizations,
     }
-    
+
     return await _submit_roc_job(
         job_type="roc_compare",
         user_id=request.user_id,
@@ -302,16 +302,16 @@ async def submit_roc_compare_job(request: ROCCompareRequest):
 async def submit_threshold_analysis_job(request: ThresholdRequest):
     """
     🎯 Submit optimal threshold analysis job.
-    
+
     Finds best classification threshold based on criterion:
-    
+
     Methods:
     - youden: Maximize Sensitivity + Specificity - 1
     - f1: Maximize F1 score
     - cost: Minimize FP×cost_fp + FN×cost_fn
     - sensitivity: Highest threshold meeting min_sensitivity
     - specificity: Lowest threshold meeting min_specificity
-    
+
     Output includes:
     - Optimal threshold
     - Metrics at optimal threshold
@@ -327,7 +327,7 @@ async def submit_threshold_analysis_job(request: ThresholdRequest):
         "min_sensitivity": request.min_sensitivity,
         "min_specificity": request.min_specificity,
     }
-    
+
     return await _submit_roc_job(
         job_type="roc_threshold",
         user_id=request.user_id,
@@ -342,15 +342,15 @@ async def submit_threshold_analysis_job(request: ThresholdRequest):
 async def submit_calibration_job(request: CalibrationRequest):
     """
     📊 Submit calibration analysis job.
-    
+
     Assesses how well predicted probabilities match actual frequencies.
-    
+
     Metrics:
     - Brier score (lower is better)
     - Expected Calibration Error (ECE)
     - Maximum Calibration Error (MCE)
     - Hosmer-Lemeshow test
-    
+
     Output includes:
     - Calibration curve data
     - Reliability diagram
@@ -362,7 +362,7 @@ async def submit_calibration_job(request: CalibrationRequest):
         "n_bins": request.n_bins,
         "strategy": request.strategy,
     }
-    
+
     return await _submit_roc_job(
         job_type="roc_calibration",
         user_id=request.user_id,
@@ -377,7 +377,7 @@ async def submit_calibration_job(request: CalibrationRequest):
 async def submit_full_evaluation_job(request: FullEvalRequest):
     """
     🚀 Submit comprehensive classifier evaluation job.
-    
+
     Complete evaluation including:
     1. ROC curve and AUC with CI
     2. Optimal threshold selection
@@ -385,7 +385,7 @@ async def submit_full_evaluation_job(request: FullEvalRequest):
     4. Precision-Recall curve and AUPRC
     5. Calibration analysis (optional)
     6. Lift and gain charts
-    
+
     Perfect for final model assessment and reporting.
     """
     config = {
@@ -396,7 +396,7 @@ async def submit_full_evaluation_job(request: FullEvalRequest):
         "include_precision_recall": request.include_precision_recall,
         "generate_visualizations": request.generate_visualizations,
     }
-    
+
     return await _submit_roc_job(
         job_type="roc_full_eval",
         user_id=request.user_id,

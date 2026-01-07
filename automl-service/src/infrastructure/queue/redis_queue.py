@@ -18,25 +18,25 @@ from src.domain.models.training_config import TrainingConfig
 class RedisJobQueue:
     """
     Redis-based job queue for distributing training jobs to workers.
-    
+
     Architecture:
     - Jobs are pushed to a Redis list (queue)
     - Workers pop jobs and process them
     - Job status is stored in Redis hashes
     - Status updates published via Redis pub/sub
     """
-    
+
     def __init__(self):
         self._redis = redis.Redis(
             host=os.environ.get("REDIS_HOST", "localhost"),
             port=int(os.environ.get("REDIS_PORT", "6379")),
             decode_responses=True,
         )
-        
+
         # Key prefixes
         self._queue_key = "automl:jobs:pending"
         self._job_prefix = "automl:job:"
-    
+
     def submit_job(
         self,
         job_type: JobType,
@@ -47,13 +47,13 @@ class RedisJobQueue:
     ) -> Job:
         """
         Submit a new training job to the queue.
-        
+
         Returns immediately with a pending Job.
         The actual training happens in the worker container.
         """
         job_id = str(uuid4())
         now = datetime.utcnow()
-        
+
         # Create job record
         job = Job(
             id=JobId.from_string(job_id),
@@ -65,7 +65,7 @@ class RedisJobQueue:
             config=config.__dict__ if hasattr(config, '__dict__') else {},
             created_at=now,
         )
-        
+
         # Prepare job data for Redis
         job_data = {
             "id": job_id,
@@ -88,26 +88,26 @@ class RedisJobQueue:
                 "algorithms": config.algorithms,
             }),
         }
-        
+
         # Store job in Redis hash
         self._redis.hset(f"{self._job_prefix}{job_id}", mapping=job_data)
-        
+
         # Add to queue for workers to pick up
         self._redis.lpush(self._queue_key, job_id)
-        
+
         return job
-    
+
     def get_job(self, job_id: str) -> Optional[Dict[str, Any]]:
         """Get job details from Redis"""
         data = self._redis.hgetall(f"{self._job_prefix}{job_id}")
         if not data:
             return None
-        
+
         # Parse result if present
         result = None
         if data.get("result"):
             result = json.loads(data["result"])
-        
+
         return {
             "id": data["id"],
             "job_type": data["job_type"],
@@ -123,57 +123,57 @@ class RedisJobQueue:
             "updated_at": data["updated_at"],
             "completed_at": data.get("completed_at"),
         }
-    
+
     def list_jobs(
-        self, 
-        user_id: str, 
+        self,
+        user_id: str,
         session_id: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """List jobs for a user"""
         # Scan for all job keys
         jobs = []
         cursor = 0
-        
+
         while True:
             cursor, keys = self._redis.scan(
-                cursor=cursor, 
+                cursor=cursor,
                 match=f"{self._job_prefix}*",
                 count=100
             )
-            
+
             for key in keys:
                 data = self._redis.hgetall(key)
                 if data.get("user_id") == user_id:
                     if session_id is None or data.get("session_id") == session_id:
                         jobs.append(self.get_job(data["id"]))
-            
+
             if cursor == 0:
                 break
-        
+
         # Sort by created_at descending
         jobs.sort(key=lambda x: x["created_at"], reverse=True)
         return jobs
-    
+
     def cancel_job(self, job_id: str, user_id: str) -> bool:
         """
         Cancel a pending job.
-        
+
         Cannot cancel running or completed jobs.
         """
         data = self._redis.hgetall(f"{self._job_prefix}{job_id}")
-        
+
         if not data:
             return False
-        
+
         if data["user_id"] != user_id:
             return False
-        
+
         if data["status"] != JobStatus.PENDING.value:
             return False
-        
+
         # Remove from queue
         self._redis.lrem(self._queue_key, 0, job_id)
-        
+
         # Update status
         self._redis.hset(
             f"{self._job_prefix}{job_id}",
@@ -183,25 +183,25 @@ class RedisJobQueue:
                 "updated_at": datetime.utcnow().isoformat(),
             }
         )
-        
+
         return True
-    
+
     def delete_job(self, job_id: str, user_id: str) -> bool:
         """Delete a job record"""
         data = self._redis.hgetall(f"{self._job_prefix}{job_id}")
-        
+
         if not data:
             return False
-        
+
         if data["user_id"] != user_id:
             return False
-        
+
         # Remove from queue if pending
         self._redis.lrem(self._queue_key, 0, job_id)
-        
+
         # Delete job record
         self._redis.delete(f"{self._job_prefix}{job_id}")
-        
+
         return True
 
 

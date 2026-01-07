@@ -22,7 +22,6 @@ Usage:
 import asyncio
 import os
 import time
-from pathlib import Path
 from typing import Optional
 
 import httpx
@@ -54,26 +53,26 @@ SAMPLE_DATA = {
 # =============================================================================
 
 async def wait_for_job(
-    client: httpx.AsyncClient, 
-    job_id: str, 
+    client: httpx.AsyncClient,
+    job_id: str,
     timeout: int = 120,
     poll_interval: int = POLL_INTERVAL
 ) -> dict:
     """Wait for a job to complete."""
     start = time.time()
-    
+
     while time.time() - start < timeout:
         resp = await client.get(f"{STATS_API_URL}/jobs/{job_id}")
-        
+
         if resp.status_code == 200:
             data = resp.json()
             status = data.get("status", "unknown")
-            
+
             if status in ["completed", "failed", "error"]:
                 return data
-        
+
         await asyncio.sleep(poll_interval)
-    
+
     return {"status": "timeout", "job_id": job_id}
 
 
@@ -112,7 +111,7 @@ async def stats_client():
 @pytest.mark.asyncio
 class TestTableOneFlow:
     """Test TableOne generation workflow."""
-    
+
     async def test_tableone_heart_disease(self, stats_client):
         """Generate TableOne for heart disease dataset grouped by target."""
         resp = await stats_client.post(
@@ -123,11 +122,11 @@ class TestTableOneFlow:
                 "user_id": TEST_USER_ID,
             }
         )
-        
+
         if resp.status_code == 200:
             data = resp.json()
             assert "job_id" in data
-            
+
             # Wait for completion
             result = await wait_for_job(stats_client, data["job_id"])
             assert result["status"] == "completed"
@@ -146,7 +145,7 @@ class TestTableOneFlow:
             if resp.status_code == 200:
                 data = resp.json()
                 assert "table" in data or "result" in data
-    
+
     async def test_tableone_with_specific_columns(self, stats_client):
         """Generate TableOne with selected columns only."""
         resp = await stats_client.post(
@@ -159,13 +158,13 @@ class TestTableOneFlow:
                 "user_id": TEST_USER_ID,
             }
         )
-        
+
         if resp.status_code == 200:
             data = resp.json()
             assert "job_id" in data
         elif resp.status_code == 404:
             pytest.skip("TableOne endpoint not implemented")
-    
+
     async def test_tableone_titanic_by_survived(self, stats_client):
         """Generate TableOne for Titanic grouped by survived."""
         resp = await stats_client.post(
@@ -176,7 +175,7 @@ class TestTableOneFlow:
                 "user_id": TEST_USER_ID,
             }
         )
-        
+
         if resp.status_code == 200:
             data = resp.json()
             assert "job_id" in data
@@ -192,7 +191,7 @@ class TestTableOneFlow:
 @pytest.mark.asyncio
 class TestEDAFlow:
     """Test Exploratory Data Analysis workflow."""
-    
+
     async def test_auto_analyze_iris(self, stats_client):
         """Run auto analysis on Iris dataset."""
         resp = await stats_client.post(
@@ -202,17 +201,17 @@ class TestEDAFlow:
                 "user_id": TEST_USER_ID,
             }
         )
-        
+
         if resp.status_code == 200:
             data = resp.json()
             assert "job_id" in data
-            
+
             # Wait for completion
             result = await wait_for_job(stats_client, data["job_id"], timeout=180)
             assert result["status"] in ["completed", "timeout"]
         elif resp.status_code == 404:
             pytest.skip("Auto-analyze endpoint not implemented")
-    
+
     async def test_auto_analyze_with_target(self, stats_client):
         """Run auto analysis with specified target column."""
         resp = await stats_client.post(
@@ -223,13 +222,13 @@ class TestEDAFlow:
                 "user_id": TEST_USER_ID,
             }
         )
-        
+
         if resp.status_code == 200:
             data = resp.json()
             assert "job_id" in data
         elif resp.status_code == 404:
             pytest.skip("Auto-analyze endpoint not implemented")
-    
+
     async def test_quick_eda(self, stats_client):
         """Test quick EDA without full job submission."""
         resp = await stats_client.post(
@@ -239,7 +238,7 @@ class TestEDAFlow:
                 "user_id": TEST_USER_ID,
             }
         )
-        
+
         # Try both possible endpoints
         if resp.status_code != 200:
             resp = await stats_client.post(
@@ -249,7 +248,7 @@ class TestEDAFlow:
                     "user_id": TEST_USER_ID,
                 }
             )
-        
+
         if resp.status_code == 200:
             data = resp.json()
             # Should contain summary statistics
@@ -264,7 +263,7 @@ class TestEDAFlow:
 @pytest.mark.asyncio
 class TestPowerAnalysisFlow:
     """Test Power Analysis workflow."""
-    
+
     async def test_ttest_power_calculation(self, stats_client):
         """Calculate power for t-test."""
         resp = await stats_client.post(
@@ -276,7 +275,7 @@ class TestPowerAnalysisFlow:
                 "user_id": TEST_USER_ID,
             }
         )
-        
+
         if resp.status_code == 200:
             data = resp.json()
             # API returns 'result' for power value or 'power' in parameters
@@ -285,7 +284,7 @@ class TestPowerAnalysisFlow:
                 assert 0 <= data["result"] <= 1 or data["result"] > 1  # Could be sample size
         elif resp.status_code == 404:
             pytest.skip("Power analysis endpoint not implemented")
-    
+
     async def test_ttest_sample_size(self, stats_client):
         """Calculate sample size for desired power."""
         resp = await stats_client.post(
@@ -297,13 +296,13 @@ class TestPowerAnalysisFlow:
                 "user_id": TEST_USER_ID,
             }
         )
-        
+
         if resp.status_code == 200:
             data = resp.json()
             assert "sample_size" in data or "n" in data
         elif resp.status_code == 404:
             pytest.skip("Sample size endpoint not implemented")
-    
+
     async def test_proportion_power(self, stats_client):
         """Calculate power for proportion test."""
         resp = await stats_client.post(
@@ -316,14 +315,14 @@ class TestPowerAnalysisFlow:
                 "user_id": TEST_USER_ID,
             }
         )
-        
+
         if resp.status_code == 200:
             data = resp.json()
             # API returns 'result' for power value
             assert "result" in data or "power" in data or "parameters" in data
         elif resp.status_code == 404:
             pytest.skip("Proportion power endpoint not implemented")
-    
+
     async def test_anova_power(self, stats_client):
         """Calculate power for ANOVA."""
         resp = await stats_client.post(
@@ -336,7 +335,7 @@ class TestPowerAnalysisFlow:
                 "user_id": TEST_USER_ID,
             }
         )
-        
+
         if resp.status_code == 200:
             data = resp.json()
             # API returns 'result' for power value
@@ -353,7 +352,7 @@ class TestPowerAnalysisFlow:
 @pytest.mark.asyncio
 class TestSurvivalAnalysisFlow:
     """Test Survival Analysis workflow."""
-    
+
     async def test_kaplan_meier(self, stats_client):
         """Run Kaplan-Meier analysis."""
         resp = await stats_client.post(
@@ -365,13 +364,13 @@ class TestSurvivalAnalysisFlow:
                 "user_id": TEST_USER_ID,
             }
         )
-        
+
         if resp.status_code == 200:
             data = resp.json()
             assert "job_id" in data or "survival_function" in data
         elif resp.status_code == 404:
             pytest.skip("Kaplan-Meier endpoint not implemented")
-    
+
     async def test_kaplan_meier_with_groups(self, stats_client):
         """Run Kaplan-Meier with group comparison."""
         resp = await stats_client.post(
@@ -384,13 +383,13 @@ class TestSurvivalAnalysisFlow:
                 "user_id": TEST_USER_ID,
             }
         )
-        
+
         if resp.status_code == 200:
             data = resp.json()
             assert "job_id" in data or "survival_function" in data
         elif resp.status_code == 404:
             pytest.skip("Kaplan-Meier endpoint not implemented")
-    
+
     async def test_cox_regression(self, stats_client):
         """Run Cox proportional hazards regression."""
         resp = await stats_client.post(
@@ -403,13 +402,13 @@ class TestSurvivalAnalysisFlow:
                 "user_id": TEST_USER_ID,
             }
         )
-        
+
         if resp.status_code == 200:
             data = resp.json()
             assert "job_id" in data or "coefficients" in data
         elif resp.status_code == 404:
             pytest.skip("Cox regression endpoint not implemented")
-    
+
     async def test_log_rank_test(self, stats_client):
         """Run log-rank test for survival comparison."""
         resp = await stats_client.post(
@@ -422,7 +421,7 @@ class TestSurvivalAnalysisFlow:
                 "user_id": TEST_USER_ID,
             }
         )
-        
+
         if resp.status_code == 200:
             data = resp.json()
             assert "p_value" in data or "job_id" in data
@@ -438,7 +437,7 @@ class TestSurvivalAnalysisFlow:
 @pytest.mark.asyncio
 class TestROCAnalysisFlow:
     """Test ROC Analysis workflow."""
-    
+
     async def test_compute_roc_curve(self, stats_client):
         """Compute ROC curve from predictions."""
         resp = await stats_client.post(
@@ -450,13 +449,13 @@ class TestROCAnalysisFlow:
                 "user_id": TEST_USER_ID,
             }
         )
-        
+
         if resp.status_code == 200:
             data = resp.json()
             assert "auc" in data or "job_id" in data
         elif resp.status_code == 404:
             pytest.skip("ROC compute endpoint not implemented")
-    
+
     async def test_roc_with_confidence_interval(self, stats_client):
         """Compute ROC curve with bootstrap CI."""
         resp = await stats_client.post(
@@ -470,7 +469,7 @@ class TestROCAnalysisFlow:
                 "user_id": TEST_USER_ID,
             }
         )
-        
+
         if resp.status_code == 200:
             data = resp.json()
             # Should have confidence interval
@@ -480,7 +479,7 @@ class TestROCAnalysisFlow:
                 assert result["status"] == "completed"
         elif resp.status_code == 404:
             pytest.skip("ROC endpoint not implemented")
-    
+
     async def test_compare_roc_curves(self, stats_client):
         """Compare two ROC curves (DeLong test)."""
         resp = await stats_client.post(
@@ -493,13 +492,13 @@ class TestROCAnalysisFlow:
                 "user_id": TEST_USER_ID,
             }
         )
-        
+
         if resp.status_code == 200:
             data = resp.json()
             assert "p_value" in data or "job_id" in data
         elif resp.status_code == 404:
             pytest.skip("ROC compare endpoint not implemented")
-    
+
     async def test_full_classifier_evaluation(self, stats_client):
         """Full classifier evaluation with multiple metrics."""
         resp = await stats_client.post(
@@ -511,11 +510,11 @@ class TestROCAnalysisFlow:
                 "user_id": TEST_USER_ID,
             }
         )
-        
+
         if resp.status_code == 200:
             data = resp.json()
             assert "job_id" in data
-            
+
             # Wait for completion
             result = await wait_for_job(stats_client, data["job_id"])
             assert result["status"] in ["completed", "timeout"]
@@ -531,7 +530,7 @@ class TestROCAnalysisFlow:
 @pytest.mark.asyncio
 class TestPropensityScoreFlow:
     """Test Propensity Score Analysis workflow."""
-    
+
     async def test_estimate_propensity_scores(self, stats_client):
         """Estimate propensity scores."""
         resp = await stats_client.post(
@@ -543,7 +542,7 @@ class TestPropensityScoreFlow:
                 "user_id": TEST_USER_ID,
             }
         )
-        
+
         if resp.status_code == 200:
             data = resp.json()
             assert "job_id" in data or "propensity_scores" in data
@@ -551,7 +550,7 @@ class TestPropensityScoreFlow:
             pytest.skip("Propensity score endpoint not implemented")
         elif resp.status_code == 422:
             pytest.skip("Propensity score requires binary treatment column")
-    
+
     async def test_propensity_score_matching(self, stats_client):
         """Perform propensity score matching."""
         resp = await stats_client.post(
@@ -563,7 +562,7 @@ class TestPropensityScoreFlow:
                 "user_id": TEST_USER_ID,
             }
         )
-        
+
         if resp.status_code == 200:
             data = resp.json()
             assert "job_id" in data or "matched_pairs" in data
@@ -579,7 +578,7 @@ class TestPropensityScoreFlow:
 @pytest.mark.asyncio
 class TestCorrelationFlow:
     """Test Correlation Analysis workflow."""
-    
+
     async def test_correlation_matrix(self, stats_client):
         """Compute correlation matrix."""
         resp = await stats_client.post(
@@ -590,13 +589,13 @@ class TestCorrelationFlow:
                 "user_id": TEST_USER_ID,
             }
         )
-        
+
         if resp.status_code == 200:
             data = resp.json()
             assert "correlation_matrix" in data or "job_id" in data
         elif resp.status_code == 404:
             pytest.skip("Correlation endpoint not implemented")
-    
+
     async def test_vif_multicollinearity(self, stats_client):
         """Check multicollinearity with VIF."""
         resp = await stats_client.post(
@@ -607,7 +606,7 @@ class TestCorrelationFlow:
                 "user_id": TEST_USER_ID,
             }
         )
-        
+
         if resp.status_code == 200:
             data = resp.json()
             assert "vif" in data or "job_id" in data
@@ -624,7 +623,7 @@ class TestCorrelationFlow:
 @pytest.mark.slow
 class TestCompleteStatisticalWorkflow:
     """Test complete statistical analysis workflow."""
-    
+
     async def test_heart_disease_complete_analysis(self, stats_client):
         """
         Complete analysis workflow for Heart Disease dataset:
@@ -641,13 +640,13 @@ class TestCompleteStatisticalWorkflow:
                 "user_id": TEST_USER_ID,
             }
         )
-        
+
         if resp.status_code != 200:
             pytest.skip("Quick stats not available")
-        
+
         stats_data = resp.json()
         assert "summary" in stats_data or "n_rows" in stats_data
-        
+
         # 2. TableOne
         resp = await stats_client.post(
             f"{STATS_API_URL}/tableone/submit",
@@ -657,9 +656,9 @@ class TestCompleteStatisticalWorkflow:
                 "user_id": TEST_USER_ID,
             }
         )
-        
+
         # Continue even if TableOne fails
-        
+
         print("✓ Complete statistical workflow test passed")
 
 

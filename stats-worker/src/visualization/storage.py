@@ -5,10 +5,10 @@ Handles saving matplotlib figures to MinIO and generating accessible URLs.
 
 Usage:
     from visualization.storage import save_figure_to_minio
-    
+
     fig, ax = plt.subplots()
     ax.plot(x, y)
-    
+
     url = save_figure_to_minio(
         fig=fig,
         user_id="user123",
@@ -19,21 +19,22 @@ Usage:
 """
 import io
 import logging
-from typing import Optional
 from datetime import timedelta
+from typing import Optional
 
 import matplotlib
+
 matplotlib.use('Agg')  # Non-interactive backend for server
 import matplotlib.pyplot as plt
 from minio import Minio
 from minio.error import S3Error
 
 from ..config import (
-    MINIO_ENDPOINT,
     MINIO_ACCESS_KEY,
+    MINIO_ENDPOINT,
+    MINIO_REPORTS_BUCKET,
     MINIO_SECRET_KEY,
     MINIO_SECURE,
-    MINIO_REPORTS_BUCKET,
 )
 
 logger = logging.getLogger(__name__)
@@ -87,7 +88,7 @@ def save_figure_to_minio(
 ) -> str:
     """
     Save a matplotlib figure to MinIO and return the URL.
-    
+
     Args:
         fig: Matplotlib figure object
         user_id: User identifier for path organization
@@ -98,10 +99,10 @@ def save_figure_to_minio(
         bucket: MinIO bucket name (default: MINIO_REPORTS_BUCKET)
         tight_layout: Apply tight_layout before saving
         transparent: Save with transparent background
-        
+
     Returns:
         URL string to access the saved figure
-        
+
     Example:
         >>> fig, ax = plt.subplots()
         >>> ax.plot([1, 2, 3], [1, 4, 9])
@@ -110,21 +111,21 @@ def save_figure_to_minio(
         http://minio:9000/stats-reports/user1/job1/plot.png
     """
     bucket = bucket or MINIO_REPORTS_BUCKET
-    
+
     # Ensure filename has correct extension
     if not filename.lower().endswith(f".{format}"):
         filename = f"{filename}.{format}"
-    
+
     # Build object path
     object_path = f"{user_id}/{job_id}/{filename}"
-    
+
     # Apply tight layout if requested
     if tight_layout:
         try:
             fig.tight_layout()
         except Exception:
             pass  # Some figures don't support tight_layout
-    
+
     # Save figure to bytes buffer
     buffer = io.BytesIO()
     fig.savefig(
@@ -137,14 +138,14 @@ def save_figure_to_minio(
         transparent=transparent,
     )
     buffer.seek(0)
-    
+
     # Get content type
     content_type = CONTENT_TYPES.get(format.lower(), "application/octet-stream")
-    
+
     # Upload to MinIO
     client = get_minio_client()
     ensure_bucket_exists(client, bucket)
-    
+
     try:
         client.put_object(
             bucket_name=bucket,
@@ -160,7 +161,7 @@ def save_figure_to_minio(
     finally:
         buffer.close()
         plt.close(fig)  # Clean up figure memory
-    
+
     # Build URL
     url = get_figure_url(bucket, object_path)
     return url
@@ -174,13 +175,13 @@ def get_figure_url(
 ) -> str:
     """
     Get URL for a figure stored in MinIO.
-    
+
     Args:
         bucket: MinIO bucket name
         object_path: Path to the object within the bucket
         presigned: If True, generate a presigned URL with expiration
         expires: Expiration time for presigned URL
-        
+
     Returns:
         URL string
     """
@@ -208,7 +209,7 @@ def save_multiple_figures(
 ) -> dict:
     """
     Save multiple figures to MinIO.
-    
+
     Args:
         figures: Dictionary mapping filename to (fig, title) tuples
                  e.g., {"roc_curve": (fig1, "ROC Curve"), "pr_curve": (fig2, "PR Curve")}
@@ -217,10 +218,10 @@ def save_multiple_figures(
         dpi: Resolution
         format: Image format
         bucket: MinIO bucket
-        
+
     Returns:
         Dictionary mapping filenames to URLs
-        
+
     Example:
         >>> urls = save_multiple_figures(
         ...     {"roc": (fig1, "ROC"), "pr": (fig2, "PR")},
@@ -230,7 +231,7 @@ def save_multiple_figures(
         {"roc": "http://...", "pr": "http://..."}
     """
     results = {}
-    
+
     for name, (fig, title) in figures.items():
         filename = f"{name}.{format}"
         try:
@@ -256,5 +257,5 @@ def save_multiple_figures(
                 "filename": filename,
                 "error": str(e),
             }
-    
+
     return results

@@ -12,8 +12,8 @@ from typing import Any, Dict, Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from ..infrastructure.redis_client import redis_client
 from ..infrastructure.minio_client import minio_client
+from ..infrastructure.redis_client import redis_client
 
 logger = logging.getLogger(__name__)
 
@@ -66,62 +66,62 @@ class MinIOUploadResponse(BaseModel):
 async def redis_set(request: RedisSetRequest) -> Dict[str, Any]:
     """
     Set a value in Redis with optional TTL.
-    
+
     Used by MCP tools to store analysis results for quick retrieval.
     """
     try:
         # Serialize the value to JSON
         value_json = json.dumps(request.value, ensure_ascii=False)
-        
+
         # Store in Redis
         await redis_client.set(
             request.key,
             value_json,
             ex=request.ttl,
         )
-        
+
         logger.info(f"Stored in Redis: {request.key} (TTL: {request.ttl}s)")
-        
+
         return {
             "status": "success",
             "key": request.key,
             "ttl": request.ttl,
         }
-        
+
     except Exception as e:
         logger.error(f"Redis set failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/redis/get", response_model=RedisGetResponse, tags=["Redis"])
 async def redis_get(key: str) -> RedisGetResponse:
     """
     Get a value from Redis.
-    
+
     Returns the stored analysis result if it exists.
     """
     try:
         value_json = await redis_client.get(key)
-        
+
         if value_json is None:
             return RedisGetResponse(
                 key=key,
                 value=None,
                 exists=False,
             )
-        
+
         # Parse JSON
         value = json.loads(value_json)
-        
+
         return RedisGetResponse(
             key=key,
             value=value,
             exists=True,
         )
-        
+
     except Exception as e:
         logger.error(f"Redis get failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.delete("/redis/delete", tags=["Redis"])
@@ -129,23 +129,23 @@ async def redis_delete(key: str) -> Dict[str, Any]:
     """Delete a key from Redis"""
     try:
         deleted = await redis_client.delete(key)
-        
+
         return {
             "status": "success",
             "key": key,
             "deleted": deleted > 0,
         }
-        
+
     except Exception as e:
         logger.error(f"Redis delete failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/redis/keys", tags=["Redis"])
 async def redis_keys(pattern: str = "stats:result:*", limit: int = 100) -> Dict[str, Any]:
     """
     List keys matching a pattern.
-    
+
     Used to list analysis results for a user.
     """
     try:
@@ -154,17 +154,17 @@ async def redis_keys(pattern: str = "stats:result:*", limit: int = 100) -> Dict[
             keys.append(key)
             if len(keys) >= limit:
                 break
-        
+
         return {
             "status": "success",
             "pattern": pattern,
             "count": len(keys),
             "keys": keys,
         }
-        
+
     except Exception as e:
         logger.error(f"Redis keys failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 # =============================================================================
@@ -175,48 +175,48 @@ async def redis_keys(pattern: str = "stats:result:*", limit: int = 100) -> Dict[
 async def minio_upload(request: MinIOUploadRequest) -> MinIOUploadResponse:
     """
     Upload content to MinIO.
-    
+
     Used by MCP tools to persist analysis results permanently.
     """
     try:
         # Ensure bucket exists
         minio_client.ensure_bucket(request.bucket)
-        
+
         # Upload content
         content_bytes = request.content.encode('utf-8')
-        
+
         minio_client.put_object(
             bucket=request.bucket,
             path=request.path,
             data=content_bytes,
             content_type=request.content_type,
         )
-        
+
         full_path = f"{request.bucket}/{request.path}"
         logger.info(f"Uploaded to MinIO: {full_path}")
-        
+
         return MinIOUploadResponse(
             bucket=request.bucket,
             path=request.path,
             full_path=full_path,
             size=len(content_bytes),
         )
-        
+
     except Exception as e:
         logger.error(f"MinIO upload failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/minio/download", tags=["MinIO"])
 async def minio_download(bucket: str, path: str) -> Dict[str, Any]:
     """
     Download content from MinIO.
-    
+
     Returns the stored analysis result.
     """
     try:
         content = minio_client.get_object(bucket=bucket, path=path)
-        
+
         # Try to parse as JSON
         try:
             data = json.loads(content.decode('utf-8'))
@@ -236,10 +236,10 @@ async def minio_download(bucket: str, path: str) -> Dict[str, Any]:
                 "content_type": "text/plain",
                 "content": content.decode('utf-8'),
             }
-        
+
     except Exception as e:
         logger.error(f"MinIO download failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/minio/list", tags=["MinIO"])
@@ -250,7 +250,7 @@ async def minio_list(
 ) -> Dict[str, Any]:
     """
     List objects in MinIO bucket.
-    
+
     Used to list analysis results for a user.
     """
     try:
@@ -259,7 +259,7 @@ async def minio_list(
             prefix=prefix,
             limit=limit,
         )
-        
+
         return {
             "status": "success",
             "bucket": bucket,
@@ -267,7 +267,7 @@ async def minio_list(
             "count": len(objects),
             "objects": objects,
         }
-        
+
     except Exception as e:
         logger.error(f"MinIO list failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e

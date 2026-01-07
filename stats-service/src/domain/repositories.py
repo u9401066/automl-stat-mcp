@@ -5,7 +5,7 @@ Abstract interfaces that define how domain objects are persisted.
 Actual implementations are in the Infrastructure layer.
 """
 from abc import ABC, abstractmethod
-from typing import Optional, List
+from typing import List, Optional
 
 from .models import StatsJob, StatsJobId
 
@@ -25,8 +25,8 @@ class StatsJobRepository(ABC):
 
     @abstractmethod
     async def find_by_user(
-        self, 
-        user_id: str, 
+        self,
+        user_id: str,
         session_id: Optional[str] = None,
         job_type: Optional[str] = None,
         limit: int = 50,

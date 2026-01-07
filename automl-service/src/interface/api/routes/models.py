@@ -2,20 +2,22 @@
 FastAPI Router - Model endpoints
 """
 from typing import List, Optional
-from fastapi import APIRouter, HTTPException, Header
 
-from ..schemas import (
-    ModelResponse, LeaderboardEntryResponse, 
-    PredictRequest, PredictResponse, ErrorResponse,
+from fastapi import APIRouter, Header, HTTPException
+
+from ....application.model_use_cases import (
+    DeleteModelUseCase,
+    GetModelLeaderboardUseCase,
+    ListModelsUseCase,
 )
 from ..dependencies import get_container
-from ....application.model_use_cases import (
-    ListModelsUseCase,
-    GetModelLeaderboardUseCase,
-    PredictUseCase,
-    DeleteModelUseCase,
+from ..schemas import (
+    ErrorResponse,
+    LeaderboardEntryResponse,
+    ModelResponse,
+    PredictRequest,
+    PredictResponse,
 )
-from ....application.dto import PredictRequest as PredictDTO
 
 router = APIRouter(prefix="/models", tags=["Models"])
 
@@ -32,11 +34,11 @@ async def list_models(
     List all trained models for the current user/session.
     """
     container = get_container()
-    
+
     use_case = ListModelsUseCase(model_repo=container.model_repo)
-    
+
     results = await use_case.execute(x_user_id, x_session_id)
-    
+
     return [
         ModelResponse(
             model_id=r.model_id,
@@ -75,16 +77,16 @@ async def get_model_leaderboard(
 ):
     """
     Get the leaderboard for a trained model.
-    
+
     Shows performance comparison of all models trained during the experiment.
     """
     container = get_container()
-    
+
     use_case = GetModelLeaderboardUseCase(model_repo=container.model_repo)
-    
+
     try:
         results = await use_case.execute(model_id, x_user_id)
-        
+
         return [
             LeaderboardEntryResponse(
                 model_name=r.model_name,
@@ -95,11 +97,11 @@ async def get_model_leaderboard(
             )
             for r in results
         ]
-    
+
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e)) from e
     except PermissionError as e:
-        raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=403, detail=str(e)) from e
 
 
 @router.post(
@@ -113,11 +115,11 @@ async def predict(
 ):
     """
     Make predictions using a trained model.
-    
+
     The prediction dataset should have the same features as the training dataset
     (excluding the target column).
-    
-    NOTE: Prediction is currently not implemented. 
+
+    NOTE: Prediction is currently not implemented.
     Models need to be downloaded from MinIO and loaded locally.
     This will be added in a future version.
     """
@@ -126,7 +128,7 @@ async def predict(
     # 1. Download model from MinIO, load with AutoGluon, predict
     # 2. Create a prediction worker that handles this async
     raise HTTPException(
-        status_code=501, 
+        status_code=501,
         detail="Prediction not yet implemented. Coming soon!"
     )
 
@@ -142,14 +144,14 @@ async def delete_model(
 ):
     """Delete a trained model."""
     container = get_container()
-    
+
     use_case = DeleteModelUseCase(model_repo=container.model_repo)
-    
+
     try:
         await use_case.execute(model_id, x_user_id)
         return {"message": "Model deleted successfully"}
-    
+
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e)) from e
     except PermissionError as e:
-        raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=403, detail=str(e)) from e

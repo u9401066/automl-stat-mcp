@@ -1,6 +1,6 @@
 # AutoML MCP System - Roadmap
 
-> Last Updated: 2025-12-17
+> Last Updated: 2026-01-06
 
 ## 🎯 Vision
 
@@ -8,13 +8,14 @@
 
 ---
 
-## 📊 Current Status (v1.5)
+## 📊 Current Status (v1.6)
 
 ### ✅ 已完成功能
 
 | 模組 | 功能 | 工具數 | 狀態 |
 |------|------|--------|------|
-| **Data Quality** | 品質偵測、轉換建議、準備度評估 | 2 | ✅ NEW |
+| **Quality Audit** | Ruff 0 報錯, MyPy 類型修正, uv 遷移 | - | ✅ NEW |
+| **Data Quality** | 品質偵測、轉換建議、準備度評估 | 2 | ✅ |
 | **AI Framework** | Claude Skills, Constitution-Bylaw | 12 Skills | ✅ |
 | **Project Mgmt** | 專案目錄、視覺化列表、報告產生 | 4 | ✅ |
 | **AutoML Core** | 資料集管理、模型訓練、預測 | 26 | ✅ |
@@ -32,6 +33,13 @@
 | **Result Persistence** | Redis + MinIO 儲存 | - | ✅ |
 
 **總計: 104+ MCP 工具**
+
+### 🆕 2026-01-06 更新
+
+- **全專案代碼品質審計完成**
+  - **Ruff Clean**: 達成 `automl-service` 與 `stats-service` 路由層零報錯。
+  - **MyPy Typing**: 修復 `cleaning.py`, `power.py`, `direct.py` 的深層類型推斷問題。
+  - **uv 遷移**: 完成從 pip 到 `uv` 的環境管理遷移。
 
 ### 🆕 2025-12-17 更新
 

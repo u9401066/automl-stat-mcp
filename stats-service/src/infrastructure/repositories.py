@@ -5,16 +5,19 @@ Infrastructure layer implementation of StatsJobRepository interface.
 """
 import json
 import logging
-from typing import Optional, List
+from typing import List, Optional
 
 import redis.asyncio as redis
 
-from ..domain.models import StatsJob, StatsJobId, StatsJobType, StatsJobStatus
-from ..domain.repositories import StatsJobRepository
 from ..config import (
-    REDIS_HOST, REDIS_PORT, REDIS_DB,
-    STATS_JOBS_PENDING, STATS_JOBS_PREFIX,
+    REDIS_DB,
+    REDIS_HOST,
+    REDIS_PORT,
+    STATS_JOBS_PENDING,
+    STATS_JOBS_PREFIX,
 )
+from ..domain.models import StatsJob, StatsJobId
+from ..domain.repositories import StatsJobRepository
 
 logger = logging.getLogger(__name__)
 
@@ -84,19 +87,19 @@ class RedisStatsJobRepository(StatsJobRepository):
                 data = await client.get(key)
                 if data:
                     job_dict = json.loads(data)
-                    
+
                     # Filter by user
                     if job_dict.get("user_id") != user_id:
                         continue
-                    
+
                     # Filter by session if specified
                     if session_id and job_dict.get("session_id") != session_id:
                         continue
-                    
+
                     # Filter by job type if specified
                     if job_type and job_dict.get("job_type") != job_type:
                         continue
-                    
+
                     try:
                         jobs.append(StatsJob.from_dict(job_dict))
                     except Exception as e:

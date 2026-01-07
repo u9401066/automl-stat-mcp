@@ -4,15 +4,16 @@ Stats Service - TableOne Routes (DDD)
 Routes for generating Table 1 (descriptive statistics) using tableone package.
 Refactored to use Domain-Driven Design with Use Cases.
 """
+from typing import List, Optional
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
-from typing import Optional, List
 
-from ..application.use_cases import SubmitTableOneUseCase, DatasetNotFoundError
 from ..application.dto import SubmitTableOneRequest as SubmitTableOneDTO
-from ..infrastructure.redis_dataset_store import redis_dataset_store
-from ..infrastructure.repositories import get_job_repository, get_job_queue
+from ..application.use_cases import DatasetNotFoundError, SubmitTableOneUseCase
 from ..infrastructure.minio_client import minio_client
+from ..infrastructure.redis_dataset_store import redis_dataset_store
+from ..infrastructure.repositories import get_job_queue, get_job_repository
 
 router = APIRouter(prefix="/tableone", tags=["TableOne"])
 
@@ -22,7 +23,7 @@ class TableOneRequest(BaseModel):
     dataset_id: str = Field(..., description="Dataset ID in MinIO")
     user_id: str = Field(..., description="User ID for isolation")
     session_id: Optional[str] = Field(None, description="Optional session ID")
-    
+
     # TableOne specific parameters
     columns: Optional[List[str]] = Field(None, description="Columns to include (all if not specified)")
     categorical: Optional[List[str]] = Field(None, description="Categorical columns")
@@ -53,22 +54,22 @@ def _get_submit_use_case() -> SubmitTableOneUseCase:
 async def submit_tableone_job(request: TableOneRequest):
     """
     Submit a TableOne job.
-    
+
     This will generate a publication-ready Table 1 with descriptive statistics.
     The job runs asynchronously - use /jobs/{job_id} to check status.
-    
+
     Parameters:
         - columns: Specify which columns to include
         - categorical: Columns to treat as categorical
         - groupby: Stratify by this column (e.g., treatment group)
         - nonnormal: Use median/IQR instead of mean/SD for these columns
         - pval: Include p-values for group comparisons
-    
+
     Returns:
         TableOneResponse with job_id for tracking
     """
     use_case = _get_submit_use_case()
-    
+
     try:
         result = await use_case.execute(
             SubmitTableOneDTO(
@@ -83,23 +84,23 @@ async def submit_tableone_job(request: TableOneRequest):
                 pval=request.pval if request.pval is not None else False,
             )
         )
-        
+
         return TableOneResponse(
             job_id=result.job_id,
             job_type=result.job_type,
             status=result.status,
             message=result.message,
         )
-        
+
     except DatasetNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e)) from e
 
 
 @router.post("/columns")
 async def get_column_suggestions(dataset_id: str, user_id: str):
     """
     Get column type suggestions for TableOne configuration.
-    
+
     Analyzes the dataset and suggests which columns are likely
     categorical vs continuous.
     """
@@ -110,28 +111,31 @@ async def get_column_suggestions(dataset_id: str, user_id: str):
             status_code=404,
             detail=f"Dataset {dataset_id} not found. Please register it first."
         )
-    
+
     # Load preview from MinIO
     minio_path = dataset_info.get("minio_path")
+    if not minio_path:
+        raise HTTPException(status_code=400, detail="MinIO path not found in dataset info")
+
     df = minio_client.load_dataset_by_path(minio_path, n_rows=1000)
-    
+
     if df is None:
         raise HTTPException(
             status_code=404,
             detail=f"Dataset file not found at {minio_path}"
         )
-    
+
     categorical = []
     continuous = []
     datetime_cols = []
-    
+
     for col in df.columns:
         dtype = df[col].dtype
-        
+
         # Skip ID-like columns
         if col.lower() in ['id', 'index', 'row_id', 'record_id']:
             continue
-        
+
         # Datetime columns
         if 'datetime' in str(dtype):
             datetime_cols.append(col)
@@ -141,20 +145,20 @@ async def get_column_suggestions(dataset_id: str, user_id: str):
         # Continuous: numeric types
         elif 'int' in str(dtype) or 'float' in str(dtype):
             continuous.append(col)
-    
+
     # Suggest nonnormal based on simple heuristic
     nonnormal_suggestions = []
     for col in continuous:
         # If skewness is high, suggest nonnormal
         if df[col].skew() > 1.0:
             nonnormal_suggestions.append(col)
-    
+
     # Suggest groupby columns (categorical with 2-5 groups)
     groupby_suggestions = [
         col for col in categorical
         if 2 <= df[col].nunique() <= 5
     ]
-    
+
     return {
         "dataset_id": dataset_id,
         "suggestions": {

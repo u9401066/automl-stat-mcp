@@ -10,25 +10,22 @@ Contains:
 """
 import logging
 import math
-from typing import Dict, List, Any, Optional, Literal
+from typing import Any, Dict, Literal, Optional, cast
 
 import numpy as np
-from scipy import stats
-
 from statsmodels.stats.power import (
+    NormalIndPower,
     TTestIndPower,
     TTestPower,
-    NormalIndPower,
 )
 
 from .base import (
     EffectSizeType,
-    TestType,
     PowerAnalysisResult,
-    safe_round,
-    interpret_effect_size,
+    TestType,
     cohens_d_from_means,
     cohens_h_from_proportions,
+    interpret_effect_size,
 )
 
 logger = logging.getLogger(__name__)
@@ -41,13 +38,13 @@ logger = logging.getLogger(__name__)
 class TTestPowerAnalysis:
     """
     Power analysis for t-tests.
-    
+
     Supports:
     - Two-sample independent t-test
     - Paired t-test
     - One-sample t-test
     """
-    
+
     @staticmethod
     def calculate_sample_size(
         effect_size: Optional[float] = None,
@@ -63,7 +60,7 @@ class TTestPowerAnalysis:
     ) -> PowerAnalysisResult:
         """
         Calculate required sample size for t-test.
-        
+
         Args:
             effect_size: Cohen's d (if not provided, calculated from means/sd)
             alpha: Significance level (default 0.05)
@@ -74,7 +71,7 @@ class TTestPowerAnalysis:
             mean1: Mean of group 1 (alternative to effect_size)
             mean2: Mean of group 2 (alternative to effect_size)
             sd: Standard deviation (pooled or common)
-            
+
         Returns:
             PowerAnalysisResult with sample size calculation
         """
@@ -86,10 +83,10 @@ class TTestPowerAnalysis:
                 raise ValueError(
                     "Either effect_size or (mean1, mean2, sd) must be provided"
                 )
-        
+
         # Ensure positive effect size for calculation
         effect_size_abs = abs(effect_size)
-        
+
         # Validate parameters
         if not 0 < alpha < 1:
             raise ValueError("alpha must be between 0 and 1")
@@ -99,7 +96,7 @@ class TTestPowerAnalysis:
             raise ValueError("effect_size must be non-zero")
         if ratio <= 0:
             raise ValueError("ratio must be positive")
-        
+
         # Select appropriate power analysis tool
         if test_type == "two-sample":
             analysis = TTestIndPower()
@@ -114,7 +111,7 @@ class TTestPowerAnalysis:
             n2 = math.ceil(n * ratio)
             total_n = n1 + n2
             test_name = TestType.TTEST_IND.value
-            
+
         elif test_type == "paired":
             analysis = TTestPower()
             n = analysis.solve_power(
@@ -127,7 +124,7 @@ class TTestPowerAnalysis:
             n2 = n1  # Paired test has same n
             total_n = n1  # Total is number of pairs
             test_name = TestType.TTEST_PAIRED.value
-            
+
         elif test_type == "one-sample":
             analysis = TTestPower()
             n = analysis.solve_power(
@@ -140,13 +137,13 @@ class TTestPowerAnalysis:
             n2 = None
             total_n = n1
             test_name = TestType.TTEST_ONE.value
-            
+
         else:
             raise ValueError(f"Unknown test_type: {test_type}")
-        
+
         # Effect size interpretation
         es_interpretation = interpret_effect_size(effect_size_abs, "cohens_d")
-        
+
         # Generate interpretation
         if test_type == "two-sample":
             interpretation = (
@@ -167,7 +164,7 @@ class TTestPowerAnalysis:
                 f"with {power*100:.0f}% power at α = {alpha}, "
                 f"you need {n1} participants."
             )
-        
+
         # Generate recommendations
         recommendations = []
         if es_interpretation == "small":
@@ -185,7 +182,7 @@ class TTestPowerAnalysis:
                 "Large sample requirement. Consider pilot study first "
                 "to verify effect size estimate."
             )
-        
+
         # Sensitivity analysis
         sensitivity = TTestPowerAnalysis._sensitivity_analysis(
             effect_size=effect_size_abs,
@@ -195,7 +192,7 @@ class TTestPowerAnalysis:
             ratio=ratio,
             alternative=alternative,
         )
-        
+
         return PowerAnalysisResult(
             test_type=test_name,
             scenario="sample_size",
@@ -216,7 +213,7 @@ class TTestPowerAnalysis:
             recommendations=recommendations,
             method="statsmodels TTestIndPower/TTestPower",
         )
-    
+
     @staticmethod
     def calculate_power(
         n: int,
@@ -231,7 +228,7 @@ class TTestPowerAnalysis:
     ) -> PowerAnalysisResult:
         """
         Calculate power given sample size.
-        
+
         Args:
             n: Sample size (per group for two-sample, total pairs for paired)
             effect_size: Cohen's d
@@ -240,7 +237,7 @@ class TTestPowerAnalysis:
             ratio: Ratio of n2/n1
             test_type: "two-sample", "paired", or "one-sample"
             mean1, mean2, sd: Alternative to effect_size
-            
+
         Returns:
             PowerAnalysisResult with power calculation
         """
@@ -252,9 +249,9 @@ class TTestPowerAnalysis:
                 raise ValueError(
                     "Either effect_size or (mean1, mean2, sd) must be provided"
                 )
-        
+
         effect_size_abs = abs(effect_size)
-        
+
         # Select appropriate power analysis tool
         if test_type == "two-sample":
             analysis = TTestIndPower()
@@ -268,7 +265,7 @@ class TTestPowerAnalysis:
             n2 = math.ceil(n * ratio)
             total_n = n + n2
             test_name = TestType.TTEST_IND.value
-            
+
         elif test_type == "paired":
             analysis = TTestPower()
             power = analysis.solve_power(
@@ -280,7 +277,7 @@ class TTestPowerAnalysis:
             n2 = n
             total_n = n
             test_name = TestType.TTEST_PAIRED.value
-            
+
         else:  # one-sample
             analysis = TTestPower()
             power = analysis.solve_power(
@@ -292,26 +289,26 @@ class TTestPowerAnalysis:
             n2 = None
             total_n = n
             test_name = TestType.TTEST_ONE.value
-        
+
         es_interpretation = interpret_effect_size(effect_size_abs, "cohens_d")
-        
+
         interpretation = (
             f"With n = {n} {'per group' if test_type == 'two-sample' else ''}, "
             f"effect size d = {effect_size_abs:.3f} ({es_interpretation}), "
             f"and α = {alpha}, the study has {power*100:.1f}% power."
         )
-        
+
         recommendations = []
         if power < 0.80:
             recommendations.append(
-                f"Power is below 80%. Consider increasing sample size to achieve adequate power."
+                "Power is below 80%. Consider increasing sample size to achieve adequate power."
             )
         if power > 0.95:
             recommendations.append(
                 "Power > 95% may indicate over-sampling. "
                 "Resources could be optimized with fewer participants."
             )
-        
+
         return PowerAnalysisResult(
             test_type=test_name,
             scenario="power",
@@ -331,7 +328,7 @@ class TTestPowerAnalysis:
             recommendations=recommendations,
             method="statsmodels TTestIndPower/TTestPower",
         )
-    
+
     @staticmethod
     def _sensitivity_analysis(
         effect_size: float,
@@ -342,12 +339,12 @@ class TTestPowerAnalysis:
         alternative: str = "two-sided",
     ) -> Dict[str, Any]:
         """Generate sensitivity analysis data for power curves"""
-        
+
         if test_type == "two-sample":
             analysis = TTestIndPower()
         else:
             analysis = TTestPower()
-        
+
         # Power curve: varying effect size
         effect_sizes = np.linspace(0.1, 1.0, 10)
         sample_sizes_by_es = []
@@ -371,7 +368,7 @@ class TTestPowerAnalysis:
                 sample_sizes_by_es.append({"effect_size": round(es, 2), "n": math.ceil(n)})
             except Exception:
                 sample_sizes_by_es.append({"effect_size": round(es, 2), "n": None})
-        
+
         # Power curve: varying power levels
         power_levels = [0.70, 0.80, 0.85, 0.90, 0.95]
         sample_sizes_by_power = []
@@ -395,7 +392,7 @@ class TTestPowerAnalysis:
                 sample_sizes_by_power.append({"power": pwr, "n": math.ceil(n)})
             except Exception:
                 sample_sizes_by_power.append({"power": pwr, "n": None})
-        
+
         return {
             "by_effect_size": sample_sizes_by_es,
             "by_power_level": sample_sizes_by_power,
@@ -409,12 +406,12 @@ class TTestPowerAnalysis:
 class ProportionPowerAnalysis:
     """
     Power analysis for proportion tests.
-    
+
     Supports:
     - Two independent proportions (chi-square test)
     - One proportion vs hypothesized value
     """
-    
+
     @staticmethod
     def calculate_sample_size(
         p1: float,
@@ -428,7 +425,7 @@ class ProportionPowerAnalysis:
     ) -> PowerAnalysisResult:
         """
         Calculate required sample size for proportion test.
-        
+
         Args:
             p1: Proportion in group 1 (or observed proportion for one-sample)
             p2: Proportion in group 2 (for two-sample test)
@@ -438,24 +435,24 @@ class ProportionPowerAnalysis:
             ratio: Ratio of n2/n1 for unequal groups
             test_type: "two-sample" or "one-sample"
             p0: Hypothesized proportion (for one-sample test)
-            
+
         Returns:
             PowerAnalysisResult with sample size calculation
         """
         # Validate proportions
         if not 0 < p1 < 1:
             raise ValueError("p1 must be between 0 and 1")
-        
+
         if test_type == "two-sample":
             if p2 is None:
                 raise ValueError("p2 is required for two-sample test")
             if not 0 < p2 < 1:
                 raise ValueError("p2 must be between 0 and 1")
-            
+
             # Calculate Cohen's h
             effect_size = cohens_h_from_proportions(p1, p2)
             effect_size_abs = abs(effect_size)
-            
+
             # Use NormalIndPower for proportion test
             analysis = NormalIndPower()
             n = analysis.solve_power(
@@ -465,29 +462,29 @@ class ProportionPowerAnalysis:
                 ratio=ratio,
                 alternative=alternative,
             )
-            
+
             n1 = math.ceil(n)
             n2 = math.ceil(n * ratio)
             total_n = n1 + n2
             test_name = TestType.PROPORTION_TWO.value
-            
+
             interpretation = (
                 f"To detect a difference between proportions "
                 f"({p1*100:.1f}% vs {p2*100:.1f}%, Cohen's h = {effect_size_abs:.3f}) "
                 f"with {power*100:.0f}% power at α = {alpha}, "
                 f"you need {n1} in group 1 and {n2} in group 2 (total N = {total_n})."
             )
-            
+
         else:  # one-sample
             if p0 is None:
                 raise ValueError("p0 (hypothesized proportion) is required for one-sample test")
             if not 0 < p0 < 1:
                 raise ValueError("p0 must be between 0 and 1")
-            
+
             # Calculate Cohen's h for one-sample
             effect_size = cohens_h_from_proportions(p1, p0)
             effect_size_abs = abs(effect_size)
-            
+
             analysis = NormalIndPower()
             # For one-sample, we use the same approach but interpret differently
             n = analysis.solve_power(
@@ -497,31 +494,31 @@ class ProportionPowerAnalysis:
                 ratio=1.0,
                 alternative=alternative,
             )
-            
+
             n1 = math.ceil(n)
             n2 = None
             total_n = n1
             test_name = TestType.PROPORTION_ONE.value
-            
+
             interpretation = (
                 f"To detect a difference from hypothesized proportion "
                 f"({p1*100:.1f}% vs {p0*100:.1f}%, Cohen's h = {effect_size_abs:.3f}) "
                 f"with {power*100:.0f}% power at α = {alpha}, "
                 f"you need {n1} participants."
             )
-        
+
         es_interpretation = interpret_effect_size(effect_size_abs, "cohens_h")
-        
+
         # Recommendations
         recommendations = []
-        
+
         # Check if proportions are close to 0 or 1 (may need more samples)
         if min(p1, p2 if p2 else p1) < 0.05 or max(p1, p2 if p2 else p1) > 0.95:
             recommendations.append(
                 "Extreme proportions (close to 0% or 100%) may require "
                 "larger samples for stable estimates. Consider exact methods."
             )
-        
+
         # Absolute risk difference
         if test_type == "two-sample" and p2:
             ard = abs(p1 - p2)
@@ -530,13 +527,13 @@ class ProportionPowerAnalysis:
                 f"Absolute risk difference: {ard*100:.1f}%. "
                 f"Number needed to treat (NNT): {nnt:.1f}."
             )
-        
+
         if es_interpretation == "small":
             recommendations.append(
                 "Small effect size requires large sample. "
                 "Verify if this difference is clinically meaningful."
             )
-        
+
         # Sensitivity analysis
         sensitivity = ProportionPowerAnalysis._sensitivity_analysis(
             p1=p1, p2=p2, p0=p0,
@@ -544,7 +541,7 @@ class ProportionPowerAnalysis:
             test_type=test_type, ratio=ratio,
             alternative=alternative,
         )
-        
+
         return PowerAnalysisResult(
             test_type=test_name,
             scenario="sample_size",
@@ -565,7 +562,7 @@ class ProportionPowerAnalysis:
             method="statsmodels NormalIndPower (normal approximation)",
             notes=["Uses arcsine transformation (Cohen's h) for effect size"],
         )
-    
+
     @staticmethod
     def calculate_power(
         n: int,
@@ -579,7 +576,7 @@ class ProportionPowerAnalysis:
     ) -> PowerAnalysisResult:
         """
         Calculate power given sample size for proportion test.
-        
+
         Args:
             n: Sample size per group (for two-sample) or total (for one-sample)
             p1: Proportion in group 1
@@ -589,58 +586,61 @@ class ProportionPowerAnalysis:
             ratio: Ratio of n2/n1
             test_type: "two-sample" or "one-sample"
             p0: Hypothesized proportion (for one-sample)
-            
+
         Returns:
             PowerAnalysisResult with power calculation
         """
         if test_type == "two-sample":
             if p2 is None:
                 raise ValueError("p2 is required for two-sample test")
-            effect_size = cohens_h_from_proportions(p1, p2)
+            p2_val = float(p2)
+            effect_size = cohens_h_from_proportions(p1, p2_val)
             test_name = TestType.PROPORTION_TWO.value
             n2 = math.ceil(n * ratio)
             total_n = n + n2
         else:
             if p0 is None:
                 raise ValueError("p0 is required for one-sample test")
-            effect_size = cohens_h_from_proportions(p1, p0)
+            p0_val = float(p0)
+            effect_size = cohens_h_from_proportions(p1, p0_val)
             test_name = TestType.PROPORTION_ONE.value
             n2 = None
             total_n = n
-        
+
         effect_size_abs = abs(effect_size)
-        
+
         analysis = NormalIndPower()
-        power = analysis.solve_power(
+        power_val = analysis.solve_power(
             effect_size=effect_size_abs,
             nobs1=n,
             alpha=alpha,
             ratio=ratio if test_type == "two-sample" else 1.0,
             alternative=alternative,
         )
-        
+        power = float(power_val)
+
         es_interpretation = interpret_effect_size(effect_size_abs, "cohens_h")
-        
+
         if test_type == "two-sample":
             interpretation = (
-                f"With n = {n} per group, comparing {p1*100:.1f}% vs {p2*100:.1f}% "
+                f"With n = {n} per group, comparing {p1*100:.1f}% vs {p2_val*100:.1f}% "
                 f"(Cohen's h = {effect_size_abs:.3f}), "
                 f"the study has {power*100:.1f}% power at α = {alpha}."
             )
         else:
             interpretation = (
-                f"With n = {n}, comparing {p1*100:.1f}% vs hypothesized {p0*100:.1f}% "
+                f"With n = {n}, comparing {p1*100:.1f}% vs hypothesized {p0_val*100:.1f}% "
                 f"(Cohen's h = {effect_size_abs:.3f}), "
                 f"the study has {power*100:.1f}% power at α = {alpha}."
             )
-        
+
         recommendations = []
         if power < 0.80:
             recommendations.append(
                 f"Power is {power*100:.1f}%, below the recommended 80%. "
                 "Consider increasing sample size."
             )
-        
+
         return PowerAnalysisResult(
             test_type=test_name,
             scenario="power",
@@ -659,7 +659,7 @@ class ProportionPowerAnalysis:
             recommendations=recommendations,
             method="statsmodels NormalIndPower",
         )
-    
+
     @staticmethod
     def _sensitivity_analysis(
         p1: float,
@@ -672,13 +672,17 @@ class ProportionPowerAnalysis:
         alternative: str,
     ) -> Dict[str, Any]:
         """Generate sensitivity analysis for proportion tests"""
-        
+
         analysis = NormalIndPower()
-        
+
         # Sample size at different power levels
         power_levels = [0.70, 0.80, 0.85, 0.90, 0.95]
-        base_es = abs(cohens_h_from_proportions(p1, p2 if p2 else p0))
-        
+        comparison_p = p2 if p2 is not None else p0
+        if comparison_p is None:
+            return {}  # Should not happen given caller logic
+
+        base_es = abs(cohens_h_from_proportions(p1, comparison_p))
+
         sample_sizes_by_power = []
         for pwr in power_levels:
             try:
@@ -692,11 +696,11 @@ class ProportionPowerAnalysis:
                 sample_sizes_by_power.append({"power": pwr, "n": math.ceil(n)})
             except Exception:
                 sample_sizes_by_power.append({"power": pwr, "n": None})
-        
+
         # For two-sample: vary p2 while keeping p1 fixed
         if test_type == "two-sample" and p2:
             p2_variations = []
-            base_diff = p2 - p1
+            p2 - p1
             for delta in [-0.10, -0.05, 0, 0.05, 0.10]:
                 new_p2 = max(0.01, min(0.99, p2 + delta))
                 es = abs(cohens_h_from_proportions(p1, new_p2))
@@ -715,12 +719,12 @@ class ProportionPowerAnalysis:
                     })
                 except Exception:
                     pass
-            
+
             return {
                 "by_power_level": sample_sizes_by_power,
                 "by_p2_variation": p2_variations,
             }
-        
+
         return {
             "by_power_level": sample_sizes_by_power,
         }
@@ -743,7 +747,7 @@ def calculate_ttest_sample_size(
 ) -> Dict[str, Any]:
     """
     Calculate sample size for t-test (MCP-friendly wrapper).
-    
+
     Args:
         effect_size: Cohen's d effect size
         mean1: Mean of group 1 (alternative to effect_size)
@@ -754,7 +758,7 @@ def calculate_ttest_sample_size(
         alternative: "two-sided", "larger", "smaller"
         ratio: n2/n1 ratio for unequal groups
         test_type: "two-sample", "paired", "one-sample"
-        
+
     Returns:
         Dictionary with sample size calculation results
     """
@@ -765,9 +769,9 @@ def calculate_ttest_sample_size(
         sd=sd,
         alpha=alpha,
         power=power,
-        alternative=alternative,
+        alternative=cast(Literal["two-sided", "larger", "smaller"], alternative),
         ratio=ratio,
-        test_type=test_type,
+        test_type=cast(Literal["two-sample", "paired", "one-sample"], test_type),
     )
     return result.to_dict()
 
@@ -785,7 +789,7 @@ def calculate_ttest_power(
 ) -> Dict[str, Any]:
     """
     Calculate power for t-test given sample size (MCP-friendly wrapper).
-    
+
     Args:
         n: Sample size (per group for two-sample)
         effect_size: Cohen's d effect size
@@ -794,7 +798,7 @@ def calculate_ttest_power(
         alternative: "two-sided", "larger", "smaller"
         ratio: n2/n1 ratio
         test_type: "two-sample", "paired", "one-sample"
-        
+
     Returns:
         Dictionary with power calculation results
     """
@@ -805,9 +809,9 @@ def calculate_ttest_power(
         mean2=mean2,
         sd=sd,
         alpha=alpha,
-        alternative=alternative,
+        alternative=cast(Literal["two-sided", "larger", "smaller"], alternative),
         ratio=ratio,
-        test_type=test_type,
+        test_type=cast(Literal["two-sample", "paired", "one-sample"], test_type),
     )
     return result.to_dict()
 
@@ -824,7 +828,7 @@ def calculate_proportion_sample_size(
 ) -> Dict[str, Any]:
     """
     Calculate sample size for proportion test (MCP-friendly wrapper).
-    
+
     Args:
         p1: Proportion in group 1
         p2: Proportion in group 2 (for two-sample test)
@@ -834,7 +838,7 @@ def calculate_proportion_sample_size(
         alternative: "two-sided", "larger", "smaller"
         ratio: n2/n1 ratio
         test_type: "two-sample" or "one-sample"
-        
+
     Returns:
         Dictionary with sample size calculation results
     """
@@ -844,9 +848,9 @@ def calculate_proportion_sample_size(
         p0=p0,
         alpha=alpha,
         power=power,
-        alternative=alternative,
+        alternative=cast(Literal["two-sided", "larger", "smaller"], alternative),
         ratio=ratio,
-        test_type=test_type,
+        test_type=cast(Literal["two-sample", "one-sample"], test_type),
     )
     return result.to_dict()
 
@@ -863,7 +867,7 @@ def calculate_proportion_power(
 ) -> Dict[str, Any]:
     """
     Calculate power for proportion test given sample size (MCP-friendly wrapper).
-    
+
     Args:
         n: Sample size per group
         p1: Proportion in group 1
@@ -873,7 +877,7 @@ def calculate_proportion_power(
         alternative: "two-sided", "larger", "smaller"
         ratio: n2/n1 ratio
         test_type: "two-sample" or "one-sample"
-        
+
     Returns:
         Dictionary with power calculation results
     """
@@ -883,8 +887,8 @@ def calculate_proportion_power(
         p2=p2,
         p0=p0,
         alpha=alpha,
-        alternative=alternative,
+        alternative=cast(Literal["two-sided", "larger", "smaller"], alternative),
         ratio=ratio,
-        test_type=test_type,
+        test_type=cast(Literal["two-sample", "one-sample"], test_type),
     )
     return result.to_dict()

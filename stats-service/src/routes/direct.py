@@ -7,15 +7,15 @@ Refactored to use Domain-Driven Design patterns.
 """
 import base64
 import io
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
-from typing import Optional, List, Any, Dict
+from typing import List, Optional
 
 import pandas as pd
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field
 
 from ..domain.models import StatsJob, StatsJobId, StatsJobType
 from ..domain.services.data_quality import DataQualityAnalyzer, analyze_data_quality
-from ..infrastructure.repositories import get_job_repository, get_job_queue
+from ..infrastructure.repositories import get_job_queue, get_job_repository
 
 router = APIRouter(prefix="/direct", tags=["Direct Analysis"])
 
@@ -23,7 +23,7 @@ router = APIRouter(prefix="/direct", tags=["Direct Analysis"])
 class DirectAnalyzeRequest(BaseModel):
     """Request model for direct analysis (no MinIO storage)"""
     csv_content: str = Field(
-        ..., 
+        ...,
         description="CSV content as string (can be base64 encoded for binary safety)"
     )
     is_base64: bool = Field(
@@ -32,11 +32,11 @@ class DirectAnalyzeRequest(BaseModel):
     )
     user_id: str = Field(..., description="User ID")
     target_column: Optional[str] = Field(
-        None, 
+        None,
         description="Target column for association analysis"
     )
     session_id: Optional[str] = Field(None, description="Session ID")
-    
+
 
 class DirectAnalyzeResponse(BaseModel):
     """Response model for direct analysis"""
@@ -51,26 +51,26 @@ class DirectAnalyzeResponse(BaseModel):
 async def direct_analyze(request: DirectAnalyzeRequest):
     """
     📊 Analyze CSV data directly without storing in MinIO.
-    
+
     This is useful for:
     - One-time analysis of temporary data
     - Quick data exploration without permanent storage
     - Testing and development
-    
+
     The CSV content is passed directly in the request and processed
     without being saved to MinIO. Results are still stored temporarily
     and can be retrieved via the job ID.
-    
+
     Args:
         csv_content: CSV data as string (or base64 if is_base64=True)
         is_base64: Set to True if csv_content is base64 encoded
         user_id: User ID
         target_column: Optional target for association analysis
-        
+
     Returns:
         job_id: Job ID for tracking
         data_preview: Preview of the parsed data
-        
+
     Example:
         ```python
         # Direct string content
@@ -78,7 +78,7 @@ async def direct_analyze(request: DirectAnalyzeRequest):
             csv_content="col1,col2\\n1,2\\n3,4",
             user_id="user1"
         )
-        
+
         # Base64 encoded (for binary safety)
         import base64
         encoded = base64.b64encode(csv_bytes).decode()
@@ -96,23 +96,23 @@ async def direct_analyze(request: DirectAnalyzeRequest):
             csv_str = csv_bytes.decode('utf-8')
         else:
             csv_str = request.csv_content
-        
+
         # 早期驗證：空內容檢查
         if not csv_str or not csv_str.strip():
             raise HTTPException(
                 status_code=400,
                 detail="CSV content is empty"
             )
-        
+
         # Parse CSV to validate and get preview
         df = pd.read_csv(io.StringIO(csv_str))
-        
+
         if df.empty:
             raise HTTPException(
                 status_code=400,
                 detail="CSV content is empty or invalid"
             )
-        
+
         # Create preview
         preview = {
             "rows": len(df),
@@ -121,7 +121,7 @@ async def direct_analyze(request: DirectAnalyzeRequest):
             "sample_rows": df.head(3).to_dict(orient="records"),
             "dtypes": {col: str(dtype) for col, dtype in df.dtypes.items()},
         }
-        
+
         # Create job using domain model
         job = StatsJob(
             id=StatsJobId.generate(),
@@ -134,13 +134,13 @@ async def direct_analyze(request: DirectAnalyzeRequest):
                 "is_direct": True,  # Flag for worker
             },
         )
-        
+
         # Save and enqueue
         job_repo = get_job_repository()
         job_queue = get_job_queue()
         await job_repo.save(job)
         await job_queue.enqueue_job(job)
-        
+
         return DirectAnalyzeResponse(
             job_id=str(job.id),
             job_type=job.job_type.value,
@@ -148,7 +148,7 @@ async def direct_analyze(request: DirectAnalyzeRequest):
             message="Direct analysis job submitted. Use /jobs/{job_id} to check status.",
             data_preview=preview
         )
-        
+
     except HTTPException:
         # 讓 HTTPException 直接通過，不要被 except Exception 捕獲
         raise
@@ -156,12 +156,12 @@ async def direct_analyze(request: DirectAnalyzeRequest):
         raise HTTPException(
             status_code=400,
             detail=f"Invalid CSV format: {str(e)}"
-        )
+        ) from e
     except Exception as e:
         raise HTTPException(
             status_code=500,
             detail=f"Failed to process CSV: {str(e)}"
-        )
+        ) from e
 
 
 class QuickStatsRequest(BaseModel):
@@ -172,7 +172,7 @@ class QuickStatsRequest(BaseModel):
         default=True,
         description="Include data quality warnings and recommendations"
     )
-    
+
 
 class QuickStatsResponse(BaseModel):
     """Quick statistics response"""
@@ -191,10 +191,10 @@ class QuickStatsResponse(BaseModel):
 async def quick_stats(request: QuickStatsRequest):
     """
     ⚡ Get quick statistics synchronously (no job queue).
-    
+
     This returns immediately with basic statistics.
     For full analysis, use /direct/analyze instead.
-    
+
     Returns:
         - Row and column counts
         - Column types and info
@@ -211,9 +211,9 @@ async def quick_stats(request: QuickStatsRequest):
             csv_str = csv_bytes.decode('utf-8')
         else:
             csv_str = request.csv_content
-        
+
         df = pd.read_csv(io.StringIO(csv_str))
-        
+
         # Column info
         column_info = []
         for col in df.columns:
@@ -224,39 +224,39 @@ async def quick_stats(request: QuickStatsRequest):
                 "null": int(df[col].isna().sum()),
                 "unique": int(df[col].nunique()),
             }
-            
+
             # Add sample values
             non_null = df[col].dropna()
             if len(non_null) > 0:
                 info["sample"] = non_null.head(3).tolist()
-            
+
             column_info.append(info)
-        
+
         # Missing summary
         missing_summary = {
             "total_missing": int(df.isna().sum().sum()),
             "columns_with_missing": int((df.isna().sum() > 0).sum()),
             "missing_by_column": df.isna().sum().to_dict(),
         }
-        
+
         # Numeric summary
         numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
         numeric_summary = None
         if numeric_cols:
             desc = df[numeric_cols].describe()
             numeric_summary = desc.to_dict()
-        
+
         # Data quality check
         quality_warnings = None
         transform_suggestions = None
         analysis_readiness = None
-        
+
         if request.include_quality_check:
             quality_report = analyze_data_quality(df)
             quality_warnings = quality_report.get("quality_warnings", [])
             transform_suggestions = quality_report.get("transform_suggestions", [])
             analysis_readiness = quality_report.get("analysis_readiness", {})
-        
+
         return QuickStatsResponse(
             rows=len(df),
             columns=len(df.columns),
@@ -267,12 +267,12 @@ async def quick_stats(request: QuickStatsRequest):
             transform_suggestions=transform_suggestions,
             analysis_readiness=analysis_readiness,
         )
-        
+
     except Exception as e:
         raise HTTPException(
             status_code=400,
             detail=f"Failed to parse CSV: {str(e)}"
-        )
+        ) from e
 
 
 # ============================================================================
@@ -299,7 +299,7 @@ class QualityCheckResponse(BaseModel):
 async def quality_check(request: QualityCheckRequest):
     """
     🔍 資料品質檢查
-    
+
     偵測資料品質問題並提供建議：
     - 全 NaN 欄 (ALL_NAN)
     - 常數欄 (CONSTANT)
@@ -307,7 +307,7 @@ async def quality_check(request: QualityCheckRequest):
     - 高缺失值欄 (HIGH_MISSING)
     - 偏態資料 (SKEWED)
     - 極端值 (OUTLIERS)
-    
+
     Returns:
         quality_warnings: 品質警告列表
         transform_suggestions: Transform 建議
@@ -321,14 +321,14 @@ async def quality_check(request: QualityCheckRequest):
             csv_str = csv_bytes.decode('utf-8')
         else:
             csv_str = request.csv_content
-        
+
         df = pd.read_csv(io.StringIO(csv_str))
-        
+
         # Run quality analysis
         analyzer = DataQualityAnalyzer()
         report = analyzer.analyze(df)
         quick_summary = analyzer.quick_check(df)
-        
+
         return QualityCheckResponse(
             rows=len(df),
             columns=len(df.columns),
@@ -337,9 +337,9 @@ async def quality_check(request: QualityCheckRequest):
             analysis_readiness=report.analysis_readiness.to_dict(),
             summary=quick_summary,
         )
-        
+
     except Exception as e:
         raise HTTPException(
             status_code=400,
             detail=f"Failed to analyze CSV: {str(e)}"
-        )
+        ) from e

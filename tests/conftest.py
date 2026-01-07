@@ -8,9 +8,8 @@ This module provides:
 """
 import asyncio
 import os
-import sys
 from pathlib import Path
-from typing import Any, Dict, Generator, Optional
+from typing import Any, Dict
 
 import httpx
 import pandas as pd
@@ -281,12 +280,12 @@ async def services_available():
     """Check if all services are available."""
     stats_ok = await check_service_health(STATS_API_URL)
     automl_ok = await check_service_health(AUTOML_API_URL)
-    
+
     if not (stats_ok and automl_ok):
         pytest.skip(
             f"Services not available (stats: {stats_ok}, automl: {automl_ok})"
         )
-    
+
     return {"stats": stats_ok, "automl": automl_ok}
 
 
@@ -334,9 +333,9 @@ def generate_test_df():
     ) -> pd.DataFrame:
         import numpy as np
         np.random.seed(seed)
-        
+
         data = {}
-        
+
         # Numeric columns
         for i in range(n_numeric):
             col = f"num_{i}"
@@ -344,7 +343,7 @@ def generate_test_df():
             if missing_rate > 0:
                 mask = np.random.random(n_rows) < missing_rate
                 data[col] = np.where(mask, np.nan, data[col])
-        
+
         # Categorical columns
         categories = ["A", "B", "C", "D"]
         for i in range(n_categorical):
@@ -353,12 +352,12 @@ def generate_test_df():
             if missing_rate > 0:
                 mask = np.random.random(n_rows) < missing_rate
                 data[col] = np.where(mask, None, data[col])
-        
+
         # Target column
         data["target"] = np.random.choice([0, 1], n_rows)
-        
+
         return pd.DataFrame(data)
-    
+
     return _generate
 
 

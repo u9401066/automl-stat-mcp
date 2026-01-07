@@ -12,10 +12,7 @@ Test Coverage:
 - Summary generation
 """
 
-import pytest
-from typing import Dict, List, Any, Optional
-from datetime import datetime
-
+from typing import List, Optional
 
 # ============================================================
 # Isolated implementations (copied from orchestration_tools.py)
@@ -34,7 +31,7 @@ def get_recommendations(row_count: int, columns: list, target_column: str, datas
         "recommendations": {},
         "warnings": [],
     }
-    
+
     # Recommend presets based on size
     if row_count < 1000:
         recommendations["recommendations"]["presets"] = "best_quality"
@@ -53,16 +50,16 @@ def get_recommendations(row_count: int, columns: list, target_column: str, datas
         recommendations["recommendations"]["time_limit"] = 1200
         recommendations["recommendations"]["reason"] = "Very large dataset - faster presets recommended"
         recommendations["warnings"].append("Large dataset may require significant training time")
-    
+
     # Check for few features
     if len(columns) < 3:
         recommendations["warnings"].append("Very few features - model may have limited performance")
-    
+
     # Estimate
     time_limit = recommendations["recommendations"]["time_limit"]
     recommendations["estimated_training_time"] = f"{time_limit // 60}-{time_limit * 2 // 60} minutes"
     recommendations["next_step"] = f"Run: train_and_wait(dataset_id='{dataset.get('dataset_id')}', target_column='{target_column}', problem_type='<your_type>', ...)"
-    
+
     return recommendations
 
 
@@ -84,7 +81,7 @@ def build_training_summary(
 ) -> dict:
     """Build training summary from resources"""
     categorized = categorize_jobs(jobs)
-    
+
     return {
         "summary": {
             "total_datasets": len(datasets),
@@ -142,7 +139,7 @@ def build_train_response(
         "status": status,
         "elapsed_seconds": round(elapsed, 1),
     }
-    
+
     if status == "completed":
         response["model_id"] = model_id
         response["result"] = result
@@ -152,7 +149,7 @@ def build_train_response(
         response["summary"] = f"❌ Training failed: {error_message}"
     else:
         response["summary"] = f"⏱️ Timeout. Use get_job_status('{job_id}') to check later."
-    
+
     return response
 
 
@@ -162,7 +159,7 @@ def build_train_response(
 
 class TestRecommendations:
     """Tests for dataset recommendations"""
-    
+
     def test_small_dataset_best_quality(self):
         """Small dataset recommends best_quality"""
         rec = get_recommendations(
@@ -173,7 +170,7 @@ class TestRecommendations:
         )
         assert rec["recommendations"]["presets"] == "best_quality"
         assert rec["recommendations"]["time_limit"] == 300
-        
+
     def test_medium_dataset_high_quality(self):
         """Medium dataset recommends high_quality"""
         rec = get_recommendations(
@@ -184,7 +181,7 @@ class TestRecommendations:
         )
         assert rec["recommendations"]["presets"] == "high_quality"
         assert rec["recommendations"]["time_limit"] == 600
-        
+
     def test_large_dataset_good_quality(self):
         """Large dataset recommends good_quality"""
         rec = get_recommendations(
@@ -195,7 +192,7 @@ class TestRecommendations:
         )
         assert rec["recommendations"]["presets"] == "good_quality"
         assert rec["recommendations"]["time_limit"] == 900
-        
+
     def test_very_large_dataset_medium_quality(self):
         """Very large dataset recommends medium_quality"""
         rec = get_recommendations(
@@ -207,7 +204,7 @@ class TestRecommendations:
         assert rec["recommendations"]["presets"] == "medium_quality"
         assert rec["recommendations"]["time_limit"] == 1200
         assert len(rec["warnings"]) > 0
-        
+
     def test_few_features_warning(self):
         """Few features generates warning"""
         rec = get_recommendations(
@@ -217,7 +214,7 @@ class TestRecommendations:
             dataset={"name": "test", "dataset_id": "ds_123"}
         )
         assert any("few features" in w for w in rec["warnings"])
-        
+
     def test_dataset_info_structure(self):
         """Dataset info has correct structure"""
         rec = get_recommendations(
@@ -232,7 +229,7 @@ class TestRecommendations:
         assert info["columns"] == 4
         assert info["target"] == "target"
         assert "target" not in info["features"]
-        
+
     def test_next_step_includes_dataset_id(self):
         """Next step includes dataset ID"""
         rec = get_recommendations(
@@ -242,7 +239,7 @@ class TestRecommendations:
             dataset={"name": "test", "dataset_id": "ds_abc123"}
         )
         assert "ds_abc123" in rec["next_step"]
-        
+
     def test_estimated_time_format(self):
         """Estimated time has correct format"""
         rec = get_recommendations(
@@ -256,7 +253,7 @@ class TestRecommendations:
 
 class TestJobCategorization:
     """Tests for job categorization"""
-    
+
     def test_empty_jobs(self):
         """Empty jobs list"""
         cat = categorize_jobs([])
@@ -264,7 +261,7 @@ class TestJobCategorization:
         assert cat["running"] == []
         assert cat["completed"] == []
         assert cat["failed"] == []
-        
+
     def test_categorize_by_status(self):
         """Jobs categorized correctly by status"""
         jobs = [
@@ -279,7 +276,7 @@ class TestJobCategorization:
         assert len(cat["running"]) == 1
         assert len(cat["completed"]) == 2
         assert len(cat["failed"]) == 1
-        
+
     def test_unknown_status(self):
         """Unknown status not categorized"""
         jobs = [
@@ -288,18 +285,18 @@ class TestJobCategorization:
         cat = categorize_jobs(jobs)
         assert cat["pending"] == []
         assert cat["running"] == []
-        
+
 
 class TestTrainingSummary:
     """Tests for training summary generation"""
-    
+
     def test_empty_summary(self):
         """Summary with no resources"""
         summary = build_training_summary([], [], [])
         assert summary["summary"]["total_datasets"] == 0
         assert summary["summary"]["total_jobs"] == 0
         assert summary["summary"]["total_models"] == 0
-        
+
     def test_summary_counts(self):
         """Summary counts resources correctly"""
         datasets = [{"dataset_id": "1"}, {"dataset_id": "2"}]
@@ -308,14 +305,14 @@ class TestTrainingSummary:
             {"job_id": "2", "status": "running"},
         ]
         models = [{"model_id": "1"}]
-        
+
         summary = build_training_summary(datasets, jobs, models)
         assert summary["summary"]["total_datasets"] == 2
         assert summary["summary"]["total_jobs"] == 2
         assert summary["summary"]["total_models"] == 1
         assert summary["summary"]["jobs_completed"] == 1
         assert summary["summary"]["jobs_running"] == 1
-        
+
     def test_active_jobs_only_pending_running(self):
         """Active jobs only includes pending and running"""
         jobs = [
@@ -328,13 +325,13 @@ class TestTrainingSummary:
         assert "1" in active_ids
         assert "2" in active_ids
         assert "3" not in active_ids
-        
+
     def test_recent_models_limit_5(self):
         """Recent models limited to 5"""
         models = [{"model_id": str(i)} for i in range(10)]
         summary = build_training_summary([], [], models)
         assert len(summary["recent_models"]) == 5
-        
+
     def test_tips_present(self):
         """Tips are present"""
         summary = build_training_summary([], [], [])
@@ -344,7 +341,7 @@ class TestTrainingSummary:
 
 class TestTrainResponse:
     """Tests for train response building"""
-    
+
     def test_completed_response(self):
         """Completed training response"""
         response = build_train_response(
@@ -360,7 +357,7 @@ class TestTrainResponse:
         assert response["model_id"] == "model_abc"
         assert "✅" in response["summary"]
         assert "iris" in response["summary"]
-        
+
     def test_failed_response(self):
         """Failed training response"""
         response = build_train_response(
@@ -373,7 +370,7 @@ class TestTrainResponse:
         assert response["status"] == "failed"
         assert response["error_message"] == "Out of memory"
         assert "❌" in response["summary"]
-        
+
     def test_timeout_response(self):
         """Timeout response"""
         response = build_train_response(
@@ -385,7 +382,7 @@ class TestTrainResponse:
         assert response["status"] == "timeout"
         assert "⏱️" in response["summary"]
         assert "job_123" in response["summary"]
-        
+
     def test_elapsed_seconds_rounded(self):
         """Elapsed seconds rounded correctly"""
         response = build_train_response(
@@ -400,17 +397,17 @@ class TestTrainResponse:
 
 class TestElapsedTimeFormat:
     """Tests for elapsed time formatting"""
-    
+
     def test_seconds(self):
         """Format seconds"""
         assert "seconds" in format_elapsed_time(30)
-        
+
     def test_minutes(self):
         """Format minutes"""
         result = format_elapsed_time(120)
         assert "minutes" in result
         assert "2" in result
-        
+
     def test_hours(self):
         """Format hours"""
         result = format_elapsed_time(7200)
@@ -420,7 +417,7 @@ class TestElapsedTimeFormat:
 
 class TestBoundaryConditions:
     """Tests for boundary conditions"""
-    
+
     def test_exactly_1000_rows(self):
         """Exactly 1000 rows is medium"""
         rec = get_recommendations(
@@ -431,7 +428,7 @@ class TestBoundaryConditions:
         )
         # 1000 is NOT < 1000, so should be high_quality
         assert rec["recommendations"]["presets"] == "high_quality"
-        
+
     def test_exactly_10000_rows(self):
         """Exactly 10000 rows is large"""
         rec = get_recommendations(
@@ -441,7 +438,7 @@ class TestBoundaryConditions:
             dataset={"name": "test", "dataset_id": "ds_123"}
         )
         assert rec["recommendations"]["presets"] == "good_quality"
-        
+
     def test_exactly_100000_rows(self):
         """Exactly 100000 rows is very large"""
         rec = get_recommendations(
@@ -467,21 +464,21 @@ def run_tests():
         TestElapsedTimeFormat,
         TestBoundaryConditions,
     ]
-    
+
     print("=" * 60)
     print("Running orchestration_tools isolated tests")
     print("=" * 60)
-    
+
     total_passed = 0
     total_failed = 0
-    
+
     for test_class in test_classes:
         print(f"\n{test_class.__name__}:")
         print("-" * 40)
-        
+
         instance = test_class()
         methods = [m for m in dir(instance) if m.startswith("test_")]
-        
+
         for method_name in methods:
             try:
                 method = getattr(instance, method_name)
@@ -491,14 +488,14 @@ def run_tests():
             except Exception as e:
                 print(f"✗ {method_name}: {e}")
                 total_failed += 1
-    
+
     print("\n" + "=" * 60)
     if total_failed == 0:
         print(f"🎉 ALL ORCHESTRATION TOOLS TESTS PASSED! ({total_passed} tests)")
     else:
         print(f"❌ {total_failed} FAILED, {total_passed} passed")
     print("=" * 60)
-    
+
     return total_failed == 0
 
 

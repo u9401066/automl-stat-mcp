@@ -46,26 +46,26 @@ SAMPLE_DATA = {
 # =============================================================================
 
 async def wait_for_job(
-    client: httpx.AsyncClient, 
-    job_id: str, 
+    client: httpx.AsyncClient,
+    job_id: str,
     timeout: int = 120,
     poll_interval: int = POLL_INTERVAL
 ) -> dict:
     """Wait for a job to complete."""
     start = time.time()
-    
+
     while time.time() - start < timeout:
         resp = await client.get(f"{STATS_API_URL}/jobs/{job_id}")
-        
+
         if resp.status_code == 200:
             data = resp.json()
             status = data.get("status", "unknown")
-            
+
             if status in ["completed", "failed", "error"]:
                 return data
-        
+
         await asyncio.sleep(poll_interval)
-    
+
     return {"status": "timeout", "job_id": job_id}
 
 
@@ -95,7 +95,7 @@ def stats_client():
 @pytest.mark.asyncio
 class TestMinIOResultsFlow:
     """Test MinIO results storage workflow."""
-    
+
     async def test_analysis_returns_result_id(self, stats_client):
         """Test that analysis returns result_id for MinIO storage."""
         async with stats_client as client:
@@ -108,7 +108,7 @@ class TestMinIOResultsFlow:
                     "user_id": TEST_USER_ID,
                 }
             )
-            
+
             if resp.status_code == 200:
                 data = resp.json()
                 # Should have result_id for MinIO storage
@@ -126,7 +126,7 @@ class TestMinIOResultsFlow:
                 f"{STATS_API_URL}/storage/redis/keys",
                 params={"pattern": "stats:result:*"}
             )
-            
+
             if resp.status_code == 200:
                 data = resp.json()
                 # Should return list of keys
@@ -143,7 +143,7 @@ class TestMinIOResultsFlow:
 @pytest.mark.asyncio
 class TestROCVisualizationFlow:
     """Test ROC curve visualization generation."""
-    
+
     async def test_roc_curve_generation(self, stats_client):
         """Test that ROC analysis generates curve figure."""
         async with stats_client as client:
@@ -157,21 +157,21 @@ class TestROCVisualizationFlow:
                     "generate_plot": True,
                 }
             )
-            
+
             if resp.status_code == 200:
                 data = resp.json()
-                
+
                 # Check if visualizations included
                 if "visualizations" in data:
                     viz = data["visualizations"]
                     assert len(viz) > 0, "No visualizations generated"
-                    
+
                     # Check for ROC curve
                     has_roc = any("roc" in v.get("filename", "").lower() for v in viz)
                     assert has_roc, "ROC curve not in visualizations"
             elif resp.status_code == 404:
                 pytest.skip("ROC endpoint not implemented")
-    
+
     async def test_roc_comparison_figures(self, stats_client):
         """Test ROC comparison generates comparison figure."""
         async with stats_client as client:
@@ -185,7 +185,7 @@ class TestROCVisualizationFlow:
                     "user_id": TEST_USER_ID,
                 }
             )
-            
+
             if resp.status_code == 200:
                 data = resp.json()
                 # Should have comparison visualization or result
@@ -202,7 +202,7 @@ class TestROCVisualizationFlow:
 @pytest.mark.asyncio
 class TestSurvivalVisualizationFlow:
     """Test survival analysis visualization generation."""
-    
+
     async def test_kaplan_meier_curve(self, stats_client):
         """Test Kaplan-Meier curve generation."""
         async with stats_client as client:
@@ -216,24 +216,24 @@ class TestSurvivalVisualizationFlow:
                     "generate_plot": True,
                 }
             )
-            
+
             if resp.status_code == 200:
                 data = resp.json()
-                
+
                 if "visualizations" in data:
                     viz = data["visualizations"]
                     # Check for KM curve
                     has_km = any(
-                        "km" in v.get("filename", "").lower() or 
+                        "km" in v.get("filename", "").lower() or
                         "kaplan" in v.get("filename", "").lower() or
-                        "survival" in v.get("filename", "").lower() 
+                        "survival" in v.get("filename", "").lower()
                         for v in viz
                     )
                     if viz:
                         assert has_km or len(viz) > 0
             elif resp.status_code == 404:
                 pytest.skip("Kaplan-Meier endpoint not implemented")
-    
+
     async def test_survival_comparison_curves(self, stats_client):
         """Test survival curves with group comparison."""
         async with stats_client as client:
@@ -247,7 +247,7 @@ class TestSurvivalVisualizationFlow:
                     "user_id": TEST_USER_ID,
                 }
             )
-            
+
             if resp.status_code == 200:
                 data = resp.json()
                 # Should have grouped survival curves or log-rank test
@@ -265,7 +265,7 @@ class TestSurvivalVisualizationFlow:
 @pytest.mark.asyncio
 class TestFullEvaluationFlow:
     """Test full evaluation with MinIO storage."""
-    
+
     async def test_full_roc_eval_returns_result_id(self, stats_client):
         """Test that full ROC evaluation stores results."""
         async with stats_client as client:
@@ -279,15 +279,15 @@ class TestFullEvaluationFlow:
                     "job_name": "viz_test_roc",
                 }
             )
-            
+
             if resp.status_code == 200:
                 data = resp.json()
                 job_id = data.get("job_id")
-                
+
                 if job_id:
                     # Wait for completion
                     result = await wait_for_job(client, job_id)
-                    
+
                     if result["status"] == "completed":
                         # Check for result persistence fields
                         result_data = result.get("result", {})
@@ -305,7 +305,7 @@ class TestFullEvaluationFlow:
 @pytest.mark.asyncio
 class TestVisualizationURLs:
     """Test visualization URL generation."""
-    
+
     async def test_visualization_urls_valid(self, stats_client):
         """Test that visualization URLs are valid MinIO paths."""
         async with stats_client as client:
@@ -319,10 +319,10 @@ class TestVisualizationURLs:
                     "generate_plot": True,
                 }
             )
-            
+
             if resp.status_code == 200:
                 data = resp.json()
-                
+
                 if "visualizations" in data:
                     for viz in data["visualizations"]:
                         if "url" in viz:
@@ -342,7 +342,7 @@ class TestVisualizationURLs:
 @pytest.mark.slow
 class TestCompleteVisualizationWorkflow:
     """Test complete visualization workflow with MinIO."""
-    
+
     async def test_full_analysis_with_minio_results(self, stats_client):
         """
         Complete analysis workflow with MinIO results:
@@ -364,36 +364,36 @@ class TestCompleteVisualizationWorkflow:
                     "job_name": "complete_viz_workflow",
                 }
             )
-            
+
             if resp.status_code != 200:
                 pytest.skip("Full-eval endpoint not available")
-            
+
             data = resp.json()
             job_id = data.get("job_id")
-            
+
             if not job_id:
                 pytest.skip("No job_id returned")
-            
+
             # 2. Wait for completion
             result = await wait_for_job(client, job_id)
-            
+
             if result["status"] != "completed":
                 pytest.skip("Job did not complete")
-            
+
             # 3. Check result structure
             result_data = result.get("result", {})
-            
+
             print(f"Job completed: {job_id}")
-            
+
             if "result_id" in result_data:
                 print(f"✓ Result ID: {result_data['result_id']}")
-            
+
             if "result_path" in result_data:
                 print(f"✓ Result Path: {result_data['result_path']}")
-            
+
             if "visualizations" in result_data:
                 print(f"✓ Visualizations: {len(result_data['visualizations'])} items")
-            
+
             print("✓ Complete visualization workflow passed!")
 
 
@@ -405,13 +405,13 @@ class TestCompleteVisualizationWorkflow:
 @pytest.mark.asyncio
 class TestStorageAPI:
     """Test storage API endpoints."""
-    
+
     async def test_redis_storage_set_get(self, stats_client):
         """Test Redis storage set and get."""
         async with stats_client as client:
             test_key = "test:viz:key"
             test_value = {"test": "data", "value": 123}
-            
+
             # Set value
             resp = await client.post(
                 f"{STATS_API_URL}/storage/redis/set",
@@ -421,21 +421,21 @@ class TestStorageAPI:
                     "ttl": 60,
                 }
             )
-            
+
             if resp.status_code == 404:
                 pytest.skip("Redis storage endpoint not implemented")
-            
+
             if resp.status_code == 200:
                 # Get value
                 resp = await client.get(
                     f"{STATS_API_URL}/storage/redis/get",
                     params={"key": test_key}
                 )
-                
+
                 if resp.status_code == 200:
                     data = resp.json()
                     assert data.get("value") == test_value or data == test_value
-    
+
     async def test_minio_list_objects(self, stats_client):
         """Test MinIO list objects."""
         async with stats_client as client:
@@ -446,10 +446,10 @@ class TestStorageAPI:
                     "prefix": TEST_USER_ID,
                 }
             )
-            
+
             if resp.status_code == 404:
                 pytest.skip("MinIO list endpoint not implemented")
-            
+
             if resp.status_code == 200:
                 data = resp.json()
                 # Should return objects list

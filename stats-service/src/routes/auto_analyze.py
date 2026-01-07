@@ -4,17 +4,18 @@ Stats Service - Auto Analyze Routes
 Routes for intelligent automatic statistical analysis.
 Refactored to use DDD Use Cases.
 """
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
 from typing import Optional
 
-from ..application.use_cases import (
-    SubmitAutoAnalyzeUseCase,
-    DatasetNotFoundError,
-)
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field
+
 from ..application.dto import SubmitAutoAnalyzeRequest as SubmitAutoAnalyzeDTO
+from ..application.use_cases import (
+    DatasetNotFoundError,
+    SubmitAutoAnalyzeUseCase,
+)
 from ..infrastructure.redis_dataset_store import redis_dataset_store
-from ..infrastructure.repositories import get_job_repository, get_job_queue
+from ..infrastructure.repositories import get_job_queue, get_job_repository
 
 router = APIRouter(prefix="/auto-analyze", tags=["Auto Analyze"])
 
@@ -25,10 +26,10 @@ class AutoAnalyzeRequest(BaseModel):
     user_id: str = Field(..., description="User ID for isolation")
     session_id: Optional[str] = Field(None, description="Optional session ID")
     target_column: Optional[str] = Field(
-        None, 
+        None,
         description="Target column for association analysis (optional). If provided, will analyze relationships between features and target."
     )
-    
+
 
 class AutoAnalyzeResponse(BaseModel):
     """Response model for auto-analyze job submission"""
@@ -51,60 +52,60 @@ def _get_submit_use_case() -> SubmitAutoAnalyzeUseCase:
 async def submit_auto_analyze_job(request: AutoAnalyzeRequest):
     """
     🧠 Submit an intelligent auto-analysis job.
-    
+
     This automatically performs comprehensive statistical analysis:
-    
+
     1. **Data Quality Check**
        - Missing values analysis (count, pattern)
        - Outlier detection (IQR, Z-score)
        - Duplicate row detection
-    
+
     2. **Variable Type Inference**
        - Numeric (continuous/discrete)
        - Categorical (nominal/ordinal)
        - Datetime, ID columns (auto-excluded)
-    
+
     3. **Descriptive Statistics**
        - Numeric: mean, std, median, IQR, skewness, kurtosis
        - Categorical: frequency, mode, top values
-    
+
     4. **Hypothesis Testing**
        - Normality test (Shapiro-Wilk/D'Agostino)
        - Auto-selects parametric vs non-parametric tests
-    
+
     5. **Association Analysis** (if target_column provided)
        - Numeric vs Numeric: Pearson/Spearman correlation
        - Categorical vs Categorical: Chi-square + Cramér's V
        - Numeric vs Categorical: t-test/ANOVA/Mann-Whitney/Kruskal-Wallis
-    
+
     6. **Recommendations**
        - Data cleaning suggestions
        - Feature engineering ideas
        - Suitable ML model recommendations
-    
+
     Args:
         dataset_id: ID of dataset to analyze
         user_id: User ID
         target_column: Optional target for association analysis
-    
+
     Returns:
         job_id for tracking progress
-    
+
     Example:
         ```
         # Basic analysis
         submit_auto_analyze(dataset_id="abc123", user_id="user1")
-        
+
         # With target column for ML prep
         submit_auto_analyze(
-            dataset_id="abc123", 
+            dataset_id="abc123",
             user_id="user1",
             target_column="price"  # Will analyze what features predict price
         )
         ```
     """
     use_case = _get_submit_use_case()
-    
+
     try:
         result = await use_case.execute(
             SubmitAutoAnalyzeDTO(
@@ -114,23 +115,23 @@ async def submit_auto_analyze_job(request: AutoAnalyzeRequest):
                 target_column=request.target_column,
             )
         )
-        
+
         return AutoAnalyzeResponse(
             job_id=result.job_id,
             job_type=result.job_type,
             status=result.status,
             message=result.message,
         )
-        
+
     except DatasetNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e)) from e
 
 
 @router.get("/capabilities")
 async def get_capabilities():
     """
     Get the capabilities of the auto-analyze engine.
-    
+
     Returns a description of all automatic analyses performed.
     """
     return {

@@ -11,8 +11,6 @@ Requires: Services running (docker compose up)
 """
 import asyncio
 import base64
-import json
-from io import StringIO
 from typing import Any, Dict
 
 import httpx
@@ -54,25 +52,25 @@ async def wait_for_job(
 ) -> Dict[str, Any]:
     """Wait for a job to complete and return result."""
     log = logger.bind(job_id=job_id)
-    
+
     for i in range(int(max_wait / poll_interval)):
         resp = await client.get(f"/jobs/{job_id}")
         if resp.status_code != 200:
             log.error("job_status_failed", status_code=resp.status_code)
             raise Exception(f"Failed to get job status: {resp.text}")
-        
+
         data = resp.json()
         status = data.get("status")
         log.debug("job_poll", attempt=i+1, status=status)
-        
+
         if status == "completed":
             return data
         elif status == "failed":
             log.error("job_failed", error=data.get("error"))
             raise Exception(f"Job failed: {data.get('error')}")
-        
+
         await asyncio.sleep(poll_interval)
-    
+
     raise TimeoutError(f"Job {job_id} did not complete within {max_wait}s")
 
 
@@ -93,7 +91,7 @@ class TestPathResolutionChain:
     ):
         """Test that container paths (/data/sample_data/...) are accepted."""
         test_logger.info("test_start", test="container_path_accepted")
-        
+
         resp = await stats_client.post(
             "/direct/quick-stats",
             json={
@@ -101,9 +99,9 @@ class TestPathResolutionChain:
                 "user_id": "test_user",
             }
         )
-        
+
         test_logger.info("response_received", status=resp.status_code)
-        
+
         # Should succeed or return specific error about file not found
         # (if stats-service doesn't support csv_path)
         if resp.status_code == 422:
@@ -121,7 +119,7 @@ class TestPathResolutionChain:
     ):
         """Test that relative paths are resolved correctly."""
         test_logger.info("test_start", test="relative_path_resolution")
-        
+
         # Test with just filename (should resolve to /data/sample_data/)
         resp = await stats_client.post(
             "/direct/quick-stats",
@@ -130,7 +128,7 @@ class TestPathResolutionChain:
                 "user_id": "test_user",
             }
         )
-        
+
         test_logger.info("response_received", status=resp.status_code)
         # Document the behavior regardless of success/failure
         assert resp.status_code in [200, 400, 404, 422]
@@ -143,7 +141,7 @@ class TestPathResolutionChain:
     ):
         """Test that host paths (/home/...) are rejected or handled."""
         test_logger.info("test_start", test="host_path_rejected")
-        
+
         resp = await stats_client.post(
             "/direct/quick-stats",
             json={
@@ -151,9 +149,9 @@ class TestPathResolutionChain:
                 "user_id": "test_user",
             }
         )
-        
+
         test_logger.info("response_received", status=resp.status_code)
-        
+
         # Host paths should fail or be converted
         # Document actual behavior
         if resp.status_code == 200:
@@ -181,12 +179,12 @@ class TestDataFormatPreservation:
     ):
         """Test CSV content is preserved when sent and analyzed."""
         test_logger.info("test_start", test="csv_content_roundtrip")
-        
+
         original_csv = df_to_csv_content(iris_df)
         original_shape = iris_df.shape
-        
+
         test_logger.info("original_data", shape=original_shape, columns=list(iris_df.columns))
-        
+
         resp = await stats_client.post(
             "/direct/quick-stats",
             json={
@@ -194,11 +192,11 @@ class TestDataFormatPreservation:
                 "user_id": "test_user",
             }
         )
-        
+
         if resp.status_code == 200:
             data = resp.json()
             test_logger.info("analysis_result", keys=list(data.keys()))
-            
+
             # Verify row count matches
             if "n_rows" in data:
                 assert data["n_rows"] == original_shape[0], \
@@ -218,10 +216,10 @@ class TestDataFormatPreservation:
     ):
         """Test base64-encoded data is correctly decoded."""
         test_logger.info("test_start", test="base64_encoding")
-        
+
         base64_content = df_to_base64(iris_df)
         test_logger.info("encoded_data", length=len(base64_content))
-        
+
         resp = await stats_client.post(
             "/direct/quick-stats",
             json={
@@ -230,7 +228,7 @@ class TestDataFormatPreservation:
                 "user_id": "test_user",
             }
         )
-        
+
         if resp.status_code == 200:
             data = resp.json()
             test_logger.info("decode_success", n_rows=data.get("n_rows"))
@@ -245,7 +243,7 @@ class TestDataFormatPreservation:
     ):
         """Test that special characters in column names are handled."""
         test_logger.info("test_start", test="special_characters")
-        
+
         # Create DataFrame with special characters
         df = pd.DataFrame({
             "Column With Spaces": [1, 2, 3],
@@ -254,10 +252,10 @@ class TestDataFormatPreservation:
             "column/with/slash": [10, 11, 12],
             "column.with.dot": [13, 14, 15],
         })
-        
+
         csv_content = df_to_csv_content(df)
         test_logger.info("test_data", columns=list(df.columns))
-        
+
         resp = await stats_client.post(
             "/direct/quick-stats",
             json={
@@ -265,7 +263,7 @@ class TestDataFormatPreservation:
                 "user_id": "test_user",
             }
         )
-        
+
         if resp.status_code == 200:
             data = resp.json()
             test_logger.info("special_chars_handled", result_keys=list(data.keys()))
@@ -285,11 +283,11 @@ class TestDataFormatPreservation:
     ):
         """Test that missing values are correctly preserved and reported."""
         test_logger.info("test_start", test="missing_values")
-        
+
         # Titanic has known missing values
         original_missing = titanic_df.isnull().sum().sum()
         test_logger.info("original_missing", total_missing=int(original_missing))
-        
+
         resp = await stats_client.post(
             "/direct/quick-stats",
             json={
@@ -297,7 +295,7 @@ class TestDataFormatPreservation:
                 "user_id": "test_user",
             }
         )
-        
+
         if resp.status_code == 200:
             data = resp.json()
             test_logger.info("missing_analysis", result=data.get("missing_summary"))
@@ -321,7 +319,7 @@ class TestResultStorageRetrieval:
     ):
         """Test that job results can be retrieved after completion."""
         test_logger.info("test_start", test="job_result_retrievable")
-        
+
         # Submit a job
         resp = await stats_client.post(
             "/direct/analyze",
@@ -330,21 +328,21 @@ class TestResultStorageRetrieval:
                 "user_id": "test_user",
             }
         )
-        
+
         if resp.status_code != 200:
             test_logger.warning("submit_failed", status=resp.status_code)
             pytest.skip("Direct analyze endpoint not available")
             return
-        
+
         data = resp.json()
         job_id = data.get("job_id")
-        
+
         if not job_id:
             test_logger.info("sync_result", note="Got immediate result, no job_id")
             return
-        
+
         test_logger.info("job_submitted", job_id=job_id)
-        
+
         # Wait for completion
         try:
             result = await wait_for_job(stats_client, job_id)
@@ -362,7 +360,7 @@ class TestResultStorageRetrieval:
     ):
         """Test that result IDs are consistent across queries."""
         test_logger.info("test_start", test="result_id_consistent")
-        
+
         # Submit analysis
         resp = await stats_client.post(
             "/direct/analyze",
@@ -371,14 +369,14 @@ class TestResultStorageRetrieval:
                 "user_id": "test_user",
             }
         )
-        
+
         if resp.status_code != 200:
             pytest.skip("Endpoint not available")
             return
-        
+
         data = resp.json()
         result_id = data.get("result_id") or data.get("job_id")
-        
+
         if result_id:
             # Query result multiple times
             for i in range(3):
@@ -411,7 +409,7 @@ class TestConcurrentOperations:
     ):
         """Test that concurrent analyses don't mix results."""
         test_logger.info("test_start", test="concurrent_isolation")
-        
+
         async def submit_analysis(df: pd.DataFrame, user_id: str) -> Dict:
             resp = await stats_client.post(
                 "/direct/quick-stats",
@@ -425,16 +423,16 @@ class TestConcurrentOperations:
                 "status": resp.status_code,
                 "data": resp.json() if resp.status_code == 200 else None,
             }
-        
+
         # Submit concurrently with different users and data
         tasks = [
             submit_analysis(iris_df, "user_A"),
             submit_analysis(titanic_df, "user_B"),
             submit_analysis(iris_df, "user_C"),
         ]
-        
+
         results = await asyncio.gather(*tasks, return_exceptions=True)
-        
+
         for r in results:
             if isinstance(r, Exception):
                 test_logger.error("concurrent_error", error=str(r))
@@ -445,18 +443,18 @@ class TestConcurrentOperations:
                     status=r["status"],
                     n_rows=r["data"].get("n_rows") if r["data"] else None,
                 )
-        
+
         # Verify isolation - check row counts match expected
         for r in results:
             if isinstance(r, dict) and r["data"]:
                 user = r["user_id"]
                 n_rows = r["data"].get("n_rows")
-                
+
                 if user in ["user_A", "user_C"]:
                     expected = len(iris_df)
                 else:
                     expected = len(titanic_df)
-                
+
                 if n_rows:
                     assert n_rows == expected, \
                         f"User {user} got wrong data: {n_rows} vs {expected}"
@@ -479,14 +477,14 @@ class TestDataTypeHandling:
     ):
         """Test that numeric types (int, float) are preserved."""
         test_logger.info("test_start", test="numeric_types")
-        
+
         df = pd.DataFrame({
             "int_col": [1, 2, 3, 4, 5],
             "float_col": [1.1, 2.2, 3.3, 4.4, 5.5],
             "large_int": [10**10, 10**11, 10**12, 10**13, 10**14],
             "small_float": [1e-10, 1e-11, 1e-12, 1e-13, 1e-14],
         })
-        
+
         resp = await stats_client.post(
             "/direct/quick-stats",
             json={
@@ -494,9 +492,9 @@ class TestDataTypeHandling:
                 "user_id": "test_user",
             }
         )
-        
+
         test_logger.info("numeric_test", status=resp.status_code)
-        
+
         if resp.status_code == 200:
             data = resp.json()
             test_logger.info("numeric_result", summary=data.get("summary"))
@@ -509,13 +507,13 @@ class TestDataTypeHandling:
     ):
         """Test boolean values are handled correctly."""
         test_logger.info("test_start", test="boolean_handling")
-        
+
         df = pd.DataFrame({
             "bool_col": [True, False, True, False, True],
             "int_bool": [1, 0, 1, 0, 1],
             "str_bool": ["yes", "no", "yes", "no", "yes"],
         })
-        
+
         resp = await stats_client.post(
             "/direct/quick-stats",
             json={
@@ -523,7 +521,7 @@ class TestDataTypeHandling:
                 "user_id": "test_user",
             }
         )
-        
+
         test_logger.info("boolean_test", status=resp.status_code)
 
     async def test_datetime_handling(
@@ -534,13 +532,12 @@ class TestDataTypeHandling:
     ):
         """Test datetime values are handled correctly."""
         test_logger.info("test_start", test="datetime_handling")
-        
-        import datetime
+
         df = pd.DataFrame({
             "date_col": pd.date_range("2024-01-01", periods=5),
             "value": [1, 2, 3, 4, 5],
         })
-        
+
         resp = await stats_client.post(
             "/direct/quick-stats",
             json={
@@ -548,7 +545,7 @@ class TestDataTypeHandling:
                 "user_id": "test_user",
             }
         )
-        
+
         test_logger.info("datetime_test", status=resp.status_code)
 
 
@@ -569,9 +566,9 @@ class TestEdgeCases:
     ):
         """Test handling of empty DataFrame."""
         test_logger.info("test_start", test="empty_dataframe")
-        
+
         df = pd.DataFrame(columns=["a", "b", "c"])
-        
+
         resp = await stats_client.post(
             "/direct/quick-stats",
             json={
@@ -579,7 +576,7 @@ class TestEdgeCases:
                 "user_id": "test_user",
             }
         )
-        
+
         test_logger.info("empty_df_result", status=resp.status_code)
         # Should handle gracefully, not crash
 
@@ -591,9 +588,9 @@ class TestEdgeCases:
     ):
         """Test handling of single-row DataFrame."""
         test_logger.info("test_start", test="single_row")
-        
+
         df = pd.DataFrame({"a": [1], "b": [2], "c": [3]})
-        
+
         resp = await stats_client.post(
             "/direct/quick-stats",
             json={
@@ -601,7 +598,7 @@ class TestEdgeCases:
                 "user_id": "test_user",
             }
         )
-        
+
         test_logger.info("single_row_result", status=resp.status_code)
 
     async def test_single_column(
@@ -612,9 +609,9 @@ class TestEdgeCases:
     ):
         """Test handling of single-column DataFrame."""
         test_logger.info("test_start", test="single_column")
-        
+
         df = pd.DataFrame({"only_column": [1, 2, 3, 4, 5]})
-        
+
         resp = await stats_client.post(
             "/direct/quick-stats",
             json={
@@ -622,7 +619,7 @@ class TestEdgeCases:
                 "user_id": "test_user",
             }
         )
-        
+
         test_logger.info("single_col_result", status=resp.status_code)
 
     async def test_all_missing_column(
@@ -633,13 +630,13 @@ class TestEdgeCases:
     ):
         """Test handling of column with all missing values."""
         test_logger.info("test_start", test="all_missing_column")
-        
+
         import numpy as np
         df = pd.DataFrame({
             "normal": [1, 2, 3, 4, 5],
             "all_missing": [np.nan, np.nan, np.nan, np.nan, np.nan],
         })
-        
+
         resp = await stats_client.post(
             "/direct/quick-stats",
             json={
@@ -647,7 +644,7 @@ class TestEdgeCases:
                 "user_id": "test_user",
             }
         )
-        
+
         test_logger.info("all_missing_result", status=resp.status_code)
 
     async def test_very_long_column_names(
@@ -658,10 +655,10 @@ class TestEdgeCases:
     ):
         """Test handling of very long column names."""
         test_logger.info("test_start", test="long_column_names")
-        
+
         long_name = "a" * 200
         df = pd.DataFrame({long_name: [1, 2, 3]})
-        
+
         resp = await stats_client.post(
             "/direct/quick-stats",
             json={
@@ -669,7 +666,7 @@ class TestEdgeCases:
                 "user_id": "test_user",
             }
         )
-        
+
         test_logger.info("long_name_result", status=resp.status_code)
 
 

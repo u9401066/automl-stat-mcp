@@ -24,10 +24,10 @@ DATASETS_BY_USER_PREFIX = "datasets:user:"
 class RedisDatasetStore:
     """
     Redis-based dataset metadata storage.
-    
+
     Provides shared access to dataset information across services.
     """
-    
+
     def __init__(self):
         self._redis = redis.Redis(
             host=os.environ.get("REDIS_HOST", "localhost"),
@@ -35,39 +35,39 @@ class RedisDatasetStore:
             db=int(os.environ.get("REDIS_DB", "0")),
             decode_responses=True,
         )
-    
+
     def get_dataset(self, dataset_id: str) -> Optional[Dict[str, Any]]:
         """
         Get dataset metadata by ID.
-        
+
         Returns:
             Dataset info dict or None if not found
         """
         key = f"{DATASETS_KEY_PREFIX}{dataset_id}"
         data = self._redis.get(key)
-        
+
         if data:
             return json.loads(data)
         return None
-    
+
     def get_datasets_by_user(
-        self, 
-        user_id: str, 
+        self,
+        user_id: str,
         session_id: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         """
         Get all datasets for a user.
-        
+
         Args:
             user_id: User ID
             session_id: Optional session filter
-            
+
         Returns:
             List of dataset info dicts
         """
         user_key = f"{DATASETS_BY_USER_PREFIX}{user_id}"
         dataset_ids = self._redis.smembers(user_key)
-        
+
         datasets = []
         for dataset_id in dataset_ids:
             dataset = self.get_dataset(dataset_id)
@@ -75,9 +75,9 @@ class RedisDatasetStore:
                 # Filter by session if specified
                 if session_id is None or dataset.get("session_id") == session_id:
                     datasets.append(dataset)
-        
+
         return datasets
-    
+
     def dataset_exists(self, dataset_id: str) -> bool:
         """Check if dataset exists"""
         key = f"{DATASETS_KEY_PREFIX}{dataset_id}"

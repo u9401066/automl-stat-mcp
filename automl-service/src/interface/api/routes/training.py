@@ -4,14 +4,18 @@ FastAPI Router - Training endpoints (Redis Queue based)
 Jobs are submitted to Redis and processed by the worker container.
 """
 from typing import Optional
-from fastapi import APIRouter, HTTPException, Header
 
-from ..schemas import (
-    AutoMLTrainRequest, SpecificTrainRequest, CompareModelsRequest,
-    JobResponse, ErrorResponse,
-)
+from fastapi import APIRouter, Header, HTTPException
+
+from ....domain.models import DatasetId, JobType, ProblemType, TrainingConfig
 from ..dependencies import get_container
-from ....domain.models import DatasetId, ProblemType, TrainingConfig, JobType
+from ..schemas import (
+    AutoMLTrainRequest,
+    CompareModelsRequest,
+    ErrorResponse,
+    JobResponse,
+    SpecificTrainRequest,
+)
 
 router = APIRouter(prefix="/train", tags=["Training"])
 
@@ -28,22 +32,22 @@ async def submit_automl_job(
 ):
     """
     Submit an AutoML training job.
-    
+
     This will automatically search for the best model and hyperparameters.
     Returns a job ID that can be used to track progress.
-    
+
     The job is queued and processed by the AutoGluon worker container.
     """
     container = get_container()
-    
+
     try:
         # 1. Validate dataset exists
         dataset_id = DatasetId.from_string(request.dataset_id)
         dataset = await container.dataset_repo.get_by_id(dataset_id)
-        
+
         if not dataset:
             raise ValueError(f"Dataset not found: {request.dataset_id}")
-        
+
         if not dataset.belongs_to(x_user_id, x_session_id):
             raise PermissionError("Access denied to dataset")
 
@@ -71,7 +75,7 @@ async def submit_automl_job(
             config=config,
             dataset_minio_path=dataset.minio_path,
         )
-        
+
         return JobResponse(
             job_id=str(job.id),
             job_type=job.job_type.value,
@@ -80,11 +84,11 @@ async def submit_automl_job(
             status_message="Queued for processing",
             created_at=job.created_at.isoformat(),
         )
-    
+
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except PermissionError as e:
-        raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=403, detail=str(e)) from e
 
 
 @router.post(
@@ -99,20 +103,20 @@ async def submit_specific_train_job(
 ):
     """
     Submit a training job with specific algorithms.
-    
+
     Use this when you want to train specific model types.
     Available algorithms: GBM, CAT, XGB, RF, XT, KNN, LR, NN_TORCH, FASTAI
     """
     container = get_container()
-    
+
     try:
         # 1. Validate dataset exists
         dataset_id = DatasetId.from_string(request.dataset_id)
         dataset = await container.dataset_repo.get_by_id(dataset_id)
-        
+
         if not dataset:
             raise ValueError(f"Dataset not found: {request.dataset_id}")
-        
+
         if not dataset.belongs_to(x_user_id, x_session_id):
             raise PermissionError("Access denied to dataset")
 
@@ -139,7 +143,7 @@ async def submit_specific_train_job(
             config=config,
             dataset_minio_path=dataset.minio_path,
         )
-        
+
         return JobResponse(
             job_id=str(job.id),
             job_type=job.job_type.value,
@@ -148,11 +152,11 @@ async def submit_specific_train_job(
             status_message="Queued for processing",
             created_at=job.created_at.isoformat(),
         )
-    
+
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except PermissionError as e:
-        raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=403, detail=str(e)) from e
 
 
 @router.post(
@@ -167,24 +171,24 @@ async def submit_compare_job(
 ):
     """
     Submit a job to compare multiple algorithms.
-    
+
     This trains multiple models and returns a leaderboard comparing their performance.
     Requires at least 2 algorithms.
     """
     container = get_container()
-    
+
     try:
         # Validate at least 2 algorithms
         if len(request.algorithms) < 2:
             raise ValueError("Compare requires at least 2 algorithms")
-        
+
         # 1. Validate dataset exists
         dataset_id = DatasetId.from_string(request.dataset_id)
         dataset = await container.dataset_repo.get_by_id(dataset_id)
-        
+
         if not dataset:
             raise ValueError(f"Dataset not found: {request.dataset_id}")
-        
+
         if not dataset.belongs_to(x_user_id, x_session_id):
             raise PermissionError("Access denied to dataset")
 
@@ -211,7 +215,7 @@ async def submit_compare_job(
             config=config,
             dataset_minio_path=dataset.minio_path,
         )
-        
+
         return JobResponse(
             job_id=str(job.id),
             job_type=job.job_type.value,
@@ -220,8 +224,8 @@ async def submit_compare_job(
             status_message="Queued for processing",
             created_at=job.created_at.isoformat(),
         )
-    
+
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except PermissionError as e:
-        raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=403, detail=str(e)) from e

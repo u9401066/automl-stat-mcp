@@ -5,7 +5,7 @@ Data classes and enums for standardized visualization results.
 
 Usage:
     from visualization.schemas import VisualizationResult, VisualizationType
-    
+
     result = VisualizationResult(
         type=VisualizationType.ROC_CURVE,
         url="https://minio.example.com/stats-reports/user123/job456/roc_curve.png",
@@ -15,51 +15,51 @@ Usage:
 """
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional, Dict, Any, List
+from typing import Any, Dict, List, Optional
 
 
 class VisualizationType(str, Enum):
     """Types of visualizations supported by the system."""
-    
+
     # ROC Analysis
     ROC_CURVE = "roc_curve"
     PR_CURVE = "pr_curve"
     CALIBRATION_CURVE = "calibration_curve"
     THRESHOLD_ANALYSIS = "threshold_analysis"
-    
+
     # Survival Analysis
     KAPLAN_MEIER = "kaplan_meier"
     FOREST_PLOT = "forest_plot"
     HAZARD_RATIO_PLOT = "hazard_ratio_plot"
     CUMULATIVE_HAZARD = "cumulative_hazard"
-    
+
     # Group Comparison
     BOXPLOT = "boxplot"
     VIOLIN_PLOT = "violin_plot"
     BAR_CHART = "bar_chart"
     STRIP_PLOT = "strip_plot"
-    
+
     # Correlation & Relationships
     HEATMAP = "heatmap"
     CORRELATION_MATRIX = "correlation_matrix"
     SCATTER_PLOT = "scatter_plot"
-    
+
     # Distribution
     HISTOGRAM = "histogram"
     DENSITY_PLOT = "density_plot"
     QQ_PLOT = "qq_plot"
-    
+
     # EDA / Summary
     MISSING_VALUES = "missing_values"
     FEATURE_IMPORTANCE = "feature_importance"
-    
+
     # AutoML Specific
     MODEL_COMPARISON = "model_comparison"
     SHAP_SUMMARY = "shap_summary"
     SHAP_WATERFALL = "shap_waterfall"
     LEARNING_CURVE = "learning_curve"
     CONFUSION_MATRIX = "confusion_matrix"
-    
+
     # Other
     CUSTOM = "custom"
 
@@ -68,7 +68,7 @@ class VisualizationType(str, Enum):
 class VisualizationResult:
     """
     Standardized visualization result structure.
-    
+
     Attributes:
         type: Type of visualization (enum)
         url: URL to access the image (MinIO presigned or direct)
@@ -87,7 +87,7 @@ class VisualizationResult:
     format: str = "png"
     width: Optional[int] = None
     height: Optional[int] = None
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
@@ -100,7 +100,7 @@ class VisualizationResult:
             "width": self.width,
             "height": self.height,
         }
-    
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "VisualizationResult":
         """Create instance from dictionary."""
@@ -120,7 +120,7 @@ class VisualizationResult:
 class VisualizationBundle:
     """
     Collection of related visualizations from a single analysis.
-    
+
     Attributes:
         job_id: Associated job ID
         user_id: User who created the visualizations
@@ -131,15 +131,15 @@ class VisualizationBundle:
     user_id: str
     visualizations: List[VisualizationResult] = field(default_factory=list)
     created_at: Optional[str] = None
-    
+
     def add(self, visualization: VisualizationResult) -> None:
         """Add a visualization to the bundle."""
         self.visualizations.append(visualization)
-    
+
     def get_by_type(self, viz_type: VisualizationType) -> List[VisualizationResult]:
         """Get all visualizations of a specific type."""
         return [v for v in self.visualizations if v.type == viz_type]
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
@@ -148,7 +148,7 @@ class VisualizationBundle:
             "visualizations": [v.to_dict() for v in self.visualizations],
             "created_at": self.created_at,
         }
-    
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "VisualizationBundle":
         """Create instance from dictionary."""
@@ -168,7 +168,7 @@ class VisualizationBundle:
 class VisualizationConfig:
     """
     Configuration options for generating visualizations.
-    
+
     Attributes:
         dpi: Output resolution (default: 300 for publication)
         format: Output format (png, svg, pdf)
@@ -185,7 +185,7 @@ class VisualizationConfig:
     style: str = "publication"
     transparent: bool = False
     include_title: bool = True
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
         return {
@@ -206,12 +206,12 @@ class VisualizationConfig:
 @dataclass
 class ROCVisualizationResult(VisualizationResult):
     """ROC curve visualization with additional metrics."""
-    
+
     auc: Optional[float] = None
     auc_ci_lower: Optional[float] = None
     auc_ci_upper: Optional[float] = None
     optimal_threshold: Optional[float] = None
-    
+
     def __post_init__(self):
         self.type = VisualizationType.ROC_CURVE
         # Add AUC to metadata
@@ -227,13 +227,13 @@ class ROCVisualizationResult(VisualizationResult):
 @dataclass
 class SurvivalVisualizationResult(VisualizationResult):
     """Survival curve visualization with additional metrics."""
-    
+
     median_survival: Optional[float] = None
     hazard_ratio: Optional[float] = None
     hr_ci_lower: Optional[float] = None
     hr_ci_upper: Optional[float] = None
     p_value: Optional[float] = None
-    
+
     def __post_init__(self):
         self.type = VisualizationType.KAPLAN_MEIER
         # Add metrics to metadata
@@ -251,11 +251,11 @@ class SurvivalVisualizationResult(VisualizationResult):
 @dataclass
 class GroupComparisonVisualizationResult(VisualizationResult):
     """Group comparison visualization with statistical annotation."""
-    
+
     p_value: Optional[float] = None
     effect_size: Optional[float] = None
     test_name: Optional[str] = None
-    
+
     def __post_init__(self):
         # Add metrics to metadata
         self.metadata = self.metadata or {}

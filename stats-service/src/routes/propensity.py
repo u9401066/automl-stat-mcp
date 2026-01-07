@@ -15,14 +15,14 @@ import base64
 import json
 import uuid
 from datetime import datetime
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field, field_validator
-from typing import Optional, List
+from typing import List, Optional
 
 import redis.asyncio as redis
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field, field_validator
 
+from ..config import REDIS_DB, REDIS_HOST, REDIS_PORT, STATS_JOBS_PENDING, STATS_JOBS_PREFIX
 from ..infrastructure.redis_dataset_store import redis_dataset_store
-from ..config import REDIS_HOST, REDIS_PORT, REDIS_DB, STATS_JOBS_PENDING, STATS_JOBS_PREFIX
 
 router = APIRouter(prefix="/propensity", tags=["Propensity Score Analysis"])
 
@@ -33,7 +33,7 @@ router = APIRouter(prefix="/propensity", tags=["Propensity Score Analysis"])
 
 class PropensityEstimateRequest(BaseModel):
     """Request for propensity score estimation
-    
+
     Provide EITHER dataset_id OR csv_content, not both.
     """
     dataset_id: Optional[str] = Field(None, description="Dataset ID (if using pre-uploaded data)")
@@ -44,7 +44,7 @@ class PropensityEstimateRequest(BaseModel):
     covariates: List[str] = Field(..., description="List of covariate columns")
     method: str = Field(default="logistic", description="Estimation method: logistic, gbm, random_forest")
     regularization: float = Field(default=0.0, description="L2 regularization strength")
-    
+
     @field_validator('dataset_id', 'csv_content')
     @classmethod
     def check_data_source(cls, v, info):
@@ -142,17 +142,17 @@ async def _submit_propensity_job(
     is_base64: bool = False,
 ) -> JobResponse:
     """Submit a propensity score analysis job to the queue
-    
+
     Supports two modes:
     1. Dataset mode: dataset_id provided, data loaded from MinIO
     2. Direct mode: csv_content provided, data embedded in job
     """
     if not dataset_id and not csv_content:
         raise HTTPException(status_code=400, detail="Must provide either dataset_id or csv_content")
-    
+
     if dataset_id and csv_content:
         raise HTTPException(status_code=400, detail="Provide either dataset_id or csv_content, not both")
-    
+
     # Verify dataset exists (if using dataset mode)
     minio_path = None
     if dataset_id:
@@ -160,10 +160,10 @@ async def _submit_propensity_job(
         if not dataset:
             raise HTTPException(status_code=404, detail=f"Dataset {dataset_id} not found")
         minio_path = dataset.get("minio_path")
-    
+
     # Create job
     job_id = f"propensity-{uuid.uuid4().hex[:12]}"
-    
+
     # Prepare params for worker
     params = {**config}
     if csv_content:
@@ -171,7 +171,7 @@ async def _submit_propensity_job(
         if is_base64:
             csv_content = base64.b64decode(csv_content).decode('utf-8')
         params["csv_content"] = csv_content
-    
+
     job_data = {
         "job_id": job_id,
         "job_type": job_type,
@@ -182,20 +182,20 @@ async def _submit_propensity_job(
         "status": "pending",
         "created_at": datetime.utcnow().isoformat(),
     }
-    
+
     # Get Redis client
     client = await _get_redis()
-    
+
     # Save job metadata
     await client.set(
         f"{STATS_JOBS_PREFIX}{job_id}",
         json.dumps(job_data),
         ex=86400 * 7  # 7 days TTL
     )
-    
+
     # Queue for processing
     await client.lpush(STATS_JOBS_PENDING, json.dumps(job_data))
-    
+
     return JobResponse(
         job_id=job_id,
         job_type=job_type,
@@ -212,19 +212,19 @@ async def _submit_propensity_job(
 async def submit_propensity_estimate_job(request: PropensityEstimateRequest):
     """
     📊 Submit propensity score estimation job.
-    
+
     Estimates P(Treatment=1 | Covariates) using specified method.
-    
+
     Supports two modes:
     - Dataset mode: Provide dataset_id for pre-uploaded data
     - Direct mode: Provide csv_content inline
-    
+
     Model diagnostics include:
     - Pseudo R² (McFadden's)
     - C-statistic (AUC)
     - Brier score
     - Score overlap between groups
-    
+
     Args:
         dataset_id: Dataset ID (optional, for pre-uploaded data)
         csv_content: CSV data as string (optional, for direct mode)
@@ -232,7 +232,7 @@ async def submit_propensity_estimate_job(request: PropensityEstimateRequest):
         covariates: Variables to include in model
         method: logistic, gbm, or random_forest
         regularization: L2 penalty (for logistic)
-    
+
     Returns:
         job_id for tracking
     """
@@ -242,7 +242,7 @@ async def submit_propensity_estimate_job(request: PropensityEstimateRequest):
         "method": request.method,
         "regularization": request.regularization,
     }
-    
+
     return await _submit_propensity_job(
         job_type="propensity_estimate",
         user_id=request.user_id,
@@ -257,14 +257,14 @@ async def submit_propensity_estimate_job(request: PropensityEstimateRequest):
 async def submit_propensity_match_job(request: PropensityMatchRequest):
     """
     🔗 Submit propensity score matching job.
-    
+
     Creates matched pairs to balance covariate distributions.
-    
+
     Methods:
     - nearest: Greedy nearest neighbor matching
     - optimal: Minimizes total distance (for small datasets)
     - caliper: Nearest within caliper distance
-    
+
     Args:
         dataset_id: Dataset ID (optional, for pre-uploaded data)
         csv_content: CSV data as string (optional, for direct mode)
@@ -274,7 +274,7 @@ async def submit_propensity_match_job(request: PropensityMatchRequest):
         method: nearest, optimal, or caliper
         caliper: Max distance for match
         ratio: Control:Treated ratio
-    
+
     Returns:
         job_id for tracking
     """
@@ -288,7 +288,7 @@ async def submit_propensity_match_job(request: PropensityMatchRequest):
         "replacement": request.replacement,
         "ratio": request.ratio,
     }
-    
+
     return await _submit_propensity_job(
         job_type="propensity_match",
         user_id=request.user_id,
@@ -303,19 +303,19 @@ async def submit_propensity_match_job(request: PropensityMatchRequest):
 async def submit_treatment_effect_job(request: TreatmentEffectRequest):
     """
     📈 Submit treatment effect estimation job.
-    
+
     Estimates causal effect of treatment on outcome.
-    
+
     Estimands:
     - ATE: Average Treatment Effect (population)
     - ATT: Average Treatment Effect on Treated
     - ATU: Average Treatment Effect on Untreated
-    
+
     Methods:
     - ipw: Inverse Probability Weighting
     - matching: PS matching then outcome comparison
     - doubly_robust: IPW + outcome regression
-    
+
     Returns:
         Point estimate, confidence interval, p-value
     """
@@ -327,7 +327,7 @@ async def submit_treatment_effect_job(request: TreatmentEffectRequest):
         "method": request.method,
         "target": request.estimand.lower(),  # Worker uses 'target' not 'estimand'
     }
-    
+
     return await _submit_propensity_job(
         job_type="propensity_effect",
         user_id=request.user_id,
@@ -342,16 +342,16 @@ async def submit_treatment_effect_job(request: TreatmentEffectRequest):
 async def submit_balance_check_job(request: BalanceCheckRequest):
     """
     ⚖️ Submit covariate balance assessment job.
-    
+
     Checks if covariates are balanced between treatment groups
     after matching or weighting.
-    
+
     Metrics:
     - Standardized Mean Difference (SMD)
     - Variance Ratio
     - KS statistic (for distributions)
     - Rubin's rules compliance
-    
+
     Returns:
         Balance table with before/after comparison
     """
@@ -362,7 +362,7 @@ async def submit_balance_check_job(request: BalanceCheckRequest):
         "matched_column": request.matched_column,
         "smd_threshold": request.threshold,
     }
-    
+
     return await _submit_propensity_job(
         job_type="propensity_balance",
         user_id=request.user_id,
@@ -377,14 +377,14 @@ async def submit_balance_check_job(request: BalanceCheckRequest):
 async def submit_full_propensity_analysis(request: PropensityFullRequest):
     """
     🚀 Submit complete propensity score analysis workflow.
-    
+
     Performs end-to-end causal inference:
     1. Estimate propensity scores
     2. Match or weight observations
     3. Check covariate balance
     4. Estimate treatment effect
     5. Sensitivity analysis
-    
+
     Returns comprehensive report with all diagnostics.
     """
     config = {
@@ -394,7 +394,7 @@ async def submit_full_propensity_analysis(request: PropensityFullRequest):
         "method": request.method,
         "caliper": request.caliper,
     }
-    
+
     return await _submit_propensity_job(
         job_type="propensity_full",
         user_id=request.user_id,

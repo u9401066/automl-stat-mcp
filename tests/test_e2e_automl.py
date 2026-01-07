@@ -22,7 +22,6 @@ Usage:
 import asyncio
 import os
 import time
-from pathlib import Path
 from typing import Optional
 
 import httpx
@@ -54,31 +53,31 @@ SAMPLE_DATA = {
 # =============================================================================
 
 async def wait_for_training_job(
-    client: httpx.AsyncClient, 
-    job_id: str, 
+    client: httpx.AsyncClient,
+    job_id: str,
     timeout: int = 300,
     poll_interval: int = POLL_INTERVAL
 ) -> dict:
     """Wait for a training job to complete."""
     start = time.time()
-    
+
     while time.time() - start < timeout:
         resp = await client.get(f"{AUTOML_API_URL}/jobs/{job_id}")
-        
+
         if resp.status_code == 200:
             data = resp.json()
             status = data.get("status", "unknown")
-            
+
             if status in ["completed", "failed", "error"]:
                 return data
-            
+
             # Print progress
             progress = data.get("progress", 0)
             if progress > 0:
                 print(f"Training progress: {progress:.1%}")
-        
+
         await asyncio.sleep(poll_interval)
-    
+
     return {"status": "timeout", "job_id": job_id}
 
 
@@ -96,11 +95,11 @@ async def register_dataset(
             "minio_path": csv_path,  # Local path will be used
         }
     )
-    
+
     if resp.status_code == 200:
         data = resp.json()
         return data.get("dataset_id")
-    
+
     return None
 
 
@@ -140,18 +139,18 @@ async def registered_iris_dataset():
 @pytest.mark.asyncio
 class TestAutoMLServiceHealth:
     """Test AutoML service health."""
-    
+
     async def test_health_check(self, automl_client):
         """Test health endpoint."""
         async with automl_client as client:
             resp = await client.get(f"{AUTOML_API_URL}/health")
             assert resp.status_code == 200
-    
+
     async def test_list_algorithms(self, automl_client):
         """Test listing available algorithms."""
         async with automl_client as client:
             resp = await client.get(f"{AUTOML_API_URL}/algorithms")
-            
+
             if resp.status_code == 200:
                 data = resp.json()
                 assert isinstance(data, list) or "algorithms" in data
@@ -167,7 +166,7 @@ class TestAutoMLServiceHealth:
 @pytest.mark.asyncio
 class TestDatasetRegistration:
     """Test dataset registration workflow."""
-    
+
     async def test_register_dataset(self, automl_client):
         """Test registering a dataset."""
         async with automl_client as client:
@@ -179,7 +178,7 @@ class TestDatasetRegistration:
                     "minio_path": SAMPLE_DATA["iris"],
                 }
             )
-            
+
             if resp.status_code == 200:
                 data = resp.json()
                 assert "dataset_id" in data
@@ -198,7 +197,7 @@ class TestDatasetRegistration:
                 if resp.status_code == 200:
                     data = resp.json()
                     assert "dataset_id" in data or "job_id" in data
-    
+
     async def test_list_datasets(self, automl_client):
         """Test listing user datasets."""
         async with automl_client as client:
@@ -206,7 +205,7 @@ class TestDatasetRegistration:
                 f"{AUTOML_API_URL}/datasets",
                 params={"user_id": TEST_USER_ID}
             )
-            
+
             if resp.status_code == 200:
                 data = resp.json()
                 assert isinstance(data, list) or "datasets" in data
@@ -220,7 +219,7 @@ class TestDatasetRegistration:
 @pytest.mark.asyncio
 class TestQuickTraining:
     """Test quick training (fast, for CI)."""
-    
+
     async def test_quick_train_classification(self, automl_client):
         """Test quick training for classification."""
         async with automl_client as client:
@@ -235,21 +234,21 @@ class TestQuickTraining:
                     "time_limit": 30,  # 30 seconds only
                 }
             )
-            
+
             if resp.status_code == 200:
                 data = resp.json()
                 assert "job_id" in data
-                
+
                 # Wait for quick training
                 result = await wait_for_training_job(
                     client, data["job_id"], timeout=QUICK_TIMEOUT
                 )
-                
+
                 if result["status"] == "completed":
                     assert "model_id" in result or "leaderboard" in result
             elif resp.status_code == 404:
                 pytest.skip("Quick train endpoint not implemented")
-    
+
     async def test_quick_train_binary(self, automl_client):
         """Test quick training for binary classification."""
         async with automl_client as client:
@@ -264,7 +263,7 @@ class TestQuickTraining:
                     "time_limit": 30,
                 }
             )
-            
+
             if resp.status_code == 200:
                 data = resp.json()
                 assert "job_id" in data
@@ -281,12 +280,12 @@ class TestQuickTraining:
 @pytest.mark.slow
 class TestAutoMLTraining:
     """Test full AutoML training (slower, comprehensive)."""
-    
+
     async def test_automl_train_iris(self, automl_client, registered_iris_dataset):
         """Test full AutoML training on Iris."""
         if registered_iris_dataset is None:
             pytest.skip("Dataset registration failed")
-        
+
         async with automl_client as client:
             resp = await client.post(
                 f"{AUTOML_API_URL}/train/automl",
@@ -298,20 +297,20 @@ class TestAutoMLTraining:
                     "user_id": TEST_USER_ID,
                 }
             )
-            
+
             if resp.status_code == 200:
                 data = resp.json()
                 assert "job_id" in data
-                
+
                 # Wait for training
                 result = await wait_for_training_job(
                     client, data["job_id"], timeout=TIMEOUT
                 )
-                
+
                 assert result["status"] in ["completed", "timeout"]
             elif resp.status_code == 404:
                 pytest.skip("AutoML train endpoint not implemented")
-    
+
     async def test_automl_train_regression(self, automl_client):
         """Test AutoML training for regression."""
         async with automl_client as client:
@@ -325,7 +324,7 @@ class TestAutoMLTraining:
                     "user_id": TEST_USER_ID,
                 }
             )
-            
+
             if resp.status_code == 200:
                 data = resp.json()
                 assert "job_id" in data
@@ -341,7 +340,7 @@ class TestAutoMLTraining:
 @pytest.mark.asyncio
 class TestSpecificAlgorithmTraining:
     """Test training with specific algorithms."""
-    
+
     async def test_train_random_forest(self, automl_client):
         """Train Random Forest specifically."""
         async with automl_client as client:
@@ -355,13 +354,13 @@ class TestSpecificAlgorithmTraining:
                     "user_id": TEST_USER_ID,
                 }
             )
-            
+
             if resp.status_code == 200:
                 data = resp.json()
                 assert "job_id" in data
             elif resp.status_code == 404:
                 pytest.skip("Specific train endpoint not implemented")
-    
+
     async def test_train_xgboost(self, automl_client):
         """Train XGBoost specifically."""
         async with automl_client as client:
@@ -375,13 +374,13 @@ class TestSpecificAlgorithmTraining:
                     "user_id": TEST_USER_ID,
                 }
             )
-            
+
             if resp.status_code == 200:
                 data = resp.json()
                 assert "job_id" in data
             elif resp.status_code == 404:
                 pytest.skip("Specific train endpoint not implemented")
-    
+
     async def test_train_lightgbm(self, automl_client):
         """Train LightGBM specifically."""
         async with automl_client as client:
@@ -395,7 +394,7 @@ class TestSpecificAlgorithmTraining:
                     "user_id": TEST_USER_ID,
                 }
             )
-            
+
             if resp.status_code == 200:
                 data = resp.json()
                 assert "job_id" in data
@@ -412,7 +411,7 @@ class TestSpecificAlgorithmTraining:
 @pytest.mark.slow
 class TestAlgorithmComparison:
     """Test comparing multiple algorithms."""
-    
+
     async def test_compare_algorithms(self, automl_client):
         """Compare multiple algorithms on same dataset."""
         async with automl_client as client:
@@ -426,16 +425,16 @@ class TestAlgorithmComparison:
                     "user_id": TEST_USER_ID,
                 }
             )
-            
+
             if resp.status_code == 200:
                 data = resp.json()
                 assert "job_id" in data
-                
+
                 # Wait for comparison
                 result = await wait_for_training_job(
                     client, data["job_id"], timeout=TIMEOUT
                 )
-                
+
                 if result["status"] == "completed":
                     # Should have leaderboard
                     assert "leaderboard" in result or "model_id" in result
@@ -451,7 +450,7 @@ class TestAlgorithmComparison:
 @pytest.mark.asyncio
 class TestModelManagement:
     """Test model management operations."""
-    
+
     async def test_list_models(self, automl_client):
         """Test listing trained models."""
         async with automl_client as client:
@@ -459,11 +458,11 @@ class TestModelManagement:
                 f"{AUTOML_API_URL}/models",
                 params={"user_id": TEST_USER_ID}
             )
-            
+
             if resp.status_code == 200:
                 data = resp.json()
                 assert isinstance(data, list) or "models" in data
-    
+
     async def test_get_leaderboard(self, automl_client):
         """Test getting model leaderboard."""
         # First, need a model_id from a training job
@@ -474,21 +473,21 @@ class TestModelManagement:
                 f"{AUTOML_API_URL}/models",
                 params={"user_id": TEST_USER_ID}
             )
-            
+
             if resp.status_code == 200:
                 models = resp.json()
                 if isinstance(models, list) and len(models) > 0:
                     model_id = models[0].get("model_id") or models[0].get("id")
-                    
+
                     # Get leaderboard
                     resp = await client.get(
                         f"{AUTOML_API_URL}/models/{model_id}/leaderboard"
                     )
-                    
+
                     if resp.status_code == 200:
                         data = resp.json()
                         assert "leaderboard" in data or isinstance(data, list)
-    
+
     async def test_get_feature_importance(self, automl_client):
         """Test getting feature importance."""
         async with automl_client as client:
@@ -497,17 +496,17 @@ class TestModelManagement:
                 f"{AUTOML_API_URL}/models",
                 params={"user_id": TEST_USER_ID}
             )
-            
+
             if resp.status_code == 200:
                 models = resp.json()
                 if isinstance(models, list) and len(models) > 0:
                     model_id = models[0].get("model_id") or models[0].get("id")
-                    
+
                     # Get feature importance
                     resp = await client.get(
                         f"{AUTOML_API_URL}/models/{model_id}/importance"
                     )
-                    
+
                     if resp.status_code == 200:
                         data = resp.json()
                         assert "importance" in data or "feature_importance" in data
@@ -521,7 +520,7 @@ class TestModelManagement:
 @pytest.mark.asyncio
 class TestPrediction:
     """Test model prediction."""
-    
+
     async def test_predict_single(self, automl_client):
         """Test single prediction."""
         # Need a trained model first
@@ -532,29 +531,29 @@ class TestPrediction:
                 f"{AUTOML_API_URL}/models",
                 params={"user_id": TEST_USER_ID}
             )
-            
+
             if resp.status_code == 200:
                 models = resp.json()
                 if isinstance(models, list) and len(models) > 0:
                     model_id = models[0].get("model_id") or models[0].get("id")
-                    
+
                     # Make prediction
                     resp = await client.post(
                         f"{AUTOML_API_URL}/predict",
                         json={
                             "model_id": model_id,
                             "data": [
-                                {"sepal_length": 5.1, "sepal_width": 3.5, 
+                                {"sepal_length": 5.1, "sepal_width": 3.5,
                                  "petal_length": 1.4, "petal_width": 0.2}
                             ],
                             "user_id": TEST_USER_ID,
                         }
                     )
-                    
+
                     if resp.status_code == 200:
                         data = resp.json()
                         assert "predictions" in data or "prediction" in data
-    
+
     async def test_predict_batch(self, automl_client):
         """Test batch prediction from CSV."""
         # Similar to single but with file input
@@ -570,7 +569,7 @@ class TestPrediction:
 @pytest.mark.slow
 class TestCompleteAutoMLWorkflow:
     """Test complete AutoML workflow."""
-    
+
     async def test_complete_workflow_iris(self, automl_client):
         """
         Complete AutoML workflow for Iris:
@@ -591,12 +590,12 @@ class TestCompleteAutoMLWorkflow:
                     "minio_path": SAMPLE_DATA["iris"],
                 }
             )
-            
+
             if resp.status_code != 200:
                 pytest.skip("Dataset registration not available")
-            
+
             dataset_id = resp.json().get("dataset_id")
-            
+
             # 2. Submit training
             resp = await client.post(
                 f"{AUTOML_API_URL}/train/automl",
@@ -608,32 +607,32 @@ class TestCompleteAutoMLWorkflow:
                     "user_id": TEST_USER_ID,
                 }
             )
-            
+
             if resp.status_code != 200:
                 pytest.skip("Training endpoint not available")
-            
+
             job_id = resp.json().get("job_id")
-            
+
             # 3. Wait for completion
             result = await wait_for_training_job(client, job_id, timeout=TIMEOUT)
-            
+
             if result["status"] != "completed":
                 pytest.skip("Training did not complete in time")
-            
+
             model_id = result.get("model_id")
-            
+
             # 4. Get leaderboard
             resp = await client.get(f"{AUTOML_API_URL}/models/{model_id}/leaderboard")
             if resp.status_code == 200:
                 leaderboard = resp.json()
                 print(f"✓ Leaderboard: {len(leaderboard)} models")
-            
+
             # 5. Get feature importance
             resp = await client.get(f"{AUTOML_API_URL}/models/{model_id}/importance")
             if resp.status_code == 200:
-                importance = resp.json()
-                print(f"✓ Feature importance retrieved")
-            
+                resp.json()
+                print("✓ Feature importance retrieved")
+
             # 6. Make prediction
             resp = await client.post(
                 f"{AUTOML_API_URL}/predict",
@@ -646,11 +645,11 @@ class TestCompleteAutoMLWorkflow:
                     "user_id": TEST_USER_ID,
                 }
             )
-            
+
             if resp.status_code == 200:
                 predictions = resp.json()
                 print(f"✓ Prediction: {predictions}")
-            
+
             print("✓ Complete AutoML workflow passed!")
 
 

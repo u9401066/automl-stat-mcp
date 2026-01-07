@@ -10,9 +10,9 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .interface.api.routes import datasets, training, jobs, models, post_only, direct
-from .interface.api.schemas import HealthResponse
 from .config import API_HOST, API_PORT, AVAILABLE_ALGORITHMS
+from .interface.api.routes import datasets, direct, jobs, models, post_only, training
+from .interface.api.schemas import HealthResponse
 
 # Configure logging
 log_level = os.environ.get("LOG_LEVEL", "INFO")
@@ -29,9 +29,9 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting AutoML API Service...")
     logger.info("Note: Training jobs are processed by the worker container")
-    
+
     yield
-    
+
     # Shutdown
     logger.info("Shutting down AutoML API Service...")
     logger.info("Shutdown complete")

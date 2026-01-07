@@ -1,20 +1,19 @@
 """
 Use Cases - Application Layer Business Logic
 """
-from typing import Optional, List
+from typing import List, Optional
 
 from ..domain.models import (
-    StatsJob, 
-    StatsJobId, 
-    StatsJobType, 
-    StatsJobStatus,
+    StatsJob,
+    StatsJobId,
+    StatsJobType,
 )
 from ..domain.repositories import StatsJobRepository
 from .dto import (
+    StatsJobResponse,
     SubmitAutoAnalyzeRequest,
     SubmitEDARequest,
     SubmitTableOneRequest,
-    StatsJobResponse,
 )
 
 

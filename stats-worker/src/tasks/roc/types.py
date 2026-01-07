@@ -10,8 +10,8 @@ Contains:
     - CalibrationResult: Calibration analysis result
     - PrecisionRecallResult: Precision-Recall curve result
 """
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Any
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
 
 
 @dataclass
@@ -24,7 +24,7 @@ class ROCPoint:
     sensitivity: float
     ppv: Optional[float] = None  # Positive Predictive Value
     npv: Optional[float] = None  # Negative Predictive Value
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "threshold": float(self.threshold),
@@ -49,7 +49,7 @@ class ROCCurveResult:
     optimal_method: str
     n_positive: int
     n_negative: int
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "auc": float(self.auc),
@@ -79,7 +79,7 @@ class AUCComparisonResult:
     ci_lower: float
     ci_upper: float
     significant: bool
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "auc1": float(self.auc1),
@@ -107,7 +107,7 @@ class CalibrationResult:
     calibration_in_the_large: float
     bins: List[Dict[str, float]]
     well_calibrated: bool
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "hosmer_lemeshow": {
@@ -131,7 +131,7 @@ class PrecisionRecallResult:
     average_precision: float
     f1_optimal_threshold: float
     f1_max: float
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "auc_pr": float(self.auc_pr),

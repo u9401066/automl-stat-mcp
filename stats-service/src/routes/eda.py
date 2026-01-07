@@ -4,15 +4,16 @@ Stats Service - EDA Routes (DDD)
 Routes for Exploratory Data Analysis using ydata-profiling.
 Refactored to use Domain-Driven Design with Use Cases.
 """
-from fastapi import APIRouter, HTTPException, Query
-from pydantic import BaseModel, Field
 from typing import Optional
 
-from ..application.use_cases import SubmitEDAUseCase, DatasetNotFoundError
+from fastapi import APIRouter, HTTPException, Query
+from pydantic import BaseModel, Field
+
 from ..application.dto import SubmitEDARequest as SubmitEDADTO
-from ..infrastructure.redis_dataset_store import redis_dataset_store
-from ..infrastructure.repositories import get_job_repository, get_job_queue
+from ..application.use_cases import DatasetNotFoundError, SubmitEDAUseCase
 from ..infrastructure.minio_client import minio_client
+from ..infrastructure.redis_dataset_store import redis_dataset_store
+from ..infrastructure.repositories import get_job_queue, get_job_repository
 
 router = APIRouter(prefix="/eda", tags=["EDA"])
 
@@ -24,7 +25,7 @@ class EDARequest(BaseModel):
     session_id: Optional[str] = Field(None, description="Optional session ID")
     title: Optional[str] = Field("EDA Report", description="Report title")
     minimal: Optional[bool] = Field(True, description="Use minimal mode for faster processing")
-    
+
 
 class EDAResponse(BaseModel):
     """Response model for EDA job submission"""
@@ -47,15 +48,15 @@ def _get_submit_use_case() -> SubmitEDAUseCase:
 async def submit_eda_job(request: EDARequest):
     """
     Submit an EDA job.
-    
+
     This will generate a comprehensive data profiling report using ydata-profiling.
     The job runs asynchronously - use /jobs/{job_id} to check status.
-    
+
     Returns:
         EDAResponse with job_id for tracking
     """
     use_case = _get_submit_use_case()
-    
+
     try:
         result = await use_case.execute(
             SubmitEDADTO(
@@ -66,16 +67,16 @@ async def submit_eda_job(request: EDARequest):
                 minimal=request.minimal if request.minimal is not None else True,
             )
         )
-        
+
         return EDAResponse(
             job_id=result.job_id,
             job_type=result.job_type,
             status=result.status,
             message=result.message,
         )
-        
+
     except DatasetNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e)) from e
 
 
 @router.post("/preview")
@@ -85,7 +86,7 @@ async def preview_dataset(
 ):
     """
     Preview dataset before running EDA.
-    
+
     Returns first N rows and basic statistics.
     """
     # First check if dataset exists in Redis store
@@ -95,17 +96,17 @@ async def preview_dataset(
             status_code=404,
             detail=f"Dataset {dataset_id} not found. Please register it first."
         )
-    
+
     # Load preview from MinIO
     minio_path = dataset_info.get("minio_path")
     df = minio_client.load_dataset_by_path(minio_path, n_rows=n_rows)
-    
+
     if df is None:
         raise HTTPException(
             status_code=404,
             detail=f"Dataset file not found at {minio_path}"
         )
-    
+
     return {
         "dataset_id": dataset_id,
         "shape": {"rows": len(df), "columns": len(df.columns)},

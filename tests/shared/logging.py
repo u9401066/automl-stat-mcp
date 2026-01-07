@@ -6,14 +6,14 @@ Uses structlog for structured, context-aware logging.
 
 Usage:
     from shared.logging import get_logger, configure_logging
-    
+
     logger = get_logger(__name__)
     logger.info("event_name", key1="value1", key2=123)
 """
 import logging
 import os
 import sys
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 try:
     import structlog
@@ -29,14 +29,14 @@ def configure_logging(
 ) -> None:
     """
     Configure structured logging for the application.
-    
+
     Args:
         level: Log level (DEBUG, INFO, WARNING, ERROR)
         json_format: If True, output JSON format (for production)
         service_name: Service name to include in logs
     """
     log_level = getattr(logging, level.upper(), logging.INFO)
-    
+
     if STRUCTLOG_AVAILABLE:
         _configure_structlog(log_level, json_format, service_name)
     else:
@@ -56,17 +56,17 @@ def _configure_structlog(
         structlog.dev.set_exc_info,
         structlog.processors.TimeStamper(fmt="iso"),
     ]
-    
+
     if service_name:
         shared_processors.insert(0, _add_service_name(service_name))
-    
+
     if json_format:
         # JSON format for production/log aggregation
         shared_processors.append(structlog.processors.JSONRenderer())
     else:
         # Console format for development
         shared_processors.append(structlog.dev.ConsoleRenderer(colors=True))
-    
+
     structlog.configure(
         processors=shared_processors,
         wrapper_class=structlog.make_filtering_bound_logger(level),
@@ -89,7 +89,7 @@ def _configure_stdlib_logging(level: int, service_name: Optional[str]) -> None:
     format_str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     if service_name:
         format_str = f"%(asctime)s - {service_name} - %(name)s - %(levelname)s - %(message)s"
-    
+
     logging.basicConfig(
         level=level,
         format=format_str,
@@ -100,10 +100,10 @@ def _configure_stdlib_logging(level: int, service_name: Optional[str]) -> None:
 def get_logger(name: str = __name__) -> Any:
     """
     Get a logger instance.
-    
+
     Args:
         name: Logger name (usually __name__)
-    
+
     Returns:
         Logger instance (structlog or stdlib)
     """
@@ -116,10 +116,10 @@ def get_logger(name: str = __name__) -> Any:
 def bind_context(**kwargs) -> None:
     """
     Bind context variables to all subsequent logs in this context.
-    
+
     Args:
         **kwargs: Context variables to bind
-    
+
     Example:
         bind_context(user_id="user123", request_id="req456")
         logger.info("processing")  # Will include user_id and request_id
@@ -143,34 +143,34 @@ class LoggerAdapter:
     Adapter that works with both structlog and stdlib logging.
     Provides consistent interface regardless of available logging library.
     """
-    
+
     def __init__(self, name: str):
         self._name = name
         self._logger = get_logger(name)
-    
+
     def debug(self, event: str, **kwargs):
         """Log debug message."""
         self._log("debug", event, **kwargs)
-    
+
     def info(self, event: str, **kwargs):
         """Log info message."""
         self._log("info", event, **kwargs)
-    
+
     def warning(self, event: str, **kwargs):
         """Log warning message."""
         self._log("warning", event, **kwargs)
-    
+
     def error(self, event: str, **kwargs):
         """Log error message."""
         self._log("error", event, **kwargs)
-    
+
     def exception(self, event: str, **kwargs):
         """Log exception with traceback."""
         if STRUCTLOG_AVAILABLE:
             self._logger.exception(event, **kwargs)
         else:
             self._logger.exception(f"{event} {kwargs}")
-    
+
     def _log(self, level: str, event: str, **kwargs):
         """Internal log method."""
         if STRUCTLOG_AVAILABLE:
@@ -181,14 +181,14 @@ class LoggerAdapter:
             if kwargs:
                 msg = f"{event} {kwargs}"
             getattr(self._logger, level)(msg)
-    
+
     def bind(self, **kwargs) -> "LoggerAdapter":
         """
         Create a new logger with bound context.
-        
+
         Args:
             **kwargs: Context to bind
-        
+
         Returns:
             New logger with bound context
         """

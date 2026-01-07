@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-01-06
+
+### Added
+- **uv Workspace 管理**: 全面遷移至 `uv` 進行虛擬環境與多服務工作空間管理。
+- **全專案代碼品質審計**: 
+  - 達成 `automl-service` 與 `stats-service` 路由層 Ruff 零報錯 (Select: E, W, F, I, B, C4)。
+  - 系統性修復了所有的 `B904` (Exception chaining) 並優化異常堆疊追蹤。
+- **深層類型安全 (MyPy)**:
+  - 為 `cleaning.py` 與 `direct.py` 中的複雜字典物件添加了適當的類型註解。
+  - 為 `power.py` 統計回傳值添加了明確的轉型與 Null 檢查。
+
+### Changed
+- 統一了 `stats-service` 的導入風格，解決了 Ruff `F401` 與 `I001` 報錯。
+- 移除了過渡性的自動化修復腳本，改為高品質的「外科手術式」手動修正。
+
 ## [1.5.0] - 2025-12-17
 
 ### Added

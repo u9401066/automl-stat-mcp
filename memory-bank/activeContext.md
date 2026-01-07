@@ -1,46 +1,30 @@
 # Active Context
 
-## Current Status (2025-12-17)
+## Current Status (2026-01-06)
 
-### 🎯 剛完成: DataQualityAnalyzer 資料品質分析模組
+### 🎯 剛完成: 全專案代碼品質審計與發布前清理 (Code Quality Audit)
 
-**核心實作：**
-1. `DataQualityAnalyzer` - 統一品質分析模組 (`stats-service/src/domain/services/data_quality.py`)
-2. `QualityWarning` - 品質警告 (critical/warning/info)
-3. `TransformSuggestion` - 轉換建議 (log/log1p/zscore)
-4. `AnalysisReadiness` - 分析準備度評估
+**核心工作：**
+1. **Ruff 規範達成**：透過「外科手術式」手動修復，清除了 `stats-service` 與 `automl-service` 所有的 `B904` (Exception chaining) 與 `W293` (Trailing whitespace) 報錯。
+2. **MyPy 類型修正**：
+   - `cleaning.py`: 為 `changes` 字典添加 `Dict[str, Any]` 註解，解決屬性訪問錯誤。
+   - `power.py`: 為統計結果添加 `float()` 強制轉型，解決 `statsmodels` 回傳 Any 導致的類型不匹配。
+   - `direct.py`: 修復了預測結果與推薦字典的類型分配報錯。
+3. **uv 環境標準化**：全面切換到 `uv` 作業，確保環境一致性。
 
-**問題偵測類型：**
-| 類型 | 嚴重度 | 說明 |
-|------|--------|------|
-| ALL_NAN | critical | 全部空值欄位 |
-| CONSTANT | warning | 常數欄位 |
-| HIGH_CARDINALITY_ID | warning | 高基數 ID 欄位 |
-| HIGH_MISSING | warning | 高缺失率 (>30%) |
-| SKEWED | info | 偏態分布 (需轉換) |
-| OUTLIERS | info | 極端異常值 |
+**目前品質指標：**
+- **automl-service**: 路由層 Ruff 0 報錯。
+- **stats-service**: 路由層 Ruff 0 報錯，MyPy 剩餘錯誤已降至基礎設施層。
+- **automl-mcp-server**: 待處理 (剩餘 200+ 簽名不一致報錯)。
 
-**API 整合：**
-- ✅ `/direct/quick-stats` - 新增 `quality_warnings`, `transform_suggestions`, `analysis_readiness`
-- ✅ `/direct/quality-check` - 新增專用品質檢查端點
-
-**測試狀態：**
-- ✅ 214 passed, 12 skipped, 0 failed
-- ✅ 25 個 DataQuality 專屬測試
-- ✅ 40 個 EDA 邊界測試
-
-**已提交 Commits：**
-- `672dfa2` - feat: 實作 DataQualityAnalyzer 資料品質分析模組
-- `ecf53c5` - feat: 資料品質測試套件 + 架構設計
-
-**可用指令:**
-- 「git push」- 推送到遠端
-- 「checkpoint」- 保存記憶檢查點
-- 「更新 ROADMAP」- 同步路線圖
+**已修正文件列表：**
+- `stats-service/src/routes/*.py` (全體)
+- `automl-service/src/interface/api/routes/*.py` (全體)
+- `stats-service/src/routes/__init__.py` (導入修復)
 
 ---
 
-## Previous Status (2025-12-16)
+## Previous Status (2025-12-17)
 
 ### 🎯 平台狀態: v0.5.0 - Visualization + Local Results ✅
 

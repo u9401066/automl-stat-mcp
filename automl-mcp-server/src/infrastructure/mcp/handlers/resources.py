@@ -21,7 +21,6 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import Any, Dict
 
 from mcp.server.fastmcp import FastMCP
 
@@ -140,32 +139,32 @@ smart_analyze(csv_path="iris.csv")  # Auto-resolves path
 
 def register_resources(mcp: FastMCP, automl_client) -> None:
     """Register MCP resources"""
-    
+
     # ==========================================================================
     # ALGORITHMS RESOURCE
     # ==========================================================================
-    
+
     @mcp.resource("automl://algorithms")
     async def get_algorithms_resource() -> str:
         """
         List of available ML algorithms.
-        
+
         Returns JSON with:
         - algorithms: Dict of algorithm codes and info
         - recommended: Suggested algorithms for different use cases
         - usage: How to use in training
         """
         return json.dumps(ALGORITHMS_INFO, indent=2)
-    
+
     # ==========================================================================
     # HEALTH RESOURCE
     # ==========================================================================
-    
+
     @mcp.resource("automl://health")
     async def get_health_resource() -> str:
         """
         Service health status.
-        
+
         Checks:
         - AutoML API connectivity
         - Stats service connectivity
@@ -183,25 +182,25 @@ def register_resources(mcp: FastMCP, automl_client) -> None:
                 "status": "unhealthy",
                 "error": str(e)
             }, indent=2)
-    
+
     # ==========================================================================
     # HELP RESOURCES
     # ==========================================================================
-    
+
     @mcp.resource("automl://help/upload")
     async def get_upload_help_resource() -> str:
         """Upload workflow documentation"""
         return UPLOAD_HELP
-    
+
     @mcp.resource("automl://help/paths")
     async def get_paths_help_resource() -> str:
         """Path resolution guide"""
         return PATH_RESOLUTION_GUIDE
-    
+
     # ==========================================================================
     # FILES RESOURCE (Dynamic)
     # ==========================================================================
-    
+
     @mcp.resource("automl://files/sample_data")
     async def get_sample_data_files() -> str:
         """List files in /data/sample_data/"""
@@ -209,7 +208,7 @@ def register_resources(mcp: FastMCP, automl_client) -> None:
             path = Path("/data/sample_data")
             if not path.exists():
                 return json.dumps({"error": "Directory not found", "path": str(path)})
-            
+
             files = []
             for f in path.glob("*.csv"):
                 stat = f.stat()
@@ -218,7 +217,7 @@ def register_resources(mcp: FastMCP, automl_client) -> None:
                     "size_kb": round(stat.st_size / 1024, 1),
                     "path": str(f),
                 })
-            
+
             return json.dumps({
                 "directory": str(path),
                 "file_count": len(files),
@@ -226,7 +225,7 @@ def register_resources(mcp: FastMCP, automl_client) -> None:
             }, indent=2)
         except Exception as e:
             return json.dumps({"error": str(e)})
-    
+
     @mcp.resource("automl://files/projects")
     async def get_projects_files() -> str:
         """List files in /data/projects/"""
@@ -234,7 +233,7 @@ def register_resources(mcp: FastMCP, automl_client) -> None:
             path = Path("/data/projects")
             if not path.exists():
                 return json.dumps({"error": "Directory not found", "path": str(path)})
-            
+
             projects = []
             for p in path.iterdir():
                 if p.is_dir():
@@ -244,7 +243,7 @@ def register_resources(mcp: FastMCP, automl_client) -> None:
                         "csv_count": len(csv_files),
                         "files": [str(f.relative_to(path)) for f in csv_files[:5]],
                     })
-            
+
             return json.dumps({
                 "directory": str(path),
                 "project_count": len(projects),
@@ -252,11 +251,11 @@ def register_resources(mcp: FastMCP, automl_client) -> None:
             }, indent=2)
         except Exception as e:
             return json.dumps({"error": str(e)})
-    
+
     # ==========================================================================
     # DEFAULT USER RESOURCE
     # ==========================================================================
-    
+
     @mcp.resource("automl://config/defaults")
     async def get_defaults_resource() -> str:
         """Default configuration values"""
@@ -267,5 +266,5 @@ def register_resources(mcp: FastMCP, automl_client) -> None:
             "n_rows_preview": 10,
             "correlation_method": "auto",
         }, indent=2)
-    
+
     logger.info("MCP Resources registered: algorithms, health, help/upload, help/paths, files/*, config/defaults")

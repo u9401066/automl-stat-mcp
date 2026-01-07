@@ -247,12 +247,12 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         """
         try:
             import httpx
-            
+
             # Query MinIO through stats service
             prefix = f"{user_id}/"
             if result_type:
                 prefix = f"{user_id}/{result_type}/"
-            
+
             async with httpx.AsyncClient(timeout=30) as client:
                 response = await client.get(
                     f"{STATS_SERVICE_URL}/storage/minio/list",
@@ -262,7 +262,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
                         "limit": limit,
                     },
                 )
-                
+
                 if response.status_code == 404:
                     return {
                         "status": "success",
@@ -271,14 +271,14 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
                         "visualizations": [],
                         "message": "No visualizations found",
                     }
-                
+
                 response.raise_for_status()
                 data = response.json()
-            
+
             # Filter to only image files
             image_extensions = {".png", ".svg", ".jpg", ".jpeg", ".pdf"}
             visualizations = []
-            
+
             for obj in data.get("objects", []):
                 path = obj.get("name", obj.get("key", ""))
                 if any(path.lower().endswith(ext) for ext in image_extensions):
@@ -288,7 +288,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
                         "size": obj.get("size"),
                         "modified": obj.get("last_modified"),
                     })
-            
+
             return {
                 "status": "success",
                 "user_id": user_id,
@@ -331,19 +331,18 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
                 template="medical_study"
             )
         """
-        import os
         import re
-        
+
         # Validate project name
         if not re.match(r'^[a-zA-Z0-9_-]+$', project_name):
             return {
                 "status": "error",
                 "error": "Project name must contain only alphanumeric characters, underscores, and hyphens",
             }
-        
+
         base_path = Path("/data/projects")
         project_path = base_path / project_name
-        
+
         # Define directory structures by template
         templates = {
             "default": [
@@ -376,21 +375,21 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
                 "figures",
             ],
         }
-        
+
         dirs_to_create = templates.get(template, templates["default"])
-        
+
         try:
             created_dirs = []
             for dir_path in dirs_to_create:
                 full_path = project_path / dir_path
                 full_path.mkdir(parents=True, exist_ok=True)
                 created_dirs.append(str(full_path))
-            
+
             # Create PROJECT_INFO.md
             # Build directory tree (avoid f-string backslash issue)
             dir_tree = "\n".join(f"├── {d}/" for d in dirs_to_create)
             created_date = datetime.now().strftime('%Y-%m-%d')
-            
+
             info_content = f"""# {project_name}
 
 **Created:** {created_date}
@@ -421,7 +420,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
 """
             info_path = project_path / "PROJECT_INFO.md"
             info_path.write_text(info_content)
-            
+
             return {
                 "status": "success",
                 "project_path": str(project_path),
@@ -456,7 +455,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         """
         try:
             projects_path = Path("/data/projects")
-            
+
             if not projects_path.exists():
                 return {
                     "status": "success",
@@ -464,7 +463,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
                     "projects": [],
                     "message": "No projects directory found",
                 }
-            
+
             projects = []
             for item in projects_path.iterdir():
                 if item.is_dir() and not item.name.startswith('.'):
@@ -474,20 +473,20 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
                         "path": str(item),
                         "has_info": info_file.exists(),
                     }
-                    
+
                     # Count files
                     try:
                         file_count = sum(1 for _ in item.rglob("*") if _.is_file())
                         project_info["file_count"] = file_count
-                    except:
+                    except Exception:
                         project_info["file_count"] = "unknown"
-                    
+
                     # Get subdirectories
                     subdirs = [d.name for d in item.iterdir() if d.is_dir()]
                     project_info["subdirectories"] = subdirs
-                    
+
                     projects.append(project_info)
-            
+
             return {
                 "status": "success",
                 "count": len(projects),

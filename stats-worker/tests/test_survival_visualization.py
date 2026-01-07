@@ -6,24 +6,23 @@ Tests covering:
 - Cumulative hazard plotting
 - Forest plot for Cox regression
 """
-import pytest
-import numpy as np
-from unittest.mock import Mock, patch, MagicMock
-
 import sys
+from unittest.mock import patch
+
+import pytest
+
 sys.path.insert(0, '/home/eric/workspace251204/stats-worker/src')
 
+from visualization.schemas import VisualizationType
 from visualization.survival import (
-    plot_kaplan_meier,
+    _get_at_risk_at_time,
+    _make_step_curve,
+    create_survival_visualizations,
     plot_cumulative_hazard,
     plot_forest_plot,
     plot_hazard_ratio,
-    create_survival_visualizations,
-    _make_step_curve,
-    _get_at_risk_at_time,
+    plot_kaplan_meier,
 )
-from visualization.schemas import VisualizationType
-
 
 # =============================================================================
 # Sample Data Fixtures
@@ -141,19 +140,19 @@ def cox_result():
 
 class TestHelperFunctions:
     """Tests for helper functions."""
-    
+
     def test_make_step_curve_empty(self):
         """Test step curve with empty data."""
         times, values = _make_step_curve([], [])
         assert times == []
         assert values == []
-    
+
     def test_make_step_curve_single_point(self):
         """Test step curve with single point."""
         times, values = _make_step_curve([0], [1.0])
         assert len(times) == 1
         assert len(values) == 1
-    
+
     def test_make_step_curve_multiple_points(self):
         """Test step curve with multiple points."""
         times, values = _make_step_curve([0, 6, 12], [1.0, 0.9, 0.8])
@@ -161,7 +160,7 @@ class TestHelperFunctions:
         assert len(times) > 3  # Step function has more points
         assert times[0] == 0
         assert values[0] == 1.0
-    
+
     def test_get_at_risk_at_time(self):
         """Test at risk calculation at specific times."""
         curve_data = [
@@ -169,13 +168,13 @@ class TestHelperFunctions:
             {"time": 6, "at_risk": 90},
             {"time": 12, "at_risk": 75},
         ]
-        
+
         assert _get_at_risk_at_time(curve_data, 0) == 100
         assert _get_at_risk_at_time(curve_data, 3) == 100  # Before first change
         assert _get_at_risk_at_time(curve_data, 6) == 100  # At time 6, use previous
         assert _get_at_risk_at_time(curve_data, 10) == 90
         assert _get_at_risk_at_time(curve_data, 20) == 75  # After last point
-    
+
     def test_get_at_risk_empty(self):
         """Test at risk with empty data."""
         assert _get_at_risk_at_time([], 5) == 0
@@ -187,85 +186,85 @@ class TestHelperFunctions:
 
 class TestKaplanMeierPlot:
     """Tests for Kaplan-Meier plotting."""
-    
+
     def test_plot_single_group(self, km_result_single):
         """Test plotting single KM curve."""
         import matplotlib.pyplot as plt
-        
+
         fig = plot_kaplan_meier(km_result_single)
-        
+
         assert fig is not None
         assert len(fig.axes) >= 1  # At least main axis
-        
+
         plt.close(fig)
-    
+
     def test_plot_two_groups(self, km_results_two_groups):
         """Test plotting two-group comparison."""
         import matplotlib.pyplot as plt
-        
+
         fig = plot_kaplan_meier(km_results_two_groups)
-        
+
         assert fig is not None
-        
+
         plt.close(fig)
-    
+
     def test_plot_with_log_rank_p(self, km_results_two_groups):
         """Test plotting with log-rank p-value."""
         import matplotlib.pyplot as plt
-        
+
         fig = plot_kaplan_meier(km_results_two_groups, log_rank_p=0.003)
-        
+
         assert fig is not None
-        
+
         plt.close(fig)
-    
+
     def test_plot_without_ci(self, km_result_single):
         """Test plotting without confidence intervals."""
         import matplotlib.pyplot as plt
-        
+
         fig = plot_kaplan_meier(km_result_single, show_ci=False)
-        
+
         assert fig is not None
-        
+
         plt.close(fig)
-    
+
     def test_plot_without_risk_table(self, km_result_single):
         """Test plotting without at-risk table."""
         import matplotlib.pyplot as plt
-        
+
         fig = plot_kaplan_meier(km_result_single, show_at_risk=False)
-        
+
         assert fig is not None
         assert len(fig.axes) == 1  # Only main axis
-        
+
         plt.close(fig)
-    
+
     def test_plot_custom_colors(self, km_results_two_groups):
         """Test plotting with custom colors."""
         import matplotlib.pyplot as plt
-        
+
         fig = plot_kaplan_meier(
             km_results_two_groups,
             colors=['#FF0000', '#0000FF']
         )
-        
+
         assert fig is not None
-        
+
         plt.close(fig)
-    
+
     def test_plot_custom_title(self, km_result_single):
         """Test plotting with custom title."""
         import matplotlib.pyplot as plt
-        
+
         fig = plot_kaplan_meier(
             km_result_single,
             title="Progression-Free Survival",
             xlabel="Months",
             ylabel="PFS Probability"
         )
-        
+
         assert fig is not None
-        
+
         plt.close(fig)
 
 
@@ -275,35 +274,35 @@ class TestKaplanMeierPlot:
 
 class TestCumulativeHazardPlot:
     """Tests for cumulative hazard plotting."""
-    
+
     def test_plot_single_group(self, km_result_single):
         """Test cumulative hazard for single group."""
         import matplotlib.pyplot as plt
-        
+
         fig = plot_cumulative_hazard(km_result_single)
-        
+
         assert fig is not None
-        
+
         plt.close(fig)
-    
+
     def test_plot_two_groups(self, km_results_two_groups):
         """Test cumulative hazard for two groups."""
         import matplotlib.pyplot as plt
-        
+
         fig = plot_cumulative_hazard(km_results_two_groups)
-        
+
         assert fig is not None
-        
+
         plt.close(fig)
-    
+
     def test_plot_without_ci(self, km_result_single):
         """Test without confidence intervals."""
         import matplotlib.pyplot as plt
-        
+
         fig = plot_cumulative_hazard(km_result_single, show_ci=False)
-        
+
         assert fig is not None
-        
+
         plt.close(fig)
 
 
@@ -313,55 +312,55 @@ class TestCumulativeHazardPlot:
 
 class TestForestPlot:
     """Tests for forest plot."""
-    
+
     def test_plot_forest(self, cox_result):
         """Test basic forest plot."""
         import matplotlib.pyplot as plt
-        
+
         fig = plot_forest_plot(cox_result)
-        
+
         assert fig is not None
-        
+
         plt.close(fig)
-    
+
     def test_plot_forest_empty_coefficients(self):
         """Test forest plot with no coefficients."""
         import matplotlib.pyplot as plt
-        
+
         fig = plot_forest_plot({"coefficients": []})
-        
+
         assert fig is not None
-        
+
         plt.close(fig)
-    
+
     def test_plot_forest_sorted_by_hr(self, cox_result):
         """Test forest plot sorted by HR."""
         import matplotlib.pyplot as plt
-        
+
         fig = plot_forest_plot(cox_result, sort_by='hr')
-        
+
         assert fig is not None
-        
+
         plt.close(fig)
-    
+
     def test_plot_forest_sorted_by_pvalue(self, cox_result):
         """Test forest plot sorted by p-value."""
         import matplotlib.pyplot as plt
-        
+
         fig = plot_forest_plot(cox_result, sort_by='pvalue')
-        
+
         assert fig is not None
-        
+
         plt.close(fig)
-    
+
     def test_plot_forest_linear_scale(self, cox_result):
         """Test forest plot with linear scale."""
         import matplotlib.pyplot as plt
-        
+
         fig = plot_forest_plot(cox_result, log_scale=False)
-        
+
         assert fig is not None
-        
+
         plt.close(fig)
 
 
@@ -371,50 +370,50 @@ class TestForestPlot:
 
 class TestHazardRatioPlot:
     """Tests for single hazard ratio plot."""
-    
+
     def test_plot_significant_higher_risk(self):
         """Test HR > 1 significantly."""
         import matplotlib.pyplot as plt
-        
+
         fig = plot_hazard_ratio(
             hr=1.8,
             ci_lower=1.2,
             ci_upper=2.7,
             label="Treatment Effect"
         )
-        
+
         assert fig is not None
-        
+
         plt.close(fig)
-    
+
     def test_plot_significant_lower_risk(self):
         """Test HR < 1 significantly."""
         import matplotlib.pyplot as plt
-        
+
         fig = plot_hazard_ratio(
             hr=0.5,
             ci_lower=0.3,
             ci_upper=0.8,
             label="Protective Effect"
         )
-        
+
         assert fig is not None
-        
+
         plt.close(fig)
-    
+
     def test_plot_not_significant(self):
         """Test HR crossing 1."""
         import matplotlib.pyplot as plt
-        
+
         fig = plot_hazard_ratio(
             hr=1.2,
             ci_lower=0.8,
             ci_upper=1.8,
             label="No Significant Effect"
         )
-        
+
         assert fig is not None
-        
+
         plt.close(fig)
 
 
@@ -424,12 +423,12 @@ class TestHazardRatioPlot:
 
 class TestCreateSurvivalVisualizations:
     """Tests for high-level visualization creation."""
-    
+
     @patch('visualization.survival.save_figure_to_minio')
     def test_create_visualizations_km_only(self, mock_save, km_results_two_groups):
         """Test creating visualizations with KM data only."""
         mock_save.return_value = "https://minio.example.com/test.png"
-        
+
         # Convert to dict format
         km_dict = {
             "groups": {
@@ -437,7 +436,7 @@ class TestCreateSurvivalVisualizations:
                 "Control": km_results_two_groups[1],
             }
         }
-        
+
         results = create_survival_visualizations(
             km_dict,
             log_rank_p=0.02,
@@ -445,26 +444,26 @@ class TestCreateSurvivalVisualizations:
             job_id="test_job",
             save_to_minio=True,
         )
-        
+
         assert len(results) >= 2  # KM + cumulative hazard
-        
+
         # Check types
         types = [r.type for r in results]
         assert VisualizationType.KAPLAN_MEIER in types
         assert VisualizationType.CUMULATIVE_HAZARD in types
-    
+
     @patch('visualization.survival.save_figure_to_minio')
     def test_create_visualizations_with_cox(self, mock_save, km_results_two_groups, cox_result):
         """Test creating visualizations with KM and Cox data."""
         mock_save.return_value = "https://minio.example.com/test.png"
-        
+
         km_dict = {
             "groups": {
                 "Treatment": km_results_two_groups[0],
                 "Control": km_results_two_groups[1],
             }
         }
-        
+
         results = create_survival_visualizations(
             km_dict,
             cox_result=cox_result,
@@ -473,9 +472,9 @@ class TestCreateSurvivalVisualizations:
             job_id="test_job",
             save_to_minio=True,
         )
-        
+
         assert len(results) >= 3  # KM + cumulative hazard + forest
-        
+
         types = [r.type for r in results]
         assert VisualizationType.FOREST_PLOT in types
 

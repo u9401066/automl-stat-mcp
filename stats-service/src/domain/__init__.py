@@ -3,7 +3,7 @@ Stats Service Domain Layer
 
 Domain models, value objects, and repository interfaces.
 """
-from .models import StatsJob, StatsJobId, StatsJobType, StatsJobStatus
+from .models import StatsJob, StatsJobId, StatsJobStatus, StatsJobType
 from .repositories import StatsJobRepository
 
 __all__ = [

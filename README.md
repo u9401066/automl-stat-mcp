@@ -167,25 +167,27 @@ curl http://localhost:8001/health
 
 See [MCP Tools Inventory](docs/MCP_TOOLS_INVENTORY.md) for complete list (102+ tools).
 
-## 🆕 Recent Updates (Dec 2025)
+## 🆕 Recent Updates (Jan 2026)
 
-- **Project Management Tools** (NEW): `create_project_workspace`, `list_user_visualizations`
-- **Result Persistence**: Analysis results saved to Redis + MinIO with `result_id`
-- **Visualization (Phase 8)**: Publication-quality charts (ROC, KM, SHAP)
-- **Data Cleaning**: 9 preprocessing tools
-- **E2E Tests**: 43 passed, 84% coverage
+- **uv 管理** (NEW): 全面使用 `uv` 進行工作空間與依賴管理。
+- **代碼品質清理**: 達成 `automl-service` 與 `stats-service` 路由層 Ruff 0 報錯。
+- **專案管理工具**: `create_project_workspace`, `list_user_visualizations`。
+- **視覺化 (Phase 8)**: 出版等級圖表 (ROC, KM, SHAP)。
 
 ## 🔧 Development
 
 ```bash
-# E2E tests
-cd tests && pytest test_e2e.py -v
+# 安裝與同步環境
+uv sync --all-extras
 
-# Stats worker tests  
-cd stats-worker && pytest tests/ -v
+# 執行 E2E 測試
+cd tests && uv run pytest test_e2e.py -v
 
-# View logs
-docker compose logs -f automl-mcp
+# 執行 Ruff 檢查
+uv run ruff check .
+
+# 執行 MyPy 檢查
+uv run mypy stats-service/src
 ```
 
 ## 📄 License

@@ -5,9 +5,9 @@ These are abstract interfaces that define how domain objects are persisted.
 Actual implementations are in the Infrastructure layer.
 """
 from abc import ABC, abstractmethod
-from typing import Optional, List
+from typing import List, Optional
 
-from .models import Dataset, DatasetId, MLModel, ModelId, Job, JobId
+from .models import Dataset, DatasetId, Job, JobId, MLModel, ModelId
 
 
 class DatasetRepository(ABC):
@@ -25,8 +25,8 @@ class DatasetRepository(ABC):
 
     @abstractmethod
     async def find_by_user(
-        self, 
-        user_id: str, 
+        self,
+        user_id: str,
         session_id: Optional[str] = None
     ) -> List[Dataset]:
         """Find all datasets for a user/session"""
@@ -58,8 +58,8 @@ class ModelRepository(ABC):
 
     @abstractmethod
     async def find_by_user(
-        self, 
-        user_id: str, 
+        self,
+        user_id: str,
         session_id: Optional[str] = None
     ) -> List[MLModel]:
         """Find all models for a user/session"""
@@ -86,8 +86,8 @@ class JobRepository(ABC):
 
     @abstractmethod
     async def find_by_user(
-        self, 
-        user_id: str, 
+        self,
+        user_id: str,
         session_id: Optional[str] = None
     ) -> List[Job]:
         """Find all jobs for a user/session"""

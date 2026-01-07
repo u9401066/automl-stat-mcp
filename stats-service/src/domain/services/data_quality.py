@@ -10,11 +10,12 @@ Data Quality Analyzer - 資料品質分析模組
 - Transform 建議
 - 分析可行性評估
 """
-from dataclasses import dataclass, field, asdict
-from typing import List, Dict, Any, Optional
+from dataclasses import asdict, dataclass, field
 from enum import Enum
-import pandas as pd
+from typing import Any, Dict, List, Optional
+
 import numpy as np
+import pandas as pd
 
 
 class IssueSeverity(str, Enum):
@@ -53,7 +54,7 @@ class QualityWarning:
     recommendation: str
     impact: str
     stats: Dict[str, Any] = field(default_factory=dict)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
 
@@ -66,7 +67,7 @@ class TransformSuggestion:
     reason: str
     before_stats: Dict[str, float]
     after_preview: Optional[Dict[str, float]] = None
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
 
@@ -80,7 +81,7 @@ class AnalysisReadiness:
     recommended_actions: List[str]
     usable_columns: List[str]
     problematic_columns: List[str]
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
 
@@ -91,7 +92,7 @@ class DataQualityReport:
     warnings: List[QualityWarning]
     transform_suggestions: List[TransformSuggestion]
     analysis_readiness: AnalysisReadiness
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "quality_warnings": [w.to_dict() for w in self.warnings],
@@ -103,22 +104,22 @@ class DataQualityReport:
 class DataQualityAnalyzer:
     """
     資料品質分析器
-    
+
     提供統一的資料品質檢測和建議功能。
-    
+
     Usage:
         analyzer = DataQualityAnalyzer()
         report = analyzer.analyze(df)
         print(report.to_dict())
     """
-    
+
     # 閾值設定
     SKEW_THRESHOLD = 1.0           # mean/median 比率閾值
     HIGH_CARDINALITY_THRESHOLD = 0.9  # unique/rows 比率閾值
     OUTLIER_IQR_MULTIPLIER = 1.5   # IQR 乘數
     HIGH_MISSING_THRESHOLD = 0.5   # 缺失值比率閾值
     MIN_ROWS_FOR_ID_DETECTION = 5  # ID 欄偵測最小行數
-    
+
     def __init__(
         self,
         skew_threshold: float = 1.0,
@@ -128,7 +129,7 @@ class DataQualityAnalyzer:
     ):
         """
         初始化分析器
-        
+
         Args:
             skew_threshold: 偏態閾值 (mean/median 比率)
             high_cardinality_threshold: 高基數閾值 (unique/rows 比率)
@@ -139,14 +140,14 @@ class DataQualityAnalyzer:
         self.HIGH_CARDINALITY_THRESHOLD = high_cardinality_threshold
         self.OUTLIER_IQR_MULTIPLIER = outlier_iqr_multiplier
         self.HIGH_MISSING_THRESHOLD = high_missing_threshold
-    
+
     def analyze(self, df: pd.DataFrame) -> DataQualityReport:
         """
         完整資料品質分析
-        
+
         Args:
             df: 要分析的 DataFrame
-            
+
         Returns:
             DataQualityReport: 品質報告
         """
@@ -156,13 +157,13 @@ class DataQualityAnalyzer:
         warning_issues: List[str] = []
         usable_columns: List[str] = []
         problematic_columns: List[str] = []
-        
+
         n_rows = len(df)
-        
+
         for col in df.columns:
             col_warnings = []
             is_usable = True
-            
+
             # 1. 檢查全 NaN
             if df[col].isna().all():
                 warning = QualityWarning(
@@ -182,7 +183,7 @@ class DataQualityAnalyzer:
                 problematic_columns.append(col)
                 warnings.append(warning)
                 continue
-            
+
             # 2. 檢查高缺失值
             null_count = df[col].isna().sum()
             null_pct = null_count / n_rows
@@ -201,7 +202,7 @@ class DataQualityAnalyzer:
                 col_warnings.append(warning)
                 warning_issues.append(f"{IssueType.HIGH_MISSING.value}:{col}")
                 warnings.append(warning)
-            
+
             # 3. 檢查常數欄
             n_unique = df[col].nunique()
             if n_unique == 1:
@@ -222,10 +223,10 @@ class DataQualityAnalyzer:
                 problematic_columns.append(col)
                 warnings.append(warning)
                 continue
-            
+
             # 4. 檢查高基數 ID 欄
             cardinality_ratio = n_unique / n_rows if n_rows > 0 else 0
-            if (cardinality_ratio >= self.HIGH_CARDINALITY_THRESHOLD and 
+            if (cardinality_ratio >= self.HIGH_CARDINALITY_THRESHOLD and
                 n_rows >= self.MIN_ROWS_FOR_ID_DETECTION):
                 # 檢查是否像 ID 欄位（字串類型或名稱含 id/uuid/mrn 等）
                 is_likely_id = (
@@ -250,7 +251,7 @@ class DataQualityAnalyzer:
                     problematic_columns.append(col)
                     warnings.append(warning)
                     continue
-            
+
             # 5. 檢查數值欄位的偏態和極端值
             if pd.api.types.is_numeric_dtype(df[col]) and df[col].dtype != 'bool':
                 non_null = df[col].dropna()
@@ -258,7 +259,7 @@ class DataQualityAnalyzer:
                     mean = non_null.mean()
                     median = non_null.median()
                     std = non_null.std()
-                    
+
                     # 偏態檢測
                     if median > 0 and not np.isnan(mean) and not np.isnan(median):
                         skew_ratio = abs(mean - median) / median
@@ -278,12 +279,12 @@ class DataQualityAnalyzer:
                             col_warnings.append(warning)
                             warning_issues.append(f"{IssueType.SKEWED.value}:{col}")
                             warnings.append(warning)
-                            
+
                             # 建議 Transform
                             transform = self._suggest_transform(non_null, col, mean, median, skew_ratio)
                             if transform:
                                 transform_suggestions.append(transform)
-                    
+
                     # 極端值檢測
                     if std > 0:
                         q1 = non_null.quantile(0.25)
@@ -291,7 +292,7 @@ class DataQualityAnalyzer:
                         iqr = q3 - q1
                         lower_bound = q1 - self.OUTLIER_IQR_MULTIPLIER * iqr
                         upper_bound = q3 + self.OUTLIER_IQR_MULTIPLIER * iqr
-                        
+
                         outliers = non_null[(non_null < lower_bound) | (non_null > upper_bound)]
                         if len(outliers) > 0:
                             outlier_pct = len(outliers) / len(non_null) * 100
@@ -314,24 +315,24 @@ class DataQualityAnalyzer:
                                 col_warnings.append(warning)
                                 warning_issues.append(f"{IssueType.OUTLIERS.value}:{col}")
                                 warnings.append(warning)
-                    
+
                     # 檢查負值（某些分析需要正值）
                     if (non_null < 0).any():
                         neg_count = (non_null < 0).sum()
-                        neg_pct = neg_count / len(non_null) * 100
+                        neg_count / len(non_null) * 100
                         # 只記錄，不作為警告（某些資料負值是正常的）
-            
+
             # 記錄可用欄位
             if is_usable and col not in problematic_columns:
                 usable_columns.append(col)
-        
+
         # 生成建議動作
         recommended_actions = self._generate_recommendations(warnings)
-        
+
         # 評估分析可行性
         # 如果所有欄位都有問題，則不適合分析
         ready = len(blocking_issues) == 0 and len(usable_columns) > 0
-        
+
         analysis_readiness = AnalysisReadiness(
             ready=ready,
             blocking_issues=blocking_issues,
@@ -340,23 +341,23 @@ class DataQualityAnalyzer:
             usable_columns=usable_columns,
             problematic_columns=list(set(problematic_columns))
         )
-        
+
         return DataQualityReport(
             warnings=warnings,
             transform_suggestions=transform_suggestions,
             analysis_readiness=analysis_readiness
         )
-    
+
     def _suggest_transform(
-        self, 
-        data: pd.Series, 
+        self,
+        data: pd.Series,
         col: str,
         mean: float,
         median: float,
         skew_ratio: float
     ) -> Optional[TransformSuggestion]:
         """建議適當的 Transform"""
-        
+
         # 檢查是否可以使用 log（所有值必須 > 0）
         if (data > 0).all():
             log_data = np.log(data)
@@ -373,7 +374,7 @@ class DataQualityAnalyzer:
                     "median": round(float(log_data.median()), 4)
                 }
             )
-        
+
         # 檢查是否可以使用 log1p（所有值必須 >= 0）
         if (data >= 0).all():
             log1p_data = np.log1p(data)
@@ -390,7 +391,7 @@ class DataQualityAnalyzer:
                     "median": round(float(log1p_data.median()), 4)
                 }
             )
-        
+
         # 含負值，建議 zscore
         return TransformSuggestion(
             column=col,
@@ -405,11 +406,11 @@ class DataQualityAnalyzer:
                 "std": 1.0
             }
         )
-    
+
     def _generate_recommendations(self, warnings: List[QualityWarning]) -> List[str]:
         """生成建議動作列表"""
         recommendations = []
-        
+
         for w in warnings:
             if w.severity == IssueSeverity.CRITICAL.value:
                 if w.issue == IssueType.ALL_NAN.value:
@@ -424,24 +425,24 @@ class DataQualityAnalyzer:
                 recommendations.append(f"對 `{w.column}` 考慮使用 log transform")
             elif w.issue == IssueType.OUTLIERS.value:
                 recommendations.append(f"檢查 `{w.column}` 的極端值")
-        
+
         return recommendations
-    
+
     def quick_check(self, df: pd.DataFrame) -> Dict[str, Any]:
         """
         快速品質檢查（輕量版）
-        
+
         只返回最重要的資訊，適合快速預覽。
-        
+
         Returns:
             dict: 包含 has_issues, critical_count, warning_count, issues_summary
         """
         report = self.analyze(df)
-        
+
         critical_count = sum(1 for w in report.warnings if w.severity == IssueSeverity.CRITICAL.value)
         warning_count = sum(1 for w in report.warnings if w.severity == IssueSeverity.WARNING.value)
         info_count = sum(1 for w in report.warnings if w.severity == IssueSeverity.INFO.value)
-        
+
         return {
             "has_issues": len(report.warnings) > 0,
             "critical_count": critical_count,
@@ -460,10 +461,10 @@ class DataQualityAnalyzer:
 def analyze_data_quality(df: pd.DataFrame) -> Dict[str, Any]:
     """
     便捷函數：分析資料品質
-    
+
     Args:
         df: 要分析的 DataFrame
-        
+
     Returns:
         dict: 品質報告字典
     """
@@ -475,10 +476,10 @@ def analyze_data_quality(df: pd.DataFrame) -> Dict[str, Any]:
 def quick_quality_check(df: pd.DataFrame) -> Dict[str, Any]:
     """
     便捷函數：快速品質檢查
-    
+
     Args:
         df: 要分析的 DataFrame
-        
+
     Returns:
         dict: 快速檢查結果
     """

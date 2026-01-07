@@ -6,18 +6,24 @@ Actual data/models are stored in MinIO.
 
 For production, consider using Redis or PostgreSQL for metadata.
 """
-import os
-from typing import Optional, List, Dict
-from datetime import datetime
 import json
+import os
+from datetime import datetime
 from pathlib import Path
+from typing import Dict, List, Optional
 
 from ..domain.models import (
-    Dataset, DatasetId,
-    MLModel, ModelId, LeaderboardEntry,
-    Job, JobId, JobStatus, JobType,
+    Dataset,
+    DatasetId,
+    Job,
+    JobId,
+    JobStatus,
+    JobType,
+    LeaderboardEntry,
+    MLModel,
+    ModelId,
 )
-from ..domain.repositories import DatasetRepository, ModelRepository, JobRepository
+from ..domain.repositories import DatasetRepository, JobRepository, ModelRepository
 from .redis_dataset_store import redis_dataset_store
 
 # Persistence directories - configurable via environment variable
@@ -79,7 +85,7 @@ class InMemoryDatasetRepository(DatasetRepository):
         }
         with open(meta_file, "w") as f:
             json.dump(data, f, indent=2)
-    
+
     def _save_to_redis(self, dataset: Dataset):
         """Save dataset metadata to Redis for cross-service access"""
         redis_dataset_store.save_dataset({
@@ -104,8 +110,8 @@ class InMemoryDatasetRepository(DatasetRepository):
         return self._datasets.get(str(dataset_id))
 
     async def find_by_user(
-        self, 
-        user_id: str, 
+        self,
+        user_id: str,
         session_id: Optional[str] = None
     ) -> List[Dataset]:
         return [
@@ -204,8 +210,8 @@ class InMemoryModelRepository(ModelRepository):
         return self._models.get(str(model_id))
 
     async def find_by_user(
-        self, 
-        user_id: str, 
+        self,
+        user_id: str,
         session_id: Optional[str] = None
     ) -> List[MLModel]:
         return [
@@ -222,7 +228,7 @@ class InMemoryModelRepository(ModelRepository):
             if model_path.exists():
                 import shutil
                 shutil.rmtree(model_path)
-            
+
             del self._models[key]
             meta_file = MODELS_META_DIR / f"{key}.json"
             if meta_file.exists():
@@ -297,8 +303,8 @@ class InMemoryJobRepository(JobRepository):
         return self._jobs.get(str(job_id))
 
     async def find_by_user(
-        self, 
-        user_id: str, 
+        self,
+        user_id: str,
         session_id: Optional[str] = None
     ) -> List[Job]:
         return [

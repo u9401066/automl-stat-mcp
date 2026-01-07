@@ -11,12 +11,10 @@ Contains:
 """
 import logging
 import math
-from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
-import numpy as np
-from scipy import stats
 from statsmodels.stats.proportion import proportion_effectsize
 
 logger = logging.getLogger(__name__)
@@ -62,11 +60,11 @@ EFFECT_SIZE_THRESHOLDS = {
 def safe_round(value: Optional[float], decimals: int = 4) -> Optional[float]:
     """
     Round a value safely, returning None for NaN/Inf.
-    
+
     Args:
         value: The value to round
         decimals: Number of decimal places
-        
+
     Returns:
         Rounded value or None if invalid
     """
@@ -86,17 +84,17 @@ def interpret_effect_size(
 ) -> str:
     """
     Interpret effect size magnitude based on Cohen's conventions.
-    
+
     Args:
         effect_size: The effect size value (absolute)
         effect_type: Type of effect size
-        
+
     Returns:
         Interpretation string: "negligible", "small", "medium", "large"
     """
     abs_es = abs(effect_size)
     thresholds = EFFECT_SIZE_THRESHOLDS.get(effect_type, EFFECT_SIZE_THRESHOLDS["cohens_d"])
-    
+
     if abs_es < thresholds["small"]:
         return "negligible"
     elif abs_es < thresholds["medium"]:
@@ -116,46 +114,46 @@ def cohens_d_from_means(
 ) -> float:
     """
     Calculate Cohen's d from means and standard deviations.
-    
+
     Args:
         mean1: Mean of group 1
         mean2: Mean of group 2
         sd1: Standard deviation of group 1
         sd2: Standard deviation of group 2 (if None, uses sd1)
         pooled: Whether to use pooled SD (recommended for independent samples)
-        
+
     Returns:
         Cohen's d effect size
     """
     if sd2 is None:
         sd2 = sd1
-    
+
     if pooled:
         # Pooled standard deviation (assumes equal sample sizes for simplicity)
         pooled_sd = math.sqrt((sd1**2 + sd2**2) / 2)
     else:
         pooled_sd = sd1
-    
+
     if pooled_sd == 0:
         return 0.0
-    
+
     return (mean1 - mean2) / pooled_sd
 
 
 def cohens_h_from_proportions(p1: float, p2: float) -> float:
     """
     Calculate Cohen's h from two proportions.
-    
+
     Cohen's h = 2 * (arcsin(sqrt(p1)) - arcsin(sqrt(p2)))
-    
+
     Args:
         p1: Proportion in group 1
         p2: Proportion in group 2
-        
+
     Returns:
         Cohen's h effect size
     """
-    return proportion_effectsize(p1, p2)
+    return float(proportion_effectsize(p1, p2))
 
 
 # =============================================================================
@@ -165,16 +163,16 @@ def cohens_h_from_proportions(p1: float, p2: float) -> float:
 @dataclass
 class PowerAnalysisResult:
     """Result of power analysis calculation"""
-    
+
     # Test identification
     test_type: str
     scenario: str  # "sample_size" or "power"
-    
+
     # Main results
     sample_size_per_group: Optional[int] = None
     total_sample_size: Optional[int] = None
     power: Optional[float] = None
-    
+
     # Input parameters
     effect_size: Optional[float] = None
     effect_size_type: str = "Cohen's d"
@@ -182,27 +180,27 @@ class PowerAnalysisResult:
     alpha: float = 0.05
     alternative: str = "two-sided"
     ratio: float = 1.0  # n2/n1 for unequal groups
-    
+
     # For proportion tests
     p1: Optional[float] = None
     p2: Optional[float] = None
-    
+
     # For t-tests with raw values
     mean1: Optional[float] = None
     mean2: Optional[float] = None
     sd: Optional[float] = None
-    
+
     # Sensitivity analysis
     sensitivity_analysis: Optional[Dict[str, Any]] = None
-    
+
     # Interpretation
     interpretation: str = ""
     recommendations: List[str] = field(default_factory=list)
-    
+
     # Metadata
     method: str = ""
     notes: List[str] = field(default_factory=list)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization"""
         return {

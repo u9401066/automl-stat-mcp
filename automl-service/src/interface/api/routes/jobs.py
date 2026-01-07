@@ -2,10 +2,11 @@
 FastAPI Router - Job endpoints (Redis Queue based)
 """
 from typing import List, Optional
-from fastapi import APIRouter, HTTPException, Header
 
-from ..schemas import JobResponse, JobListResponse, ErrorResponse
+from fastapi import APIRouter, Header, HTTPException
+
 from ..dependencies import get_container
+from ..schemas import ErrorResponse, JobResponse
 
 router = APIRouter(prefix="/jobs", tags=["Jobs"])
 
@@ -21,20 +22,20 @@ async def get_job_status(
 ):
     """
     Get the status of a training job.
-    
+
     Poll this endpoint to track job progress.
     """
     container = get_container()
-    
+
     job_data = container.job_queue.get_job(job_id)
-    
+
     if not job_data:
         raise HTTPException(status_code=404, detail=f"Job not found: {job_id}")
-    
+
     # Check permission
     if job_data["user_id"] != x_user_id:
         raise HTTPException(status_code=403, detail="Access denied")
-    
+
     return JobResponse(
         job_id=job_data["id"],
         job_type=job_data["job_type"],
@@ -62,9 +63,9 @@ async def list_jobs(
     List all jobs for the current user/session.
     """
     container = get_container()
-    
+
     jobs = container.job_queue.list_jobs(x_user_id, x_session_id)
-    
+
     return [
         JobResponse(
             job_id=j["id"],
@@ -94,19 +95,19 @@ async def cancel_job(
 ):
     """
     Cancel a pending job.
-    
+
     Note: Running jobs cannot be cancelled.
     """
     container = get_container()
-    
+
     success = container.job_queue.cancel_job(job_id, x_user_id)
-    
+
     if not success:
         raise HTTPException(
-            status_code=400, 
+            status_code=400,
             detail="Cannot cancel job (not found, wrong user, or already running)"
         )
-    
+
     return {"status": "cancelled", "job_id": job_id}
 
 
@@ -123,10 +124,10 @@ async def delete_job(
     Delete a job record.
     """
     container = get_container()
-    
+
     success = container.job_queue.delete_job(job_id, x_user_id)
-    
+
     if not success:
         raise HTTPException(status_code=404, detail=f"Job not found: {job_id}")
-    
+
     return {"status": "deleted", "job_id": job_id}

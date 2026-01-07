@@ -13,15 +13,15 @@ Test Coverage:
 - Cleaning action defaults
 """
 
-import pytest
 import base64
 import io
 import uuid
-from datetime import datetime
-from typing import Optional, List, Dict, Any
 from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
+import pandas as pd
 
 # ============================================================
 # Isolated implementations (copied from smart_tools.py)
@@ -54,7 +54,7 @@ class DataIssue:
     message: str
     details: Dict[str, Any]
     suggested_action: str
-    
+
     def to_dict(self) -> dict:
         return {
             "issue_type": self.issue_type.value,
@@ -70,35 +70,34 @@ class DataIssue:
 class ValidationReport:
     """Validation report containing all issues"""
     issues: List[DataIssue]
-    
+
     @property
     def total_issues(self) -> int:
         return len(self.issues)
-    
+
     @property
     def critical_count(self) -> int:
         return sum(1 for i in self.issues if i.severity == IssueSeverity.CRITICAL)
-    
+
     @property
     def high_count(self) -> int:
         return sum(1 for i in self.issues if i.severity == IssueSeverity.HIGH)
-    
+
     @property
     def medium_count(self) -> int:
         return sum(1 for i in self.issues if i.severity == IssueSeverity.MEDIUM)
-    
+
     @property
     def low_count(self) -> int:
         return sum(1 for i in self.issues if i.severity == IssueSeverity.LOW)
-    
+
     @property
     def can_proceed(self) -> bool:
         return self.critical_count == 0
 
 
-def parse_csv_content(csv_content: str, is_base64: bool = False) -> 'pd.DataFrame':
+def parse_csv_content(csv_content: str, is_base64: bool = False) -> pd.DataFrame:
     """Parse CSV content into DataFrame"""
-    import pandas as pd
     if is_base64:
         decoded = base64.b64decode(csv_content).decode("utf-8")
         return pd.read_csv(io.StringIO(decoded))
@@ -113,7 +112,7 @@ def format_issues_for_response(report: ValidationReport) -> List[dict]:
 def generate_questions_from_issues(report: ValidationReport) -> List[str]:
     """Generate user questions based on detected issues"""
     questions = []
-    
+
     # Critical issues first
     critical_issues = [i for i in report.issues if i.severity == IssueSeverity.CRITICAL]
     if critical_issues:
@@ -124,7 +123,7 @@ def generate_questions_from_issues(report: ValidationReport) -> List[str]:
                 f"⚠️ CRITICAL: PII detected in columns: {cols}. "
                 "Options: mask (replace with ***), hash (SHA256), or drop these columns?"
             )
-    
+
     # High severity
     high_issues = [i for i in report.issues if i.severity == IssueSeverity.HIGH]
     for issue in high_issues:
@@ -134,7 +133,7 @@ def generate_questions_from_issues(report: ValidationReport) -> List[str]:
                 f"({issue.details.get('missing_pct', 0):.1f}% missing). "
                 "Options: drop rows, drop column, or impute (mean/median/mode)?"
             )
-    
+
     # Medium severity
     medium_issues = [i for i in report.issues if i.severity == IssueSeverity.MEDIUM]
     outlier_issues = [i for i in medium_issues if i.issue_type == IssueType.OUTLIERS_DETECTED]
@@ -144,12 +143,12 @@ def generate_questions_from_issues(report: ValidationReport) -> List[str]:
             f"Outliers detected in: {cols[:5]}{'...' if len(cols) > 5 else ''}. "
             "Options: cap to IQR bounds, remove, or keep as-is?"
         )
-    
+
     # Always add storage question
     questions.append(
         "Do you want to save this dataset for future use, or is this a one-time analysis?"
     )
-    
+
     return questions
 
 
@@ -168,7 +167,7 @@ def create_ticket_structure(
 ) -> dict:
     """Create ticket structure"""
     suggested_questions = generate_questions_from_issues(validation_report)
-    
+
     return {
         "ticket_id": ticket_id,
         "ticket_type": "data_analysis",
@@ -205,7 +204,7 @@ def get_default_cleaning_actions(report: ValidationReport) -> Dict[str, Any]:
         "invalid_columns": [],
         "duplicates": "keep",
     }
-    
+
     for issue in report.issues:
         if issue.issue_type == IssueType.HIGH_MISSING_RATIO and issue.column:
             actions["missing_values"][issue.column] = "impute_median"
@@ -217,7 +216,7 @@ def get_default_cleaning_actions(report: ValidationReport) -> Dict[str, Any]:
             actions["invalid_columns"].append(issue.column)
         elif issue.issue_type == IssueType.DUPLICATE_ROWS:
             actions["duplicates"] = "drop"
-    
+
     return actions
 
 
@@ -227,14 +226,14 @@ def get_default_cleaning_actions(report: ValidationReport) -> Dict[str, Any]:
 
 class TestCSVParsing:
     """Tests for CSV parsing utilities"""
-    
+
     def test_parse_normal_csv(self):
         """Parse normal CSV string"""
         csv = "name,age,score\nAlice,30,85\nBob,25,90"
         df = parse_csv_content(csv)
         assert len(df) == 2
         assert list(df.columns) == ["name", "age", "score"]
-        
+
     def test_parse_base64_csv(self):
         """Parse base64 encoded CSV"""
         csv = "name,age\nAlice,30\nBob,25"
@@ -242,7 +241,7 @@ class TestCSVParsing:
         df = parse_csv_content(encoded, is_base64=True)
         assert len(df) == 2
         assert "name" in df.columns
-        
+
     def test_parse_csv_with_missing_values(self):
         """Parse CSV with missing values"""
         csv = "a,b,c\n1,,3\n4,5,\n,8,9"
@@ -250,7 +249,7 @@ class TestCSVParsing:
         assert df["a"].isna().sum() == 1
         assert df["b"].isna().sum() == 1
         assert df["c"].isna().sum() == 1
-        
+
     def test_parse_csv_with_unicode(self):
         """Parse CSV with unicode characters"""
         csv = "名字,年齡\n張三,30\n李四,25"
@@ -261,18 +260,18 @@ class TestCSVParsing:
 
 class TestTicketGeneration:
     """Tests for ticket generation"""
-    
+
     def test_ticket_id_format(self):
         """Ticket ID follows expected format"""
         ticket_id = generate_ticket_id()
         assert ticket_id.startswith("analysis-")
         assert len(ticket_id) == 21  # "analysis-" + 12 hex chars
-        
+
     def test_ticket_ids_unique(self):
         """Ticket IDs are unique"""
         ids = [generate_ticket_id() for _ in range(100)]
         assert len(set(ids)) == 100
-        
+
     def test_ticket_structure(self):
         """Ticket has required fields"""
         report = ValidationReport(issues=[])
@@ -282,7 +281,7 @@ class TestTicketGeneration:
             data_preview={"rows": 100, "columns": 5},
             validation_report=report,
         )
-        
+
         assert "ticket_id" in ticket
         assert "ticket_type" in ticket
         assert "status" in ticket
@@ -291,7 +290,7 @@ class TestTicketGeneration:
         assert "data_issues" in ticket
         assert "analysis_context" in ticket
         assert "suggested_questions" in ticket
-        
+
     def test_ticket_status_pending(self):
         """New ticket has pending status"""
         report = ValidationReport(issues=[])
@@ -302,7 +301,7 @@ class TestTicketGeneration:
             validation_report=report,
         )
         assert ticket["status"] == "pending_user_decision"
-        
+
     def test_ticket_with_analysis_context(self):
         """Ticket includes analysis context"""
         report = ValidationReport(issues=[])
@@ -320,14 +319,14 @@ class TestTicketGeneration:
 
 class TestValidationReport:
     """Tests for ValidationReport"""
-    
+
     def test_empty_report(self):
         """Empty report has zero counts"""
         report = ValidationReport(issues=[])
         assert report.total_issues == 0
         assert report.critical_count == 0
-        assert report.can_proceed == True
-        
+        assert report.can_proceed
+
     def test_report_with_critical_issue(self):
         """Report with critical issue cannot proceed"""
         issue = DataIssue(
@@ -340,8 +339,8 @@ class TestValidationReport:
         )
         report = ValidationReport(issues=[issue])
         assert report.critical_count == 1
-        assert report.can_proceed == False
-        
+        assert not report.can_proceed
+
     def test_report_severity_counts(self):
         """Report correctly counts severities"""
         issues = [
@@ -361,7 +360,7 @@ class TestValidationReport:
 
 class TestIssueFormatting:
     """Tests for issue formatting"""
-    
+
     def test_format_single_issue(self):
         """Format single issue to dict"""
         issue = DataIssue(
@@ -374,12 +373,12 @@ class TestIssueFormatting:
         )
         report = ValidationReport(issues=[issue])
         formatted = format_issues_for_response(report)
-        
+
         assert len(formatted) == 1
         assert formatted[0]["issue_type"] == "pii_detected"
         assert formatted[0]["severity"] == "critical"
         assert formatted[0]["column"] == "email"
-        
+
     def test_format_multiple_issues(self):
         """Format multiple issues"""
         issues = [
@@ -393,14 +392,14 @@ class TestIssueFormatting:
 
 class TestQuestionGeneration:
     """Tests for question generation from issues"""
-    
+
     def test_no_issues_storage_question_only(self):
         """No issues generates only storage question"""
         report = ValidationReport(issues=[])
         questions = generate_questions_from_issues(report)
         assert len(questions) == 1
         assert "save" in questions[0].lower()
-        
+
     def test_pii_generates_critical_question(self):
         """PII issue generates critical question"""
         issue = DataIssue(
@@ -413,12 +412,12 @@ class TestQuestionGeneration:
         )
         report = ValidationReport(issues=[issue])
         questions = generate_questions_from_issues(report)
-        
+
         # Should have PII question + storage question
         assert len(questions) == 2
         assert "CRITICAL" in questions[0]
         assert "PII" in questions[0]
-        
+
     def test_missing_values_question(self):
         """Missing values generate question with percentage"""
         issue = DataIssue(
@@ -431,10 +430,10 @@ class TestQuestionGeneration:
         )
         report = ValidationReport(issues=[issue])
         questions = generate_questions_from_issues(report)
-        
+
         assert any("Missing" in q for q in questions)
         assert any("25.5%" in q for q in questions)
-        
+
     def test_outliers_question(self):
         """Outliers generate question"""
         issue = DataIssue(
@@ -447,9 +446,9 @@ class TestQuestionGeneration:
         )
         report = ValidationReport(issues=[issue])
         questions = generate_questions_from_issues(report)
-        
+
         assert any("Outlier" in q for q in questions)
-        
+
     def test_multiple_outlier_columns_truncated(self):
         """More than 5 outlier columns are truncated"""
         issues = [
@@ -465,21 +464,21 @@ class TestQuestionGeneration:
         ]
         report = ValidationReport(issues=issues)
         questions = generate_questions_from_issues(report)
-        
+
         outlier_q = [q for q in questions if "Outlier" in q][0]
         assert "..." in outlier_q
 
 
 class TestDefaultCleaningActions:
     """Tests for default cleaning action generation"""
-    
+
     def test_empty_report_default_actions(self):
         """Empty report has empty actions"""
         report = ValidationReport(issues=[])
         actions = get_default_cleaning_actions(report)
         assert actions["missing_values"] == {}
         assert actions["pii"] == {}
-        
+
     def test_missing_values_default_impute(self):
         """Missing values default to median imputation"""
         issue = DataIssue(
@@ -493,7 +492,7 @@ class TestDefaultCleaningActions:
         report = ValidationReport(issues=[issue])
         actions = get_default_cleaning_actions(report)
         assert actions["missing_values"]["age"] == "impute_median"
-        
+
     def test_pii_default_mask(self):
         """PII defaults to masking"""
         issue = DataIssue(
@@ -507,7 +506,7 @@ class TestDefaultCleaningActions:
         report = ValidationReport(issues=[issue])
         actions = get_default_cleaning_actions(report)
         assert actions["pii"]["email"] == "mask"
-        
+
     def test_outliers_default_cap(self):
         """Outliers default to IQR capping"""
         issue = DataIssue(
@@ -521,7 +520,7 @@ class TestDefaultCleaningActions:
         report = ValidationReport(issues=[issue])
         actions = get_default_cleaning_actions(report)
         assert actions["outliers"]["value"] == "cap_iqr"
-        
+
     def test_constant_column_marked_invalid(self):
         """Constant columns added to invalid list"""
         issue = DataIssue(
@@ -535,7 +534,7 @@ class TestDefaultCleaningActions:
         report = ValidationReport(issues=[issue])
         actions = get_default_cleaning_actions(report)
         assert "const" in actions["invalid_columns"]
-        
+
     def test_duplicates_default_drop(self):
         """Duplicate rows default to drop"""
         issue = DataIssue(
@@ -553,7 +552,7 @@ class TestDefaultCleaningActions:
 
 class TestDataIssueToDict:
     """Tests for DataIssue serialization"""
-    
+
     def test_issue_to_dict_all_fields(self):
         """All fields serialized correctly"""
         issue = DataIssue(
@@ -565,14 +564,14 @@ class TestDataIssueToDict:
             suggested_action="mask or hash",
         )
         d = issue.to_dict()
-        
+
         assert d["issue_type"] == "pii_detected"
         assert d["severity"] == "critical"
         assert d["column"] == "email"
         assert d["message"] == "Email pattern detected"
         assert d["details"]["pattern"] == "email"
         assert d["suggested_action"] == "mask or hash"
-        
+
     def test_issue_to_dict_null_column(self):
         """Null column serialized correctly"""
         issue = DataIssue(
@@ -602,21 +601,21 @@ def run_tests():
         TestDefaultCleaningActions,
         TestDataIssueToDict,
     ]
-    
+
     print("=" * 60)
     print("Running smart_tools isolated tests")
     print("=" * 60)
-    
+
     total_passed = 0
     total_failed = 0
-    
+
     for test_class in test_classes:
         print(f"\n{test_class.__name__}:")
         print("-" * 40)
-        
+
         instance = test_class()
         methods = [m for m in dir(instance) if m.startswith("test_")]
-        
+
         for method_name in methods:
             try:
                 method = getattr(instance, method_name)
@@ -626,14 +625,14 @@ def run_tests():
             except Exception as e:
                 print(f"✗ {method_name}: {e}")
                 total_failed += 1
-    
+
     print("\n" + "=" * 60)
     if total_failed == 0:
         print(f"🎉 ALL SMART TOOLS TESTS PASSED! ({total_passed} tests)")
     else:
         print(f"❌ {total_failed} FAILED, {total_passed} passed")
     print("=" * 60)
-    
+
     return total_failed == 0
 
 

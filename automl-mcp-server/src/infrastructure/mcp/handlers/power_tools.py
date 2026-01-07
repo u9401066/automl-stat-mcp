@@ -9,7 +9,7 @@ Combines multiple power analysis tools into unified interfaces:
 - power_survival: Survival power/sample size (replaces 5 tools)
 """
 import logging
-from typing import Optional, List
+from typing import List, Optional
 
 from mcp.server.fastmcp import FastMCP
 
@@ -144,7 +144,7 @@ def register_power_tools(mcp: FastMCP, stats_client) -> None:
                     "status": "success",
                     "sensitivity_table": results,
                     "parameters": {"effect_size": effect_size, "alpha": alpha},
-                    "recommendation": f"Choose n where power >= 0.80"
+                    "recommendation": "Choose n where power >= 0.80"
                 }
 
             return {"status": "error", "error": f"Unknown mode: {mode}. Use: sample_size, power, sensitivity, effect_size"}

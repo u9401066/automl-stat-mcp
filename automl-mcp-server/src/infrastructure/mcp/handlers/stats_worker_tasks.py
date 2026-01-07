@@ -230,15 +230,15 @@ except ImportError as e:
     def generate_tableone(*args, **kwargs):
         raise ImportError("stats-worker tasks not available")
 
-    class TableOneGenerator:
+    class TableOneGenerator:  # type: ignore[no-redef]
         def __init__(self, *args, **kwargs):
             raise ImportError("stats-worker tasks not available")
 
-    class TableOneConfig:
+    class TableOneConfig:  # type: ignore[no-redef]
         def __init__(self, *args, **kwargs):
             raise ImportError("stats-worker tasks not available")
 
-    class TableOneResult:
+    class TableOneResult:  # type: ignore[no-redef]
         def __init__(self, *args, **kwargs):
             raise ImportError("stats-worker tasks not available")
 
@@ -258,11 +258,11 @@ except ImportError as e:
     def compare_survival_curves(*args, **kwargs):
         raise ImportError("stats-worker tasks not available")
 
-    class KaplanMeierEstimator:
+    class KaplanMeierEstimator:  # type: ignore[no-redef]
         def __init__(self, *args, **kwargs):
             raise ImportError("stats-worker tasks not available")
 
-    class CoxPHFitter:
+    class CoxPHFitter:  # type: ignore[no-redef]
         def __init__(self, *args, **kwargs):
             raise ImportError("stats-worker tasks not available")
 
@@ -282,19 +282,19 @@ except ImportError as e:
     def propensity_score_analysis(*args, **kwargs):
         raise ImportError("stats-worker tasks not available")
 
-    class PropensityScoreEstimator:
+    class PropensityScoreEstimator:  # type: ignore[no-redef]
         def __init__(self, *args, **kwargs):
             raise ImportError("stats-worker tasks not available")
 
-    class PropensityScoreMatcher:
+    class PropensityScoreMatcher:  # type: ignore[no-redef]
         def __init__(self, *args, **kwargs):
             raise ImportError("stats-worker tasks not available")
 
-    class IPWeighting:
+    class IPWeighting:  # type: ignore[no-redef]
         def __init__(self, *args, **kwargs):
             raise ImportError("stats-worker tasks not available")
 
-    class BalanceAssessor:
+    class BalanceAssessor:  # type: ignore[no-redef]
         def __init__(self, *args, **kwargs):
             raise ImportError("stats-worker tasks not available")
 
@@ -317,43 +317,43 @@ except ImportError as e:
     def full_classifier_evaluation(*args, **kwargs):
         raise ImportError("stats-worker tasks not available")
 
-    class ROCPoint:
+    class ROCPoint:  # type: ignore[no-redef]
         def __init__(self, *args, **kwargs):
             raise ImportError("stats-worker tasks not available")
 
-    class ROCCurveResult:
+    class ROCCurveResult:  # type: ignore[no-redef]
         def __init__(self, *args, **kwargs):
             raise ImportError("stats-worker tasks not available")
 
-    class AUCComparisonResult:
+    class AUCComparisonResult:  # type: ignore[no-redef]
         def __init__(self, *args, **kwargs):
             raise ImportError("stats-worker tasks not available")
 
-    class CalibrationResult:
+    class CalibrationResult:  # type: ignore[no-redef]
         def __init__(self, *args, **kwargs):
             raise ImportError("stats-worker tasks not available")
 
-    class PrecisionRecallResult:
+    class PrecisionRecallResult:  # type: ignore[no-redef]
         def __init__(self, *args, **kwargs):
             raise ImportError("stats-worker tasks not available")
 
-    class ROCAnalyzer:
+    class ROCAnalyzer:  # type: ignore[no-redef]
         def __init__(self, *args, **kwargs):
             raise ImportError("stats-worker tasks not available")
 
-    class DeLongTest:
+    class DeLongTest:  # type: ignore[no-redef]
         def __init__(self, *args, **kwargs):
             raise ImportError("stats-worker tasks not available")
 
-    class CalibrationAnalyzer:
+    class CalibrationAnalyzer:  # type: ignore[no-redef]
         def __init__(self, *args, **kwargs):
             raise ImportError("stats-worker tasks not available")
 
-    class PrecisionRecallAnalyzer:
+    class PrecisionRecallAnalyzer:  # type: ignore[no-redef]
         def __init__(self, *args, **kwargs):
             raise ImportError("stats-worker tasks not available")
 
-    class NetBenefitAnalyzer:
+    class NetBenefitAnalyzer:  # type: ignore[no-redef]
         def __init__(self, *args, **kwargs):
             raise ImportError("stats-worker tasks not available")
 
@@ -368,15 +368,15 @@ except ImportError as e:
         raise ImportError("stats-worker tasks not available")
 
     # Phase 6: Power Analysis stubs
-    class TTestPowerAnalysis:
+    class TTestPowerAnalysis:  # type: ignore[no-redef]
         def __init__(self, *args, **kwargs):
             raise ImportError("stats-worker tasks not available")
 
-    class ProportionPowerAnalysis:
+    class ProportionPowerAnalysis:  # type: ignore[no-redef]
         def __init__(self, *args, **kwargs):
             raise ImportError("stats-worker tasks not available")
 
-    class PowerAnalysisResult:
+    class PowerAnalysisResult:  # type: ignore[no-redef]
         def __init__(self, *args, **kwargs):
             raise ImportError("stats-worker tasks not available")
 
@@ -401,28 +401,28 @@ except ImportError as e:
     def interpret_effect_size(*args, **kwargs):
         raise ImportError("stats-worker tasks not available")
 
-    class EffectSizeType:
+    class EffectSizeType:  # type: ignore[no-redef]
         def __init__(self, *args, **kwargs):
             raise ImportError("stats-worker tasks not available")
 
-    class TestType:
+    class TestType:  # type: ignore[no-redef]
         def __init__(self, *args, **kwargs):
             raise ImportError("stats-worker tasks not available")
 
     # Phase 6.2: ANOVA and Chi-square stubs
-    class ANOVAPowerAnalysis:
+    class ANOVAPowerAnalysis:  # type: ignore[no-redef]
         def __init__(self, *args, **kwargs):
             raise ImportError("stats-worker tasks not available")
 
-    class ANOVAPowerResult:
+    class ANOVAPowerResult:  # type: ignore[no-redef]
         def __init__(self, *args, **kwargs):
             raise ImportError("stats-worker tasks not available")
 
-    class ChiSquarePowerAnalysis:
+    class ChiSquarePowerAnalysis:  # type: ignore[no-redef]
         def __init__(self, *args, **kwargs):
             raise ImportError("stats-worker tasks not available")
 
-    class ChiSquarePowerResult:
+    class ChiSquarePowerResult:  # type: ignore[no-redef]
         def __init__(self, *args, **kwargs):
             raise ImportError("stats-worker tasks not available")
 
@@ -454,11 +454,11 @@ except ImportError as e:
         raise ImportError("stats-worker tasks not available")
 
     # Phase 6.3: Survival Analysis Power stubs
-    class SurvivalPowerAnalysis:
+    class SurvivalPowerAnalysis:  # type: ignore[no-redef]
         def __init__(self, *args, **kwargs):
             raise ImportError("stats-worker tasks not available")
 
-    class SurvivalPowerResult:
+    class SurvivalPowerResult:  # type: ignore[no-redef]
         def __init__(self, *args, **kwargs):
             raise ImportError("stats-worker tasks not available")
 

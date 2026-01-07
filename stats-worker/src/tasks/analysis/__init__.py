@@ -22,16 +22,16 @@ from .distribution import (
     compare_distributions,
     ks_test_two_samples,
 )
+from .functions import run_enhanced_analysis
 from .missing_data import (
     MissingValueAnalysis,
     analyze_missing_values,
 )
 from .multicollinearity import (
-    VIFResult,
     MulticollinearityAnalysis,
+    VIFResult,
     compute_vif,
 )
-from .functions import run_enhanced_analysis
 
 __all__ = [
     # Base

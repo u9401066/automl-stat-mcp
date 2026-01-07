@@ -19,6 +19,7 @@ Usage:
     python tests/test_e2e.py
 """
 import asyncio
+import os
 import time
 from io import BytesIO
 from pathlib import Path
@@ -27,8 +28,6 @@ import httpx
 import pandas as pd
 from dotenv import load_dotenv
 from minio import Minio
-
-import os
 
 # Load .env file from project root
 load_dotenv(Path(__file__).parent.parent / ".env")
@@ -62,18 +61,18 @@ def upload_to_minio(df: pd.DataFrame, object_name: str) -> str:
         secret_key=MINIO_SECRET_KEY,
         secure=MINIO_SECURE
     )
-    
+
     # Create bucket if not exists
     if not client.bucket_exists(MINIO_BUCKET):
         client.make_bucket(MINIO_BUCKET)
         print(f"Created bucket: {MINIO_BUCKET}")
-    
+
     # Convert DataFrame to CSV bytes
     csv_buffer = BytesIO()
     df.to_csv(csv_buffer, index=False)
     csv_buffer.seek(0)
     csv_bytes = csv_buffer.getvalue()
-    
+
     # Upload
     client.put_object(
         MINIO_BUCKET,
@@ -82,7 +81,7 @@ def upload_to_minio(df: pd.DataFrame, object_name: str) -> str:
         len(csv_bytes),
         content_type="text/csv"
     )
-    
+
     minio_path = f"s3://{MINIO_BUCKET}/{object_name}"
     print(f"Uploaded dataset to: {minio_path}")
     return minio_path
@@ -138,26 +137,26 @@ async def submit_job(dataset_id: str, target_column: str) -> dict:
 async def poll_job_status(job_id: str, timeout: int = 120) -> dict:
     """Poll job status until completion or timeout."""
     start_time = time.time()
-    
+
     async with httpx.AsyncClient() as client:
         while time.time() - start_time < timeout:
             resp = await client.get(f"{API_BASE_URL}/jobs/{job_id}")
             resp.raise_for_status()
             data = resp.json()
-            
+
             status = data.get("status", "unknown")
             print(f"⏳ Job status: {status}")
-            
+
             if status == "completed":
-                print(f"✅ Job completed!")
+                print("✅ Job completed!")
                 return data
             elif status == "failed":
                 print(f"❌ Job failed: {data.get('error')}")
                 return data
-            
+
             await asyncio.sleep(5)  # Poll every 5 seconds
-        
-        print(f"⏰ Timeout waiting for job completion")
+
+        print("⏰ Timeout waiting for job completion")
         return {"status": "timeout"}
 
 
@@ -176,44 +175,44 @@ async def main():
     print("=" * 60)
     print("AutoML E2E Test")
     print("=" * 60)
-    
+
     # Step 1: Check API health
     print("\n[1/5] Checking API health...")
     await test_api_health()
-    
+
     # Step 2: Create and upload test dataset
     print("\n[2/5] Creating and uploading test dataset...")
     df = create_test_dataset()
     print(f"Dataset shape: {df.shape}")
     print(f"Columns: {list(df.columns)}")
-    
+
     timestamp = int(time.time())
     object_name = f"test/iris_test_{timestamp}.csv"
     minio_path = upload_to_minio(df, object_name)
-    
+
     # Step 3: Register dataset
     print("\n[3/5] Registering dataset...")
     dataset = await register_dataset(minio_path, f"iris_test_{timestamp}")
     dataset_id = dataset.get("id") or dataset.get("dataset_id")
     print(f"Dataset ID: {dataset_id}")
-    
+
     # Step 4: Submit AutoML job
     print("\n[4/5] Submitting AutoML job...")
     job = await submit_job(dataset_id, target_column="target")
     job_id = job.get("id") or job.get("job_id")
     print(f"Job ID: {job_id}")
-    
+
     # Step 5: Poll for completion
     print("\n[5/5] Waiting for job completion...")
     print("(This requires the automl-worker to be running)")
     result = await poll_job_status(job_id, timeout=120)
-    
+
     if result.get("status") == "completed":
         model_id = result.get("model_id")
         if model_id:
             print(f"\n[Bonus] Getting leaderboard for model {model_id}...")
             await get_leaderboard(model_id)
-    
+
     print("\n" + "=" * 60)
     print("E2E Test Complete!")
     print("=" * 60)

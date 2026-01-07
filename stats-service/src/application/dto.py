@@ -2,8 +2,7 @@
 Data Transfer Objects for Stats Service
 """
 from dataclasses import dataclass
-from typing import Optional, List, Dict, Any
-
+from typing import Any, Dict, List, Optional
 
 # ============== Request DTOs ==============
 

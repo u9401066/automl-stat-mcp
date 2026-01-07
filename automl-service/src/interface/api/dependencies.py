@@ -4,28 +4,26 @@ Dependency Injection Container
 Provides instances of repositories and services.
 Uses Redis Queue for job management (not in-memory).
 """
-import os
-from functools import lru_cache
 
+from ...config import MINIO_BUCKET
+from ...infrastructure.file_storage import MinIOStorageService
+from ...infrastructure.queue.redis_queue import RedisJobQueue, get_job_queue
 from ...infrastructure.repositories import (
     InMemoryDatasetRepository,
     InMemoryModelRepository,
 )
-from ...infrastructure.file_storage import MinIOStorageService
-from ...infrastructure.queue.redis_queue import RedisJobQueue, get_job_queue
-from ...config import MINIO_BUCKET
 
 
 class Container:
     """Simple DI container for API service (no ML engine needed)"""
-    
+
     _instance = None
-    
+
     def __init__(self):
         # Repositories (in-memory for now, can move to Redis/DB later)
         self._dataset_repo = None
         self._model_repo = None
-        
+
         # Services
         self._minio_client = None
         self._job_queue = None

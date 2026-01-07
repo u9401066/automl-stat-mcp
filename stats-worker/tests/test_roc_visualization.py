@@ -8,24 +8,24 @@ Tests covering:
 - Confusion matrix plotting
 - Threshold analysis plotting
 """
-import pytest
-import numpy as np
-from unittest.mock import Mock, patch, MagicMock
-
 import sys
+from unittest.mock import patch
+
+import numpy as np
+import pytest
+
 sys.path.insert(0, '/home/eric/workspace251204/stats-worker/src')
 
 from visualization.roc import (
-    plot_roc_curve,
-    plot_roc_curves_comparison,
-    plot_pr_curve,
+    create_roc_visualizations,
     plot_calibration_curve,
     plot_confusion_matrix,
+    plot_pr_curve,
+    plot_roc_curve,
+    plot_roc_curves_comparison,
     plot_threshold_analysis,
-    create_roc_visualizations,
 )
 from visualization.schemas import VisualizationType
-
 
 # =============================================================================
 # Sample Data Fixtures
@@ -148,121 +148,121 @@ def confusion_matrix_array():
 
 class TestROCCurvePlot:
     """Tests for ROC curve plotting."""
-    
+
     def test_plot_basic(self, roc_result):
         """Test basic ROC curve plot."""
         import matplotlib.pyplot as plt
-        
+
         fig = plot_roc_curve(roc_result)
-        
+
         assert fig is not None
         assert len(fig.axes) == 1
-        
+
         plt.close(fig)
-    
+
     def test_plot_with_optimal_threshold(self, roc_result):
         """Test ROC curve with optimal threshold marked."""
         import matplotlib.pyplot as plt
-        
+
         fig = plot_roc_curve(roc_result, show_optimal=True)
-        
+
         assert fig is not None
-        
+
         plt.close(fig)
-    
+
     def test_plot_without_ci(self, roc_result):
         """Test ROC curve without CI in legend."""
         import matplotlib.pyplot as plt
-        
+
         fig = plot_roc_curve(roc_result, show_ci=False)
-        
+
         assert fig is not None
-        
+
         plt.close(fig)
-    
+
     def test_plot_without_diagonal(self, roc_result):
         """Test ROC curve without diagonal reference."""
         import matplotlib.pyplot as plt
-        
+
         fig = plot_roc_curve(roc_result, show_diagonal=False)
-        
+
         assert fig is not None
-        
+
         plt.close(fig)
-    
+
     def test_plot_custom_color(self, roc_result):
         """Test ROC curve with custom color."""
         import matplotlib.pyplot as plt
-        
+
         fig = plot_roc_curve(roc_result, color='#FF0000')
-        
+
         assert fig is not None
-        
+
         plt.close(fig)
-    
+
     def test_plot_custom_title(self, roc_result):
         """Test ROC curve with custom title."""
         import matplotlib.pyplot as plt
-        
+
         fig = plot_roc_curve(roc_result, title="Model Performance")
-        
+
         assert fig is not None
-        
+
         plt.close(fig)
-    
+
     def test_plot_empty_curve(self):
         """Test ROC curve with no data."""
         import matplotlib.pyplot as plt
-        
+
         fig = plot_roc_curve({"curve": []})
-        
+
         assert fig is not None
-        
+
         plt.close(fig)
 
 
 class TestROCComparison:
     """Tests for ROC curves comparison."""
-    
+
     def test_compare_two_curves(self, roc_result, roc_result_2):
         """Test comparing two ROC curves."""
         import matplotlib.pyplot as plt
-        
+
         fig = plot_roc_curves_comparison(
             [roc_result, roc_result_2],
             labels=["Model A", "Model B"]
         )
-        
+
         assert fig is not None
-        
+
         plt.close(fig)
-    
+
     def test_compare_with_delong(self, roc_result, roc_result_2):
         """Test comparison with DeLong test result."""
         import matplotlib.pyplot as plt
-        
+
         comparison = {
             "difference": 0.07,
             "p_value": 0.02
         }
-        
+
         fig = plot_roc_curves_comparison(
             [roc_result, roc_result_2],
             comparison_result=comparison
         )
-        
+
         assert fig is not None
-        
+
         plt.close(fig)
-    
+
     def test_compare_default_labels(self, roc_result, roc_result_2):
         """Test comparison with default labels."""
         import matplotlib.pyplot as plt
-        
+
         fig = plot_roc_curves_comparison([roc_result, roc_result_2])
-        
+
         assert fig is not None
-        
+
         plt.close(fig)
 
 
@@ -272,45 +272,45 @@ class TestROCComparison:
 
 class TestPRCurvePlot:
     """Tests for Precision-Recall curve plotting."""
-    
+
     def test_plot_basic(self, pr_result):
         """Test basic PR curve plot."""
         import matplotlib.pyplot as plt
-        
+
         fig = plot_pr_curve(pr_result)
-        
+
         assert fig is not None
-        
+
         plt.close(fig)
-    
+
     def test_plot_with_f1_optimal(self, pr_result):
         """Test PR curve with F1-optimal point."""
         import matplotlib.pyplot as plt
-        
+
         fig = plot_pr_curve(pr_result, show_f1_optimal=True)
-        
+
         assert fig is not None
-        
+
         plt.close(fig)
-    
+
     def test_plot_with_baseline(self, pr_result):
         """Test PR curve with baseline."""
         import matplotlib.pyplot as plt
-        
+
         fig = plot_pr_curve(pr_result, show_baseline=True, baseline_precision=0.33)
-        
+
         assert fig is not None
-        
+
         plt.close(fig)
-    
+
     def test_plot_without_auc(self, pr_result):
         """Test PR curve without AUC in legend."""
         import matplotlib.pyplot as plt
-        
+
         fig = plot_pr_curve(pr_result, show_auc=False)
-        
+
         assert fig is not None
-        
+
         plt.close(fig)
 
 
@@ -320,46 +320,46 @@ class TestPRCurvePlot:
 
 class TestCalibrationPlot:
     """Tests for calibration curve plotting."""
-    
+
     def test_plot_basic(self, calibration_result):
         """Test basic calibration plot."""
         import matplotlib.pyplot as plt
-        
+
         fig = plot_calibration_curve(calibration_result)
-        
+
         assert fig is not None
-        
+
         plt.close(fig)
-    
+
     def test_plot_with_histogram(self, calibration_result):
         """Test calibration with histogram."""
         import matplotlib.pyplot as plt
-        
+
         fig = plot_calibration_curve(calibration_result, show_histogram=True)
-        
+
         assert fig is not None
         assert len(fig.axes) >= 2  # Main plot + histogram
-        
+
         plt.close(fig)
-    
+
     def test_plot_without_histogram(self, calibration_result):
         """Test calibration without histogram."""
         import matplotlib.pyplot as plt
-        
+
         fig = plot_calibration_curve(calibration_result, show_histogram=False)
-        
+
         assert fig is not None
-        
+
         plt.close(fig)
-    
+
     def test_plot_without_metrics(self, calibration_result):
         """Test calibration without metrics text."""
         import matplotlib.pyplot as plt
-        
+
         fig = plot_calibration_curve(calibration_result, show_metrics=False)
-        
+
         assert fig is not None
-        
+
         plt.close(fig)
 
 
@@ -369,80 +369,80 @@ class TestCalibrationPlot:
 
 class TestConfusionMatrixPlot:
     """Tests for confusion matrix plotting."""
-    
+
     def test_plot_from_dict(self, confusion_matrix_dict):
         """Test confusion matrix from dict."""
         import matplotlib.pyplot as plt
-        
+
         fig = plot_confusion_matrix(confusion_matrix_dict)
-        
+
         assert fig is not None
-        
+
         plt.close(fig)
-    
+
     def test_plot_from_array(self, confusion_matrix_array):
         """Test confusion matrix from numpy array."""
         import matplotlib.pyplot as plt
-        
+
         fig = plot_confusion_matrix(confusion_matrix_array)
-        
+
         assert fig is not None
-        
+
         plt.close(fig)
-    
+
     def test_plot_normalized(self, confusion_matrix_dict):
         """Test normalized confusion matrix."""
         import matplotlib.pyplot as plt
-        
+
         fig = plot_confusion_matrix(confusion_matrix_dict, normalize=True)
-        
+
         assert fig is not None
-        
+
         plt.close(fig)
-    
+
     def test_plot_custom_labels(self, confusion_matrix_dict):
         """Test with custom labels."""
         import matplotlib.pyplot as plt
-        
+
         fig = plot_confusion_matrix(
             confusion_matrix_dict,
             labels=['Control', 'Disease']
         )
-        
+
         assert fig is not None
-        
+
         plt.close(fig)
-    
+
     def test_plot_without_percentages(self, confusion_matrix_dict):
         """Test without percentages."""
         import matplotlib.pyplot as plt
-        
+
         fig = plot_confusion_matrix(
             confusion_matrix_dict,
             show_percentages=False
         )
-        
+
         assert fig is not None
-        
+
         plt.close(fig)
-    
+
     def test_metrics_calculation(self, confusion_matrix_dict):
         """Test that metrics are correctly calculated."""
         import matplotlib.pyplot as plt
-        
+
         # Expected metrics
         tn, fp, fn, tp = 150, 50, 20, 80
         total = tn + fp + fn + tp
-        
-        expected_accuracy = (tp + tn) / total  # 230/300 = 0.767
-        expected_sensitivity = tp / (tp + fn)  # 80/100 = 0.8
-        expected_specificity = tn / (tn + fp)  # 150/200 = 0.75
-        
+
+        (tp + tn) / total  # 230/300 = 0.767
+        tp / (tp + fn)  # 80/100 = 0.8
+        tn / (tn + fp)  # 150/200 = 0.75
+
         fig = plot_confusion_matrix(confusion_matrix_dict)
-        
+
         # Verify figure was created (metrics are in the figure text)
         assert fig is not None
-        
+
         plt.close(fig)
 
 
@@ -452,41 +452,41 @@ class TestConfusionMatrixPlot:
 
 class TestThresholdAnalysis:
     """Tests for threshold analysis plotting."""
-    
+
     def test_plot_basic(self, roc_result):
         """Test basic threshold analysis."""
         import matplotlib.pyplot as plt
-        
+
         fig = plot_threshold_analysis(roc_result)
-        
+
         assert fig is not None
-        
+
         plt.close(fig)
-    
+
     def test_plot_selected_metrics(self, roc_result):
         """Test with selected metrics only."""
         import matplotlib.pyplot as plt
-        
+
         fig = plot_threshold_analysis(
             roc_result,
             metrics=['sensitivity', 'specificity']
         )
-        
+
         assert fig is not None
-        
+
         plt.close(fig)
-    
+
     def test_plot_custom_title(self, roc_result):
         """Test with custom title."""
         import matplotlib.pyplot as plt
-        
+
         fig = plot_threshold_analysis(
             roc_result,
             title="Classification Threshold Selection"
         )
-        
+
         assert fig is not None
-        
+
         plt.close(fig)
 
 
@@ -496,30 +496,30 @@ class TestThresholdAnalysis:
 
 class TestCreateROCVisualizations:
     """Tests for high-level visualization creation."""
-    
+
     @patch('visualization.roc.save_figure_to_minio')
     def test_create_roc_only(self, mock_save, roc_result):
         """Test creating visualizations with ROC data only."""
         mock_save.return_value = "https://minio.example.com/test.png"
-        
+
         results = create_roc_visualizations(
             roc_result,
             user_id="test_user",
             job_id="test_job",
             save_to_minio=True,
         )
-        
+
         assert len(results) >= 2  # ROC + threshold analysis
-        
+
         types = [r.type for r in results]
         assert VisualizationType.ROC_CURVE in types
         assert VisualizationType.THRESHOLD_ANALYSIS in types
-    
+
     @patch('visualization.roc.save_figure_to_minio')
     def test_create_full_suite(self, mock_save, roc_result, pr_result, calibration_result, confusion_matrix_dict):
         """Test creating full visualization suite."""
         mock_save.return_value = "https://minio.example.com/test.png"
-        
+
         results = create_roc_visualizations(
             roc_result,
             pr_result=pr_result,
@@ -529,29 +529,29 @@ class TestCreateROCVisualizations:
             job_id="test_job",
             save_to_minio=True,
         )
-        
+
         assert len(results) >= 5  # ROC, threshold, PR, calibration, confusion matrix
-        
+
         types = [r.type for r in results]
         assert VisualizationType.ROC_CURVE in types
         assert VisualizationType.PR_CURVE in types
         assert VisualizationType.CALIBRATION_CURVE in types
         assert VisualizationType.CONFUSION_MATRIX in types
-    
+
     @patch('visualization.roc.save_figure_to_minio')
     def test_roc_visualization_result_metadata(self, mock_save, roc_result):
         """Test ROCVisualizationResult has correct metadata."""
         mock_save.return_value = "https://minio.example.com/test.png"
-        
+
         results = create_roc_visualizations(
             roc_result,
             user_id="test_user",
             job_id="test_job",
         )
-        
+
         # Find ROC result
         roc_viz = next(r for r in results if r.type == VisualizationType.ROC_CURVE)
-        
+
         assert roc_viz.auc == 0.85
         assert roc_viz.auc_ci_lower == 0.80
         assert roc_viz.auc_ci_upper == 0.90
