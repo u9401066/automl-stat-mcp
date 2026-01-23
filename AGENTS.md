@@ -93,6 +93,90 @@ uv run pytest              # 執行測試
 
 詳見：`.github/bylaws/python-environment.md`
 
+### 開發環境設置
+
+#### 根目錄 uv 環境（Host 開發）
+
+```bash
+# 根目錄用於本機開發和測試編排
+cd /home/eric/workspace251204
+uv venv && source .venv/bin/activate
+uv sync --all-extras
+
+# 執行整合測試
+uv run pytest tests/ -v
+```
+
+#### 各服務 venv（Docker 內）
+
+| 服務 | 目錄 | venv | 說明 |
+|------|------|------|------|
+| automl-mcp-server | `automl-mcp-server/` | `.venv` | MCP 伺服器，有獨立 `pyproject.toml` + `uv.lock` |
+| automl-service | `automl-service/` | Docker only | 使用 `requirements.txt` |
+| stats-service | `stats-service/` | Docker only | 使用 `requirements.txt` |
+| automl-worker | `automl-worker/` | Docker only | GPU 容器，有 autogluon |
+| stats-worker | `stats-worker/` | Docker only | 統計計算 worker |
+
+#### automl-mcp-server 本機開發
+
+```bash
+cd automl-mcp-server
+uv venv && source .venv/bin/activate
+uv sync                           # 基本依賴
+uv pip install pandas numpy scipy  # 額外依賴（測試用）
+
+# 執行單元測試
+uv run pytest tests/unit/ -v
+```
+
+### Docker 環境架構
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    Docker Compose 服務架構                               │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│   [Profile: default/stats]                                              │
+│       ├─ automl-mcp (8002)     ← MCP 伺服器入口                         │
+│       ├─ stats-service (8003) ← 統計 API                                │
+│       ├─ stats-worker (x2)    ← 統計計算 worker                         │
+│       └─ automl-redis (6379)  ← Redis 任務隊列                          │
+│                                                                         │
+│   [Profile: ml] 額外加載                                                 │
+│       ├─ automl-api (8001)    ← AutoML API                              │
+│       └─ automl-worker (x4)   ← AutoML 訓練 worker (可 GPU)             │
+│                                                                         │
+│   [Profile: full] 額外加載                                               │
+│       └─ minio (9000/9001)    ← 物件儲存                                │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+#### Docker Compose Profiles 使用
+
+```bash
+# 預設模式（僅統計服務，本地儲存）
+docker compose up -d
+
+# ML 模式（加入 AutoML 訓練）
+docker compose --profile ml up -d
+
+# 完整模式（加入 MinIO 儲存）
+docker compose --profile full up -d
+
+# 環境變數控制儲存模式
+STORAGE_MODE=local docker compose up -d   # 預設，使用本地檔案
+STORAGE_MODE=minio docker compose --profile full up -d  # 使用 MinIO
+```
+
+#### Volume 掛載
+
+| Host 路徑 | Container 路徑 | 用途 |
+|-----------|----------------|------|
+| `./sample_data` | `/data/sample_data` | 範例資料集 |
+| `./projects` | `/data/projects` | 使用者專案 |
+| `local-results` | `/data/results` | 分析結果（local 模式） |
+
 ### Memory Bank 同步
 
 每次重要操作必須更新 Memory Bank：
