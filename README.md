@@ -92,10 +92,33 @@ Configure your AI agent (Claude Desktop, Cursor, etc.) to connect to the MCP ser
 
 ### Storage Modes
 
-| Mode | Environment Variable | Description |
-|------|---------------------|-------------|
-| Local (Default) | `STORAGE_MODE=local` | Uses local `/data` directory, no external dependencies |
-| MinIO | `STORAGE_MODE=minio` | Uses MinIO object storage for scalable deployment |
+**Default**: Local file storage (no external dependencies)
+
+| Mode | Environment Variable | Description | Requirements |
+|------|---------------------|-------------|-------------|
+| **Local** (Default) | `STORAGE_MODE=local` | Uses local `/data` directory for all storage operations | None |
+| **MinIO** | `STORAGE_MODE=minio` | S3-compatible object storage for distributed deployment | Profile: `full` |
+
+**Volume Mounts**:
+```yaml
+volumes:
+  - ./sample_data:/data/sample_data:ro   # Sample datasets (read-only)
+  - ./projects:/data/projects             # User projects
+  - local-results:/data/results           # Analysis results
+```
+
+**Switching Storage Modes**:
+```bash
+# Local storage (default)
+docker compose up -d
+
+# MinIO storage (requires full profile)
+STORAGE_MODE=minio docker compose --profile full up -d
+```
+
+**Path Resolution**:
+- User input: `iris.csv` → Container path: `/data/sample_data/iris.csv`
+- User input: `projects/study1/data.csv` → `/data/projects/study1/data.csv`
 
 ---
 

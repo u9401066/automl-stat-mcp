@@ -10,8 +10,8 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse
 
 from ..application.use_cases import GetJobResultUseCase, GetJobStatusUseCase, ListJobsUseCase
-from ..infrastructure.minio_client import minio_client
 from ..infrastructure.repositories import get_job_repository
+from ..infrastructure.storage_factory import get_storage
 
 router = APIRouter(prefix="/jobs", tags=["Jobs"])
 
@@ -90,14 +90,19 @@ async def get_job_result(job_id: str):
             "result": result.result
         }
 
-    # Otherwise load from MinIO
-    report = minio_client.get_report(job_id)
+    # Otherwise load from storage
+    storage = get_storage()
+    report_path = f"stats-reports/{job_id}.json"
+    report_bytes = await storage.read_bytes(report_path)
 
-    if not report:
+    if report_bytes is None:
         raise HTTPException(
             status_code=404,
-            detail="Report not found in storage"
+            detail=f"Result for job {job_id} not found in storage"
         )
+
+    import json
+    report = json.loads(report_bytes.decode('utf-8'))
 
     return {
         "job_id": job_id,
@@ -134,13 +139,18 @@ async def get_job_html_report(job_id: str):
             detail=f"Job is not completed. Current status: {result.status}"
         )
 
-    html = minio_client.get_html_report(job_id)
+    # Get HTML from storage
+    storage = get_storage()
+    html_path = f"stats-reports/{job_id}.html"
+    html_bytes = await storage.read_bytes(html_path)
 
-    if not html:
+    if html_bytes is None:
         raise HTTPException(
             status_code=404,
             detail="HTML report not found in storage"
         )
+
+    html = html_bytes.decode('utf-8')
 
     return html
 

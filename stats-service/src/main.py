@@ -15,8 +15,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from .config import SERVICE_HOST, SERVICE_PORT
-from .infrastructure.minio_client import minio_client
 from .infrastructure.redis_client import redis_client
+from .infrastructure.storage_factory import get_storage
 from .routes import auto_analyze, cleaning, direct, eda, jobs, power, propensity, roc, storage, survival, tableone
 
 # Configure logging
@@ -34,9 +34,9 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting Stats Service...")
 
-    # Ensure MinIO buckets exist
-    minio_client.ensure_buckets()
-    logger.info("MinIO buckets verified")
+    # Initialize storage backend
+    storage = get_storage()
+    logger.info(f"Storage backend initialized: {type(storage).__name__}")
 
     yield
 

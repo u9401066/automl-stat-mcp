@@ -11,6 +11,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import API_HOST, API_PORT, AVAILABLE_ALGORITHMS
+from .infrastructure.storage_factory import get_storage
 from .interface.api.routes import datasets, direct, jobs, models, post_only, training
 from .interface.api.schemas import HealthResponse
 
@@ -28,6 +29,12 @@ async def lifespan(app: FastAPI):
     """Application lifespan - startup and shutdown"""
     # Startup
     logger.info("Starting AutoML API Service...")
+    
+    # Initialize storage backend
+    storage = get_storage()
+    storage_type = storage.__class__.__name__
+    logger.info(f"Storage backend initialized: {storage_type}")
+    
     logger.info("Note: Training jobs are processed by the worker container")
 
     yield

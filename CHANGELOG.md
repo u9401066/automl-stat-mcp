@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2026-01-23
+
+### Added
+- **Storage Abstraction Layer**: Implemented `storage_factory.py` with pluggable storage backends
+  - `LocalStorageService`: Default local file storage at `/data` (no external dependencies)
+  - `MinIOStorageService`: Optional MinIO S3-compatible object storage
+  - Singleton factory pattern with `get_storage()` API
+  - Configurable via `STORAGE_MODE` environment variable (local/minio)
+
+### Changed
+- **stats-service Migration**: Replaced direct `minio_client` calls with `storage_factory`
+  - Updated 5 route files: main.py, storage.py, tableone.py, eda.py, jobs.py
+  - Startup logs now show: `Storage backend initialized: LocalStorageService`
+- **automl-service Migration**: Replaced `MinIOStorageService()` instantiation with `get_storage()`
+  - Updated `dependencies.py` DI container to use storage factory
+  - Updated `main.py` with storage initialization logging
+- **Docker Compose Profiles**: Enhanced documentation for storage mode selection
+- **Default Storage Mode**: Changed from MinIO-required to local-first architecture
+
+### Fixed
+- Syntax error in `stats-service/src/routes/tableone.py` (duplicate closing parenthesis)
+- Integration tests now pass with local storage mode (32 passed)
+
+### Technical Details
+- Volume mounts: `./sample_data` → `/data/sample_data`, `./projects` → `/data/projects`
+- Path resolution: Automatic conversion from user input to container paths
+- Storage selection: `STORAGE_MODE=local` (default) or `STORAGE_MODE=minio` (requires profile: full)
+
 ## [1.6.0] - 2026-01-06
 
 ### Added

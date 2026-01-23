@@ -6,7 +6,7 @@ Uses Redis Queue for job management (not in-memory).
 """
 
 from ...config import MINIO_BUCKET
-from ...infrastructure.file_storage import MinIOStorageService
+from ...infrastructure.storage_factory import get_storage
 from ...infrastructure.queue.redis_queue import RedisJobQueue, get_job_queue
 from ...infrastructure.repositories import (
     InMemoryDatasetRepository,
@@ -47,10 +47,10 @@ class Container:
         return self._model_repo
 
     @property
-    def file_storage(self) -> MinIOStorageService:
-        """MinIO file storage service"""
+    def file_storage(self):
+        """Storage service (Local or MinIO based on STORAGE_MODE)"""
         if self._minio_client is None:
-            self._minio_client = MinIOStorageService()
+            self._minio_client = get_storage()
         return self._minio_client
 
     @property

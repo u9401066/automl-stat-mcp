@@ -11,8 +11,8 @@ from pydantic import BaseModel, Field
 
 from ..application.dto import SubmitTableOneRequest as SubmitTableOneDTO
 from ..application.use_cases import DatasetNotFoundError, SubmitTableOneUseCase
-from ..infrastructure.minio_client import minio_client
 from ..infrastructure.redis_dataset_store import redis_dataset_store
+from ..infrastructure.storage_factory import get_storage
 from ..infrastructure.repositories import get_job_queue, get_job_repository
 
 router = APIRouter(prefix="/tableone", tags=["TableOne"])
@@ -112,12 +112,13 @@ async def get_column_suggestions(dataset_id: str, user_id: str):
             detail=f"Dataset {dataset_id} not found. Please register it first."
         )
 
-    # Load preview from MinIO
+    # Load preview from storage
     minio_path = dataset_info.get("minio_path")
     if not minio_path:
-        raise HTTPException(status_code=400, detail="MinIO path not found in dataset info")
+        raise HTTPException(status_code=400, detail="Dataset path not found in dataset info")
 
-    df = minio_client.load_dataset_by_path(minio_path, n_rows=1000)
+    storage = get_storage()
+    df = await storage.read_csv(minio_path, n_rows=1000)
 
     if df is None:
         raise HTTPException(

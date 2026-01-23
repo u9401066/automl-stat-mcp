@@ -12,8 +12,8 @@ from typing import Any, Dict, Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from ..infrastructure.minio_client import minio_client
 from ..infrastructure.redis_client import redis_client
+from ..infrastructure.storage_factory import get_storage
 
 logger = logging.getLogger(__name__)
 
@@ -179,15 +179,14 @@ async def minio_upload(request: MinIOUploadRequest) -> MinIOUploadResponse:
     Used by MCP tools to persist analysis results permanently.
     """
     try:
-        # Ensure bucket exists
-        minio_client.ensure_bucket(request.bucket)
-
         # Upload content
         content_bytes = request.content.encode('utf-8')
+        storage = get_storage()
 
-        minio_client.put_object(
-            bucket=request.bucket,
-            path=request.path,
+        # Write to storage backend
+        full_path = f"{request.bucket}/{request.path}"
+        await storage.write_bytes(
+            path=full_path,
             data=content_bytes,
             content_type=request.content_type,
         )
@@ -215,7 +214,9 @@ async def minio_download(bucket: str, path: str) -> Dict[str, Any]:
     Returns the stored analysis result.
     """
     try:
-        content = minio_client.get_object(bucket=bucket, path=path)
+        storage = get_storage()
+        full_path = f"{bucket}/{path}"
+        content = await storage.read_bytes(full_path)
 
         # Try to parse as JSON
         try:
@@ -254,11 +255,9 @@ async def minio_list(
     Used to list analysis results for a user.
     """
     try:
-        objects = minio_client.list_objects(
-            bucket=bucket,
-            prefix=prefix,
-            limit=limit,
-        )
+        storage = get_storage()
+        dir_path = f"{bucket}/{prefix}" if prefix else bucket
+        objects = await storage.list_files(dir_path, recursive=True)
 
         return {
             "status": "success",

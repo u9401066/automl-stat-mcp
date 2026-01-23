@@ -11,8 +11,8 @@ from pydantic import BaseModel, Field
 
 from ..application.dto import SubmitEDARequest as SubmitEDADTO
 from ..application.use_cases import DatasetNotFoundError, SubmitEDAUseCase
-from ..infrastructure.minio_client import minio_client
 from ..infrastructure.redis_dataset_store import redis_dataset_store
+from ..infrastructure.storage_factory import get_storage
 from ..infrastructure.repositories import get_job_queue, get_job_repository
 
 router = APIRouter(prefix="/eda", tags=["EDA"])
