@@ -1,33 +1,40 @@
 # =============================================================================
-# AutoML Full Stack - Separated Architecture
+# Clinical AutoML MCP - Open Source Data Analysis & ML Platform
 # =============================================================================
 #
-# Components:
-#   - automl-api: FastAPI service (lightweight, no AutoGluon)
-#   - automl-worker: AutoGluon training workers (default: 4 replicas)
-#   - automl-mcp: MCP Server for AI agents
-#   - stats-service: Statistical analysis API (EDA, TableOne)
-#   - stats-worker: Statistical analysis workers
-#   - redis: Job queue and status storage
+# 🚀 Quick Start (Local Mode - No External Dependencies):
+#   docker compose up -d                    # Stats + MCP only
 #
-# External (connect only, no local data storage):
-#   - MinIO: Your existing MinIO server
+# 📊 Profiles:
+#   docker compose --profile stats up -d    # Statistics only
+#   docker compose --profile ml up -d       # + ML training
+#   docker compose --profile full up -d     # + MinIO storage
 #
-# Usage:
-#   1. Copy .env.example to .env and configure MinIO connection
-#   2. docker compose up -d   # Starts all services with 4 workers
+# 🔧 Components:
+#   - automl-mcp: MCP Server for AI agents (always on)
+#   - stats-service: Statistical analysis API
+#   - stats-worker: Background analysis workers
+#   - automl-api: ML training API (profile: ml)
+#   - automl-worker: AutoGluon workers (profile: ml)
+#   - minio: Object storage (profile: full, optional)
 #
-# Scaling Workers:
-#   docker compose up -d --scale automl-worker=8 --scale stats-worker=2
+# 💾 Storage Modes:
+#   STORAGE_MODE=local  (default) - Uses local /data directory
+#   STORAGE_MODE=minio  - Uses MinIO (requires 'full' profile or external MinIO)
 #
-# GPU Support:
-#   docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d
+# 📈 Scaling Workers:
+#   docker compose --profile ml up -d --scale automl-worker=8 --scale stats-worker=4
+#
+# 🔗 External MinIO (no local minio container):
+#   1. Set MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY in .env
+#   2. Set STORAGE_MODE=minio
+#   3. docker compose --profile ml up -d
 #
 # =============================================================================
 
 services:
   # ===========================================================================
-  # Redis - Job Queue & Status Store
+  # Redis - Job Queue & Status Store (Always Required)
   # ===========================================================================
   redis:
     image: redis:7-alpine
@@ -46,76 +53,7 @@ services:
       retries: 5
 
   # ===========================================================================
-  # AutoML API Service (Lightweight - No AutoGluon)
-  # ===========================================================================
-  automl-api:
-    build: ./automl-service
-    container_name: automl-api
-    ports:
-      - "8001:8001"
-    environment:
-      # MinIO - Connect to your existing server (no local storage)
-      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio.example.com:9000}
-      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
-      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
-      - MINIO_SECURE=${MINIO_SECURE:-false}
-      - MINIO_DATASET_BUCKET=${MINIO_DATASET_BUCKET:-automl-datasets}
-      - MINIO_MODEL_BUCKET=${MINIO_MODEL_BUCKET:-automl-models}
-      # Redis
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      # Logging
-      - LOG_LEVEL=INFO
-    networks:
-      - automl-network
-    depends_on:
-      redis:
-        condition: service_healthy
-    restart: unless-stopped
-
-  # ===========================================================================
-  # AutoGluon Worker (Official Image - Zero Maintenance)
-  # ===========================================================================
-  # To update AutoGluon: Change the FROM tag in automl-worker/Dockerfile
-  # Available tags: https://hub.docker.com/r/autogluon/autogluon/tags
-  #
-  # GPU support: Use docker-compose.gpu.yml
-  # Scaling: docker-compose up -d --scale automl-worker=3
-  # ===========================================================================
-  automl-worker:
-    build: ./automl-worker
-    # Note: container_name removed to support scaling
-    environment:
-      # MinIO - Same as API
-      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio.example.com:9000}
-      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
-      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
-      - MINIO_SECURE=${MINIO_SECURE:-false}
-      - MINIO_DATASET_BUCKET=${MINIO_DATASET_BUCKET:-automl-datasets}
-      - MINIO_MODEL_BUCKET=${MINIO_MODEL_BUCKET:-automl-models}
-      # Redis
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      # Worker settings
-      - WORKER_TEMP_DIR=/tmp/autogluon-work
-      - WORKER_TYPE=cpu
-      - LOG_LEVEL=INFO
-    networks:
-      - automl-network
-    depends_on:
-      redis:
-        condition: service_healthy
-    restart: unless-stopped
-    deploy:
-      replicas: 4  # Default 4 workers for parallel training
-      resources:
-        limits:
-          memory: 8G
-        reservations:
-          memory: 4G
-
-  # ===========================================================================
-  # AutoML MCP Server
+  # AutoML MCP Server (Always On - Core Component)
   # ===========================================================================
   automl-mcp:
     build: ./automl-mcp-server
@@ -127,24 +65,21 @@ services:
       - STATS_SERVICE_URL=http://stats-service:8003
       - MCP_MODE=sse
       - MCP_PORT=8002
-      - LOG_LEVEL=INFO
+      - STORAGE_MODE=${STORAGE_MODE:-local}
+      - LOCAL_DATA_ROOT=/data
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
     volumes:
-      # Only two data directories needed:
-      # 1. sample_data - Public test datasets (read-only)
-      # 2. projects - User research projects (read-write)
-      # All temp data goes to Redis, permanent results go to MinIO
-      - ./sample_data:/data/sample_data:ro    # Sample datasets (read-only)
-      - ./projects:/data/projects             # User research projects (read-write)
+      - ./sample_data:/data/sample_data:ro
+      - ./projects:/data/projects
+      - local-results:/data/results
     networks:
       - automl-network
     depends_on:
-      - automl-api
       - stats-service
     restart: unless-stopped
+
   # ===========================================================================
-  # Stats Service - Statistical Analysis API
-  # ===========================================================================
-  # Provides EDA reports and Table 1 generation
+  # Stats Service - Statistical Analysis API (Always On)
   # ===========================================================================
   stats-service:
     build: ./stats-service
@@ -152,10 +87,11 @@ services:
     ports:
       - "8003:8003"
     environment:
-      # AutoML Service - For dataset lookup
-      - AUTOML_SERVICE_URL=http://automl-api:8001
-      # MinIO - Same as AutoML
-      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio.example.com:9000}
+      # Storage Mode
+      - STORAGE_MODE=${STORAGE_MODE:-local}
+      - LOCAL_DATA_ROOT=/data
+      # MinIO (only used if STORAGE_MODE=minio)
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio:9000}
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
       - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
       - MINIO_SECURE=${MINIO_SECURE:-false}
@@ -167,32 +103,29 @@ services:
       # Service
       - SERVICE_HOST=0.0.0.0
       - SERVICE_PORT=8003
-      - LOG_LEVEL=INFO
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
     volumes:
-      # Only sample_data and projects - all temp goes to Redis, permanent to MinIO
-      - ./sample_data:/data/sample_data:ro    # Sample datasets (read-only)
-      - ./projects:/data/projects             # User research projects (read-write)
+      - ./sample_data:/data/sample_data:ro
+      - ./projects:/data/projects
+      - local-results:/data/results
     networks:
       - automl-network
     depends_on:
       redis:
         condition: service_healthy
-      automl-api:
-        condition: service_started
     restart: unless-stopped
 
   # ===========================================================================
-  # Stats Worker - Statistical Analysis Background Worker
-  # ===========================================================================
-  # Processes EDA and TableOne jobs using ydata-profiling and tableone
-  # Scaling: docker-compose up -d --scale stats-worker=2
+  # Stats Worker - Statistical Analysis Background Worker (Always On)
   # ===========================================================================
   stats-worker:
     build: ./stats-worker
-    # Note: container_name removed to support scaling
     environment:
-      # MinIO - Same as API
-      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio.example.com:9000}
+      # Storage Mode
+      - STORAGE_MODE=${STORAGE_MODE:-local}
+      - LOCAL_DATA_ROOT=/data
+      # MinIO (only used if STORAGE_MODE=minio)
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio:9000}
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
       - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
       - MINIO_SECURE=${MINIO_SECURE:-false}
@@ -201,14 +134,14 @@ services:
       # Redis
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      # Worker - Temp data only, no local results storage
+      # Worker
       - TEMP_DIR=/tmp/stats-work
       - REDIS_JOB_TTL=86400
-      - LOG_LEVEL=INFO
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
     volumes:
-      # Only sample_data and projects - all temp goes to Redis, permanent to MinIO
-      - ./sample_data:/data/sample_data:ro    # Sample datasets (read-only)
-      - ./projects:/data/projects             # User research projects (read-write)
+      - ./sample_data:/data/sample_data:ro
+      - ./projects:/data/projects
+      - local-results:/data/results
     networks:
       - automl-network
     depends_on:
@@ -216,15 +149,123 @@ services:
         condition: service_healthy
     restart: unless-stopped
     deploy:
-      replicas: 2  # Default 2 stats workers
+      replicas: 2
       resources:
         limits:
           memory: 4G
         reservations:
           memory: 2G
 
+  # ===========================================================================
+  # AutoML API Service (Profile: ml)
+  # ===========================================================================
+  automl-api:
+    build: ./automl-service
+    container_name: automl-api
+    profiles:
+      - ml
+      - full
+    ports:
+      - "8001:8001"
+    environment:
+      # Storage Mode
+      - STORAGE_MODE=${STORAGE_MODE:-local}
+      - LOCAL_DATA_ROOT=/data
+      # MinIO (only used if STORAGE_MODE=minio)
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio:9000}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
+      - MINIO_SECURE=${MINIO_SECURE:-false}
+      - MINIO_DATASET_BUCKET=${MINIO_DATASET_BUCKET:-automl-datasets}
+      - MINIO_MODEL_BUCKET=${MINIO_MODEL_BUCKET:-automl-models}
+      # Redis
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ./sample_data:/data/sample_data:ro
+      - ./projects:/data/projects
+      - local-results:/data/results
+    networks:
+      - automl-network
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ===========================================================================
+  # AutoGluon Worker (Profile: ml)
+  # ===========================================================================
+  automl-worker:
+    build: ./automl-worker
+    profiles:
+      - ml
+      - full
+    environment:
+      # Storage Mode
+      - STORAGE_MODE=${STORAGE_MODE:-local}
+      - LOCAL_DATA_ROOT=/data
+      # MinIO (only used if STORAGE_MODE=minio)
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio:9000}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
+      - MINIO_SECURE=${MINIO_SECURE:-false}
+      - MINIO_DATASET_BUCKET=${MINIO_DATASET_BUCKET:-automl-datasets}
+      - MINIO_MODEL_BUCKET=${MINIO_MODEL_BUCKET:-automl-models}
+      # Redis
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      # Worker settings
+      - WORKER_TEMP_DIR=/tmp/autogluon-work
+      - WORKER_TYPE=cpu
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ./sample_data:/data/sample_data:ro
+      - ./projects:/data/projects
+      - local-results:/data/results
+    networks:
+      - automl-network
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      replicas: 4
+      resources:
+        limits:
+          memory: 8G
+        reservations:
+          memory: 4G
+
+  # ===========================================================================
+  # MinIO - Object Storage (Profile: full - Optional)
+  # ===========================================================================
+  minio:
+    image: minio/minio:latest
+    container_name: automl-minio
+    profiles:
+      - full
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ACCESS_KEY:-minioadmin}
+      - MINIO_ROOT_PASSWORD=${MINIO_SECRET_KEY:-minioadmin}
+    volumes:
+      - minio-data:/data
+    networks:
+      - automl-network
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
 volumes:
   redis-data:
+  local-results:
+  minio-data:
 
 networks:
   automl-network:

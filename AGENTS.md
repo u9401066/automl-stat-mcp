@@ -4,16 +4,58 @@
 
 ---
 
+## 📚 法規架構（三層法規體系）
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        法規優先級                                │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   [Level 1] 憲法 CONSTITUTION.md                                │
+│       └─→ 最高原則，不可違反                                     │
+│       └─→ 定義專案核心價值與不可妥協的規則                        │
+│                   ↓                                             │
+│   [Level 2] 子法 .github/bylaws/*.md                            │
+│       └─→ 細則規範，實作指引                                     │
+│       └─→ 6 個子法檔案（見下表）                                 │
+│                   ↓                                             │
+│   [Level 3] 技能 .claude/skills/*/SKILL.md                      │
+│       └─→ 操作程序，具體步驟                                     │
+│       └─→ 23 個 Skills（見下表）                                 │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 子法清單 (`.github/bylaws/`)
+
+| 子法 | 用途 | 關鍵規則 |
+|------|------|----------|
+| `ddd-architecture.md` | DDD 架構規範 | Domain 層禁止外部依賴 |
+| `python-environment.md` | Python 環境管理 | 優先 uv，禁止全域安裝 |
+| `memory-bank.md` | Memory Bank 同步 | 每次操作必須更新 |
+| `git-workflow.md` | Git 提交規範 | Commit 前檢查清單 |
+| `file-paths.md` | 檔案路徑規則 | Container vs Host 路徑 |
+| `docker-operations.md` | Docker 操作指引 | 服務啟動與除錯 |
+
+### 如何使用 Skills
+
+```
+觸發方式：
+1. 直接說觸發詞：「開始工作」→ 觸發 session-start
+2. 說 Skill 名稱：「執行 debug-workflow」
+3. 問問題：「怎麼做存活分析？」→ 自動讀取 mcp-statistical-analysis
+
+Agent 會自動：
+1. 讀取 .claude/skills/{skill-name}/SKILL.md
+2. 按照 SKILL.md 中的步驟執行
+3. 更新 Memory Bank（如果 Skill 要求）
+```
+
+---
+
 ## 專案規則
 
-### 法規遵循
-你必須遵守以下法規層級：
-
-1. **憲法**：`CONSTITUTION.md` - 最高原則，不可違反
-2. **子法**：`.github/bylaws/*.md` - 細則規範
-3. **技能**：`.claude/skills/*/SKILL.md` - 操作程序
-
-### 架構原則
+### 架構原則 (DDD)
 
 - 採用 **DDD (Domain-Driven Design)**
 - **DAL (Data Access Layer) 必須獨立**
@@ -21,21 +63,33 @@
 
 詳見：`.github/bylaws/ddd-architecture.md`
 
-### Python 環境規則
+### Python 環境規則 (uv 優先)
 
-- **優先使用 uv** 管理套件和虛擬環境
-- 新專案必須建立 `pyproject.toml` + `uv.lock`
-- 禁止全域安裝套件
+⚠️ **一律使用 uv**，不要用 pip/conda！
 
 ```bash
-# 初始化環境
-uv venv
-uv sync --all-extras
+# 初始化專案
+uv init                    # 建立 pyproject.toml
+uv venv                    # 建立 .venv
+source .venv/bin/activate  # 啟用環境
 
 # 安裝依賴
-uv add package-name
-uv add --dev pytest ruff
+uv add pandas numpy        # 新增依賴
+uv add --dev pytest ruff   # 開發依賴
+uv sync --all-extras       # 同步所有依賴
+
+# 鎖定版本
+uv lock                    # 產生 uv.lock
+
+# 執行腳本
+uv run python script.py    # 自動使用正確環境
+uv run pytest              # 執行測試
 ```
+
+**禁止事項：**
+- ❌ `pip install xxx`（全域安裝）
+- ❌ `conda install xxx`（避免環境混亂）
+- ❌ 沒有 `pyproject.toml` 就開始寫程式
 
 詳見：`.github/bylaws/python-environment.md`
 
@@ -369,6 +423,7 @@ generate_analysis_report(
 - **code-reviewer** - 程式碼審查
 - **test-generator** - 測試生成（Unit/Integration/E2E）
 - **project-init** - 專案初始化
+- **dependency-audit** - 依賴審計（缺失套件、安全漏洞、授權檢查）
 
 ### MCP 資料分析 Skills（本專案核心）
 - **mcp-project-workflow** - 專案完整操作流程（建立→上傳→分析→報告）

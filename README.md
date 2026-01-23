@@ -1,195 +1,288 @@
-# AutoML MCP System
+# Clinical AutoML MCP
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Docker](https://img.shields.io/badge/docker-ready-blue)](https://www.docker.com/)
-[![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![Docker](https://img.shields.io/badge/docker-compose-blue.svg)](https://docs.docker.com/compose/)
 
-Multi-user AutoML system accessible via AI Agents through MCP (Model Context Protocol).
+**AI-powered clinical research and data analysis platform using Model Context Protocol (MCP).**
+
+Clinical AutoML MCP provides 51+ statistical and machine learning tools through the MCP interface, enabling AI agents (Claude, GPT, etc.) to perform comprehensive clinical research analysis.
+
+---
 
 ## ✨ Features
 
-- 🤖 **AutoML Training** - Automatic model selection with AutoGluon
-- 📊 **Statistical Analysis** - Comprehensive stats tools (TableOne, ROC, Survival, Power)
-- 📁 **Simple File References** - Agent passes file paths, system handles everything
-- 💾 **Result Persistence** - All results saved to Redis + MinIO with unique IDs
-- 🔌 **MCP Integration** - Direct access from AI Agents (Claude, Copilot)
-- 🔒 **Enterprise Ready** - HTTPS, multi-user isolation
+### 📊 Statistical Analysis (51+ MCP Tools)
+- **Descriptive Statistics**: Table One generation, correlation analysis, group comparisons
+- **Survival Analysis**: Kaplan-Meier curves, Cox proportional hazards, log-rank tests
+- **Propensity Score Analysis**: PSM matching, IPW weighting, treatment effect estimation
+- **ROC Analysis**: AUC with CI, threshold optimization, DeLong test for model comparison
+- **Power Analysis**: T-test, ANOVA, Chi-square, proportion, survival sample size calculation
 
-## 🎯 Design Philosophy
+### 🤖 Machine Learning (AutoGluon Backend)
+- **AutoML Training**: Automatic model selection and hyperparameter tuning
+- **Multi-Algorithm Support**: XGBoost, LightGBM, CatBoost, Random Forest, Neural Networks
+- **Classification & Regression**: Binary, multiclass, and regression problems
 
-**Agent 只負責四件事：**
-1. **傳入檔案路徑** - 告訴系統資料在哪裡
-2. **建立工單** - 設定要做什麼任務（含參數）
-3. **查詢狀態** - 檢查工單執行進度
-4. **取得結果** - 獲取輸出（模型/報告/圖片 + 持久化連結）
+### 🔧 Data Preparation
+- **Missing Value Analysis**: MCAR/MAR/MNAR detection with imputation recommendations
+- **Data Cleaning**: PII detection, outlier handling, encoding categorical variables
+- **Quality Checks**: VIF multicollinearity, data validation, integrity checks
 
-## 📚 Documentation
-
-| Document | Description |
-|----------|-------------|
-| [Agent Workflow](docs/AGENT_WORKFLOW.md) | Agent 工作流程與工具使用指南 |
-| [Architecture](docs/ARCHITECTURE.md) | 系統架構設計 |
-| [MCP Tools Inventory](docs/MCP_TOOLS_INVENTORY.md) | 工具清單與狀態 |
-| [Deployment Guide](docs/deployment-guide.md) | 完整部署教學 |
-| [Roadmap](docs/ROADMAP.md) | 開發藍圖與進度追蹤 |
-
-## 🏗️ Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              AI Agent (Claude/Copilot)                       │
-└──────────────────────────────────┬───────────────────────────────────────────┘
-                                   │ MCP Protocol (SSE)
-                                   ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           MCP Server (Port 8002)                             │
-│  ┌─────────────────────────────────────────────────────────────────────┐    │
-│  │                        102+ MCP Tools                               │    │
-│  │  AutoML (26) | Stats (61+) | Cleaning (9) | Workflow (3) | Proj (4) │    │
-│  └─────────────────────────────────────────────────────────────────────┘    │
-└──────────────────┬────────────────────────────────────────┬─────────────────┘
-                   │                                        │
-                   ▼                                        ▼
-┌──────────────────────────────────┐    ┌──────────────────────────────────┐
-│        AutoML Service (8001)     │    │        Stats Service (8003)      │
-│  • Dataset Management            │    │  • Statistical Analysis          │
-│  • Job Orchestration             │    │  • Data Cleaning                 │
-│  • Model Registry                │    │  • Result Storage API            │
-└──────────────────┬───────────────┘    └──────────────────┬───────────────┘
-                   │                                        │
-                   ▼                                        ▼
-┌──────────────────────────────────┐    ┌──────────────────────────────────┐
-│        AutoML Worker             │    │        Stats Worker              │
-│  • AutoGluon 1.3.1               │    │  • ydata-profiling, tableone     │
-│  • Model training                │    │  • lifelines, scipy, statsmodels │
-└──────────────────────────────────┘    └──────────────────────────────────┘
-                   │                                        │
-                   └──────────────┬─────────────────────────┘
-                                  ▼
-               ┌──────────────────────────────────────┐
-               │     Shared Infrastructure            │
-               │  ┌────────┐    ┌────────┐           │
-               │  │ Redis  │    │ (9000) │           │
-               │  │ (6379) │    │ MinIO  │           │
-               │  └────────┘    └────────┘           │
-               │    Cache         Object              │
-               │    Queue         Storage             │
-               └──────────────────────────────────────┘
-```
-
-## 📁 Directory Structure
-
-```
-workspace/
-├── automl-mcp-server/    # MCP Server for AI Agents
-├── automl-service/       # AutoML REST API
-├── automl-worker/        # ML Training Workers
-├── stats-service/        # Statistics REST API
-├── stats-worker/         # Statistics Workers
-├── docs/                 # Documentation
-│   ├── design-issues/    # Design decisions
-│   └── archive/          # Completed plans
-├── memory-bank/          # Project context (for AI agents)
-├── projects/             # User research projects
-├── sample_data/          # Sample datasets
-└── docker-compose.yml    # Main deployment
-```
+---
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-
 - Docker & Docker Compose
-- MinIO server (external or local)
+- 8GB+ RAM recommended
+- (Optional) GPU for accelerated ML training
 
-### 1. Configure Environment
-
-```bash
-cp .env.example .env
-nano .env
-```
-
-Required settings:
-```bash
-MINIO_ENDPOINT=your-minio-host:9000
-MINIO_ACCESS_KEY=your-access-key
-MINIO_SECRET_KEY=your-secret-key
-```
-
-### 2. Start All Services
+### Installation
 
 ```bash
+# Clone the repository
+git clone https://github.com/yourusername/clinical-automl-mcp.git
+cd clinical-automl-mcp
+
+# Start services (statistics only, local storage)
 docker compose up -d
+
+# Or start with ML training support
+docker compose --profile ml up -d
+
+# Or start full stack with MinIO storage
+docker compose --profile full up -d
 ```
 
-Services started:
-- **Redis** (6379) - Job queue
-- **AutoML API** (8001) - REST API
-- **AutoML MCP** (8002) - MCP Server
-- **Stats API** (8003) - Statistics API
-- **4x AutoML Workers** - ML training
-- **2x Stats Workers** - Statistical analysis
-
-### 3. Verify
+### Verify Installation
 
 ```bash
-docker ps
-curl http://localhost:8001/health
+# Check service health
+curl http://localhost:8003/health  # Stats service
+curl http://localhost:8002/health  # MCP server
+
+# List available sample datasets
+curl http://localhost:8003/api/files/list
 ```
 
-### 4. Connect AI Agent
+### Connect to AI Agent
 
-**VS Code Copilot**: See `.vscode/mcp.json`
+Configure your AI agent (Claude Desktop, Cursor, etc.) to connect to the MCP server:
 
-**Claude Desktop**:
 ```json
 {
   "mcpServers": {
-    "automl": {
-      "type": "sse",
+    "clinical-automl": {
       "url": "http://localhost:8002/sse"
     }
   }
 }
 ```
 
-## 📊 Key MCP Tools
+---
 
-| Category | Tools | Description |
-|----------|-------|-------------|
-| **File** | `list_available_files`, `upload_dataset` | 檔案管理 |
-| **AutoML** | `submit_automl_job`, `train_and_wait`, `predict` | ML 訓練 |
-| **Stats** | `compare_groups`, `analyze_correlations`, `generate_tableone_directly` | 統計分析 |
-| **Cleaning** | `handle_missing_values`, `convert_to_binary` | 資料清理 |
-| **ROC** | `compute_roc_curve`, `full_classifier_evaluation` | 分類評估 |
-| **Survival** | `kaplan_meier_survival`, `cox_proportional_hazards` | 存活分析 |
-| **Power** | `calculate_ttest_sample_size`, `calculate_survival_sample_size` | 樣本數 |
+## 📊 Deployment Profiles
 
-See [MCP Tools Inventory](docs/MCP_TOOLS_INVENTORY.md) for complete list (102+ tools).
+| Profile | Command | Components | Use Case |
+|---------|---------|------------|----------|
+| Default | `docker compose up -d` | Stats + MCP | Statistical analysis only |
+| `ml` | `docker compose --profile ml up -d` | + AutoML API/Workers | ML training enabled |
+| `full` | `docker compose --profile full up -d` | + MinIO | Full stack with object storage |
 
-## 🆕 Recent Updates (Jan 2026)
+### Storage Modes
 
-- **uv 管理** (NEW): 全面使用 `uv` 進行工作空間與依賴管理。
-- **代碼品質清理**: 達成 `automl-service` 與 `stats-service` 路由層 Ruff 0 報錯。
-- **專案管理工具**: `create_project_workspace`, `list_user_visualizations`。
-- **視覺化 (Phase 8)**: 出版等級圖表 (ROC, KM, SHAP)。
+| Mode | Environment Variable | Description |
+|------|---------------------|-------------|
+| Local (Default) | `STORAGE_MODE=local` | Uses local `/data` directory, no external dependencies |
+| MinIO | `STORAGE_MODE=minio` | Uses MinIO object storage for scalable deployment |
 
-## 🔧 Development
+---
+
+## 🛠️ Configuration
+
+### Environment Variables
+
+Copy `.env.example` to `.env` and customize:
 
 ```bash
-# 安裝與同步環境
-uv sync --all-extras
-
-# 執行 E2E 測試
-cd tests && uv run pytest test_e2e.py -v
-
-# 執行 Ruff 檢查
-uv run ruff check .
-
-# 執行 MyPy 檢查
-uv run mypy stats-service/src
+cp .env.example .env
 ```
+
+Key settings:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `STORAGE_MODE` | `local` | Storage backend: `local` or `minio` |
+| `LOG_LEVEL` | `INFO` | Logging level |
+| `MINIO_ENDPOINT` | `minio:9000` | MinIO server address |
+| `MINIO_ACCESS_KEY` | `minioadmin` | MinIO access key |
+| `MINIO_SECRET_KEY` | `minioadmin` | MinIO secret key |
+
+### Scaling Workers
+
+```bash
+# Scale stats workers
+docker compose up -d --scale stats-worker=4
+
+# Scale ML workers (requires ml profile)
+docker compose --profile ml up -d --scale automl-worker=8 --scale stats-worker=4
+```
+
+---
+
+## 📁 Sample Datasets
+
+The `sample_data/` directory includes test datasets:
+
+| Dataset | Type | Target | Records |
+|---------|------|--------|---------|
+| `iris.csv` | Classification | species | 150 |
+| `titanic.csv` | Binary | survived | 891 |
+| `heart_disease.csv` | Binary | target | 303 |
+| `breast_cancer.csv` | Binary | diagnosis | 569 |
+| `medical_study_200.csv` | RCT | treatment_group | 200 |
+| `rossi_recidivism.csv` | Survival | arrest, week | 432 |
+| `stanford_heart.csv` | Survival | status, time | 103 |
+
+---
+
+## 🔧 MCP Tools Reference
+
+### Quick Start Tools (Recommended)
+
+| Tool | Description |
+|------|-------------|
+| `smart_analyze` | One-stop analysis: stats + Table One + correlations |
+| `quick_preview` | Fast data preview with auto path resolution |
+| `compare_treatment_groups` | Simplified group comparison |
+| `analyze_medical_study` | Complete RCT analysis pipeline |
+
+### Statistical Analysis
+
+| Category | Tools |
+|----------|-------|
+| **Descriptive** | `generate_tableone_directly`, `analyze_correlations`, `compare_groups`, `get_quick_stats` |
+| **Survival** | `kaplan_meier_survival`, `cox_proportional_hazards` |
+| **Propensity** | `run_propensity_analysis`, `estimate_treatment_effect` |
+| **ROC** | `compute_roc_curve`, `compare_roc_curves`, `find_optimal_threshold`, `full_classifier_evaluation` |
+| **Power** | `power_ttest`, `power_anova`, `power_chisquare`, `power_proportion`, `power_survival` |
+
+### Data Preparation
+
+| Category | Tools |
+|----------|-------|
+| **Quality** | `analyze_missing_values`, `check_multicollinearity`, `get_column_info` |
+| **Cleaning** | `handle_missing_values`, `encode_categorical`, `convert_to_binary`, `filter_rows`, `remove_columns` |
+| **Project** | `create_project_workspace`, `list_available_files`, `list_project_workspaces` |
+
+### ML Training (Requires `ml` profile)
+
+| Tool | Description |
+|------|-------------|
+| `train_and_wait` | One-shot AutoML training |
+| `submit_automl_job` | Async training submission |
+| `get_job_status` | Check training progress |
+| `get_model_leaderboard` | View trained models ranking |
+| `predict` | Make predictions |
+
+---
+
+## 🏗️ Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     AI Agent (Claude/GPT)                       │
+└─────────────────────────────────────────────────────────────────┘
+                                │ MCP Protocol
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     automl-mcp (Port 8002)                      │
+│                   51+ MCP Tools Handlers                        │
+└─────────────────────────────────────────────────────────────────┘
+                    │                           │
+                    ▼                           ▼
+    ┌───────────────────────────┐   ┌───────────────────────────┐
+    │   stats-service (8003)    │   │   automl-api (8001)       │
+    │   Statistical Analysis    │   │   ML Training API         │
+    └───────────────────────────┘   └───────────────────────────┘
+                    │                           │
+                    ▼                           ▼
+    ┌───────────────────────────┐   ┌───────────────────────────┐
+    │      stats-worker         │   │     automl-worker         │
+    │   Background Analysis     │   │   AutoGluon Training      │
+    └───────────────────────────┘   └───────────────────────────┘
+                    │                           │
+                    └───────────────┬───────────┘
+                                    ▼
+                    ┌───────────────────────────┐
+                    │         Redis             │
+                    │    Job Queue & Cache      │
+                    └───────────────────────────┘
+                                    │
+            ┌───────────────────────┴───────────────────────┐
+            ▼                                               ▼
+┌───────────────────────┐                     ┌───────────────────────┐
+│   Local Storage       │         OR          │   MinIO Storage       │
+│   /data/...           │                     │   Object Storage      │
+└───────────────────────┘                     └───────────────────────┘
+```
+
+---
+
+## 📚 Documentation
+
+- [Architecture Overview](docs/ARCHITECTURE.md)
+- [MCP Tools Inventory](docs/MCP_TOOLS_INVENTORY.md)
+- [Deployment Guide](docs/deployment-guide.md)
+- [Testing Strategy](docs/TESTING_STRATEGY.md)
+- [Roadmap](docs/ROADMAP.md)
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+### Development Setup
+
+```bash
+# Clone with submodules
+git clone --recursive https://github.com/yourusername/clinical-automl-mcp.git
+cd clinical-automl-mcp
+
+# Create virtual environment
+python -m venv .venv
+source .venv/bin/activate  # or .venv\Scripts\activate on Windows
+
+# Install development dependencies
+pip install -e ".[dev]"
+
+# Run tests
+pytest tests/
+```
+
+---
 
 ## 📄 License
 
-MIT
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 🙏 Acknowledgments
+
+Built with these excellent open source projects:
+
+- [AutoGluon](https://auto.gluon.ai/) - AutoML framework
+- [lifelines](https://lifelines.readthedocs.io/) - Survival analysis
+- [tableone](https://github.com/tompollard/tableone) - Clinical table generation
+- [FastAPI](https://fastapi.tiangolo.com/) - API framework
+- [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) - AI agent protocol
+
+---
+
+## 📧 Contact
+
+- Issues: [GitHub Issues](https://github.com/yourusername/clinical-automl-mcp/issues)
+- Discussions: [GitHub Discussions](https://github.com/yourusername/clinical-automl-mcp/discussions)
