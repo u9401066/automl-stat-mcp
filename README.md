@@ -301,8 +301,41 @@ source .venv/bin/activate  # or .venv\Scripts\activate on Windows
 # Install development dependencies
 pip install -e ".[dev]"
 
-# Run tests
+# Run tests (interactive mode)
+./run_tests.sh
+
+# Or run specific test suites
+./run_tests.sh fast        # Fast tests only
+./run_tests.sh edge        # Edge case tests
+./run_tests.sh e2e         # End-to-end workflow tests
+./run_tests.sh performance # Performance & load tests
+./run_tests.sh security    # Security tests
+./run_tests.sh coverage    # Generate coverage report
+```
+
+### Test Suites
+
+Our comprehensive test coverage includes:
+
+- **Edge Cases** (50+ tests): Data boundaries, input validation, statistical/ML edge cases
+- **E2E Workflows** (20+ tests): Complete medical RCT, survival analysis, ML training pipelines
+- **Performance** (15+ tests): Load benchmarks, concurrent requests, stress tests
+- **Security** (20+ tests): Injection attacks, path traversal, rate limiting, user isolation
+
+See [TESTING_ENHANCEMENT_PLAN.md](docs/TESTING_ENHANCEMENT_PLAN.md) for details.
+
+```bash
+# Run all tests
 pytest tests/
+
+# Run with coverage
+pytest --cov=. --cov-report=html tests/
+
+# Run specific markers
+pytest -m "edge_case" tests/
+pytest -m "e2e" tests/
+pytest -m "performance" tests/
+pytest -m "security" tests/
 ```
 
 ---
