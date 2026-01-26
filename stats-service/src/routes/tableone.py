@@ -12,8 +12,8 @@ from pydantic import BaseModel, Field
 from ..application.dto import SubmitTableOneRequest as SubmitTableOneDTO
 from ..application.use_cases import DatasetNotFoundError, SubmitTableOneUseCase
 from ..infrastructure.redis_dataset_store import redis_dataset_store
-from ..infrastructure.storage_factory import get_storage
 from ..infrastructure.repositories import get_job_queue, get_job_repository
+from ..infrastructure.storage_factory import get_storage
 
 router = APIRouter(prefix="/tableone", tags=["TableOne"])
 

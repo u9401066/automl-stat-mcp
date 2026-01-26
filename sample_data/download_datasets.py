@@ -288,7 +288,7 @@ def download_pbc():
             "lifelines.datasets.load_stanford_heart_transplants (Crowley & Hu, 1977)",
             "103 heart transplant patients. Survival analysis: post-transplant survival."
         )
-    except:
+    except Exception:
         pass
 
     # Also try lung cancer dataset

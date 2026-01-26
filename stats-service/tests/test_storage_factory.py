@@ -4,7 +4,6 @@ Unit tests for storage_factory.py
 Tests the LocalStorageService implementation which is the default mode.
 MinIO tests require actual MinIO instance and are skipped in unit tests.
 """
-import json
 import os
 import tempfile
 from pathlib import Path
@@ -211,7 +210,7 @@ class TestStorageFactory:
 
     def test_default_is_local(self, monkeypatch):
         """Test default storage mode is local."""
-        from src.infrastructure.storage_factory import reset_storage, get_storage, LocalStorageService
+        from src.infrastructure.storage_factory import LocalStorageService, get_storage, reset_storage
 
         monkeypatch.setenv("STORAGE_MODE", "local")
         reset_storage()
@@ -221,7 +220,7 @@ class TestStorageFactory:
 
     def test_singleton_pattern(self, monkeypatch):
         """Test storage is singleton."""
-        from src.infrastructure.storage_factory import reset_storage, get_storage
+        from src.infrastructure.storage_factory import get_storage, reset_storage
 
         monkeypatch.setenv("STORAGE_MODE", "local")
         reset_storage()
@@ -232,7 +231,7 @@ class TestStorageFactory:
 
     def test_reset_storage(self, monkeypatch):
         """Test reset_storage clears singleton."""
-        from src.infrastructure.storage_factory import reset_storage, get_storage
+        from src.infrastructure.storage_factory import get_storage, reset_storage
 
         monkeypatch.setenv("STORAGE_MODE", "local")
         reset_storage()

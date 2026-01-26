@@ -6,22 +6,18 @@ Uses shared RedisManager for connection pooling.
 """
 import json
 import logging
-from datetime import datetime
-from typing import Optional
-from uuid import uuid4
-
-import redis.asyncio as redis
 
 # Import shared RedisManager
 import sys
+from datetime import datetime
 from pathlib import Path
+from typing import Optional
+from uuid import uuid4
+
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 from shared.infrastructure.redis_manager import RedisManager
 
 from ..config import (
-    REDIS_DB,
-    REDIS_HOST,
-    REDIS_PORT,
     STATS_JOBS_PENDING,
     STATS_JOBS_PREFIX,
 )
@@ -38,10 +34,10 @@ class RedisClient:
     async def connect(self):
         """
         Get Redis client from shared connection pool.
-        
+
         Returns:
             Redis client instance
-        
+
         Raises:
             ConnectionError: If connection fails after retries
         """
@@ -52,7 +48,7 @@ class RedisClient:
     async def close(self):
         """
         Close connection pool.
-        
+
         Note: With shared RedisManager, this doesn't actually close the pool
         as it may be in use by other components. The pool will be closed
         during application shutdown via RedisManager.close().
@@ -79,7 +75,7 @@ class RedisClient:
 
         Returns:
             Job information dict
-        
+
         Raises:
             ConnectionError: If Redis connection fails
             TimeoutError: If Redis operation times out
@@ -116,7 +112,7 @@ class RedisClient:
             logger.info(f"Created job {job_id} (type: {job_type}) for user {user_id}")
 
             return job
-        
+
         except Exception as e:
             logger.error(f"Failed to create job: {e}")
             raise
@@ -124,10 +120,10 @@ class RedisClient:
     async def get_job(self, job_id: str) -> Optional[dict]:
         """
         Get job information by ID.
-        
+
         Returns:
             Job dict or None if not found
-        
+
         Raises:
             ConnectionError: If Redis connection fails
         """
@@ -142,7 +138,7 @@ class RedisClient:
                     logger.error(f"Invalid JSON in job {job_id}: {e}")
                     return None
             return None
-        
+
         except Exception as e:
             logger.error(f"Failed to get job {job_id}: {e}")
             raise

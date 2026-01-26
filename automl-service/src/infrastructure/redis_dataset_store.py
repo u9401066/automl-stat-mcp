@@ -10,15 +10,15 @@ Value: JSON with dataset metadata
 """
 import json
 import logging
-import os
-from typing import Any, Dict, List, Optional
-
-import redis
-from redis.exceptions import ConnectionError, TimeoutError, RedisError
 
 # Import shared RedisManager
 import sys
 from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+import redis
+from redis.exceptions import ConnectionError, RedisError, TimeoutError
+
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 from shared.infrastructure.redis_manager import get_sync_client
 
@@ -42,7 +42,7 @@ class RedisDatasetStore:
     def __init__(self):
         # Lazy initialization - get client from RedisManager on first use
         self._redis = None
-    
+
     def _get_client(self) -> redis.Redis:
         """Get Redis client from shared connection pool."""
         if self._redis is None:
@@ -65,7 +65,7 @@ class RedisDatasetStore:
                 - created_at: str (ISO format)
                 - description: Optional[str]
                 - session_id: Optional[str]
-        
+
         Raises:
             ConnectionError: If Redis connection fails
             RedisError: For other Redis errors
@@ -75,7 +75,7 @@ class RedisDatasetStore:
 
         try:
             redis_client = self._get_client()
-            
+
             # Store dataset metadata with TTL
             key = f"{DATASETS_KEY_PREFIX}{dataset_id}"
             redis_client.set(key, json.dumps(dataset_info), ex=DATASET_TTL)
@@ -87,7 +87,7 @@ class RedisDatasetStore:
             redis_client.expire(user_key, DATASET_TTL)
 
             logger.info(f"Saved dataset {dataset_id} to Redis with TTL {DATASET_TTL}s")
-        
+
         except ConnectionError as e:
             logger.error(f"Redis connection failed while saving dataset {dataset_id}: {e}")
             raise

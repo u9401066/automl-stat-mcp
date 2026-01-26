@@ -1,6 +1,6 @@
 [project]
 name = "automl-stat-mcp"
-version = "1.4.0"
+version = "0.1.0"
 description = "AutoML and Statistical Analysis Platform with Model Context Protocol (MCP) Integration"
 readme = "README.md"
 requires-python = ">=3.10"

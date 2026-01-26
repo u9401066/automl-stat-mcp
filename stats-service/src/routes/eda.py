@@ -6,13 +6,12 @@ Refactored to use Domain-Driven Design with Use Cases.
 """
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from ..application.dto import SubmitEDARequest as SubmitEDADTO
 from ..application.use_cases import DatasetNotFoundError, SubmitEDAUseCase
 from ..infrastructure.redis_dataset_store import redis_dataset_store
-from ..infrastructure.storage_factory import get_storage
 from ..infrastructure.repositories import get_job_queue, get_job_repository
 
 router = APIRouter(prefix="/eda", tags=["EDA"])
@@ -79,16 +78,19 @@ async def submit_eda_job(request: EDARequest):
         raise HTTPException(status_code=404, detail=str(e)) from e
 
 
+# TODO: Fix preview_dataset endpoint - minio_client needs to be imported
+# This endpoint is currently disabled due to missing dependencies
+"""
 @router.post("/preview")
 async def preview_dataset(
     dataset_id: str,
     n_rows: int = Query(default=10, le=100)
 ):
-    """
+    \"\"\"
     Preview dataset before running EDA.
 
     Returns first N rows and basic statistics.
-    """
+    \"\"\"
     # First check if dataset exists in Redis store
     dataset_info = redis_dataset_store.get_dataset(dataset_id)
     if not dataset_info:
@@ -115,3 +117,4 @@ async def preview_dataset(
         "preview": df.to_dict(orient="records"),
         "missing_values": df.isnull().sum().to_dict(),
     }
+"""

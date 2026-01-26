@@ -29,12 +29,12 @@ async def lifespan(app: FastAPI):
     """Application lifespan - startup and shutdown"""
     # Startup
     logger.info("Starting AutoML API Service...")
-    
+
     # Initialize storage backend
     storage = get_storage()
     storage_type = storage.__class__.__name__
     logger.info(f"Storage backend initialized: {storage_type}")
-    
+
     logger.info("Note: Training jobs are processed by the worker container")
 
     yield

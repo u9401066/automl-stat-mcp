@@ -6,19 +6,18 @@ Uses shared RedisManager for connection pooling.
 """
 import json
 import logging
-import os
+
+# Import shared RedisManager
+import sys
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
 import redis
 
-# Import shared RedisManager
-import sys
-from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent))
 from shared.infrastructure.redis_manager import get_sync_client
-
 from src.domain.models.job import Job, JobId, JobStatus, JobType
 from src.domain.models.training_config import TrainingConfig
 
@@ -43,7 +42,7 @@ class RedisJobQueue:
         # Key prefixes
         self._queue_key = "automl:jobs:pending"
         self._job_prefix = "automl:job:"
-    
+
     def _get_client(self) -> redis.Redis:
         """Get Redis client from shared connection pool."""
         if self._redis is None:

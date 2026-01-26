@@ -9,12 +9,10 @@
     python tests/test_datasets_e2e.py --suite ml     # 只跑 ML 訓練
 """
 import argparse
-import json
 import time
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List
 
-import pytest
 import requests
 
 # Service URLs
@@ -133,14 +131,14 @@ class DatasetTester:
     def test_quick_stats(self, dataset_name: str, config: Dict) -> Dict:
         """測試 Quick Stats"""
         csv_path = self.get_csv_path(config["file"])
-        
+
         try:
             resp = requests.post(
                 f"{STATS_SERVICE}/direct/quick-stats",
                 json={"csv_path": csv_path},
                 timeout=30
             )
-            
+
             if resp.status_code == 200:
                 data = resp.json()
                 return {
@@ -153,7 +151,7 @@ class DatasetTester:
                 if self.verbose:
                     print(f"\n      Error: {error_msg}")
                 return {"status": f"❌ FAIL ({resp.status_code})", "error": error_msg}
-                
+
         except Exception as e:
             if self.verbose:
                 print(f"\n      Exception: {str(e)}")
@@ -162,7 +160,7 @@ class DatasetTester:
     def test_tableone(self, dataset_name: str, config: Dict) -> Dict:
         """測試 Table One 生成"""
         csv_path = self.get_csv_path(config["file"])
-        
+
         try:
             resp = requests.post(
                 f"{STATS_SERVICE}/tableone/generate-direct",
@@ -172,7 +170,7 @@ class DatasetTester:
                 },
                 timeout=60
             )
-            
+
             if resp.status_code == 200:
                 data = resp.json()
                 return {
@@ -181,14 +179,14 @@ class DatasetTester:
                 }
             else:
                 return {"status": "❌ FAIL", "error": resp.text}
-                
+
         except Exception as e:
             return {"status": "❌ ERROR", "error": str(e)}
 
     def test_correlation(self, dataset_name: str, config: Dict) -> Dict:
         """測試相關性分析"""
         csv_path = self.get_csv_path(config["file"])
-        
+
         try:
             resp = requests.post(
                 f"{STATS_SERVICE}/eda/correlation",
@@ -198,7 +196,7 @@ class DatasetTester:
                 },
                 timeout=60
             )
-            
+
             if resp.status_code == 200:
                 data = resp.json()
                 return {
@@ -207,14 +205,14 @@ class DatasetTester:
                 }
             else:
                 return {"status": "❌ FAIL", "error": resp.text}
-                
+
         except Exception as e:
             return {"status": "❌ ERROR", "error": str(e)}
 
     def test_kaplan_meier(self, dataset_name: str, config: Dict) -> Dict:
         """測試 Kaplan-Meier 存活分析"""
         csv_path = self.get_csv_path(config["file"])
-        
+
         try:
             resp = requests.post(
                 f"{STATS_SERVICE}/survival/kaplan-meier",
@@ -225,7 +223,7 @@ class DatasetTester:
                 },
                 timeout=60
             )
-            
+
             if resp.status_code == 200:
                 data = resp.json()
                 return {
@@ -234,7 +232,7 @@ class DatasetTester:
                 }
             else:
                 return {"status": "❌ FAIL", "error": resp.text}
-                
+
         except Exception as e:
             return {"status": "❌ ERROR", "error": str(e)}
 
@@ -242,44 +240,44 @@ class DatasetTester:
         """執行統計分析測試"""
         config = DATASETS[dataset_name]
         results = {}
-        
+
         print(f"\n📊 Testing {dataset_name} - Statistics")
         print(f"   File: {config['file']}")
         print(f"   Size: {config['size']}")
-        
+
         # Quick Stats (所有資料集)
         print("   ├─ Quick Stats...", end=" ")
         results["quick_stats"] = self.test_quick_stats(dataset_name, config)
         print(results["quick_stats"]["status"])
-        
+
         # Table One (非存活分析)
         if "tableone" in config["stats_tests"]:
             print("   ├─ Table One...", end=" ")
             results["tableone"] = self.test_tableone(dataset_name, config)
             print(results["tableone"]["status"])
-        
+
         # Correlation (大部分資料集)
         if "correlation" in config["stats_tests"]:
             print("   ├─ Correlation...", end=" ")
             results["correlation"] = self.test_correlation(dataset_name, config)
             print(results["correlation"]["status"])
-        
+
         # Kaplan-Meier (存活分析)
         if "kaplan_meier" in config["stats_tests"]:
             print("   ├─ Kaplan-Meier...", end=" ")
             results["kaplan_meier"] = self.test_kaplan_meier(dataset_name, config)
             print(results["kaplan_meier"]["status"])
-        
+
         return results
 
     def run_ml_tests(self, dataset_name: str) -> Dict:
         """執行 ML 訓練測試（需要 AutoML Service）"""
         config = DATASETS[dataset_name]
-        
+
         if not config["ml_tests"]:
             print(f"\n🤖 Skipping {dataset_name} - No ML tests defined")
             return {}
-        
+
         print(f"\n🤖 Testing {dataset_name} - Machine Learning")
         print("   ⚠️  ML tests require AutoML Service (not implemented yet)")
         return {}
@@ -289,15 +287,15 @@ class DatasetTester:
         if dataset_name not in DATASETS:
             print(f"❌ Unknown dataset: {dataset_name}")
             return {}
-        
+
         results = {"dataset": dataset_name, "timestamp": time.time()}
-        
+
         if suite in ["all", "stats"]:
             results["stats"] = self.run_stats_tests(dataset_name)
-        
+
         if suite in ["all", "ml"]:
             results["ml"] = self.run_ml_tests(dataset_name)
-        
+
         return results
 
     def run_all(self, suite: str = "all"):
@@ -305,23 +303,23 @@ class DatasetTester:
         print("=" * 70)
         print("📋 E2E Dataset Testing Suite")
         print("=" * 70)
-        
+
         # 檢查服務
         if not self.test_service_health():
             print("\n⚠️  請先啟動 Stats Service")
             print("   Docker: docker compose up -d")
             print("   Local:  python stats-service/src/main.py")
             return
-        
+
         all_results = []
-        
+
         for dataset_name in DATASETS.keys():
             result = self.run_dataset(dataset_name, suite)
             all_results.append(result)
-        
+
         # 摘要報告
         self.print_summary(all_results)
-        
+
         return all_results
 
     def print_summary(self, results: List[Dict]):
@@ -329,19 +327,19 @@ class DatasetTester:
         print("\n" + "=" * 70)
         print("📈 Test Summary")
         print("=" * 70)
-        
+
         total = len(results)
         stats_pass = 0
         stats_fail = 0
-        
+
         for result in results:
             if "stats" in result:
-                for test_name, test_result in result["stats"].items():
+                for _test_name, test_result in result["stats"].items():
                     if test_result.get("status", "").startswith("✅"):
                         stats_pass += 1
                     else:
                         stats_fail += 1
-        
+
         print(f"Datasets Tested: {total}")
         print(f"Stats Tests: {stats_pass} passed, {stats_fail} failed")
         print("=" * 70)
@@ -371,11 +369,11 @@ def main():
         action="store_true",
         help="顯示詳細錯誤訊息"
     )
-    
+
     args = parser.parse_args()
-    
+
     tester = DatasetTester(data_root=args.data_root, verbose=args.verbose)
-    
+
     if args.dataset == "all":
         tester.run_all(suite=args.suite)
     else:

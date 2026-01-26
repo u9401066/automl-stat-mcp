@@ -6,12 +6,12 @@ Uses Redis Queue for job management (not in-memory).
 """
 
 from ...config import MINIO_BUCKET
-from ...infrastructure.storage_factory import get_storage
 from ...infrastructure.queue.redis_queue import RedisJobQueue, get_job_queue
 from ...infrastructure.repositories import (
     InMemoryDatasetRepository,
     InMemoryModelRepository,
 )
+from ...infrastructure.storage_factory import get_storage
 
 
 class Container:
