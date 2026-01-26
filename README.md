@@ -38,21 +38,41 @@ AutoML Stat MCP provides 51+ statistical and machine learning tools through the 
 - 8GB+ RAM recommended
 - (Optional) GPU for accelerated ML training
 
-### Installation
+### ⚡ One-Line Install (推薦)
 
 ```bash
-# Clone the repository
-git clone https://github.com/ericwang385/automl-stat-mcp.git
+# Clone and auto-install
+git clone https://github.com/u9401066/automl-stat-mcp.git
 cd automl-stat-mcp
+./quick-install.sh
+```
 
-# Start services (statistics only, local storage)
-docker compose up -d
+### 🎯 Quick Launch Scripts
 
-# Or start with ML training support
-docker compose --profile ml up -d
+```bash
+# 方式 1: 使用啟動腳本 (推薦)
+./start.sh           # 預設模式 (統計分析)
+./start.sh ml        # ML 模式 (含訓練)
+./start.sh full      # 完整模式 (含 MinIO)
 
-# Or start full stack with MinIO storage
-docker compose --profile full up -d
+# 方式 2: 使用 Makefile (最方便)
+make start           # 啟動預設服務
+make start-ml        # 啟動 ML 服務
+make start-full      # 啟動完整服務
+make logs            # 查看日誌
+make health          # 健康檢查
+make help            # 所有可用指令
+
+# 方式 3: 使用 Docker Compose (進階)
+docker compose up -d                    # 預設
+docker compose --profile ml up -d       # ML
+docker compose --profile full up -d     # 完整
+```
+
+### 🛑 Stop Services
+
+```bash
+./stop.sh            # 或 make stop
 ```
 
 ### Verify Installation
