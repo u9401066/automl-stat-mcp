@@ -2,8 +2,10 @@
 Redis Job Queue Client
 
 Handles job submission to Redis queue for AutoGluon workers.
+Uses shared RedisManager for connection pooling.
 """
 import json
+import logging
 import os
 from datetime import datetime
 from typing import Any, Dict, List, Optional
@@ -11,13 +13,21 @@ from uuid import uuid4
 
 import redis
 
+# Import shared RedisManager
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent))
+from shared.infrastructure.redis_manager import get_sync_client
+
 from src.domain.models.job import Job, JobId, JobStatus, JobType
 from src.domain.models.training_config import TrainingConfig
+
+logger = logging.getLogger(__name__)
 
 
 class RedisJobQueue:
     """
-    Redis-based job queue for distributing training jobs to workers.
+    Redis-based job queue using shared RedisManager.
 
     Architecture:
     - Jobs are pushed to a Redis list (queue)
@@ -27,15 +37,18 @@ class RedisJobQueue:
     """
 
     def __init__(self):
-        self._redis = redis.Redis(
-            host=os.environ.get("REDIS_HOST", "localhost"),
-            port=int(os.environ.get("REDIS_PORT", "6379")),
-            decode_responses=True,
-        )
+        # Lazy initialization - get client from RedisManager on first use
+        self._redis = None
 
         # Key prefixes
         self._queue_key = "automl:jobs:pending"
         self._job_prefix = "automl:job:"
+    
+    def _get_client(self) -> redis.Redis:
+        """Get Redis client from shared connection pool."""
+        if self._redis is None:
+            self._redis = get_sync_client()
+        return self._redis
 
     def submit_job(
         self,
@@ -90,16 +103,19 @@ class RedisJobQueue:
         }
 
         # Store job in Redis hash
-        self._redis.hset(f"{self._job_prefix}{job_id}", mapping=job_data)
+        redis_client = self._get_client()
+        redis_client.hset(f"{self._job_prefix}{job_id}", mapping=job_data)
 
         # Add to queue for workers to pick up
-        self._redis.lpush(self._queue_key, job_id)
+        redis_client.lpush(self._queue_key, job_id)
 
+        logger.info(f"Submitted job {job_id} to Redis queue")
         return job
 
     def get_job(self, job_id: str) -> Optional[Dict[str, Any]]:
         """Get job details from Redis"""
-        data = self._redis.hgetall(f"{self._job_prefix}{job_id}")
+        redis_client = self._get_client()
+        data = redis_client.hgetall(f"{self._job_prefix}{job_id}")
         if not data:
             return None
 
@@ -131,18 +147,19 @@ class RedisJobQueue:
     ) -> List[Dict[str, Any]]:
         """List jobs for a user"""
         # Scan for all job keys
+        redis_client = self._get_client()
         jobs = []
         cursor = 0
 
         while True:
-            cursor, keys = self._redis.scan(
+            cursor, keys = redis_client.scan(
                 cursor=cursor,
                 match=f"{self._job_prefix}*",
                 count=100
             )
 
             for key in keys:
-                data = self._redis.hgetall(key)
+                data = redis_client.hgetall(key)
                 if data.get("user_id") == user_id:
                     if session_id is None or data.get("session_id") == session_id:
                         jobs.append(self.get_job(data["id"]))
@@ -160,7 +177,8 @@ class RedisJobQueue:
 
         Cannot cancel running or completed jobs.
         """
-        data = self._redis.hgetall(f"{self._job_prefix}{job_id}")
+        redis_client = self._get_client()
+        data = redis_client.hgetall(f"{self._job_prefix}{job_id}")
 
         if not data:
             return False
@@ -172,10 +190,10 @@ class RedisJobQueue:
             return False
 
         # Remove from queue
-        self._redis.lrem(self._queue_key, 0, job_id)
+        redis_client.lrem(self._queue_key, 0, job_id)
 
         # Update status
-        self._redis.hset(
+        redis_client.hset(
             f"{self._job_prefix}{job_id}",
             mapping={
                 "status": JobStatus.CANCELLED.value,
@@ -184,11 +202,13 @@ class RedisJobQueue:
             }
         )
 
+        logger.info(f"Cancelled job {job_id}")
         return True
 
     def delete_job(self, job_id: str, user_id: str) -> bool:
         """Delete a job record"""
-        data = self._redis.hgetall(f"{self._job_prefix}{job_id}")
+        redis_client = self._get_client()
+        data = redis_client.hgetall(f"{self._job_prefix}{job_id}")
 
         if not data:
             return False
@@ -197,11 +217,12 @@ class RedisJobQueue:
             return False
 
         # Remove from queue if pending
-        self._redis.lrem(self._queue_key, 0, job_id)
+        redis_client.lrem(self._queue_key, 0, job_id)
 
         # Delete job record
-        self._redis.delete(f"{self._job_prefix}{job_id}")
+        redis_client.delete(f"{self._job_prefix}{job_id}")
 
+        logger.info(f"Deleted job {job_id}")
         return True
 
 

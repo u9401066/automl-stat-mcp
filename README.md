@@ -1,12 +1,12 @@
-# Clinical AutoML MCP
+# AutoML Stat MCP
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Docker](https://img.shields.io/badge/docker-compose-blue.svg)](https://docs.docker.com/compose/)
 
-**AI-powered clinical research and data analysis platform using Model Context Protocol (MCP).**
+**AI-powered statistical analysis and AutoML platform using Model Context Protocol (MCP).**
 
-Clinical AutoML MCP provides 51+ statistical and machine learning tools through the MCP interface, enabling AI agents (Claude, GPT, etc.) to perform comprehensive clinical research analysis.
+AutoML Stat MCP provides 51+ statistical and machine learning tools through the MCP interface, enabling AI agents (Claude, GPT, etc.) to perform comprehensive clinical research analysis.
 
 ---
 
@@ -42,8 +42,8 @@ Clinical AutoML MCP provides 51+ statistical and machine learning tools through 
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/clinical-automl-mcp.git
-cd clinical-automl-mcp
+git clone https://github.com/ericwang385/automl-stat-mcp.git
+cd automl-stat-mcp
 
 # Start services (statistics only, local storage)
 docker compose up -d

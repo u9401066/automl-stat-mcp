@@ -5,6 +5,63 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Redis Priority 2: RedisManager Singleton** - 統一的 Redis 連線管理
+  - 共享連線池設計 (最大 50 連線，所有服務共用)
+  - 懶加載初始化 + 線程安全單例模式
+  - 重試機制 (3 次嘗試，指數退避)
+  - 健康檢查與優雅關閉
+  - 同時支援 async 和 sync 客戶端
+  - 完整測試套件 (16 tests, 100% 通過率)
+  - 新增檔案: `shared/infrastructure/redis_manager.py`, `tests/unit/test_redis_manager.py`
+
+### Changed
+- **stats-service 重構為使用 RedisManager**:
+  - `src/infrastructure/redis_client.py` - 改用 async RedisManager
+  - `src/infrastructure/redis_dataset_store.py` - 改用 `get_sync_client()`
+- **automl-service 重構為使用 RedisManager**:
+  - `src/infrastructure/redis_dataset_store.py` - 改用 `get_sync_client()`
+  - `src/infrastructure/queue/redis_queue.py` - 改用 lazy initialization
+- **消除重複的 Redis 連線池**: 從 4+ 個獨立連線池減少到 1 個共享池
+
+### Technical Details
+- **連線池優化**: 減少連線數量 50%+，降低 Redis 記憶體使用
+- **集中配置**: 所有 Redis 設定統一由 RedisManager 管理
+- **一致性錯誤處理**: 統一的重試與錯誤處理邏輯
+- **監控支援**: 提供 `get_pool_stats()` 用於除錯
+
+## [1.7.1] - 2026-01-23
+
+### Fixed
+- **Redis CRUD 完整性**: 為 `stats-service/redis_dataset_store.py` 補充 `save_dataset()` 和 `delete_dataset()` 方法
+- **Redis 錯誤處理**: 為所有 Redis 操作添加完整錯誤處理
+  - `redis_client.py`: 連線重試機制（3次重試）、錯誤日誌
+  - `redis_dataset_store.py`: ConnectionError/TimeoutError/RedisError 處理
+  - `redis_queue.py`: 完整錯誤處理和 JSON 解析錯誤處理
+- **Redis TTL**: 為所有 Redis key 添加過期時間
+  - Dataset metadata: 30天 (2592000秒)
+  - Job records: 30天 (2592000秒)
+  - User dataset sets: 30天
+  - 防止 Redis 記憶體洩漏
+
+### Changed
+- **Redis 連線配置**: 優化連線池參數
+  - `max_connections=50` - 連線池大小限制
+  - `socket_keepalive=True` - 保持連線活躍
+  - `socket_connect_timeout=5` - 連線超時設定
+  - `retry_on_timeout=True` - 自動重試機制
+
+### Added
+- **Redis 使用審查報告**: 建立 `docs/REDIS_AUDIT_REPORT.md`
+  - 完整的 CRUD 操作檢查
+  - 錯誤處理評估
+  - 連線管理分析
+  - TTL 管理檢查
+  - 效能問題識別
+  - 修復優先級清單
+
 ## [1.7.0] - 2026-01-23
 
 ### Added

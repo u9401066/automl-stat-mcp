@@ -2,6 +2,7 @@
 Stats Service - Redis Client
 
 Manages job queue operations for statistical analysis.
+Uses shared RedisManager for connection pooling.
 """
 import json
 import logging
@@ -10,6 +11,12 @@ from typing import Optional
 from uuid import uuid4
 
 import redis.asyncio as redis
+
+# Import shared RedisManager
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
+from shared.infrastructure.redis_manager import RedisManager
 
 from ..config import (
     REDIS_DB,
@@ -23,25 +30,36 @@ logger = logging.getLogger(__name__)
 
 
 class RedisClient:
-    """Async Redis client for stats job management"""
+    """Async Redis client for stats job management using shared RedisManager"""
 
     def __init__(self):
-        self._pool = None
+        self._manager = None
 
     async def connect(self):
-        """Create connection pool"""
-        if self._pool is None:
-            self._pool = redis.ConnectionPool.from_url(
-                f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}",
-                decode_responses=True
-            )
-        return redis.Redis(connection_pool=self._pool)
+        """
+        Get Redis client from shared connection pool.
+        
+        Returns:
+            Redis client instance
+        
+        Raises:
+            ConnectionError: If connection fails after retries
+        """
+        if self._manager is None:
+            self._manager = await RedisManager.get_instance()
+        return await self._manager.get_client()
 
     async def close(self):
-        """Close connection pool"""
-        if self._pool:
-            await self._pool.disconnect()
-            self._pool = None
+        """
+        Close connection pool.
+        
+        Note: With shared RedisManager, this doesn't actually close the pool
+        as it may be in use by other components. The pool will be closed
+        during application shutdown via RedisManager.close().
+        """
+        # Connection pool is managed by RedisManager singleton
+        # No need to close here
+        pass
 
     async def create_job(
         self,
@@ -61,48 +79,73 @@ class RedisClient:
 
         Returns:
             Job information dict
+        
+        Raises:
+            ConnectionError: If Redis connection fails
+            TimeoutError: If Redis operation times out
         """
-        client = await self.connect()
+        try:
+            client = await self.connect()
 
-        job_id = str(uuid4())
-        now = datetime.utcnow().isoformat()
+            job_id = str(uuid4())
+            now = datetime.utcnow().isoformat()
 
-        job = {
-            "job_id": job_id,
-            "job_type": job_type,
-            "status": "pending",
-            "params": params,
-            "user_id": user_id,
-            "session_id": session_id,
-            "created_at": now,
-            "updated_at": now,
-            "progress": 0.0,
-            "message": "Job queued",
-        }
+            job = {
+                "job_id": job_id,
+                "job_type": job_type,
+                "status": "pending",
+                "params": params,
+                "user_id": user_id,
+                "session_id": session_id,
+                "created_at": now,
+                "updated_at": now,
+                "progress": 0.0,
+                "message": "Job queued",
+            }
 
-        # Store job metadata
-        await client.set(
-            f"{STATS_JOBS_PREFIX}{job_id}",
-            json.dumps(job),
-            ex=86400 * 7  # 7 days TTL
-        )
+            # Store job metadata
+            await client.set(
+                f"{STATS_JOBS_PREFIX}{job_id}",
+                json.dumps(job),
+                ex=86400 * 7  # 7 days TTL
+            )
 
-        # Add to pending queue
-        await client.lpush(STATS_JOBS_PENDING, json.dumps(job))
+            # Add to pending queue
+            await client.lpush(STATS_JOBS_PENDING, json.dumps(job))
 
-        logger.info(f"Created job {job_id} (type: {job_type}) for user {user_id}")
+            logger.info(f"Created job {job_id} (type: {job_type}) for user {user_id}")
 
-        return job
+            return job
+        
+        except Exception as e:
+            logger.error(f"Failed to create job: {e}")
+            raise
 
     async def get_job(self, job_id: str) -> Optional[dict]:
-        """Get job information by ID"""
-        client = await self.connect()
+        """
+        Get job information by ID.
+        
+        Returns:
+            Job dict or None if not found
+        
+        Raises:
+            ConnectionError: If Redis connection fails
+        """
+        try:
+            client = await self.connect()
+            data = await client.get(f"{STATS_JOBS_PREFIX}{job_id}")
 
-        data = await client.get(f"{STATS_JOBS_PREFIX}{job_id}")
-
-        if data:
-            return json.loads(data)
-        return None
+            if data:
+                try:
+                    return json.loads(data)
+                except json.JSONDecodeError as e:
+                    logger.error(f"Invalid JSON in job {job_id}: {e}")
+                    return None
+            return None
+        
+        except Exception as e:
+            logger.error(f"Failed to get job {job_id}: {e}")
+            raise
 
     async def list_jobs(
         self,

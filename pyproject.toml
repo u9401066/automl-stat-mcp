@@ -1,12 +1,12 @@
 [project]
-name = "automl-platform"
+name = "automl-stat-mcp"
 version = "1.4.0"
-description = "AutoML Platform - AI Agent Integration via MCP"
+description = "AutoML and Statistical Analysis Platform with Model Context Protocol (MCP) Integration"
 readme = "README.md"
 requires-python = ">=3.10"
-license = {text = "MIT"}
+license = {text = "Apache-2.0"}
 authors = [
-    {name = "Eric", email = "eric@example.com"}
+    {name = "Eric Wang", email = "eric@example.com"}
 ]
 
 # =============================================================================
