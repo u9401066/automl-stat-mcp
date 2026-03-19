@@ -19,11 +19,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching
-COPY requirements.txt .
+COPY stats-service/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy source code
-COPY src/ ./src/
+COPY stats-service/src/ ./src/
+COPY shared/ ./shared/
 
 # Environment variables
 ENV PYTHONUNBUFFERED=1

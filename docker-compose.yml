@@ -82,7 +82,9 @@ services:
   # Stats Service - Statistical Analysis API (Always On)
   # ===========================================================================
   stats-service:
-    build: ./stats-service
+    build:
+      context: .
+      dockerfile: stats-service/Dockerfile
     container_name: stats-service
     ports:
       - "8003:8003"
@@ -160,7 +162,9 @@ services:
   # AutoML API Service (Profile: ml)
   # ===========================================================================
   automl-api:
-    build: ./automl-service
+    build:
+      context: .
+      dockerfile: automl-service/Dockerfile
     container_name: automl-api
     profiles:
       - ml

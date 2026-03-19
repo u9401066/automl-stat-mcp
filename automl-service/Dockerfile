@@ -15,10 +15,11 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY requirements.txt .
+COPY automl-service/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY src/ ./src/
+COPY automl-service/src/ ./src/
+COPY shared/ ./shared/
 
 # No local data storage - everything goes to MinIO
 RUN mkdir -p /tmp/automl-temp

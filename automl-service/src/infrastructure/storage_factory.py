@@ -18,7 +18,7 @@ import os
 from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, BinaryIO, List, Optional, Tuple
 
 import pandas as pd
 
@@ -103,6 +103,26 @@ class StorageService(ABC):
     @abstractmethod
     def get_public_url(self, path: str) -> Optional[str]:
         """Get public URL for a file (if applicable)."""
+        ...
+
+    @abstractmethod
+    async def get_file_info(self, path: str) -> dict[str, Any]:
+        """Get file metadata such as size and modified time."""
+        ...
+
+    @abstractmethod
+    async def validate_csv(self, path: str) -> Tuple[bool, List[str], int]:
+        """Validate CSV structure and return (is_valid, columns, row_count)."""
+        ...
+
+    @abstractmethod
+    async def upload_content(
+        self,
+        path: str,
+        content: BinaryIO,
+        content_type: str = "application/octet-stream",
+    ) -> str:
+        """Upload raw content stream. Returns final path."""
         ...
 
 
@@ -251,6 +271,46 @@ class LocalStorageService(StorageService):
     def get_public_url(self, path: str) -> Optional[str]:
         """Local files don't have public URLs."""
         return None
+
+    async def get_file_info(self, path: str) -> dict[str, Any]:
+        """Get local file metadata."""
+        file_path = self._resolve_path(path)
+        if not file_path.exists():
+            raise ValueError(f"File not found: {file_path}")
+
+        stat = file_path.stat()
+        return {
+            "size": stat.st_size,
+            "last_modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+        }
+
+    async def validate_csv(self, path: str) -> Tuple[bool, List[str], int]:
+        """Validate local CSV readability and basic shape."""
+        file_path = self._resolve_path(path)
+        try:
+            df = pd.read_csv(file_path)
+        except Exception as exc:
+            logger.error(f"Failed to validate CSV {file_path}: {exc}")
+            return False, [], 0
+
+        return True, df.columns.tolist(), len(df)
+
+    async def upload_content(
+        self,
+        path: str,
+        content: BinaryIO,
+        content_type: str = "application/octet-stream",
+    ) -> str:
+        """Persist uploaded content into local storage root."""
+        file_path = self._resolve_path(path)
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        if hasattr(content, "seek"):
+            content.seek(0)
+        data = content.read()
+        if isinstance(data, str):
+            data = data.encode("utf-8")
+        file_path.write_bytes(data)
+        return str(file_path)
 
 
 # =============================================================================
@@ -479,6 +539,53 @@ class MinIOStorageService(StorageService):
         except Exception as e:
             logger.error(f"Failed to get URL for {bucket}/{object_name}: {e}")
             return None
+
+    async def get_file_info(self, path: str) -> dict[str, Any]:
+        """Get MinIO object metadata."""
+        bucket, object_name = self._parse_path(path)
+        try:
+            stat = self.client.stat_object(bucket, object_name)
+        except Exception as exc:
+            raise ValueError(f"Failed to stat object {bucket}/{object_name}: {exc}") from exc
+
+        return {
+            "size": stat.size,
+            "last_modified": stat.last_modified.isoformat() if stat.last_modified else None,
+            "etag": stat.etag,
+            "content_type": stat.content_type,
+        }
+
+    async def validate_csv(self, path: str) -> Tuple[bool, List[str], int]:
+        """Validate MinIO CSV readability and basic shape."""
+        df = await self.read_csv(path)
+        if df is None:
+            return False, [], 0
+        return True, df.columns.tolist(), len(df)
+
+    async def upload_content(
+        self,
+        path: str,
+        content: BinaryIO,
+        content_type: str = "application/octet-stream",
+    ) -> str:
+        """Upload content stream to MinIO."""
+        bucket, object_name = self._parse_path(path)
+        self._ensure_bucket(bucket)
+
+        if hasattr(content, "seek"):
+            content.seek(0)
+        data = content.read()
+        if isinstance(data, str):
+            data = data.encode("utf-8")
+
+        self.client.put_object(
+            bucket,
+            object_name,
+            io.BytesIO(data),
+            len(data),
+            content_type=content_type,
+        )
+        return f"{bucket}/{object_name}"
 
 
 # =============================================================================
