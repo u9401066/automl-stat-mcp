@@ -3,6 +3,7 @@ Isolated tests for AutoML workflow utilities.
 
 Tests job submission validation, parameter handling, and response parsing.
 """
+
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
@@ -10,8 +11,10 @@ from typing import Any, Dict, List, Optional
 # Mock/Helper Classes for Testing
 # ==============================================================================
 
+
 class JobStatus:
     """Job status enum-like class"""
+
     PENDING = "pending"
     RUNNING = "running"
     COMPLETED = "completed"
@@ -25,6 +28,7 @@ class JobStatus:
 
 class ProblemType:
     """Problem type validation"""
+
     BINARY = "binary"
     MULTICLASS = "multiclass"
     REGRESSION = "regression"
@@ -40,6 +44,7 @@ class ProblemType:
 
 class Presets:
     """AutoGluon presets"""
+
     BEST = "best_quality"
     HIGH = "high_quality"
     GOOD = "good_quality"
@@ -53,6 +58,7 @@ class Presets:
 
 class Algorithms:
     """Available algorithms"""
+
     GBM = "GBM"
     CAT = "CAT"
     XGB = "XGB"
@@ -65,8 +71,7 @@ class Algorithms:
 
     @classmethod
     def all(cls):
-        return [cls.GBM, cls.CAT, cls.XGB, cls.RF, cls.XT,
-                cls.KNN, cls.LR, cls.NN_TORCH, cls.FASTAI]
+        return [cls.GBM, cls.CAT, cls.XGB, cls.RF, cls.XT, cls.KNN, cls.LR, cls.NN_TORCH, cls.FASTAI]
 
 
 def validate_job_request(
@@ -133,6 +138,7 @@ def parse_job_response(response: Dict[str, Any]) -> Dict[str, Any]:
 def generate_job_id() -> str:
     """Generate unique job ID"""
     import uuid
+
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
     unique = uuid.uuid4().hex[:8]
     return f"job_{timestamp}_{unique}"
@@ -141,6 +147,7 @@ def generate_job_id() -> str:
 # ==============================================================================
 # Tests
 # ==============================================================================
+
 
 class TestJobValidation:
     """Test job submission validation"""
@@ -560,7 +567,7 @@ def run_all_tests():
         print(f"\n{class_name}:")
         print("-" * 40)
 
-        test_methods = [m for m in dir(test_class) if m.startswith('test_')]
+        test_methods = [m for m in dir(test_class) if m.startswith("test_")]
 
         for method_name in test_methods:
             try:

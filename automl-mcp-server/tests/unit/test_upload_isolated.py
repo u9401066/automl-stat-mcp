@@ -3,6 +3,7 @@ Isolated tests for upload utilities.
 
 Tests the column sanitization and CSV processing functions.
 """
+
 import re
 from typing import Any, Dict, List
 
@@ -12,6 +13,7 @@ import pandas as pd
 # ==============================================================================
 # Copied helper functions for isolated testing
 # ==============================================================================
+
 
 def _sanitize_column_name(name: str) -> str:
     """
@@ -31,13 +33,13 @@ def _sanitize_column_name(name: str) -> str:
         return f"col_{original.split(':')[-1].strip()}"
 
     # Replace special characters with underscore (keep Chinese, alphanumeric)
-    sanitized = re.sub(r'[^\w\u4e00-\u9fff]', '_', original)
+    sanitized = re.sub(r"[^\w\u4e00-\u9fff]", "_", original)
 
     # Replace multiple underscores with single
-    sanitized = re.sub(r'_+', '_', sanitized)
+    sanitized = re.sub(r"_+", "_", sanitized)
 
     # Remove leading/trailing underscores
-    sanitized = sanitized.strip('_')
+    sanitized = sanitized.strip("_")
 
     # If empty after sanitization, use hash of original
     if not sanitized:
@@ -87,6 +89,7 @@ def _create_column_mapping(original_columns: List[str]) -> Dict[str, Any]:
 # ==============================================================================
 # Tests
 # ==============================================================================
+
 
 class TestColumnSanitization:
     """Test column name sanitization"""
@@ -269,24 +272,28 @@ class TestCSVProcessing:
 
     def test_dataframe_column_rename(self):
         """Test DataFrame column renaming"""
-        df = pd.DataFrame({
-            'user name': [1, 2, 3],
-            'age (years)': [25, 30, 35],
-            'score%': [90, 85, 88],
-        })
+        df = pd.DataFrame(
+            {
+                "user name": [1, 2, 3],
+                "age (years)": [25, 30, 35],
+                "score%": [90, 85, 88],
+            }
+        )
 
         mapping = _create_column_mapping(df.columns.tolist())
         df_renamed = df.rename(columns=mapping["mapping"])
 
-        assert list(df_renamed.columns) == ['user_name', 'age_years', 'score']
+        assert list(df_renamed.columns) == ["user_name", "age_years", "score"]
         print("✓ DataFrame column rename")
 
     def test_csv_roundtrip_with_rename(self):
         """Test CSV roundtrip with column renaming"""
-        df = pd.DataFrame({
-            'Column A': [1, 2, 3],
-            'Column B': ['x', 'y', 'z'],
-        })
+        df = pd.DataFrame(
+            {
+                "Column A": [1, 2, 3],
+                "Column B": ["x", "y", "z"],
+            }
+        )
 
         mapping = _create_column_mapping(df.columns.tolist())
         df_renamed = df.rename(columns=mapping["mapping"])
@@ -295,7 +302,7 @@ class TestCSVProcessing:
         csv_content = df_renamed.to_csv(index=False)
         df_loaded = pd.read_csv(pd.io.common.StringIO(csv_content))
 
-        assert list(df_loaded.columns) == ['Column_A', 'Column_B']
+        assert list(df_loaded.columns) == ["Column_A", "Column_B"]
         print("✓ CSV roundtrip with rename")
 
 
@@ -321,27 +328,29 @@ class TestDataPreview:
 
     def test_row_sampling(self):
         """Test row sampling for preview"""
-        df = pd.DataFrame({
-            'a': range(100),
-            'b': range(100, 200),
-        })
+        df = pd.DataFrame(
+            {
+                "a": range(100),
+                "b": range(100, 200),
+            }
+        )
 
         max_rows = 5
         preview = df.head(max_rows)
 
         assert len(preview) == max_rows
-        assert list(preview['a']) == [0, 1, 2, 3, 4]
+        assert list(preview["a"]) == [0, 1, 2, 3, 4]
         print("✓ Row sampling")
 
     def test_column_limiting(self):
         """Test column limiting for preview"""
-        df = pd.DataFrame({f'col_{i}': [i] for i in range(20)})
+        df = pd.DataFrame({f"col_{i}": [i] for i in range(20)})
 
         max_cols = 10
         preview_cols = df.columns[:max_cols]
 
         assert len(preview_cols) == 10
-        assert list(preview_cols) == [f'col_{i}' for i in range(10)]
+        assert list(preview_cols) == [f"col_{i}" for i in range(10)]
         print("✓ Column limiting")
 
 
@@ -361,7 +370,7 @@ class TestFilePathHandling:
             # Check it's an absolute path
             assert os.path.isabs(path)
             # Check it has .csv extension
-            assert path.endswith('.csv')
+            assert path.endswith(".csv")
 
         print("✓ Path validation")
 
@@ -386,39 +395,43 @@ class TestDataTypeParsing:
 
     def test_numeric_detection(self):
         """Test numeric column detection"""
-        df = pd.DataFrame({
-            'int_col': [1, 2, 3],
-            'float_col': [1.1, 2.2, 3.3],
-            'str_col': ['a', 'b', 'c'],
-            'mixed': [1, 'two', 3],
-        })
+        df = pd.DataFrame(
+            {
+                "int_col": [1, 2, 3],
+                "float_col": [1.1, 2.2, 3.3],
+                "str_col": ["a", "b", "c"],
+                "mixed": [1, "two", 3],
+            }
+        )
 
         numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
 
-        assert 'int_col' in numeric_cols
-        assert 'float_col' in numeric_cols
-        assert 'str_col' not in numeric_cols
+        assert "int_col" in numeric_cols
+        assert "float_col" in numeric_cols
+        assert "str_col" not in numeric_cols
         print("✓ Numeric detection")
 
     def test_categorical_detection(self):
         """Test categorical column detection"""
-        df = pd.DataFrame({
-            'category': ['A', 'B', 'A', 'C', 'B'] * 20,  # Low cardinality
-            'text': [f'text_{i}' for i in range(100)],  # High cardinality
-            'id': range(100),
-        })
+        df = pd.DataFrame(
+            {
+                "category": ["A", "B", "A", "C", "B"] * 20,  # Low cardinality
+                "text": [f"text_{i}" for i in range(100)],  # High cardinality
+                "id": range(100),
+            }
+        )
 
         threshold = 0.1  # <10% unique = categorical
 
         categorical_cols = []
         for col in df.columns:
-            if df[col].dtype == 'object':
+            if df[col].dtype == "object":
                 ratio = df[col].nunique() / len(df)
                 if ratio < threshold:
                     categorical_cols.append(col)
 
-        assert 'category' in categorical_cols
-        assert 'text' not in categorical_cols
+        assert "category" in categorical_cols
+        assert "text" not in categorical_cols
         print("✓ Categorical detection")
 
 
@@ -442,7 +455,7 @@ def run_all_tests():
         print(f"\n{class_name}:")
         print("-" * 40)
 
-        test_methods = [m for m in dir(test_class) if m.startswith('test_')]
+        test_methods = [m for m in dir(test_class) if m.startswith("test_")]
 
         for method_name in test_methods:
             try:

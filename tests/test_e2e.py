@@ -18,6 +18,7 @@ Usage:
     pip install minio httpx pandas
     python tests/test_e2e.py
 """
+
 import asyncio
 import os
 import time
@@ -55,12 +56,7 @@ def create_test_dataset() -> pd.DataFrame:
 
 def upload_to_minio(df: pd.DataFrame, object_name: str) -> str:
     """Upload DataFrame to MinIO as CSV."""
-    client = Minio(
-        MINIO_ENDPOINT,
-        access_key=MINIO_ACCESS_KEY,
-        secret_key=MINIO_SECRET_KEY,
-        secure=MINIO_SECURE
-    )
+    client = Minio(MINIO_ENDPOINT, access_key=MINIO_ACCESS_KEY, secret_key=MINIO_SECRET_KEY, secure=MINIO_SECURE)
 
     # Create bucket if not exists
     if not client.bucket_exists(MINIO_BUCKET):
@@ -74,13 +70,7 @@ def upload_to_minio(df: pd.DataFrame, object_name: str) -> str:
     csv_bytes = csv_buffer.getvalue()
 
     # Upload
-    client.put_object(
-        MINIO_BUCKET,
-        object_name,
-        BytesIO(csv_bytes),
-        len(csv_bytes),
-        content_type="text/csv"
-    )
+    client.put_object(MINIO_BUCKET, object_name, BytesIO(csv_bytes), len(csv_bytes), content_type="text/csv")
 
     minio_path = f"s3://{MINIO_BUCKET}/{object_name}"
     print(f"Uploaded dataset to: {minio_path}")
@@ -102,11 +92,7 @@ async def register_dataset(minio_path: str, name: str) -> dict:
     async with httpx.AsyncClient() as client:
         resp = await client.post(
             f"{API_BASE_URL}/datasets/",
-            json={
-                "name": name,
-                "description": "Test dataset for E2E testing",
-                "minio_path": minio_path
-            }
+            json={"name": name, "description": "Test dataset for E2E testing", "minio_path": minio_path},
         )
         resp.raise_for_status()
         data = resp.json()
@@ -125,8 +111,8 @@ async def submit_job(dataset_id: str, target_column: str) -> dict:
                 "problem_type": "multiclass",
                 "time_limit": 60,  # 1 minute for quick test
                 "algorithms": ["GBM", "RF"],  # Quick algorithms
-                "metric": "accuracy"
-            }
+                "metric": "accuracy",
+            },
         )
         resp.raise_for_status()
         data = resp.json()

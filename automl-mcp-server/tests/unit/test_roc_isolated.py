@@ -10,6 +10,7 @@ import numpy as np
 # Tests
 # ==============================================================================
 
+
 class TestROCCurveCalculation:
     """Test ROC curve calculations"""
 
@@ -42,7 +43,7 @@ class TestROCCurveCalculation:
         # AUC approximation using trapezoidal rule
         auc = 0
         for i in range(1, len(fpr_list)):
-            auc += (fpr_list[i] - fpr_list[i-1]) * (tpr_list[i] + tpr_list[i-1]) / 2
+            auc += (fpr_list[i] - fpr_list[i - 1]) * (tpr_list[i] + tpr_list[i - 1]) / 2
 
         assert abs(auc - 1.0) < 0.01  # Near perfect
         print("✓ Perfect classifier ROC")
@@ -60,7 +61,7 @@ class TestROCCurveCalculation:
         pos_scores = y_score[y_true == 1]
         neg_scores = y_score[y_true == 0]
 
-        u_stat, _ = mannwhitneyu(pos_scores, neg_scores, alternative='two-sided')
+        u_stat, _ = mannwhitneyu(pos_scores, neg_scores, alternative="two-sided")
         auc = u_stat / (len(pos_scores) * len(neg_scores))
 
         # Should be around 0.5 for random
@@ -77,7 +78,7 @@ class TestROCCurveCalculation:
         pos_scores = y_score[y_true == 1]
         neg_scores = y_score[y_true == 0]
 
-        u_stat, _ = mannwhitneyu(pos_scores, neg_scores, alternative='two-sided')
+        u_stat, _ = mannwhitneyu(pos_scores, neg_scores, alternative="two-sided")
         auc = u_stat / (len(pos_scores) * len(neg_scores))
 
         # Should be close to 0
@@ -130,11 +131,13 @@ class TestConfidenceIntervals:
         """Test DeLong method for AUC variance (simplified)"""
         np.random.seed(42)
         # Use overlapping distributions to get variance in AUC
-        y_true = np.array([0]*30 + [1]*30)
-        y_score = np.concatenate([
-            np.random.uniform(0.2, 0.6, 30),  # Negative: 0.2-0.6
-            np.random.uniform(0.4, 0.8, 30)   # Positive: 0.4-0.8 (overlap!)
-        ])
+        y_true = np.array([0] * 30 + [1] * 30)
+        y_score = np.concatenate(
+            [
+                np.random.uniform(0.2, 0.6, 30),  # Negative: 0.2-0.6
+                np.random.uniform(0.4, 0.8, 30),  # Positive: 0.4-0.8 (overlap!)
+            ]
+        )
 
         # Simplified bootstrap CI
         n_bootstrap = 500
@@ -264,8 +267,8 @@ class TestClassificationMetrics:
         sensitivity = tp / (tp + fn)  # 2/3
         specificity = tn / (tn + fp)  # 2/3
 
-        assert abs(sensitivity - 2/3) < 0.01
-        assert abs(specificity - 2/3) < 0.01
+        assert abs(sensitivity - 2 / 3) < 0.01
+        assert abs(specificity - 2 / 3) < 0.01
         print("✓ Sensitivity and specificity")
 
     def test_ppv_npv(self):
@@ -281,8 +284,8 @@ class TestClassificationMetrics:
         ppv = tp / (tp + fp) if (tp + fp) > 0 else 0  # 2/3
         npv = tn / (tn + fn) if (tn + fn) > 0 else 0  # 2/3
 
-        assert abs(ppv - 2/3) < 0.01
-        assert abs(npv - 2/3) < 0.01
+        assert abs(ppv - 2 / 3) < 0.01
+        assert abs(npv - 2 / 3) < 0.01
         print("✓ PPV and NPV")
 
     def test_accuracy(self):
@@ -293,7 +296,7 @@ class TestClassificationMetrics:
         correct = np.sum(y_true == y_pred)
         accuracy = correct / len(y_true)
 
-        assert accuracy == 4/6
+        assert accuracy == 4 / 6
         print("✓ Accuracy")
 
 
@@ -364,7 +367,7 @@ class TestCalibration:
         predicted = []
 
         for i in range(n_bins):
-            mask = (y_prob >= bins[i]) & (y_prob < bins[i+1])
+            mask = (y_prob >= bins[i]) & (y_prob < bins[i + 1])
             if np.sum(mask) > 0:
                 observed.append(np.mean(y_true[mask]))
                 predicted.append(np.mean(y_prob[mask]))
@@ -398,7 +401,7 @@ def run_all_tests():
         print(f"\n{class_name}:")
         print("-" * 40)
 
-        test_methods = [m for m in dir(test_class) if m.startswith('test_')]
+        test_methods = [m for m in dir(test_class) if m.startswith("test_")]
 
         for method_name in test_methods:
             try:

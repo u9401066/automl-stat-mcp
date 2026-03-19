@@ -3,6 +3,7 @@ Isolated tests for dataset management utilities.
 
 Tests dataset registration, validation, and metadata handling.
 """
+
 import json
 import re
 from datetime import datetime
@@ -11,6 +12,7 @@ from typing import Any, Dict, List
 # ==============================================================================
 # Helper Functions for Testing
 # ==============================================================================
+
 
 def validate_dataset_name(name: str) -> Dict[str, Any]:
     """Validate dataset name"""
@@ -29,7 +31,7 @@ def validate_dataset_name(name: str) -> Dict[str, Any]:
         errors.append("Dataset name cannot exceed 100 characters")
 
     # Character check
-    if not re.match(r'^[\w\-\.\s\u4e00-\u9fff]+$', name):
+    if not re.match(r"^[\w\-\.\s\u4e00-\u9fff]+$", name):
         errors.append("Dataset name contains invalid characters")
 
     if errors:
@@ -55,7 +57,7 @@ def validate_minio_path(path: str) -> Dict[str, Any]:
     bucket, key = parts[0], parts[1]
 
     # Bucket validation
-    if not re.match(r'^[a-z0-9][a-z0-9\-]{1,61}[a-z0-9]$', bucket):
+    if not re.match(r"^[a-z0-9][a-z0-9\-]{1,61}[a-z0-9]$", bucket):
         if len(bucket) < 3:
             errors.append("Bucket name must be at least 3 characters")
         elif len(bucket) > 63:
@@ -81,6 +83,7 @@ def validate_minio_path(path: str) -> Dict[str, Any]:
 def generate_dataset_id(user_id: str, name: str) -> str:
     """Generate unique dataset ID"""
     import hashlib
+
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
     content = f"{user_id}_{name}_{timestamp}"
     hash_part = hashlib.md5(content.encode()).hexdigest()[:8]
@@ -91,18 +94,18 @@ def infer_file_type(filename: str) -> str:
     """Infer file type from filename"""
     filename = filename.lower()
 
-    if filename.endswith('.csv'):
-        return 'csv'
-    elif filename.endswith('.parquet'):
-        return 'parquet'
-    elif filename.endswith('.xlsx') or filename.endswith('.xls'):
-        return 'excel'
-    elif filename.endswith('.json'):
-        return 'json'
-    elif filename.endswith('.tsv'):
-        return 'tsv'
+    if filename.endswith(".csv"):
+        return "csv"
+    elif filename.endswith(".parquet"):
+        return "parquet"
+    elif filename.endswith(".xlsx") or filename.endswith(".xls"):
+        return "excel"
+    elif filename.endswith(".json"):
+        return "json"
+    elif filename.endswith(".tsv"):
+        return "tsv"
     else:
-        return 'unknown'
+        return "unknown"
 
 
 def parse_column_info(columns: List[str], dtypes: Dict[str, str]) -> List[Dict[str, Any]]:
@@ -122,6 +125,7 @@ def parse_column_info(columns: List[str], dtypes: Dict[str, str]) -> List[Dict[s
 # ==============================================================================
 # Tests
 # ==============================================================================
+
 
 class TestDatasetNameValidation:
     """Test dataset name validation"""
@@ -425,7 +429,7 @@ class TestDatasetList:
         page_size = 10
         page = 2  # 0-indexed
 
-        paginated = datasets[page * page_size:(page + 1) * page_size]
+        paginated = datasets[page * page_size : (page + 1) * page_size]
 
         assert len(paginated) == 10
         assert paginated[0]["id"] == 20
@@ -487,7 +491,7 @@ def run_all_tests():
         print(f"\n{class_name}:")
         print("-" * 40)
 
-        test_methods = [m for m in dir(test_class) if m.startswith('test_')]
+        test_methods = [m for m in dir(test_class) if m.startswith("test_")]
 
         for method_name in test_methods:
             try:

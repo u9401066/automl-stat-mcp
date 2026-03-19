@@ -6,12 +6,13 @@ Tests covering:
 - Cumulative hazard plotting
 - Forest plot for Cox regression
 """
+
 import sys
 from unittest.mock import patch
 
 import pytest
 
-sys.path.insert(0, '/home/eric/workspace251204/stats-worker/src')
+sys.path.insert(0, "/home/eric/workspace251204/stats-worker/src")
 
 from visualization.schemas import VisualizationType
 from visualization.survival import (
@@ -28,6 +29,7 @@ from visualization.survival import (
 # Sample Data Fixtures
 # =============================================================================
 
+
 @pytest.fixture
 def km_result_single():
     """Single group KM result."""
@@ -40,12 +42,52 @@ def km_result_single():
         "median_ci": {"lower": 20.0, "upper": 30.0},
         "survival_curve": [
             {"time": 0, "survival": 1.0, "ci_lower": 1.0, "ci_upper": 1.0, "at_risk": 100, "events": 0, "censored": 0},
-            {"time": 6, "survival": 0.92, "ci_lower": 0.86, "ci_upper": 0.96, "at_risk": 95, "events": 5, "censored": 3},
-            {"time": 12, "survival": 0.78, "ci_lower": 0.70, "ci_upper": 0.85, "at_risk": 80, "events": 10, "censored": 5},
-            {"time": 18, "survival": 0.62, "ci_lower": 0.52, "ci_upper": 0.71, "at_risk": 60, "events": 12, "censored": 8},
-            {"time": 24, "survival": 0.48, "ci_lower": 0.37, "ci_upper": 0.58, "at_risk": 42, "events": 10, "censored": 8},
-            {"time": 30, "survival": 0.35, "ci_lower": 0.25, "ci_upper": 0.46, "at_risk": 28, "events": 8, "censored": 6},
-        ]
+            {
+                "time": 6,
+                "survival": 0.92,
+                "ci_lower": 0.86,
+                "ci_upper": 0.96,
+                "at_risk": 95,
+                "events": 5,
+                "censored": 3,
+            },
+            {
+                "time": 12,
+                "survival": 0.78,
+                "ci_lower": 0.70,
+                "ci_upper": 0.85,
+                "at_risk": 80,
+                "events": 10,
+                "censored": 5,
+            },
+            {
+                "time": 18,
+                "survival": 0.62,
+                "ci_lower": 0.52,
+                "ci_upper": 0.71,
+                "at_risk": 60,
+                "events": 12,
+                "censored": 8,
+            },
+            {
+                "time": 24,
+                "survival": 0.48,
+                "ci_lower": 0.37,
+                "ci_upper": 0.58,
+                "at_risk": 42,
+                "events": 10,
+                "censored": 8,
+            },
+            {
+                "time": 30,
+                "survival": 0.35,
+                "ci_lower": 0.25,
+                "ci_upper": 0.46,
+                "at_risk": 28,
+                "events": 8,
+                "censored": 6,
+            },
+        ],
     }
 
 
@@ -60,12 +102,52 @@ def km_results_two_groups():
             "n_censored": 32,
             "median_survival": 32.0,
             "survival_curve": [
-                {"time": 0, "survival": 1.0, "ci_lower": 1.0, "ci_upper": 1.0, "at_risk": 50, "events": 0, "censored": 0},
-                {"time": 6, "survival": 0.96, "ci_lower": 0.88, "ci_upper": 0.99, "at_risk": 48, "events": 2, "censored": 1},
-                {"time": 12, "survival": 0.88, "ci_lower": 0.77, "ci_upper": 0.94, "at_risk": 42, "events": 4, "censored": 2},
-                {"time": 24, "survival": 0.72, "ci_lower": 0.58, "ci_upper": 0.83, "at_risk": 32, "events": 6, "censored": 4},
-                {"time": 36, "survival": 0.58, "ci_lower": 0.42, "ci_upper": 0.72, "at_risk": 22, "events": 6, "censored": 4},
-            ]
+                {
+                    "time": 0,
+                    "survival": 1.0,
+                    "ci_lower": 1.0,
+                    "ci_upper": 1.0,
+                    "at_risk": 50,
+                    "events": 0,
+                    "censored": 0,
+                },
+                {
+                    "time": 6,
+                    "survival": 0.96,
+                    "ci_lower": 0.88,
+                    "ci_upper": 0.99,
+                    "at_risk": 48,
+                    "events": 2,
+                    "censored": 1,
+                },
+                {
+                    "time": 12,
+                    "survival": 0.88,
+                    "ci_lower": 0.77,
+                    "ci_upper": 0.94,
+                    "at_risk": 42,
+                    "events": 4,
+                    "censored": 2,
+                },
+                {
+                    "time": 24,
+                    "survival": 0.72,
+                    "ci_lower": 0.58,
+                    "ci_upper": 0.83,
+                    "at_risk": 32,
+                    "events": 6,
+                    "censored": 4,
+                },
+                {
+                    "time": 36,
+                    "survival": 0.58,
+                    "ci_lower": 0.42,
+                    "ci_upper": 0.72,
+                    "at_risk": 22,
+                    "events": 6,
+                    "censored": 4,
+                },
+            ],
         },
         {
             "group": "Control",
@@ -74,13 +156,53 @@ def km_results_two_groups():
             "n_censored": 23,
             "median_survival": 18.0,
             "survival_curve": [
-                {"time": 0, "survival": 1.0, "ci_lower": 1.0, "ci_upper": 1.0, "at_risk": 50, "events": 0, "censored": 0},
-                {"time": 6, "survival": 0.88, "ci_lower": 0.77, "ci_upper": 0.94, "at_risk": 44, "events": 6, "censored": 2},
-                {"time": 12, "survival": 0.68, "ci_lower": 0.54, "ci_upper": 0.79, "at_risk": 34, "events": 8, "censored": 2},
-                {"time": 24, "survival": 0.42, "ci_lower": 0.28, "ci_upper": 0.55, "at_risk": 20, "events": 10, "censored": 4},
-                {"time": 36, "survival": 0.28, "ci_lower": 0.15, "ci_upper": 0.42, "at_risk": 12, "events": 3, "censored": 5},
-            ]
-        }
+                {
+                    "time": 0,
+                    "survival": 1.0,
+                    "ci_lower": 1.0,
+                    "ci_upper": 1.0,
+                    "at_risk": 50,
+                    "events": 0,
+                    "censored": 0,
+                },
+                {
+                    "time": 6,
+                    "survival": 0.88,
+                    "ci_lower": 0.77,
+                    "ci_upper": 0.94,
+                    "at_risk": 44,
+                    "events": 6,
+                    "censored": 2,
+                },
+                {
+                    "time": 12,
+                    "survival": 0.68,
+                    "ci_lower": 0.54,
+                    "ci_upper": 0.79,
+                    "at_risk": 34,
+                    "events": 8,
+                    "censored": 2,
+                },
+                {
+                    "time": 24,
+                    "survival": 0.42,
+                    "ci_lower": 0.28,
+                    "ci_upper": 0.55,
+                    "at_risk": 20,
+                    "events": 10,
+                    "censored": 4,
+                },
+                {
+                    "time": 36,
+                    "survival": 0.28,
+                    "ci_lower": 0.15,
+                    "ci_upper": 0.42,
+                    "at_risk": 12,
+                    "events": 3,
+                    "censored": 5,
+                },
+            ],
+        },
     ]
 
 
@@ -99,7 +221,7 @@ def cox_result():
                 "hr_ci": {"lower": 1.012, "upper": 1.060},
                 "z_score": 2.92,
                 "p_value": 0.004,
-                "significant": True
+                "significant": True,
             },
             {
                 "variable": "treatment",
@@ -109,7 +231,7 @@ def cox_result():
                 "hr_ci": {"lower": 0.336, "upper": 0.861},
                 "z_score": -2.58,
                 "p_value": 0.01,
-                "significant": True
+                "significant": True,
             },
             {
                 "variable": "stage",
@@ -119,7 +241,7 @@ def cox_result():
                 "hr_ci": {"lower": 0.891, "upper": 1.608},
                 "z_score": 1.20,
                 "p_value": 0.23,
-                "significant": False
+                "significant": False,
             },
         ],
         "model_fit": {
@@ -130,13 +252,14 @@ def cox_result():
         "global_tests": {
             "likelihood_ratio": {"statistic": 26.4, "p_value": 0.0001},
             "wald": {"statistic": 24.2, "p_value": 0.0002},
-        }
+        },
     }
 
 
 # =============================================================================
 # Unit Tests - Helper Functions
 # =============================================================================
+
 
 class TestHelperFunctions:
     """Tests for helper functions."""
@@ -183,6 +306,7 @@ class TestHelperFunctions:
 # =============================================================================
 # Unit Tests - Kaplan-Meier Plot
 # =============================================================================
+
 
 class TestKaplanMeierPlot:
     """Tests for Kaplan-Meier plotting."""
@@ -243,10 +367,7 @@ class TestKaplanMeierPlot:
         """Test plotting with custom colors."""
         import matplotlib.pyplot as plt
 
-        fig = plot_kaplan_meier(
-            km_results_two_groups,
-            colors=['#FF0000', '#0000FF']
-        )
+        fig = plot_kaplan_meier(km_results_two_groups, colors=["#FF0000", "#0000FF"])
 
         assert fig is not None
 
@@ -257,10 +378,7 @@ class TestKaplanMeierPlot:
         import matplotlib.pyplot as plt
 
         fig = plot_kaplan_meier(
-            km_result_single,
-            title="Progression-Free Survival",
-            xlabel="Months",
-            ylabel="PFS Probability"
+            km_result_single, title="Progression-Free Survival", xlabel="Months", ylabel="PFS Probability"
         )
 
         assert fig is not None
@@ -271,6 +389,7 @@ class TestKaplanMeierPlot:
 # =============================================================================
 # Unit Tests - Cumulative Hazard Plot
 # =============================================================================
+
 
 class TestCumulativeHazardPlot:
     """Tests for cumulative hazard plotting."""
@@ -310,6 +429,7 @@ class TestCumulativeHazardPlot:
 # Unit Tests - Forest Plot
 # =============================================================================
 
+
 class TestForestPlot:
     """Tests for forest plot."""
 
@@ -337,7 +457,7 @@ class TestForestPlot:
         """Test forest plot sorted by HR."""
         import matplotlib.pyplot as plt
 
-        fig = plot_forest_plot(cox_result, sort_by='hr')
+        fig = plot_forest_plot(cox_result, sort_by="hr")
 
         assert fig is not None
 
@@ -347,7 +467,7 @@ class TestForestPlot:
         """Test forest plot sorted by p-value."""
         import matplotlib.pyplot as plt
 
-        fig = plot_forest_plot(cox_result, sort_by='pvalue')
+        fig = plot_forest_plot(cox_result, sort_by="pvalue")
 
         assert fig is not None
 
@@ -368,6 +488,7 @@ class TestForestPlot:
 # Unit Tests - Hazard Ratio Plot
 # =============================================================================
 
+
 class TestHazardRatioPlot:
     """Tests for single hazard ratio plot."""
 
@@ -375,12 +496,7 @@ class TestHazardRatioPlot:
         """Test HR > 1 significantly."""
         import matplotlib.pyplot as plt
 
-        fig = plot_hazard_ratio(
-            hr=1.8,
-            ci_lower=1.2,
-            ci_upper=2.7,
-            label="Treatment Effect"
-        )
+        fig = plot_hazard_ratio(hr=1.8, ci_lower=1.2, ci_upper=2.7, label="Treatment Effect")
 
         assert fig is not None
 
@@ -390,12 +506,7 @@ class TestHazardRatioPlot:
         """Test HR < 1 significantly."""
         import matplotlib.pyplot as plt
 
-        fig = plot_hazard_ratio(
-            hr=0.5,
-            ci_lower=0.3,
-            ci_upper=0.8,
-            label="Protective Effect"
-        )
+        fig = plot_hazard_ratio(hr=0.5, ci_lower=0.3, ci_upper=0.8, label="Protective Effect")
 
         assert fig is not None
 
@@ -405,12 +516,7 @@ class TestHazardRatioPlot:
         """Test HR crossing 1."""
         import matplotlib.pyplot as plt
 
-        fig = plot_hazard_ratio(
-            hr=1.2,
-            ci_lower=0.8,
-            ci_upper=1.8,
-            label="No Significant Effect"
-        )
+        fig = plot_hazard_ratio(hr=1.2, ci_lower=0.8, ci_upper=1.8, label="No Significant Effect")
 
         assert fig is not None
 
@@ -421,10 +527,11 @@ class TestHazardRatioPlot:
 # Integration Tests
 # =============================================================================
 
+
 class TestCreateSurvivalVisualizations:
     """Tests for high-level visualization creation."""
 
-    @patch('visualization.survival.save_figure_to_minio')
+    @patch("visualization.survival.save_figure_to_minio")
     def test_create_visualizations_km_only(self, mock_save, km_results_two_groups):
         """Test creating visualizations with KM data only."""
         mock_save.return_value = "https://minio.example.com/test.png"
@@ -452,7 +559,7 @@ class TestCreateSurvivalVisualizations:
         assert VisualizationType.KAPLAN_MEIER in types
         assert VisualizationType.CUMULATIVE_HAZARD in types
 
-    @patch('visualization.survival.save_figure_to_minio')
+    @patch("visualization.survival.save_figure_to_minio")
     def test_create_visualizations_with_cox(self, mock_save, km_results_two_groups, cox_result):
         """Test creating visualizations with KM and Cox data."""
         mock_save.return_value = "https://minio.example.com/test.png"

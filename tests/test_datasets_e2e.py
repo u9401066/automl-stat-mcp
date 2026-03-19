@@ -8,6 +8,7 @@
     python tests/test_datasets_e2e.py --suite stats  # 只跑統計分析
     python tests/test_datasets_e2e.py --suite ml     # 只跑 ML 訓練
 """
+
 import argparse
 import time
 from pathlib import Path
@@ -133,11 +134,7 @@ class DatasetTester:
         csv_path = self.get_csv_path(config["file"])
 
         try:
-            resp = requests.post(
-                f"{STATS_SERVICE}/direct/quick-stats",
-                json={"csv_path": csv_path},
-                timeout=30
-            )
+            resp = requests.post(f"{STATS_SERVICE}/direct/quick-stats", json={"csv_path": csv_path}, timeout=30)
 
             if resp.status_code == 200:
                 data = resp.json()
@@ -168,7 +165,7 @@ class DatasetTester:
                     "csv_path": csv_path,
                     "group_column": config.get("target"),
                 },
-                timeout=60
+                timeout=60,
             )
 
             if resp.status_code == 200:
@@ -194,7 +191,7 @@ class DatasetTester:
                     "csv_path": csv_path,
                     "method": "pearson",
                 },
-                timeout=60
+                timeout=60,
             )
 
             if resp.status_code == 200:
@@ -221,7 +218,7 @@ class DatasetTester:
                     "time_col": config.get("time_col"),
                     "event_col": config.get("target"),
                 },
-                timeout=60
+                timeout=60,
             )
 
             if resp.status_code == 200:
@@ -347,28 +344,10 @@ class DatasetTester:
 
 def main():
     parser = argparse.ArgumentParser(description="E2E Dataset Testing")
-    parser.add_argument(
-        "--dataset",
-        choices=list(DATASETS.keys()) + ["all"],
-        default="all",
-        help="選擇要測試的資料集"
-    )
-    parser.add_argument(
-        "--suite",
-        choices=["all", "stats", "ml"],
-        default="all",
-        help="選擇測試套件"
-    )
-    parser.add_argument(
-        "--data-root",
-        default="/home/eric/workspace251204",
-        help="資料根目錄"
-    )
-    parser.add_argument(
-        "-v", "--verbose",
-        action="store_true",
-        help="顯示詳細錯誤訊息"
-    )
+    parser.add_argument("--dataset", choices=list(DATASETS.keys()) + ["all"], default="all", help="選擇要測試的資料集")
+    parser.add_argument("--suite", choices=["all", "stats", "ml"], default="all", help="選擇測試套件")
+    parser.add_argument("--data-root", default="/home/eric/workspace251204", help="資料根目錄")
+    parser.add_argument("-v", "--verbose", action="store_true", help="顯示詳細錯誤訊息")
 
     args = parser.parse_args()
 

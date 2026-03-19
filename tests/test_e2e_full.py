@@ -21,6 +21,7 @@ Usage:
     # Run with markers
     python -m pytest tests/test_e2e.py -m "not slow" -v
 """
+
 import asyncio
 import base64
 import os
@@ -65,6 +66,7 @@ POLL_INTERVAL = int(os.getenv("POLL_INTERVAL", "3"))
 # Test Data Generators
 # =============================================================================
 
+
 def create_iris_dataset() -> pd.DataFrame:
     """Load Iris dataset from local sample_data directory."""
     csv_path = SAMPLE_DATA_DIR / "iris.csv"
@@ -85,23 +87,26 @@ def create_clinical_dataset() -> pd.DataFrame:
     """Load clinical dataset from local sample_data directory."""
     csv_path = SAMPLE_DATA_DIR / "medical_study_200.csv"
     if not csv_path.exists():
-        raise FileNotFoundError(f"Medical study dataset not found at {csv_path}")
+        pytest.skip(f"Medical study dataset not found at {csv_path}")
     return pd.read_csv(csv_path)
 
 
 def create_survival_dataset() -> pd.DataFrame:
     """Create a synthetic survival dataset."""
     import numpy as np
+
     np.random.seed(42)
     n = 150
 
-    df = pd.DataFrame({
-        'time': np.random.exponential(24, n).round(1),  # months
-        'event': np.random.choice([0, 1], n, p=[0.3, 0.7]),
-        'treatment': np.random.choice(['A', 'B'], n),
-        'age': np.random.normal(60, 10, n).astype(int).clip(30, 80),
-        'stage': np.random.choice(['I', 'II', 'III', 'IV'], n, p=[0.2, 0.3, 0.3, 0.2]),
-    })
+    df = pd.DataFrame(
+        {
+            "time": np.random.exponential(24, n).round(1),  # months
+            "event": np.random.choice([0, 1], n, p=[0.3, 0.7]),
+            "treatment": np.random.choice(["A", "B"], n),
+            "age": np.random.normal(60, 10, n).astype(int).clip(30, 80),
+            "stage": np.random.choice(["I", "II", "III", "IV"], n, p=[0.2, 0.3, 0.3, 0.2]),
+        }
+    )
 
     return df
 
@@ -110,18 +115,15 @@ def create_survival_dataset() -> pd.DataFrame:
 # Helper Functions
 # =============================================================================
 
+
 def upload_to_minio(df: pd.DataFrame, object_name: str) -> str:
     """Upload DataFrame to MinIO as CSV."""
-    client = Minio(
-        MINIO_ENDPOINT,
-        access_key=MINIO_ACCESS_KEY,
-        secret_key=MINIO_SECRET_KEY,
-        secure=MINIO_SECURE
-    )
-
-    # Create bucket if not exists
-    if not client.bucket_exists(MINIO_BUCKET):
-        client.make_bucket(MINIO_BUCKET)
+    try:
+        client = Minio(MINIO_ENDPOINT, access_key=MINIO_ACCESS_KEY, secret_key=MINIO_SECRET_KEY, secure=MINIO_SECURE)
+        if not client.bucket_exists(MINIO_BUCKET):
+            client.make_bucket(MINIO_BUCKET)
+    except Exception as e:
+        pytest.skip(f"MinIO not available at {MINIO_ENDPOINT}: {e}")
 
     # Convert DataFrame to CSV bytes
     csv_buffer = BytesIO()
@@ -130,19 +132,12 @@ def upload_to_minio(df: pd.DataFrame, object_name: str) -> str:
     csv_bytes = csv_buffer.getvalue()
 
     # Upload
-    client.put_object(
-        MINIO_BUCKET,
-        object_name,
-        BytesIO(csv_bytes),
-        len(csv_bytes),
-        content_type="text/csv"
-    )
+    client.put_object(MINIO_BUCKET, object_name, BytesIO(csv_bytes), len(csv_bytes), content_type="text/csv")
 
     return f"s3://{MINIO_BUCKET}/{object_name}"
 
 
-async def wait_for_job(client: httpx.AsyncClient, base_url: str, job_id: str,
-                       timeout: int = TEST_TIMEOUT) -> dict:
+async def wait_for_job(client: httpx.AsyncClient, base_url: str, job_id: str, timeout: int = TEST_TIMEOUT) -> dict:
     """Poll job status until completion or timeout."""
     start_time = time.time()
 
@@ -170,13 +165,14 @@ def df_to_csv_string(df: pd.DataFrame) -> str:
 
 def df_to_base64(df: pd.DataFrame) -> str:
     """Convert DataFrame to base64 encoded CSV."""
-    csv_bytes = df.to_csv(index=False).encode('utf-8')
-    return base64.b64encode(csv_bytes).decode('utf-8')
+    csv_bytes = df.to_csv(index=False).encode("utf-8")
+    return base64.b64encode(csv_bytes).decode("utf-8")
 
 
 # =============================================================================
 # Stats Service Tests
 # =============================================================================
+
 
 @pytest.mark.e2e
 class TestStatsServiceHealth:
@@ -203,12 +199,7 @@ class TestStatsServiceDirect:
         csv_content = df_to_csv_string(df)
 
         async with httpx.AsyncClient() as client:
-            resp = await client.post(
-                f"{STATS_API_URL}/direct/quick-stats",
-                json={
-                    "csv_content": csv_content
-                }
-            )
+            resp = await client.post(f"{STATS_API_URL}/direct/quick-stats", json={"csv_content": csv_content})
 
             assert resp.status_code == 200
             data = resp.json()
@@ -228,11 +219,7 @@ class TestStatsServiceDirect:
         async with httpx.AsyncClient(timeout=30.0) as client:
             resp = await client.post(
                 f"{STATS_API_URL}/direct/analyze",
-                json={
-                    "csv_content": csv_content,
-                    "user_id": "test_user",
-                    "target_column": "outcome"
-                }
+                json={"csv_content": csv_content, "user_id": "test_user", "target_column": "outcome"},
             )
 
             assert resp.status_code == 200
@@ -251,11 +238,7 @@ class TestStatsServiceDirect:
         async with httpx.AsyncClient(timeout=30.0) as client:
             resp = await client.post(
                 f"{STATS_API_URL}/direct/analyze",
-                json={
-                    "csv_content": csv_base64,
-                    "is_base64": True,
-                    "user_id": "test_user"
-                }
+                json={"csv_content": csv_base64, "is_base64": True, "user_id": "test_user"},
             )
 
             assert resp.status_code == 200
@@ -272,11 +255,7 @@ class TestStatsServiceDirect:
         async with httpx.AsyncClient() as client:
             resp = await client.post(
                 f"{STATS_API_URL}/direct/preview",
-                json={
-                    "csv_content": csv_content,
-                    "user_id": "test_user",
-                    "n_rows": 10
-                }
+                json={"csv_content": csv_content, "user_id": "test_user", "n_rows": 10},
             )
 
             assert resp.status_code == 200
@@ -302,11 +281,7 @@ class TestStatsServiceJobs:
             # Step 1: Submit job
             resp = await client.post(
                 f"{STATS_API_URL}/direct/analyze",
-                json={
-                    "csv_content": csv_content,
-                    "user_id": "test_user",
-                    "target_column": "outcome"
-                }
+                json={"csv_content": csv_content, "user_id": "test_user", "target_column": "outcome"},
             )
             assert resp.status_code == 200
             job_id = resp.json()["job_id"]
@@ -326,6 +301,7 @@ class TestStatsServiceJobs:
 # =============================================================================
 # AutoML Service Tests
 # =============================================================================
+
 
 @pytest.mark.e2e
 class TestAutoMLServiceHealth:
@@ -349,10 +325,7 @@ class TestAutoMLServiceDatasets:
     async def test_list_datasets(self):
         """Test list datasets endpoint."""
         async with httpx.AsyncClient(follow_redirects=True) as client:
-            resp = await client.get(
-                f"{AUTOML_API_URL}/datasets",
-                headers={"x-user-id": "test-user"}
-            )
+            resp = await client.get(f"{AUTOML_API_URL}/datasets", headers={"x-user-id": "test-user"})
             assert resp.status_code == 200
             data = resp.json()
             assert isinstance(data, (list, dict))
@@ -372,11 +345,7 @@ class TestAutoMLServiceDatasets:
             resp = await client.post(
                 f"{AUTOML_API_URL}/datasets/register",
                 headers={"x-user-id": "test-user"},
-                json={
-                    "name": f"e2e_iris_{timestamp}",
-                    "description": "E2E test dataset",
-                    "minio_path": minio_path
-                }
+                json={"name": f"e2e_iris_{timestamp}", "description": "E2E test dataset", "minio_path": minio_path},
             )
 
             assert resp.status_code in [200, 201]
@@ -398,10 +367,7 @@ class TestAutoMLServiceDirect:
             resp = await client.post(
                 f"{AUTOML_API_URL}/direct/analyze",
                 headers={"x-user-id": "test-user"},
-                json={
-                    "csv_content": csv_content,
-                    "target_column": "target"
-                }
+                json={"csv_content": csv_content, "target_column": "target"},
             )
 
             assert resp.status_code == 200
@@ -422,9 +388,7 @@ class TestAutoMLServiceDirect:
             resp = await client.post(
                 f"{AUTOML_API_URL}/direct/quick-stats",
                 headers={"x-user-id": "test-user"},
-                json={
-                    "csv_content": csv_content
-                }
+                json={"csv_content": csv_content},
             )
 
             assert resp.status_code == 200
@@ -439,6 +403,7 @@ class TestAutoMLServiceDirect:
 # MCP Server Tests
 # =============================================================================
 
+
 @pytest.mark.e2e
 class TestMCPServer:
     """Test MCP Server endpoints."""
@@ -449,10 +414,7 @@ class TestMCPServer:
         async with httpx.AsyncClient() as client:
             try:
                 # Just check that SSE endpoint responds
-                resp = await client.get(
-                    f"{MCP_SERVER_URL}/sse",
-                    timeout=5.0
-                )
+                resp = await client.get(f"{MCP_SERVER_URL}/sse", timeout=5.0)
                 # SSE may return different codes depending on implementation
                 assert resp.status_code in [200, 204, 400, 405]
             except httpx.ReadTimeout:
@@ -465,6 +427,7 @@ class TestMCPServer:
 # =============================================================================
 # Integration Tests
 # =============================================================================
+
 
 @pytest.mark.e2e
 @pytest.mark.slow
@@ -479,20 +442,13 @@ class TestIntegration:
 
         async with httpx.AsyncClient(timeout=60.0) as client:
             # Stats Service analysis
-            stats_resp = await client.post(
-                f"{STATS_API_URL}/direct/quick-stats",
-                json={
-                    "csv_content": csv_content
-                }
-            )
+            stats_resp = await client.post(f"{STATS_API_URL}/direct/quick-stats", json={"csv_content": csv_content})
 
             # AutoML Service analysis (requires x-user-id header)
             automl_resp = await client.post(
                 f"{AUTOML_API_URL}/direct/quick-stats",
                 headers={"x-user-id": "integration_test"},
-                json={
-                    "csv_content": csv_content
-                }
+                json={"csv_content": csv_content},
             )
 
             # Both should succeed

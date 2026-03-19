@@ -3,6 +3,7 @@ Isolated tests for model management utilities.
 
 Tests model handling, leaderboard, and prediction utilities.
 """
+
 import json
 from typing import Any, Dict, List, Optional
 
@@ -11,6 +12,7 @@ import numpy as np
 # ==============================================================================
 # Helper Functions for Testing
 # ==============================================================================
+
 
 class ModelMetrics:
     """Model performance metrics"""
@@ -65,13 +67,11 @@ class ModelMetrics:
         return 1 - ss_res / ss_tot
 
 
-def create_leaderboard(models: List[Dict[str, Any]], metric: str, higher_is_better: bool = True) -> List[Dict[str, Any]]:
+def create_leaderboard(
+    models: List[Dict[str, Any]], metric: str, higher_is_better: bool = True
+) -> List[Dict[str, Any]]:
     """Create sorted leaderboard from models"""
-    sorted_models = sorted(
-        models,
-        key=lambda x: x.get(metric, 0),
-        reverse=higher_is_better
-    )
+    sorted_models = sorted(models, key=lambda x: x.get(metric, 0), reverse=higher_is_better)
 
     for rank, model in enumerate(sorted_models, 1):
         model["rank"] = rank
@@ -98,7 +98,9 @@ def validate_prediction_input(data: Dict[str, Any]) -> Dict[str, Any]:
     return {"valid": True, "errors": []}
 
 
-def format_prediction_output(predictions: np.ndarray, problem_type: str, class_labels: Optional[List] = None) -> Dict[str, Any]:
+def format_prediction_output(
+    predictions: np.ndarray, problem_type: str, class_labels: Optional[List] = None
+) -> Dict[str, Any]:
     """Format prediction output"""
     result = {
         "predictions": predictions.tolist() if isinstance(predictions, np.ndarray) else predictions,
@@ -114,6 +116,7 @@ def format_prediction_output(predictions: np.ndarray, problem_type: str, class_l
 # ==============================================================================
 # Tests
 # ==============================================================================
+
 
 class TestModelMetricsClassification:
     """Test classification metrics"""
@@ -136,7 +139,7 @@ class TestModelMetricsClassification:
         # TP=2, FP=1, Precision = 2/3
         precision = ModelMetrics.calculate_precision(y_true, y_pred)
 
-        assert abs(precision - 2/3) < 0.01
+        assert abs(precision - 2 / 3) < 0.01
         print(f"✓ Precision: {precision:.3f}")
 
     def test_recall(self):
@@ -147,7 +150,7 @@ class TestModelMetricsClassification:
         # TP=2, FN=1, Recall = 2/3
         recall = ModelMetrics.calculate_recall(y_true, y_pred)
 
-        assert abs(recall - 2/3) < 0.01
+        assert abs(recall - 2 / 3) < 0.01
         print(f"✓ Recall: {recall:.3f}")
 
     def test_f1_score(self):
@@ -400,11 +403,7 @@ class TestModelInfo:
         """Test feature importance sorting"""
         importance = {"c": 0.1, "a": 0.5, "b": 0.3, "d": 0.1}
 
-        sorted_features = sorted(
-            importance.items(),
-            key=lambda x: x[1],
-            reverse=True
-        )
+        sorted_features = sorted(importance.items(), key=lambda x: x[1], reverse=True)
 
         assert sorted_features[0][0] == "a"
         assert sorted_features[1][0] == "b"
@@ -516,7 +515,7 @@ def run_all_tests():
         print(f"\n{class_name}:")
         print("-" * 40)
 
-        test_methods = [m for m in dir(test_class) if m.startswith('test_')]
+        test_methods = [m for m in dir(test_class) if m.startswith("test_")]
 
         for method_name in test_methods:
             try:

@@ -6,6 +6,7 @@ This module provides:
 - Common fixtures for sample data
 - Service connection helpers
 """
+
 import asyncio
 import os
 from pathlib import Path
@@ -24,6 +25,7 @@ load_dotenv()
 # Structured Logging Configuration
 # =============================================================================
 
+
 def configure_structlog():
     """Configure structlog for consistent, structured logging across tests."""
     structlog.configure(
@@ -34,7 +36,7 @@ def configure_structlog():
             structlog.dev.set_exc_info,
             structlog.processors.TimeStamper(fmt="iso"),
             # Use ConsoleRenderer for colorful dev output
-            structlog.dev.ConsoleRenderer(colors=True)
+            structlog.dev.ConsoleRenderer(colors=True),
         ],
         wrapper_class=structlog.make_filtering_bound_logger(
             int(os.environ.get("LOG_LEVEL", "20"))  # INFO = 20
@@ -43,6 +45,7 @@ def configure_structlog():
         logger_factory=structlog.PrintLoggerFactory(),
         cache_logger_on_first_use=True,
     )
+
 
 # Configure at import time
 configure_structlog()
@@ -136,6 +139,7 @@ SAMPLE_DATASETS = {
 # Logger Fixture
 # =============================================================================
 
+
 @pytest.fixture
 def test_logger(request):
     """Provide a structured logger bound with test context."""
@@ -148,6 +152,7 @@ def test_logger(request):
 # =============================================================================
 # Sample Data Fixtures
 # =============================================================================
+
 
 @pytest.fixture(scope="session")
 def sample_data_dir() -> Path:
@@ -207,25 +212,31 @@ def csv_content_titanic(titanic_df) -> str:
 # Path Conversion Fixtures
 # =============================================================================
 
+
 @pytest.fixture
 def container_path():
     """Convert host path to container path."""
+
     def _convert(filename: str) -> str:
         return f"{CONTAINER_SAMPLE_DATA}/{filename}"
+
     return _convert
 
 
 @pytest.fixture
 def host_path(sample_data_dir):
     """Get host path for a sample file."""
+
     def _get(filename: str) -> Path:
         return sample_data_dir / filename
+
     return _get
 
 
 # =============================================================================
 # HTTP Client Fixtures
 # =============================================================================
+
 
 @pytest.fixture
 async def async_client():
@@ -244,26 +255,21 @@ def sync_client():
 @pytest.fixture
 async def stats_client():
     """Create async client for stats service."""
-    async with httpx.AsyncClient(
-        base_url=STATS_API_URL,
-        timeout=DEFAULT_TIMEOUT
-    ) as client:
+    async with httpx.AsyncClient(base_url=STATS_API_URL, timeout=DEFAULT_TIMEOUT) as client:
         yield client
 
 
 @pytest.fixture
 async def automl_client():
     """Create async client for automl service."""
-    async with httpx.AsyncClient(
-        base_url=AUTOML_API_URL,
-        timeout=DEFAULT_TIMEOUT
-    ) as client:
+    async with httpx.AsyncClient(base_url=AUTOML_API_URL, timeout=DEFAULT_TIMEOUT) as client:
         yield client
 
 
 # =============================================================================
 # Service Health Fixtures
 # =============================================================================
+
 
 async def check_service_health(url: str, path: str = "/health") -> bool:
     """Check if a service is healthy."""
@@ -282,9 +288,7 @@ async def services_available():
     automl_ok = await check_service_health(AUTOML_API_URL)
 
     if not (stats_ok and automl_ok):
-        pytest.skip(
-            f"Services not available (stats: {stats_ok}, automl: {automl_ok})"
-        )
+        pytest.skip(f"Services not available (stats: {stats_ok}, automl: {automl_ok})")
 
     return {"stats": stats_ok, "automl": automl_ok}
 
@@ -309,6 +313,7 @@ async def automl_service_available():
 # Event Loop Configuration
 # =============================================================================
 
+
 @pytest.fixture(scope="session")
 def event_loop():
     """Create event loop for async tests."""
@@ -321,9 +326,11 @@ def event_loop():
 # Test Data Generators
 # =============================================================================
 
+
 @pytest.fixture
 def generate_test_df():
     """Generate test DataFrames with specific characteristics."""
+
     def _generate(
         n_rows: int = 100,
         n_numeric: int = 3,
@@ -332,6 +339,7 @@ def generate_test_df():
         seed: int = 42,
     ) -> pd.DataFrame:
         import numpy as np
+
         np.random.seed(seed)
 
         data = {}
@@ -364,6 +372,7 @@ def generate_test_df():
 # =============================================================================
 # Cleanup Fixtures
 # =============================================================================
+
 
 @pytest.fixture(autouse=True)
 def cleanup_test_artifacts():

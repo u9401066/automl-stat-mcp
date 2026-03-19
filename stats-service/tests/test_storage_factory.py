@@ -4,6 +4,7 @@ Unit tests for storage_factory.py
 Tests the LocalStorageService implementation which is the default mode.
 MinIO tests require actual MinIO instance and are skipped in unit tests.
 """
+
 import os
 import tempfile
 from pathlib import Path
@@ -28,16 +29,19 @@ class TestLocalStorageService:
     def storage(self, temp_dir):
         """Create LocalStorageService with temp directory."""
         from src.infrastructure.storage_factory import LocalStorageService
+
         return LocalStorageService(data_root=temp_dir)
 
     @pytest.fixture
     def sample_df(self):
         """Create sample DataFrame."""
-        return pd.DataFrame({
-            "name": ["Alice", "Bob", "Charlie"],
-            "age": [25, 30, 35],
-            "score": [85.5, 90.0, 78.5],
-        })
+        return pd.DataFrame(
+            {
+                "name": ["Alice", "Bob", "Charlie"],
+                "age": [25, 30, 35],
+                "score": [85.5, 90.0, 78.5],
+            }
+        )
 
     # =========================================================================
     # CSV Operations
@@ -251,6 +255,7 @@ class TestEdgeCases:
         """Create LocalStorageService with temp directory."""
         with tempfile.TemporaryDirectory() as tmpdir:
             from src.infrastructure.storage_factory import LocalStorageService
+
             yield LocalStorageService(data_root=tmpdir)
 
     @pytest.mark.asyncio

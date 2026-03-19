@@ -3,6 +3,7 @@ Unit tests for Survival Analysis Module.
 
 Tests for Kaplan-Meier estimator, log-rank test, and Cox proportional hazards.
 """
+
 import os
 import sys
 
@@ -10,7 +11,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from tasks.survival_analysis import (
     CoxCoefficient,
@@ -32,6 +33,7 @@ from tasks.survival_analysis import (
 # Test Fixtures
 # =============================================================================
 
+
 @pytest.fixture
 def simple_survival_data():
     """Simple survival data for basic testing."""
@@ -49,10 +51,12 @@ def simple_survival_data():
     events[times > max_time] = 0
     times = np.minimum(times, max_time)
 
-    return pd.DataFrame({
-        'time': times,
-        'event': events,
-    })
+    return pd.DataFrame(
+        {
+            "time": times,
+            "event": events,
+        }
+    )
 
 
 @pytest.fixture
@@ -62,11 +66,11 @@ def grouped_survival_data():
     n = 200
 
     # Treatment assignment
-    treatment = np.random.choice(['Treatment', 'Control'], n)
+    treatment = np.random.choice(["Treatment", "Control"], n)
 
     # Different survival by group (treatment has better survival)
     times = np.where(
-        treatment == 'Treatment',
+        treatment == "Treatment",
         np.random.exponential(18, n),  # Treatment: longer survival
         np.random.exponential(12, n),  # Control: shorter survival
     )
@@ -79,11 +83,13 @@ def grouped_survival_data():
     events[times > max_time] = 0
     times = np.minimum(times, max_time)
 
-    return pd.DataFrame({
-        'survival_time': times,
-        'death': events,
-        'treatment_group': treatment,
-    })
+    return pd.DataFrame(
+        {
+            "survival_time": times,
+            "death": events,
+            "treatment_group": treatment,
+        }
+    )
 
 
 @pytest.fixture
@@ -113,13 +119,15 @@ def cox_data():
     events[times > max_time] = 0
     times = np.minimum(times, max_time)
 
-    return pd.DataFrame({
-        'time': times,
-        'event': events,
-        'age': age,
-        'male': is_male,
-        'stage': stage,
-    })
+    return pd.DataFrame(
+        {
+            "time": times,
+            "event": events,
+            "age": age,
+            "male": is_male,
+            "stage": stage,
+        }
+    )
 
 
 @pytest.fixture
@@ -128,19 +136,16 @@ def multi_group_data():
     np.random.seed(789)
     n = 150
 
-    groups = np.random.choice(['DrugA', 'DrugB', 'Placebo'], n)
+    groups = np.random.choice(["DrugA", "DrugB", "Placebo"], n)
 
     # Different survival by group
     base_times = {
-        'DrugA': 20,
-        'DrugB': 15,
-        'Placebo': 10,
+        "DrugA": 20,
+        "DrugB": 15,
+        "Placebo": 10,
     }
 
-    times = np.array([
-        np.random.exponential(base_times[g])
-        for g in groups
-    ])
+    times = np.array([np.random.exponential(base_times[g]) for g in groups])
 
     events = np.random.binomial(1, 0.7, n)
 
@@ -148,16 +153,19 @@ def multi_group_data():
     events[times > max_time] = 0
     times = np.minimum(times, max_time)
 
-    return pd.DataFrame({
-        'time': times,
-        'event': events,
-        'arm': groups,
-    })
+    return pd.DataFrame(
+        {
+            "time": times,
+            "event": events,
+            "arm": groups,
+        }
+    )
 
 
 # =============================================================================
 # Helper Function Tests
 # =============================================================================
+
 
 class TestHelperFunctions:
     """Tests for helper functions."""
@@ -175,13 +183,13 @@ class TestHelperFunctions:
 
     def test_safe_float_nan(self):
         """Test safe_float with NaN."""
-        assert safe_float(float('nan')) is None
-        assert safe_float(float('nan'), 0.0) == 0.0
+        assert safe_float(float("nan")) is None
+        assert safe_float(float("nan"), 0.0) == 0.0
 
     def test_safe_float_inf(self):
         """Test safe_float with infinity."""
-        assert safe_float(float('inf')) is None
-        assert safe_float(float('-inf')) is None
+        assert safe_float(float("inf")) is None
+        assert safe_float(float("-inf")) is None
 
     def test_safe_round(self):
         """Test safe_round function."""
@@ -193,6 +201,7 @@ class TestHelperFunctions:
 # Kaplan-Meier Tests
 # =============================================================================
 
+
 class TestKaplanMeierEstimator:
     """Tests for Kaplan-Meier estimator."""
 
@@ -200,8 +209,8 @@ class TestKaplanMeierEstimator:
         """Test basic KM estimation."""
         km = KaplanMeierEstimator()
         result = km.fit(
-            simple_survival_data['time'].values,
-            simple_survival_data['event'].values,
+            simple_survival_data["time"].values,
+            simple_survival_data["event"].values,
         )
 
         assert isinstance(result, KaplanMeierResult)
@@ -212,8 +221,8 @@ class TestKaplanMeierEstimator:
         """Test survival curve properties."""
         km = KaplanMeierEstimator()
         result = km.fit(
-            simple_survival_data['time'].values,
-            simple_survival_data['event'].values,
+            simple_survival_data["time"].values,
+            simple_survival_data["event"].values,
         )
 
         # Survival should start at 1 and decrease
@@ -221,7 +230,7 @@ class TestKaplanMeierEstimator:
 
         for i in range(1, len(result.survival_table)):
             # Survival should be non-increasing
-            assert result.survival_table[i].survival <= result.survival_table[i-1].survival
+            assert result.survival_table[i].survival <= result.survival_table[i - 1].survival
             # Survival should be between 0 and 1
             assert 0 <= result.survival_table[i].survival <= 1
 
@@ -229,8 +238,8 @@ class TestKaplanMeierEstimator:
         """Test confidence interval properties."""
         km = KaplanMeierEstimator()
         result = km.fit(
-            simple_survival_data['time'].values,
-            simple_survival_data['event'].values,
+            simple_survival_data["time"].values,
+            simple_survival_data["event"].values,
         )
 
         for point in result.survival_table:
@@ -244,8 +253,8 @@ class TestKaplanMeierEstimator:
         """Test median survival calculation."""
         km = KaplanMeierEstimator()
         result = km.fit(
-            simple_survival_data['time'].values,
-            simple_survival_data['event'].values,
+            simple_survival_data["time"].values,
+            simple_survival_data["event"].values,
         )
 
         # Median should be positive if calculated
@@ -256,14 +265,14 @@ class TestKaplanMeierEstimator:
         """Test KM with multiple groups."""
         km = KaplanMeierEstimator()
         results = km.fit_groups(
-            grouped_survival_data['survival_time'].values,
-            grouped_survival_data['death'].values,
-            grouped_survival_data['treatment_group'].values,
+            grouped_survival_data["survival_time"].values,
+            grouped_survival_data["death"].values,
+            grouped_survival_data["treatment_group"].values,
         )
 
         assert len(results) == 2
-        assert 'Treatment' in results
-        assert 'Control' in results
+        assert "Treatment" in results
+        assert "Control" in results
 
         # Treatment should have better survival (higher median)
         # Note: Due to random variation, we just check structure
@@ -275,22 +284,22 @@ class TestKaplanMeierEstimator:
         """Test serialization to dict."""
         km = KaplanMeierEstimator()
         result = km.fit(
-            simple_survival_data['time'].values,
-            simple_survival_data['event'].values,
+            simple_survival_data["time"].values,
+            simple_survival_data["event"].values,
         )
 
         d = result.to_dict()
-        assert 'group' in d
-        assert 'n_subjects' in d
-        assert 'median_survival' in d
-        assert 'survival_curve' in d
+        assert "group" in d
+        assert "n_subjects" in d
+        assert "median_survival" in d
+        assert "survival_curve" in d
 
     def test_get_survival_at_time(self, simple_survival_data):
         """Test getting survival at specific time."""
         km = KaplanMeierEstimator()
         result = km.fit(
-            simple_survival_data['time'].values,
-            simple_survival_data['event'].values,
+            simple_survival_data["time"].values,
+            simple_survival_data["event"].values,
         )
 
         # Survival at time 0 should be 1
@@ -306,15 +315,16 @@ class TestKaplanMeierEstimator:
 # Log-Rank Test Tests
 # =============================================================================
 
+
 class TestLogRankTest:
     """Tests for log-rank test."""
 
     def test_two_groups(self, grouped_survival_data):
         """Test log-rank test with 2 groups."""
         result = log_rank_test(
-            grouped_survival_data['survival_time'].values,
-            grouped_survival_data['death'].values,
-            grouped_survival_data['treatment_group'].values,
+            grouped_survival_data["survival_time"].values,
+            grouped_survival_data["death"].values,
+            grouped_survival_data["treatment_group"].values,
         )
 
         assert isinstance(result, LogRankResult)
@@ -325,9 +335,9 @@ class TestLogRankTest:
     def test_three_groups(self, multi_group_data):
         """Test log-rank test with 3 groups."""
         result = log_rank_test(
-            multi_group_data['time'].values,
-            multi_group_data['event'].values,
-            multi_group_data['arm'].values,
+            multi_group_data["time"].values,
+            multi_group_data["event"].values,
+            multi_group_data["arm"].values,
         )
 
         assert len(result.groups) == 3
@@ -336,9 +346,9 @@ class TestLogRankTest:
     def test_pairwise_comparisons(self, multi_group_data):
         """Test pairwise comparisons for >2 groups."""
         result = log_rank_test(
-            multi_group_data['time'].values,
-            multi_group_data['event'].values,
-            multi_group_data['arm'].values,
+            multi_group_data["time"].values,
+            multi_group_data["event"].values,
+            multi_group_data["arm"].values,
             pairwise=True,
         )
 
@@ -347,28 +357,28 @@ class TestLogRankTest:
         assert len(result.pairwise) == 3
 
         for _key, comparison in result.pairwise.items():
-            assert 'p_value' in comparison
-            assert 'p_value_adjusted' in comparison  # Bonferroni
+            assert "p_value" in comparison
+            assert "p_value_adjusted" in comparison  # Bonferroni
 
     def test_to_dict(self, grouped_survival_data):
         """Test serialization to dict."""
         result = log_rank_test(
-            grouped_survival_data['survival_time'].values,
-            grouped_survival_data['death'].values,
-            grouped_survival_data['treatment_group'].values,
+            grouped_survival_data["survival_time"].values,
+            grouped_survival_data["death"].values,
+            grouped_survival_data["treatment_group"].values,
         )
 
         d = result.to_dict()
-        assert 'groups' in d
-        assert 'test_statistic' in d
-        assert 'p_value' in d
-        assert 'significant' in d
+        assert "groups" in d
+        assert "test_statistic" in d
+        assert "p_value" in d
+        assert "significant" in d
 
     def test_single_group_returns_nonsignificant(self):
         """Test that single group returns p=1."""
         times = np.array([1, 2, 3, 4, 5])
         events = np.array([1, 1, 1, 0, 0])
-        groups = np.array(['A', 'A', 'A', 'A', 'A'])
+        groups = np.array(["A", "A", "A", "A", "A"])
 
         result = log_rank_test(times, events, groups)
         assert result.p_value == 1.0
@@ -378,6 +388,7 @@ class TestLogRankTest:
 # Cox Proportional Hazards Tests
 # =============================================================================
 
+
 class TestCoxPHFitter:
     """Tests for Cox proportional hazards regression."""
 
@@ -386,9 +397,9 @@ class TestCoxPHFitter:
         cox = CoxPHFitter()
         result = cox.fit(
             cox_data,
-            duration_col='time',
-            event_col='event',
-            covariates=['age', 'male', 'stage'],
+            duration_col="time",
+            event_col="event",
+            covariates=["age", "male", "stage"],
         )
 
         assert isinstance(result, CoxRegressionResult)
@@ -401,9 +412,9 @@ class TestCoxPHFitter:
         cox = CoxPHFitter()
         result = cox.fit(
             cox_data,
-            duration_col='time',
-            event_col='event',
-            covariates=['age', 'male', 'stage'],
+            duration_col="time",
+            event_col="event",
+            covariates=["age", "male", "stage"],
         )
 
         for coef in result.coefficients:
@@ -417,9 +428,9 @@ class TestCoxPHFitter:
         cox = CoxPHFitter()
         result = cox.fit(
             cox_data,
-            duration_col='time',
-            event_col='event',
-            covariates=['age', 'male', 'stage'],
+            duration_col="time",
+            event_col="event",
+            covariates=["age", "male", "stage"],
         )
 
         for coef in result.coefficients:
@@ -433,9 +444,9 @@ class TestCoxPHFitter:
         cox = CoxPHFitter()
         result = cox.fit(
             cox_data,
-            duration_col='time',
-            event_col='event',
-            covariates=['age', 'male', 'stage'],
+            duration_col="time",
+            event_col="event",
+            covariates=["age", "male", "stage"],
         )
 
         if result.concordance is not None:
@@ -448,9 +459,9 @@ class TestCoxPHFitter:
         cox = CoxPHFitter()
         result = cox.fit(
             cox_data,
-            duration_col='time',
-            event_col='event',
-            covariates=['age', 'male', 'stage'],
+            duration_col="time",
+            event_col="event",
+            covariates=["age", "male", "stage"],
         )
 
         # Likelihood ratio test
@@ -463,8 +474,8 @@ class TestCoxPHFitter:
         cox = CoxPHFitter()
         result = cox.fit(
             cox_data,
-            duration_col='time',
-            event_col='event',
+            duration_col="time",
+            event_col="event",
             # Don't specify covariates
         )
 
@@ -476,22 +487,23 @@ class TestCoxPHFitter:
         cox = CoxPHFitter()
         result = cox.fit(
             cox_data,
-            duration_col='time',
-            event_col='event',
-            covariates=['age', 'male'],
+            duration_col="time",
+            event_col="event",
+            covariates=["age", "male"],
         )
 
         d = result.to_dict()
-        assert 'n_subjects' in d
-        assert 'n_events' in d
-        assert 'coefficients' in d
-        assert 'model_fit' in d
-        assert 'global_tests' in d
+        assert "n_subjects" in d
+        assert "n_events" in d
+        assert "coefficients" in d
+        assert "model_fit" in d
+        assert "global_tests" in d
 
 
 # =============================================================================
 # Convenience Function Tests
 # =============================================================================
+
 
 class TestConvenienceFunctions:
     """Tests for convenience functions."""
@@ -500,71 +512,72 @@ class TestConvenienceFunctions:
         """Test KM analysis without grouping."""
         result = kaplan_meier_analysis(
             simple_survival_data,
-            time_col='time',
-            event_col='event',
+            time_col="time",
+            event_col="event",
         )
 
-        assert result['analysis_type'] == 'kaplan_meier'
-        assert result['grouped'] is False
-        assert 'overall' in result
+        assert result["analysis_type"] == "kaplan_meier"
+        assert result["grouped"] is False
+        assert "overall" in result
 
     def test_kaplan_meier_analysis_grouped(self, grouped_survival_data):
         """Test KM analysis with grouping."""
         result = kaplan_meier_analysis(
             grouped_survival_data,
-            time_col='survival_time',
-            event_col='death',
-            group_col='treatment_group',
+            time_col="survival_time",
+            event_col="death",
+            group_col="treatment_group",
         )
 
-        assert result['grouped'] is True
-        assert 'groups' in result
-        assert 'log_rank_test' in result
+        assert result["grouped"] is True
+        assert "groups" in result
+        assert "log_rank_test" in result
 
     def test_cox_regression_function(self, cox_data):
         """Test Cox regression convenience function."""
         result = cox_regression(
             cox_data,
-            time_col='time',
-            event_col='event',
-            covariates=['age', 'male', 'stage'],
+            time_col="time",
+            event_col="event",
+            covariates=["age", "male", "stage"],
         )
 
-        assert result['analysis_type'] == 'cox_regression'
-        assert 'coefficients' in result
-        assert 'model_fit' in result
+        assert result["analysis_type"] == "cox_regression"
+        assert "coefficients" in result
+        assert "model_fit" in result
 
     def test_survival_summary(self, grouped_survival_data):
         """Test survival summary."""
         result = survival_summary(
             grouped_survival_data,
-            time_col='survival_time',
-            event_col='death',
-            group_col='treatment_group',
+            time_col="survival_time",
+            event_col="death",
+            group_col="treatment_group",
             time_points=[12, 24],
         )
 
-        assert 'n_subjects' in result
-        assert 'n_events' in result
-        assert 'by_group' in result
+        assert "n_subjects" in result
+        assert "n_events" in result
+        assert "by_group" in result
 
     def test_compare_survival_curves(self, grouped_survival_data):
         """Test survival curve comparison."""
         result = compare_survival_curves(
             grouped_survival_data,
-            time_col='survival_time',
-            event_col='death',
-            group_col='treatment_group',
+            time_col="survival_time",
+            event_col="death",
+            group_col="treatment_group",
         )
 
-        assert 'groups' in result
-        assert 'log_rank_test' in result
-        assert 'conclusion' in result
+        assert "groups" in result
+        assert "log_rank_test" in result
+        assert "conclusion" in result
 
 
 # =============================================================================
 # Edge Cases and Error Handling Tests
 # =============================================================================
+
 
 class TestEdgeCases:
     """Tests for edge cases and error handling."""
@@ -640,6 +653,7 @@ class TestEdgeCases:
 # Clinical Data Scenarios
 # =============================================================================
 
+
 class TestClinicalScenarios:
     """Tests simulating real clinical data scenarios."""
 
@@ -648,85 +662,92 @@ class TestClinicalScenarios:
         np.random.seed(42)
         n = 100
 
-        df = pd.DataFrame({
-            'os_months': np.random.exponential(24, n),
-            'death': np.random.binomial(1, 0.6, n),
-            'treatment': np.random.choice(['Chemo', 'Immuno'], n),
-            'age': np.random.normal(65, 10, n),
-            'ecog': np.random.choice([0, 1, 2], n, p=[0.4, 0.4, 0.2]),
-        })
+        df = pd.DataFrame(
+            {
+                "os_months": np.random.exponential(24, n),
+                "death": np.random.binomial(1, 0.6, n),
+                "treatment": np.random.choice(["Chemo", "Immuno"], n),
+                "age": np.random.normal(65, 10, n),
+                "ecog": np.random.choice([0, 1, 2], n, p=[0.4, 0.4, 0.2]),
+            }
+        )
 
         # KM analysis
         km_result = kaplan_meier_analysis(
             df,
-            time_col='os_months',
-            event_col='death',
-            group_col='treatment',
+            time_col="os_months",
+            event_col="death",
+            group_col="treatment",
         )
 
-        assert km_result['grouped'] is True
-        assert 'log_rank_test' in km_result
+        assert km_result["grouped"] is True
+        assert "log_rank_test" in km_result
 
         # Cox regression
         cox_result = cox_regression(
             df,
-            time_col='os_months',
-            event_col='death',
-            covariates=['age', 'ecog'],
+            time_col="os_months",
+            event_col="death",
+            covariates=["age", "ecog"],
         )
 
-        assert len(cox_result['coefficients']) == 2
+        assert len(cox_result["coefficients"]) == 2
 
     def test_cardiovascular_study(self):
         """Test survival analysis for cardiovascular study."""
         np.random.seed(123)
         n = 200
 
-        df = pd.DataFrame({
-            'time_to_event': np.random.exponential(5, n),  # Years
-            'mace': np.random.binomial(1, 0.4, n),  # Major adverse cardiac event
-            'statin': np.random.binomial(1, 0.6, n),
-            'diabetes': np.random.binomial(1, 0.3, n),
-            'sbp': np.random.normal(140, 20, n),
-        })
+        df = pd.DataFrame(
+            {
+                "time_to_event": np.random.exponential(5, n),  # Years
+                "mace": np.random.binomial(1, 0.4, n),  # Major adverse cardiac event
+                "statin": np.random.binomial(1, 0.6, n),
+                "diabetes": np.random.binomial(1, 0.3, n),
+                "sbp": np.random.normal(140, 20, n),
+            }
+        )
 
         # Summary
         summary = survival_summary(
             df,
-            time_col='time_to_event',
-            event_col='mace',
-            group_col='statin',
+            time_col="time_to_event",
+            event_col="mace",
+            group_col="statin",
             time_points=[1, 3, 5],
         )
 
-        assert 'by_group' in summary
-        assert 'survival_at_times' in summary['by_group']['0']
+        assert "by_group" in summary
+        assert "survival_at_times" in summary["by_group"]["0"]
 
     def test_landmark_analysis(self):
         """Test survival at specific landmark times."""
         np.random.seed(456)
         n = 100
 
-        df = pd.DataFrame({
-            'time': np.random.exponential(12, n),
-            'event': np.random.binomial(1, 0.5, n),
-        })
+        df = pd.DataFrame(
+            {
+                "time": np.random.exponential(12, n),
+                "event": np.random.binomial(1, 0.5, n),
+            }
+        )
 
         summary = survival_summary(
             df,
-            time_col='time',
-            event_col='event',
+            time_col="time",
+            event_col="event",
             time_points=[6, 12, 18, 24],
         )
 
-        assert 'survival_at_times' in summary
-        assert 't=6' in summary['survival_at_times']
-        assert 't=12' in summary['survival_at_times']
+        assert "survival_at_times" in summary
+        assert "t=6" in summary["survival_at_times"]
+        assert "t=12" in summary["survival_at_times"]
 
 
 # =============================================================================
 # Integration Tests
 # =============================================================================
+
 
 class TestIntegration:
     """Integration tests for full workflows."""
@@ -736,52 +757,52 @@ class TestIntegration:
         # 1. Summary statistics
         summary = survival_summary(
             grouped_survival_data,
-            time_col='survival_time',
-            event_col='death',
-            group_col='treatment_group',
+            time_col="survival_time",
+            event_col="death",
+            group_col="treatment_group",
         )
 
-        assert summary['n_subjects'] == len(grouped_survival_data)
+        assert summary["n_subjects"] == len(grouped_survival_data)
 
         # 2. KM analysis
         km = kaplan_meier_analysis(
             grouped_survival_data,
-            time_col='survival_time',
-            event_col='death',
-            group_col='treatment_group',
+            time_col="survival_time",
+            event_col="death",
+            group_col="treatment_group",
         )
 
-        assert 'groups' in km
-        assert 'log_rank_test' in km
+        assert "groups" in km
+        assert "log_rank_test" in km
 
         # 3. Comparison
         comparison = compare_survival_curves(
             grouped_survival_data,
-            time_col='survival_time',
-            event_col='death',
-            group_col='treatment_group',
+            time_col="survival_time",
+            event_col="death",
+            group_col="treatment_group",
         )
 
-        assert 'conclusion' in comparison
+        assert "conclusion" in comparison
 
     def test_cox_with_binary_treatment(self, grouped_survival_data):
         """Test Cox regression with binary treatment."""
         df = grouped_survival_data.copy()
-        df['treatment_binary'] = (df['treatment_group'] == 'Treatment').astype(int)
+        df["treatment_binary"] = (df["treatment_group"] == "Treatment").astype(int)
 
         result = cox_regression(
             df,
-            time_col='survival_time',
-            event_col='death',
-            covariates=['treatment_binary'],
+            time_col="survival_time",
+            event_col="death",
+            covariates=["treatment_binary"],
         )
 
-        assert len(result['coefficients']) == 1
+        assert len(result["coefficients"]) == 1
 
         # Treatment should show some effect (not necessarily significant)
-        hr = result['coefficients'][0]['hazard_ratio']
+        hr = result["coefficients"][0]["hazard_ratio"]
         assert hr > 0
 
 
-if __name__ == '__main__':
-    pytest.main([__file__, '-v'])
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

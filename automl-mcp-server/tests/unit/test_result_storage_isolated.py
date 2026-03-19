@@ -3,6 +3,7 @@ Isolated test for NumpyJSONEncoder and ResultStorage.
 
 This test copies the essential code to avoid import chain issues.
 """
+
 import json
 import uuid
 from dataclasses import dataclass, field
@@ -14,6 +15,7 @@ import numpy as np
 # ==============================================================================
 # Copied code from result_storage.py for isolated testing
 # ==============================================================================
+
 
 class NumpyJSONEncoder(json.JSONEncoder):
     """Custom JSON encoder that handles numpy types and other special types."""
@@ -29,7 +31,7 @@ class NumpyJSONEncoder(json.JSONEncoder):
         elif isinstance(obj, np.bool_):
             return bool(obj)
         # Handle pandas types if present
-        elif hasattr(obj, 'item'):  # pandas scalars
+        elif hasattr(obj, "item"):  # pandas scalars
             return obj.item()
         # Handle datetime
         elif isinstance(obj, datetime):
@@ -39,7 +41,7 @@ class NumpyJSONEncoder(json.JSONEncoder):
             return obj
         # Handle bytes
         elif isinstance(obj, bytes):
-            return obj.decode('utf-8', errors='replace')
+            return obj.decode("utf-8", errors="replace")
         # Handle sets
         elif isinstance(obj, set):
             return list(obj)
@@ -54,6 +56,7 @@ def safe_json_dumps(data: Any, **kwargs) -> str:
 @dataclass
 class ResultMetadata:
     """Metadata for a stored analysis result"""
+
     result_id: str
     analysis_type: str
     user_id: str
@@ -145,85 +148,83 @@ class ResultStorage:
 # Tests
 # ==============================================================================
 
+
 def test_numpy_json_encoder():
     """Test NumpyJSONEncoder handles numpy types"""
     print("Testing NumpyJSONEncoder...")
 
     # Test int64
-    data = {'value': np.int64(42)}
+    data = {"value": np.int64(42)}
     result = safe_json_dumps(data)
     parsed = json.loads(result)
-    assert parsed['value'] == 42, f"Expected 42, got {parsed['value']}"
+    assert parsed["value"] == 42, f"Expected 42, got {parsed['value']}"
     print("✓ numpy.int64 serialization")
 
     # Test float64
-    data = {'value': np.float64(3.14159)}
+    data = {"value": np.float64(3.14159)}
     result = safe_json_dumps(data)
     parsed = json.loads(result)
-    assert abs(parsed['value'] - 3.14159) < 0.0001
+    assert abs(parsed["value"] - 3.14159) < 0.0001
     print("✓ numpy.float64 serialization")
 
     # Test bool
-    data = {'flag_true': np.bool_(True), 'flag_false': np.bool_(False)}
+    data = {"flag_true": np.bool_(True), "flag_false": np.bool_(False)}
     result = safe_json_dumps(data)
     parsed = json.loads(result)
-    assert parsed['flag_true'] is True
-    assert parsed['flag_false'] is False
+    assert parsed["flag_true"] is True
+    assert parsed["flag_false"] is False
     print("✓ numpy.bool_ serialization")
 
     # Test array
-    data = {'array': np.array([1, 2, 3, 4, 5])}
+    data = {"array": np.array([1, 2, 3, 4, 5])}
     result = safe_json_dumps(data)
     parsed = json.loads(result)
-    assert parsed['array'] == [1, 2, 3, 4, 5]
+    assert parsed["array"] == [1, 2, 3, 4, 5]
     print("✓ numpy.ndarray serialization")
 
     # Test 2D array
-    data = {'matrix': np.array([[1, 2], [3, 4]])}
+    data = {"matrix": np.array([[1, 2], [3, 4]])}
     result = safe_json_dumps(data)
     parsed = json.loads(result)
-    assert parsed['matrix'] == [[1, 2], [3, 4]]
+    assert parsed["matrix"] == [[1, 2], [3, 4]]
     print("✓ numpy.ndarray 2D serialization")
 
     # Test mixed types
     data = {
-        'python_int': 42,
-        'python_float': 3.14,
-        'python_str': 'hello',
-        'numpy_int': np.int64(100),
-        'numpy_float': np.float64(2.718),
-        'numpy_array': np.array([1, 2, 3]),
-        'nested': {
-            'numpy_bool': np.bool_(True),
-            'list': [np.int64(1), np.int64(2)]
-        }
+        "python_int": 42,
+        "python_float": 3.14,
+        "python_str": "hello",
+        "numpy_int": np.int64(100),
+        "numpy_float": np.float64(2.718),
+        "numpy_array": np.array([1, 2, 3]),
+        "nested": {"numpy_bool": np.bool_(True), "list": [np.int64(1), np.int64(2)]},
     }
     result = safe_json_dumps(data)
     parsed = json.loads(result)
-    assert parsed['python_int'] == 42
-    assert parsed['numpy_int'] == 100
-    assert parsed['nested']['numpy_bool'] is True
+    assert parsed["python_int"] == 42
+    assert parsed["numpy_int"] == 100
+    assert parsed["nested"]["numpy_bool"] is True
     print("✓ Mixed types serialization")
 
     # Test datetime
-    data = {'timestamp': datetime(2025, 1, 1, 12, 0, 0)}
+    data = {"timestamp": datetime(2025, 1, 1, 12, 0, 0)}
     result = safe_json_dumps(data)
     parsed = json.loads(result)
-    assert parsed['timestamp'] == "2025-01-01T12:00:00"
+    assert parsed["timestamp"] == "2025-01-01T12:00:00"
     print("✓ datetime serialization")
 
     # Test bytes
-    data = {'bytes': b'hello'}
+    data = {"bytes": b"hello"}
     result = safe_json_dumps(data)
     parsed = json.loads(result)
-    assert parsed['bytes'] == 'hello'
+    assert parsed["bytes"] == "hello"
     print("✓ bytes serialization")
 
     # Test set
-    data = {'set': {1, 2, 3}}
+    data = {"set": {1, 2, 3}}
     result = safe_json_dumps(data)
     parsed = json.loads(result)
-    assert sorted(parsed['set']) == [1, 2, 3]
+    assert sorted(parsed["set"]) == [1, 2, 3]
     print("✓ set serialization")
 
     print("\n✅ All NumpyJSONEncoder tests passed!")
@@ -233,10 +234,7 @@ def test_result_storage_class():
     """Test ResultStorage class methods"""
     print("\nTesting ResultStorage class...")
 
-    storage = ResultStorage(
-        stats_service_url="http://test:8003",
-        minio_bucket="test-bucket"
-    )
+    storage = ResultStorage(stats_service_url="http://test:8003", minio_bucket="test-bucket")
 
     # Test initialization
     assert storage.stats_service_url == "http://test:8003"
@@ -264,20 +262,14 @@ def test_result_storage_class():
 
     # Test _extract_summary for different types
     # correlation
-    corr_result = {
-        "columns": ["a", "b", "c"],
-        "significant_pairs": [("a", "b"), ("b", "c")]
-    }
+    corr_result = {"columns": ["a", "b", "c"], "significant_pairs": [("a", "b"), ("b", "c")]}
     summary = storage._extract_summary(corr_result, "correlation")
     assert summary["n_variables"] == 3
     assert summary["n_significant_pairs"] == 2
     print("✓ Summary extraction (correlation)")
 
     # compare_groups
-    cg_result = {
-        "n_groups": 3,
-        "main_test": {"test": "ANOVA", "p_value": 0.001}
-    }
+    cg_result = {"n_groups": 3, "main_test": {"test": "ANOVA", "p_value": 0.001}}
     summary = storage._extract_summary(cg_result, "compare_groups")
     assert summary["n_groups"] == 3
     assert summary["test_used"] == "ANOVA"
@@ -285,20 +277,14 @@ def test_result_storage_class():
     print("✓ Summary extraction (compare_groups)")
 
     # roc
-    roc_result = {
-        "auc": 0.85,
-        "optimal_threshold": 0.5
-    }
+    roc_result = {"auc": 0.85, "optimal_threshold": 0.5}
     summary = storage._extract_summary(roc_result, "roc")
     assert summary["auc"] == 0.85
     assert summary["optimal_threshold"] == 0.5
     print("✓ Summary extraction (roc)")
 
     # tableone
-    to_result = {
-        "n_total": 500,
-        "variables_analyzed": ["age", "gender", "bmi"]
-    }
+    to_result = {"n_total": 500, "variables_analyzed": ["age", "gender", "bmi"]}
     summary = storage._extract_summary(to_result, "tableone")
     assert summary["n_total"] == 500
     assert summary["n_variables"] == 3
@@ -318,12 +304,9 @@ def test_result_to_markdown():
             "result_id": "stat_test_abc123",
             "analysis_type": "correlation",
             "user_id": "test_user",
-            "created_at": "2025-01-01T12:00:00"
+            "created_at": "2025-01-01T12:00:00",
         },
-        "result": {
-            "status": "success",
-            "data": [1, 2, 3]
-        }
+        "result": {"status": "success", "data": [1, 2, 3]},
     }
 
     md = storage._result_to_markdown(data)
@@ -351,7 +334,7 @@ def test_result_metadata_dataclass():
         redis_key="stats:result:stat_test_abc123",
         minio_path="bucket/path/file.json",
         expires_at="2025-01-08T12:00:00",
-        summary={"n_variables": 5}
+        summary={"n_variables": 5},
     )
 
     assert metadata.result_id == "stat_test_abc123"
@@ -364,11 +347,7 @@ def test_result_metadata_dataclass():
 
     # Test default values
     metadata2 = ResultMetadata(
-        result_id="test",
-        analysis_type="test",
-        user_id="user",
-        created_at="now",
-        redis_key="key"
+        result_id="test", analysis_type="test", user_id="user", created_at="now", redis_key="key"
     )
     assert metadata2.minio_path is None
     assert metadata2.expires_at is None
@@ -389,40 +368,32 @@ def test_edge_cases():
     print("✓ Empty dict serialization")
 
     # Deeply nested numpy
-    data = {
-        'level1': {
-            'level2': {
-                'level3': {
-                    'value': np.float64(1.5)
-                }
-            }
-        }
-    }
+    data = {"level1": {"level2": {"level3": {"value": np.float64(1.5)}}}}
     result = safe_json_dumps(data)
     parsed = json.loads(result)
-    assert parsed['level1']['level2']['level3']['value'] == 1.5
+    assert parsed["level1"]["level2"]["level3"]["value"] == 1.5
     print("✓ Deeply nested numpy serialization")
 
     # List of numpy arrays
-    data = {'arrays': [np.array([1, 2]), np.array([3, 4])]}
+    data = {"arrays": [np.array([1, 2]), np.array([3, 4])]}
     result = safe_json_dumps(data)
     parsed = json.loads(result)
-    assert parsed['arrays'] == [[1, 2], [3, 4]]
+    assert parsed["arrays"] == [[1, 2], [3, 4]]
     print("✓ List of numpy arrays")
 
     # Unicode in strings
-    data = {'chinese': '中文測試', 'emoji': '🎉'}
+    data = {"chinese": "中文測試", "emoji": "🎉"}
     result = safe_json_dumps(data)
     parsed = json.loads(result)
-    assert parsed['chinese'] == '中文測試'
-    assert parsed['emoji'] == '🎉'
+    assert parsed["chinese"] == "中文測試"
+    assert parsed["emoji"] == "🎉"
     print("✓ Unicode support")
 
     # Large integers
-    data = {'big': np.int64(9223372036854775807)}
+    data = {"big": np.int64(9223372036854775807)}
     result = safe_json_dumps(data)
     parsed = json.loads(result)
-    assert parsed['big'] == 9223372036854775807
+    assert parsed["big"] == 9223372036854775807
     print("✓ Large integer handling")
 
     print("\n✅ Edge case tests passed!")

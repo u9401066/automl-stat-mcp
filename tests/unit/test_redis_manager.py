@@ -3,6 +3,7 @@ Unit Tests for RedisManager
 
 Tests the singleton Redis connection manager.
 """
+
 import asyncio
 import os
 
@@ -111,7 +112,7 @@ class TestRedisManagerConnection:
             mock_pool.side_effect = [
                 redis.ConnectionError("Connection failed"),
                 redis.ConnectionError("Connection failed"),
-                MagicMock()
+                MagicMock(),
             ]
 
             with patch.object(redis.Redis, "ping", new_callable=AsyncMock) as mock_ping:

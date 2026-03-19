@@ -4,6 +4,7 @@ Phase 6.3 Survival Analysis Power Tests
 Tests for SurvivalPowerAnalysis class and related functions.
 Log-rank test power calculations using Schoenfeld formula.
 """
+
 import math
 import os
 import sys
@@ -11,7 +12,7 @@ import sys
 import pytest
 
 # Add path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from tasks.power_analysis import (
     SurvivalPowerAnalysis,
@@ -180,9 +181,7 @@ class TestCalculateSampleSize:
         )
         # n = events / prob_event
         assert result.total_n > result.n_events
-        assert result.total_n == pytest.approx(
-            result.n_events / 0.70, rel=0.1
-        )
+        assert result.total_n == pytest.approx(result.n_events / 0.70, rel=0.1)
 
     def test_calculate_sample_size_low_event_rate(self):
         """Test sample size with low event rate (more censoring)."""
@@ -315,7 +314,7 @@ class TestCalculateFromMedianSurvival:
             follow_up_time=12,
         )
         # HR = log(0.5)/median_control / (log(0.5)/median_treatment) = 8/12 = 0.667
-        assert result.hazard_ratio == pytest.approx(8/12, rel=0.05)
+        assert result.hazard_ratio == pytest.approx(8 / 12, rel=0.05)
         assert result.total_n > 0
 
     def test_from_medians_improvement(self):
@@ -527,11 +526,11 @@ class TestSchoenfeldFormula:
         alpha = 0.05
         power = 0.80
 
-        z_alpha = norm.ppf(1 - alpha/2)  # 1.96
+        z_alpha = norm.ppf(1 - alpha / 2)  # 1.96
         z_beta = norm.ppf(power)  # 0.84
         log_hr = math.log(hr)
 
-        expected_events = 4 * (z_alpha + z_beta)**2 / log_hr**2
+        expected_events = 4 * (z_alpha + z_beta) ** 2 / log_hr**2
 
         result = SurvivalPowerAnalysis.calculate_events(
             hazard_ratio=hr,

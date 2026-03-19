@@ -3,6 +3,7 @@ Isolated tests for survival analysis utilities.
 
 Tests Kaplan-Meier, Cox regression, log-rank tests.
 """
+
 from typing import Tuple
 
 import numpy as np
@@ -11,6 +12,7 @@ from scipy import stats
 # ==============================================================================
 # Kaplan-Meier Implementation (for testing)
 # ==============================================================================
+
 
 def kaplan_meier(times: np.ndarray, events: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
@@ -53,7 +55,7 @@ def kaplan_meier(times: np.ndarray, events: np.ndarray) -> Tuple[np.ndarray, np.
 
         if n_at_risk > 0:
             # Survival update
-            current_survival *= (1 - n_events / n_at_risk)
+            current_survival *= 1 - n_events / n_at_risk
 
             # Greenwood's variance component
             if n_at_risk - n_events > 0:
@@ -69,8 +71,9 @@ def kaplan_meier(times: np.ndarray, events: np.ndarray) -> Tuple[np.ndarray, np.
     return np.array(unique_times), np.array(survival), np.array(variance)
 
 
-def log_rank_test(times1: np.ndarray, events1: np.ndarray,
-                  times2: np.ndarray, events2: np.ndarray) -> Tuple[float, float]:
+def log_rank_test(
+    times1: np.ndarray, events1: np.ndarray, times2: np.ndarray, events2: np.ndarray
+) -> Tuple[float, float]:
     """
     Perform log-rank test for two survival curves.
 
@@ -126,7 +129,7 @@ def log_rank_test(times1: np.ndarray, events1: np.ndarray,
 
     # Chi-square statistic
     if variance > 0:
-        chi2 = (observed1 - expected1)**2 / variance
+        chi2 = (observed1 - expected1) ** 2 / variance
         p_value = 1 - stats.chi2.cdf(chi2, 1)
     else:
         chi2 = 0
@@ -138,6 +141,7 @@ def log_rank_test(times1: np.ndarray, events1: np.ndarray,
 # ==============================================================================
 # Tests
 # ==============================================================================
+
 
 class TestKaplanMeier:
     """Test Kaplan-Meier survival estimation"""
@@ -186,7 +190,7 @@ class TestKaplanMeier:
         unique_times, survival, variance = kaplan_meier(times, events)
 
         for i in range(1, len(survival)):
-            assert survival[i] <= survival[i-1]
+            assert survival[i] <= survival[i - 1]
 
         print("✓ Survival monotonically decreasing")
 
@@ -299,6 +303,7 @@ class TestHazardRatio:
 
     def test_hr_interpretation(self):
         """Test HR interpretation"""
+
         def interpret_hr(hr):
             if hr < 1:
                 return "protective"
@@ -326,7 +331,7 @@ class TestCensoringPatterns:
         events = (true_times <= study_end).astype(int)
 
         assert sum(events) == 3  # 3 events, 2 censored
-        print(f"✓ Type I censoring: {sum(events)} events, {sum(1-events)} censored")
+        print(f"✓ Type I censoring: {sum(events)} events, {sum(1 - events)} censored")
 
     def test_random_censoring(self):
         """Test random (right) censoring"""
@@ -394,13 +399,13 @@ class TestSurvivalCurveComparison:
 
         # Group 1: baseline hazard
         lambda1 = 0.1
-        times1 = np.random.exponential(1/lambda1, n)
+        times1 = np.random.exponential(1 / lambda1, n)
         events1 = np.ones(n)
 
         # Group 2: proportional hazard (HR = 0.5)
         hr = 0.5
         lambda2 = lambda1 * hr
-        times2 = np.random.exponential(1/lambda2, n)
+        times2 = np.random.exponential(1 / lambda2, n)
         events2 = np.ones(n)
 
         # Under PH, log-rank is optimal
@@ -461,7 +466,7 @@ def run_all_tests():
         print(f"\n{class_name}:")
         print("-" * 40)
 
-        test_methods = [m for m in dir(test_class) if m.startswith('test_')]
+        test_methods = [m for m in dir(test_class) if m.startswith("test_")]
 
         for method_name in test_methods:
             try:

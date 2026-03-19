@@ -44,7 +44,7 @@
 ```python
 class TestJobResultsManager:
     """Test JobResultsManager core functionality."""
-    
+
     def test_init_creates_manager()
     def test_sanitize_name()
     def test_ensure_dirs_creates_structure()
@@ -59,7 +59,7 @@ class TestJobResultsManager:
     def test_finalize_with_error()
     def test_get_summary()
     def test_cleanup()
-    
+
 class TestSourceInfo:
     """Test SourceInfo dataclass."""
     def test_to_dict()
@@ -86,7 +86,7 @@ class TestWorkerResultsMixin:
 ```python
 class TestWorkerWithResults:
     """Test Worker processing with local results."""
-    
+
     @pytest.mark.integration
     def test_process_job_creates_results_dir()
     def test_process_job_saves_figures()
@@ -105,7 +105,7 @@ class TestWorkerWithResults:
 ```python
 class TestDataUploadFlow:
     """Complete data upload workflow."""
-    
+
     @pytest.mark.e2e
     async def test_list_available_files()
     async def test_upload_local_file_temporary()
@@ -113,10 +113,10 @@ class TestDataUploadFlow:
     async def test_upload_with_column_sanitization()
     async def test_upload_generates_metadata()
     async def test_register_minio_file()
-    
+
 class TestDataCleaningFlow:
     """Data cleaning workflow."""
-    
+
     async def test_convert_to_binary()
     async def test_encode_categorical()
     async def test_handle_missing_values()
@@ -131,36 +131,36 @@ class TestDataCleaningFlow:
 ```python
 class TestTableOneFlow:
     """TableOne generation workflow."""
-    
+
     async def test_tableone_heart_disease()
     async def test_tableone_with_stratification()
     async def test_tableone_continuous_vs_categorical()
-    
+
 class TestEDAFlow:
     """Exploratory Data Analysis workflow."""
-    
+
     async def test_auto_analyze_iris()
     async def test_auto_analyze_with_target()
     async def test_quick_stats()
-    
+
 class TestPowerAnalysisFlow:
     """Power Analysis workflow."""
-    
+
     async def test_ttest_power()
     async def test_proportion_power()
     async def test_anova_power()
     async def test_survival_power()
-    
+
 class TestSurvivalAnalysisFlow:
     """Survival Analysis workflow."""
-    
+
     async def test_kaplan_meier()
     async def test_cox_regression()
     async def test_log_rank_test()
-    
+
 class TestROCAnalysisFlow:
     """ROC Analysis workflow."""
-    
+
     async def test_compute_roc_curve()
     async def test_compare_roc_curves()
     async def test_full_classifier_evaluation()
@@ -175,28 +175,28 @@ class TestROCAnalysisFlow:
 ```python
 class TestAutoMLTrainingFlow:
     """AutoML training workflow."""
-    
+
     async def test_submit_automl_job_iris()
     async def test_submit_automl_job_breast_cancer()
     async def test_wait_for_training()
     async def test_get_leaderboard()
-    
+
 class TestSpecificAlgorithmFlow:
     """Specific algorithm training workflow."""
-    
+
     async def test_train_xgboost()
     async def test_train_random_forest()
     async def test_train_lightgbm()
-    
+
 class TestPredictionFlow:
     """Model prediction workflow."""
-    
+
     async def test_predict_with_model()
     async def test_batch_prediction()
-    
+
 class TestModelManagementFlow:
     """Model management workflow."""
-    
+
     async def test_list_models()
     async def test_get_feature_importance()
     async def test_delete_model()
@@ -211,23 +211,23 @@ class TestModelManagementFlow:
 ```python
 class TestResultsDirectoryFlow:
     """Test local results directory creation."""
-    
+
     async def test_results_dir_created()
     async def test_figures_saved()
     async def test_html_report_generated()
     async def test_metadata_json_correct()
-    
+
 class TestVisualizationOutputFlow:
     """Test visualization output in results."""
-    
+
     async def test_roc_curve_saved()
     async def test_survival_curve_saved()
     async def test_feature_importance_saved()
     async def test_shap_summary_saved()
-    
+
 class TestHTMLReportFlow:
     """Test HTML report content."""
-    
+
     async def test_html_contains_figures()
     async def test_html_contains_statistics()
     async def test_html_opens_in_browser()

@@ -6,6 +6,7 @@ This isolates business logic from infrastructure concerns.
 
 Based on test-generator Skill Layer 3: Service Unit Tests (Mock)
 """
+
 import json
 from unittest.mock import AsyncMock, Mock
 
@@ -16,6 +17,7 @@ import pytest
 # =============================================================================
 # Mock HTTP Client Tests
 # =============================================================================
+
 
 class TestAutoMLClientMock:
     """Test AutoML client with mocked HTTP responses"""
@@ -42,9 +44,7 @@ class TestAutoMLClientMock:
     @pytest.mark.asyncio
     async def test_list_algorithms_success(self, mock_async_client, mock_http_response):
         """Test list_algorithms with successful response"""
-        mock_http_response.json.return_value = {
-            "algorithms": ["GBM", "RF", "XGB", "NN_TORCH"]
-        }
+        mock_http_response.json.return_value = {"algorithms": ["GBM", "RF", "XGB", "NN_TORCH"]}
 
         # Simulate API call
         async with mock_async_client as client:
@@ -59,16 +59,9 @@ class TestAutoMLClientMock:
     @pytest.mark.asyncio
     async def test_submit_job_success(self, mock_async_client, mock_http_response):
         """Test job submission with successful response"""
-        mock_http_response.json.return_value = {
-            "job_id": "job_abc123",
-            "status": "pending"
-        }
+        mock_http_response.json.return_value = {"job_id": "job_abc123", "status": "pending"}
 
-        payload = {
-            "dataset_id": "ds_test",
-            "target_column": "target",
-            "problem_type": "binary"
-        }
+        payload = {"dataset_id": "ds_test", "target_column": "target", "problem_type": "binary"}
 
         async with mock_async_client as client:
             response = await client.post("/api/v1/train", json=payload)
@@ -81,14 +74,16 @@ class TestAutoMLClientMock:
     @pytest.mark.asyncio
     async def test_http_error_handling(self, mock_async_client, mock_http_response):
         """Test handling of HTTP errors"""
-        from httpx import HTTPStatusError, Request, Response
+        import httpx as _httpx
+
+        HTTPStatusError = _httpx.HTTPStatusError
+        Request = _httpx.Request
+        Response = _httpx.Response
 
         # Simulate 500 error
         mock_http_response.status_code = 500
         mock_http_response.raise_for_status.side_effect = HTTPStatusError(
-            message="Server Error",
-            request=Mock(spec=Request),
-            response=Mock(spec=Response, status_code=500)
+            message="Server Error", request=Mock(spec=Request), response=Mock(spec=Response, status_code=500)
         )
 
         async with mock_async_client as client:
@@ -102,7 +97,9 @@ class TestAutoMLClientMock:
     @pytest.mark.asyncio
     async def test_timeout_handling(self, mock_async_client):
         """Test handling of request timeouts"""
-        from httpx import TimeoutException
+        import httpx as _httpx
+
+        TimeoutException = _httpx.TimeoutException
 
         mock_async_client.get.side_effect = TimeoutException("Connection timed out")
 
@@ -116,6 +113,7 @@ class TestAutoMLClientMock:
 # =============================================================================
 # Mock Redis Tests
 # =============================================================================
+
 
 class TestRedisOperationsMock:
     """Test Redis operations with mocked Redis client"""
@@ -136,11 +134,7 @@ class TestRedisOperationsMock:
     @pytest.mark.asyncio
     async def test_save_result_to_redis(self, mock_redis):
         """Test saving analysis result to Redis"""
-        result = {
-            "status": "success",
-            "analysis_type": "tableone",
-            "data": {"n": 100, "columns": 5}
-        }
+        result = {"status": "success", "analysis_type": "tableone", "data": {"n": 100, "columns": 5}}
         result_id = "stat_tableone_abc123"
 
         # Serialize and save
@@ -188,11 +182,7 @@ class TestRedisOperationsMock:
     @pytest.mark.asyncio
     async def test_list_cached_results(self, mock_redis):
         """Test listing cached results by pattern"""
-        mock_redis.keys.return_value = [
-            "stat_tableone_001",
-            "stat_tableone_002",
-            "stat_eda_003"
-        ]
+        mock_redis.keys.return_value = ["stat_tableone_001", "stat_tableone_002", "stat_eda_003"]
 
         keys = await mock_redis.keys("stat_*")
 
@@ -204,6 +194,7 @@ class TestRedisOperationsMock:
 # =============================================================================
 # Mock MinIO Tests
 # =============================================================================
+
 
 class TestMinIOOperationsMock:
     """Test MinIO operations with mocked MinIO client"""
@@ -224,14 +215,14 @@ class TestMinIOOperationsMock:
         """Test uploading CSV file to MinIO"""
         # Create test CSV
         csv_path = tmp_path / "test.csv"
-        df = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
+        df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
         df.to_csv(csv_path, index=False)
 
         bucket = "datasets"
         object_name = "user/project/test.csv"
 
         # Simulate upload
-        with open(csv_path, 'rb') as f:
+        with open(csv_path, "rb") as f:
             data = f.read()
             mock_minio.put_object(bucket, object_name, f, len(data))
 
@@ -285,9 +276,7 @@ class TestMinIOOperationsMock:
     def test_minio_connection_error(self, mock_minio):
         """Test handling of MinIO connection errors"""
         # Use generic connection error instead of urllib3-specific
-        mock_minio.bucket_exists.side_effect = ConnectionError(
-            "MinIO connection failed"
-        )
+        mock_minio.bucket_exists.side_effect = ConnectionError("MinIO connection failed")
 
         with pytest.raises(ConnectionError):
             mock_minio.bucket_exists("datasets")
@@ -298,6 +287,7 @@ class TestMinIOOperationsMock:
 # =============================================================================
 # Mock Result Storage Tests
 # =============================================================================
+
 
 class TestResultStorageMock:
     """Test ResultStorage with mocked backends"""
@@ -315,22 +305,14 @@ class TestResultStorageMock:
     @pytest.mark.asyncio
     async def test_save_analysis_result(self, mock_storage):
         """Test saving analysis result"""
-        result = {
-            "status": "success",
-            "type": "tableone",
-            "summary": {"n": 100}
-        }
+        result = {"status": "success", "type": "tableone", "summary": {"n": 100}}
 
         metadata = Mock()
         metadata.result_id = "stat_tableone_abc123"
         metadata.minio_path = "stats/user/tableone_abc123.json"
         mock_storage.save_result.return_value = metadata
 
-        saved = await mock_storage.save_result(
-            result_type="tableone",
-            result=result,
-            user_id="user1"
-        )
+        saved = await mock_storage.save_result(result_type="tableone", result=result, user_id="user1")
 
         assert saved.result_id.startswith("stat_")
         print("✓ Save analysis result test passed")
@@ -338,10 +320,7 @@ class TestResultStorageMock:
     @pytest.mark.asyncio
     async def test_get_result_success(self, mock_storage):
         """Test retrieving result by ID"""
-        mock_storage.get_result.return_value = {
-            "status": "success",
-            "data": {"n": 100}
-        }
+        mock_storage.get_result.return_value = {"status": "success", "data": {"n": 100}}
 
         result = await mock_storage.get_result("stat_test_123")
 
@@ -378,6 +357,7 @@ class TestResultStorageMock:
 # Mock Stats Worker Tests
 # =============================================================================
 
+
 class TestStatsWorkerMock:
     """Test stats worker task submission with mocked Celery"""
 
@@ -395,11 +375,7 @@ class TestStatsWorkerMock:
 
     def test_submit_tableone_job(self, mock_celery_task):
         """Test submitting TableOne job"""
-        params = {
-            "csv_path": "/data/test.csv",
-            "columns": ["age", "gender", "outcome"],
-            "groupby": "outcome"
-        }
+        params = {"csv_path": "/data/test.csv", "columns": ["age", "gender", "outcome"], "groupby": "outcome"}
 
         result = mock_celery_task.delay(**params)
 
@@ -409,10 +385,7 @@ class TestStatsWorkerMock:
 
     def test_submit_eda_job(self, mock_celery_task):
         """Test submitting EDA job"""
-        params = {
-            "csv_path": "/data/test.csv",
-            "analysis_type": "quick_eda"
-        }
+        params = {"csv_path": "/data/test.csv", "analysis_type": "quick_eda"}
 
         result = mock_celery_task.apply_async(kwargs=params)
 
@@ -429,7 +402,10 @@ class TestStatsWorkerMock:
 
     def test_job_timeout(self, mock_celery_task):
         """Test job timeout handling"""
-        from celery.exceptions import TimeoutError
+        try:
+            from celery.exceptions import TimeoutError
+        except ModuleNotFoundError:
+            pytest.skip("celery not installed")
 
         async_result = mock_celery_task.delay()
         async_result.get.side_effect = TimeoutError("Task timed out")
@@ -443,6 +419,7 @@ class TestStatsWorkerMock:
 # =============================================================================
 # Integration Scenario Tests (with Mocks)
 # =============================================================================
+
 
 class TestAnalysisWorkflowMock:
     """Test complete analysis workflows with mocked services"""
@@ -462,20 +439,11 @@ class TestAnalysisWorkflowMock:
 
         # 3. Mock job completion
         mock_result.status = "SUCCESS"
-        mock_result.get.return_value = {
-            "status": "success",
-            "tableone": {
-                "n": 100,
-                "variables": 5,
-                "groups": 2
-            }
-        }
+        mock_result.get.return_value = {"status": "success", "tableone": {"n": 100, "variables": 5, "groups": 2}}
 
         # 4. Mock result storage
         mock_storage = AsyncMock()
-        mock_storage.save_result.return_value = Mock(
-            result_id="stat_tableone_abc123"
-        )
+        mock_storage.save_result.return_value = Mock(result_id="stat_tableone_abc123")
 
         # Execute workflow
         # Step 1: Upload
@@ -488,10 +456,7 @@ class TestAnalysisWorkflowMock:
         result = job.get(timeout=60)
 
         # Step 4: Save
-        saved = await mock_storage.save_result(
-            result_type="tableone",
-            result=result
-        )
+        saved = await mock_storage.save_result(result_type="tableone", result=result)
 
         # Verify
         assert job.id == "job_tableone_001"
@@ -536,6 +501,7 @@ class TestAnalysisWorkflowMock:
 # Mock Data Validation Tests
 # =============================================================================
 
+
 class TestDataValidationMock:
     """Test data validation with mocked validators"""
 
@@ -561,11 +527,9 @@ class TestDataValidationMock:
 
     def test_validate_target_column_binary(self):
         """Test binary target column validation"""
-        df = pd.DataFrame({
-            'target': [0, 1, 0, 1, 1]
-        })
+        df = pd.DataFrame({"target": [0, 1, 0, 1, 1]})
 
-        unique_values = df['target'].unique()
+        unique_values = df["target"].unique()
         is_binary = len(unique_values) == 2
 
         assert is_binary
@@ -573,11 +537,9 @@ class TestDataValidationMock:
 
     def test_validate_target_not_binary(self):
         """Test non-binary target detection"""
-        df = pd.DataFrame({
-            'target': [0, 1, 2, 1, 0]
-        })
+        df = pd.DataFrame({"target": [0, 1, 2, 1, 0]})
 
-        unique_values = df['target'].unique()
+        unique_values = df["target"].unique()
         is_binary = len(unique_values) == 2
 
         assert not is_binary
@@ -585,18 +547,14 @@ class TestDataValidationMock:
 
     def test_validate_numeric_columns(self):
         """Test numeric column validation"""
-        df = pd.DataFrame({
-            'numeric': [1.0, 2.0, 3.0],
-            'string': ['a', 'b', 'c'],
-            'mixed': [1, 'two', 3]
-        })
+        df = pd.DataFrame({"numeric": [1.0, 2.0, 3.0], "string": ["a", "b", "c"], "mixed": [1, "two", 3]})
 
         numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
 
-        assert 'numeric' in numeric_cols
-        assert 'string' not in numeric_cols
+        assert "numeric" in numeric_cols
+        assert "string" not in numeric_cols
         print("✓ Numeric column validation test passed")
 
 
-if __name__ == '__main__':
-    pytest.main([__file__, '-v'])
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

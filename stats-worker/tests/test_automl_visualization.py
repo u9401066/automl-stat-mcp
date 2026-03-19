@@ -3,6 +3,7 @@ Tests for AutoML Visualization Module
 
 Tests feature importance, SHAP, learning curves, and model comparison plots.
 """
+
 import sys
 from unittest.mock import patch
 
@@ -11,7 +12,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-sys.path.insert(0, '/home/eric/workspace251204/stats-worker/src')
+sys.path.insert(0, "/home/eric/workspace251204/stats-worker/src")
 
 from visualization.automl import (
     AUTOML_COLORS,
@@ -33,20 +34,21 @@ from visualization.schemas import VisualizationType
 # Fixtures
 # =============================================================================
 
+
 @pytest.fixture
 def sample_feature_importance():
     """Sample feature importance dictionary."""
     return {
-        'age': 0.25,
-        'income': 0.20,
-        'education': 0.15,
-        'gender': 0.10,
-        'experience': 0.08,
-        'location': 0.07,
-        'marital_status': 0.05,
-        'hours_per_week': 0.04,
-        'occupation': 0.03,
-        'native_country': 0.03,
+        "age": 0.25,
+        "income": 0.20,
+        "education": 0.15,
+        "gender": 0.10,
+        "experience": 0.08,
+        "location": 0.07,
+        "marital_status": 0.05,
+        "hours_per_week": 0.04,
+        "occupation": 0.03,
+        "native_country": 0.03,
     }
 
 
@@ -54,12 +56,12 @@ def sample_feature_importance():
 def sample_leaderboard():
     """Sample AutoML leaderboard."""
     return [
-        {'model_name': 'WeightedEnsemble_L2', 'score': 0.92, 'fit_time': 120.5, 'pred_time': 0.5},
-        {'model_name': 'LightGBM', 'score': 0.90, 'fit_time': 45.2, 'pred_time': 0.1},
-        {'model_name': 'XGBoost', 'score': 0.89, 'fit_time': 60.3, 'pred_time': 0.15},
-        {'model_name': 'CatBoost', 'score': 0.88, 'fit_time': 80.1, 'pred_time': 0.2},
-        {'model_name': 'RandomForest', 'score': 0.86, 'fit_time': 30.0, 'pred_time': 0.3},
-        {'model_name': 'NeuralNetTorch', 'score': 0.85, 'fit_time': 200.0, 'pred_time': 0.05},
+        {"model_name": "WeightedEnsemble_L2", "score": 0.92, "fit_time": 120.5, "pred_time": 0.5},
+        {"model_name": "LightGBM", "score": 0.90, "fit_time": 45.2, "pred_time": 0.1},
+        {"model_name": "XGBoost", "score": 0.89, "fit_time": 60.3, "pred_time": 0.15},
+        {"model_name": "CatBoost", "score": 0.88, "fit_time": 80.1, "pred_time": 0.2},
+        {"model_name": "RandomForest", "score": 0.86, "fit_time": 30.0, "pred_time": 0.3},
+        {"model_name": "NeuralNetTorch", "score": 0.85, "fit_time": 200.0, "pred_time": 0.05},
     ]
 
 
@@ -77,18 +79,20 @@ def sample_features():
     """Sample feature DataFrame for SHAP plots."""
     np.random.seed(42)
     n_samples = 100
-    return pd.DataFrame({
-        'age': np.random.randint(18, 80, n_samples),
-        'income': np.random.uniform(20000, 150000, n_samples),
-        'education': np.random.randint(8, 20, n_samples),
-        'gender': np.random.choice([0, 1], n_samples),
-        'experience': np.random.randint(0, 40, n_samples),
-        'location': np.random.randint(1, 50, n_samples),
-        'marital_status': np.random.choice([0, 1, 2], n_samples),
-        'hours_per_week': np.random.randint(20, 80, n_samples),
-        'occupation': np.random.randint(1, 15, n_samples),
-        'native_country': np.random.randint(1, 40, n_samples),
-    })
+    return pd.DataFrame(
+        {
+            "age": np.random.randint(18, 80, n_samples),
+            "income": np.random.uniform(20000, 150000, n_samples),
+            "education": np.random.randint(8, 20, n_samples),
+            "gender": np.random.choice([0, 1], n_samples),
+            "experience": np.random.randint(0, 40, n_samples),
+            "location": np.random.randint(1, 50, n_samples),
+            "marital_status": np.random.choice([0, 1, 2], n_samples),
+            "hours_per_week": np.random.randint(20, 80, n_samples),
+            "occupation": np.random.randint(1, 15, n_samples),
+            "native_country": np.random.randint(1, 40, n_samples),
+        }
+    )
 
 
 @pytest.fixture
@@ -116,6 +120,7 @@ def sample_regression_data():
 # =============================================================================
 # Test Feature Importance Plot
 # =============================================================================
+
 
 class TestPlotFeatureImportance:
     """Tests for plot_feature_importance."""
@@ -146,8 +151,7 @@ class TestPlotFeatureImportance:
 
     def test_from_dataframe(self, sample_feature_importance):
         """Test with DataFrame input."""
-        df = pd.DataFrame(list(sample_feature_importance.items()),
-                         columns=['feature', 'importance'])
+        df = pd.DataFrame(list(sample_feature_importance.items()), columns=["feature", "importance"])
         fig = plot_feature_importance(df)
 
         assert isinstance(fig, plt.Figure)
@@ -163,11 +167,7 @@ class TestPlotFeatureImportance:
 
     def test_custom_title_and_xlabel(self, sample_feature_importance):
         """Test custom title and labels."""
-        fig = plot_feature_importance(
-            sample_feature_importance,
-            title="Custom Title",
-            xlabel="Gini Importance"
-        )
+        fig = plot_feature_importance(sample_feature_importance, title="Custom Title", xlabel="Gini Importance")
 
         ax = fig.axes[0]
         assert ax.get_title() == "Custom Title"
@@ -194,17 +194,13 @@ class TestPlotFeatureImportance:
 # Test SHAP Plots
 # =============================================================================
 
+
 class TestPlotShapSummary:
     """Tests for plot_shap_summary."""
 
     def test_bar_plot_fallback(self, sample_shap_values, sample_features):
         """Test bar plot fallback when SHAP library not available."""
-        fig = plot_shap_summary(
-            sample_shap_values,
-            sample_features,
-            plot_type="bar",
-            title="SHAP Summary"
-        )
+        fig = plot_shap_summary(sample_shap_values, sample_features, plot_type="bar", title="SHAP Summary")
 
         assert isinstance(fig, plt.Figure)
         plt.close(fig)
@@ -212,22 +208,14 @@ class TestPlotShapSummary:
     def test_with_feature_names(self, sample_shap_values, sample_features):
         """Test with explicit feature names."""
         feature_names = list(sample_features.columns)
-        fig = plot_shap_summary(
-            sample_shap_values,
-            sample_features.values,
-            feature_names=feature_names
-        )
+        fig = plot_shap_summary(sample_shap_values, sample_features.values, feature_names=feature_names)
 
         assert isinstance(fig, plt.Figure)
         plt.close(fig)
 
     def test_max_display(self, sample_shap_values, sample_features):
         """Test max_display parameter."""
-        fig = plot_shap_summary(
-            sample_shap_values,
-            sample_features,
-            max_display=5
-        )
+        fig = plot_shap_summary(sample_shap_values, sample_features, max_display=5)
 
         assert isinstance(fig, plt.Figure)
         plt.close(fig)
@@ -238,11 +226,7 @@ class TestPlotShapWaterfall:
 
     def test_basic_waterfall(self, sample_shap_values, sample_features):
         """Test basic waterfall plot."""
-        fig = plot_shap_waterfall(
-            sample_shap_values,
-            sample_features,
-            sample_idx=0
-        )
+        fig = plot_shap_waterfall(sample_shap_values, sample_features, sample_idx=0)
 
         assert isinstance(fig, plt.Figure)
         plt.close(fig)
@@ -252,23 +236,14 @@ class TestPlotShapWaterfall:
         single_shap = np.random.randn(10) * 0.5
         single_features = sample_features.iloc[0]
 
-        fig = plot_shap_waterfall(
-            single_shap,
-            single_features,
-            title="Single Prediction Explanation"
-        )
+        fig = plot_shap_waterfall(single_shap, single_features, title="Single Prediction Explanation")
 
         assert isinstance(fig, plt.Figure)
         plt.close(fig)
 
     def test_max_display(self, sample_shap_values, sample_features):
         """Test max_display parameter."""
-        fig = plot_shap_waterfall(
-            sample_shap_values,
-            sample_features,
-            sample_idx=0,
-            max_display=5
-        )
+        fig = plot_shap_waterfall(sample_shap_values, sample_features, sample_idx=0, max_display=5)
 
         assert isinstance(fig, plt.Figure)
         plt.close(fig)
@@ -277,6 +252,7 @@ class TestPlotShapWaterfall:
 # =============================================================================
 # Test Learning Curve Plot
 # =============================================================================
+
 
 class TestPlotLearningCurve:
     """Tests for plot_learning_curve."""
@@ -296,10 +272,7 @@ class TestPlotLearningCurve:
         """Test with standard deviation bands."""
         train_sizes, train_scores, val_scores, train_std, val_std = sample_learning_curve_data
 
-        fig = plot_learning_curve(
-            train_sizes, train_scores, val_scores,
-            train_std=train_std, val_std=val_std
-        )
+        fig = plot_learning_curve(train_sizes, train_scores, val_scores, train_std=train_std, val_std=val_std)
 
         assert isinstance(fig, plt.Figure)
         plt.close(fig)
@@ -309,10 +282,12 @@ class TestPlotLearningCurve:
         train_sizes, train_scores, val_scores, _, _ = sample_learning_curve_data
 
         fig = plot_learning_curve(
-            train_sizes, train_scores, val_scores,
+            train_sizes,
+            train_scores,
+            val_scores,
             title="Model Learning Curve",
             xlabel="Training Set Size",
-            ylabel="Accuracy"
+            ylabel="Accuracy",
         )
 
         ax = fig.axes[0]
@@ -324,20 +299,21 @@ class TestPlotLearningCurve:
         """Test overfitting diagnosis annotation."""
         train_sizes = np.array([100, 200, 400, 800])
         train_scores = np.array([0.99, 0.99, 0.98, 0.98])  # High train
-        val_scores = np.array([0.70, 0.72, 0.73, 0.74])    # Low val
+        val_scores = np.array([0.70, 0.72, 0.73, 0.74])  # Low val
 
         fig = plot_learning_curve(train_sizes, train_scores, val_scores)
 
         # Check annotation text exists
         ax = fig.axes[0]
         texts = [t.get_text() for t in ax.texts]
-        assert any('overfitting' in t.lower() for t in texts)
+        assert any("overfitting" in t.lower() for t in texts)
         plt.close(fig)
 
 
 # =============================================================================
 # Test Model Comparison Plot
 # =============================================================================
+
 
 class TestPlotModelComparison:
     """Tests for plot_model_comparison."""
@@ -378,22 +354,18 @@ class TestPlotModelComparison:
 
     def test_custom_metric_name(self, sample_leaderboard):
         """Test custom metric name."""
-        fig = plot_model_comparison(
-            sample_leaderboard,
-            metric='score',
-            metric_name='ROC AUC'
-        )
+        fig = plot_model_comparison(sample_leaderboard, metric="score", metric_name="ROC AUC")
 
         ax = fig.axes[0]
-        assert 'ROC AUC' in ax.get_xlabel()
+        assert "ROC AUC" in ax.get_xlabel()
         plt.close(fig)
 
     def test_model_type_colors(self):
         """Test that models get appropriate colors."""
-        assert _get_model_color('WeightedEnsemble_L2') == MODEL_TYPE_COLORS['WeightedEnsemble']
-        assert _get_model_color('LightGBM_1') == MODEL_TYPE_COLORS['LightGBM']
-        assert _get_model_color('XGBoost_BAG_L1') == MODEL_TYPE_COLORS['XGBoost']
-        assert _get_model_color('UnknownModel') == MODEL_TYPE_COLORS['default']
+        assert _get_model_color("WeightedEnsemble_L2") == MODEL_TYPE_COLORS["WeightedEnsemble"]
+        assert _get_model_color("LightGBM_1") == MODEL_TYPE_COLORS["LightGBM"]
+        assert _get_model_color("XGBoost_BAG_L1") == MODEL_TYPE_COLORS["XGBoost"]
+        assert _get_model_color("UnknownModel") == MODEL_TYPE_COLORS["default"]
 
 
 class TestPlotAlgorithmPerformance:
@@ -402,9 +374,9 @@ class TestPlotAlgorithmPerformance:
     def test_basic_algorithm_comparison(self):
         """Test basic algorithm performance comparison."""
         results = {
-            'XGBoost': {'accuracy': 0.89, 'f1': 0.87, 'auc': 0.92},
-            'LightGBM': {'accuracy': 0.90, 'f1': 0.88, 'auc': 0.93},
-            'RandomForest': {'accuracy': 0.86, 'f1': 0.84, 'auc': 0.89},
+            "XGBoost": {"accuracy": 0.89, "f1": 0.87, "auc": 0.92},
+            "LightGBM": {"accuracy": 0.90, "f1": 0.88, "auc": 0.93},
+            "RandomForest": {"accuracy": 0.86, "f1": 0.84, "auc": 0.89},
         }
 
         fig = plot_algorithm_performance(results)
@@ -415,14 +387,11 @@ class TestPlotAlgorithmPerformance:
     def test_custom_metrics(self):
         """Test with custom metrics list."""
         results = {
-            'Model_A': {'precision': 0.85, 'recall': 0.80},
-            'Model_B': {'precision': 0.82, 'recall': 0.88},
+            "Model_A": {"precision": 0.85, "recall": 0.80},
+            "Model_B": {"precision": 0.82, "recall": 0.88},
         }
 
-        fig = plot_algorithm_performance(
-            results,
-            metrics=['precision', 'recall']
-        )
+        fig = plot_algorithm_performance(results, metrics=["precision", "recall"])
 
         assert isinstance(fig, plt.Figure)
         plt.close(fig)
@@ -431,6 +400,7 @@ class TestPlotAlgorithmPerformance:
 # =============================================================================
 # Test Regression Plots
 # =============================================================================
+
 
 class TestPlotPredictionVsActual:
     """Tests for plot_prediction_vs_actual."""
@@ -452,7 +422,7 @@ class TestPlotPredictionVsActual:
 
         ax = fig.axes[0]
         texts = [t.get_text() for t in ax.texts]
-        assert any('R²' in t or 'R2' in t.upper() for t in texts)
+        assert any("R²" in t or "R2" in t.upper() for t in texts)
         plt.close(fig)
 
     def test_without_metrics(self, sample_regression_data):
@@ -487,7 +457,7 @@ class TestPlotResiduals:
         # Check histogram axis has statistics text
         ax_hist = fig.axes[1]
         texts = [t.get_text() for t in ax_hist.texts]
-        assert any('Mean' in t for t in texts)
+        assert any("Mean" in t for t in texts)
         plt.close(fig)
 
 
@@ -495,123 +465,93 @@ class TestPlotResiduals:
 # Test High-Level Visualization Creator
 # =============================================================================
 
+
 class TestCreateAutomlVisualizations:
     """Tests for create_automl_visualizations."""
 
-    @patch('visualization.automl.save_figure_to_minio')
+    @patch("visualization.automl.save_figure_to_minio")
     def test_with_feature_importance(self, mock_save, sample_feature_importance):
         """Test creating visualizations with feature importance."""
         mock_save.return_value = "http://minio/test.png"
 
-        model_result = {
-            'feature_importance': sample_feature_importance,
-            'problem_type': 'binary'
-        }
+        model_result = {"feature_importance": sample_feature_importance, "problem_type": "binary"}
 
-        results = create_automl_visualizations(
-            model_result,
-            user_id='test_user',
-            job_id='test_job',
-            save_to_minio=True
-        )
+        results = create_automl_visualizations(model_result, user_id="test_user", job_id="test_job", save_to_minio=True)
 
         assert len(results) >= 1
         assert any(r.type == VisualizationType.FEATURE_IMPORTANCE for r in results)
-        plt.close('all')
+        plt.close("all")
 
-    @patch('visualization.automl.save_figure_to_minio')
+    @patch("visualization.automl.save_figure_to_minio")
     def test_with_leaderboard(self, mock_save, sample_leaderboard):
         """Test creating visualizations with leaderboard."""
         mock_save.return_value = "http://minio/test.png"
 
-        model_result = {
-            'leaderboard': sample_leaderboard,
-            'metric': 'accuracy',
-            'problem_type': 'binary'
-        }
+        model_result = {"leaderboard": sample_leaderboard, "metric": "accuracy", "problem_type": "binary"}
 
-        results = create_automl_visualizations(
-            model_result,
-            user_id='test_user',
-            job_id='test_job',
-            save_to_minio=True
-        )
+        results = create_automl_visualizations(model_result, user_id="test_user", job_id="test_job", save_to_minio=True)
 
         assert len(results) >= 1
         assert any(r.type == VisualizationType.MODEL_COMPARISON for r in results)
-        plt.close('all')
+        plt.close("all")
 
-    @patch('visualization.automl.save_figure_to_minio')
+    @patch("visualization.automl.save_figure_to_minio")
     def test_with_shap_values(self, mock_save, sample_shap_values, sample_features):
         """Test creating visualizations with SHAP values."""
         mock_save.return_value = "http://minio/test.png"
 
-        model_result = {
-            'problem_type': 'binary'
-        }
+        model_result = {"problem_type": "binary"}
 
         results = create_automl_visualizations(
             model_result,
             X=sample_features,
             shap_values=sample_shap_values,
-            user_id='test_user',
-            job_id='test_job',
-            save_to_minio=True
+            user_id="test_user",
+            job_id="test_job",
+            save_to_minio=True,
         )
 
         assert len(results) >= 1
         assert any(r.type == VisualizationType.SHAP_SUMMARY for r in results)
-        plt.close('all')
+        plt.close("all")
 
-    @patch('visualization.automl.save_figure_to_minio')
+    @patch("visualization.automl.save_figure_to_minio")
     def test_regression_plots(self, mock_save, sample_regression_data):
         """Test creating regression visualizations."""
         mock_save.return_value = "http://minio/test.png"
 
         y_true, y_pred = sample_regression_data
 
-        model_result = {
-            'problem_type': 'regression'
-        }
+        model_result = {"problem_type": "regression"}
 
         results = create_automl_visualizations(
-            model_result,
-            y_true=y_true,
-            y_pred=y_pred,
-            user_id='test_user',
-            job_id='test_job',
-            save_to_minio=True
+            model_result, y_true=y_true, y_pred=y_pred, user_id="test_user", job_id="test_job", save_to_minio=True
         )
 
         assert len(results) >= 2  # prediction_vs_actual and residuals
-        plt.close('all')
+        plt.close("all")
 
     def test_without_minio(self, sample_feature_importance):
         """Test creating visualizations without saving to MinIO."""
-        model_result = {
-            'feature_importance': sample_feature_importance,
-            'problem_type': 'binary'
-        }
+        model_result = {"feature_importance": sample_feature_importance, "problem_type": "binary"}
 
-        results = create_automl_visualizations(
-            model_result,
-            save_to_minio=False
-        )
+        results = create_automl_visualizations(model_result, save_to_minio=False)
 
         assert len(results) >= 1
         assert results[0].url == ""  # No URL when not saving
-        plt.close('all')
+        plt.close("all")
 
-    def test_all_visualizations(self, sample_feature_importance, sample_leaderboard,
-                                sample_shap_values, sample_features, sample_regression_data):
+    def test_all_visualizations(
+        self, sample_feature_importance, sample_leaderboard, sample_shap_values, sample_features, sample_regression_data
+    ):
         """Test creating all visualization types."""
         y_true, y_pred = sample_regression_data
 
         model_result = {
-            'feature_importance': sample_feature_importance,
-            'leaderboard': sample_leaderboard,
-            'problem_type': 'regression',
-            'metric': 'rmse'
+            "feature_importance": sample_feature_importance,
+            "leaderboard": sample_leaderboard,
+            "problem_type": "regression",
+            "metric": "rmse",
         }
 
         results = create_automl_visualizations(
@@ -620,7 +560,7 @@ class TestCreateAutomlVisualizations:
             y_true=y_true,
             y_pred=y_pred,
             shap_values=sample_shap_values,
-            save_to_minio=False
+            save_to_minio=False,
         )
 
         # Should have multiple visualizations
@@ -632,31 +572,32 @@ class TestCreateAutomlVisualizations:
         assert VisualizationType.MODEL_COMPARISON in types
         assert VisualizationType.SHAP_SUMMARY in types
 
-        plt.close('all')
+        plt.close("all")
 
 
 # =============================================================================
 # Test Color Constants
 # =============================================================================
 
+
 class TestColorConstants:
     """Tests for color constants."""
 
     def test_automl_colors(self):
         """Test AUTOML_COLORS dict."""
-        assert 'primary' in AUTOML_COLORS
-        assert 'secondary' in AUTOML_COLORS
-        assert 'positive' in AUTOML_COLORS
-        assert 'negative' in AUTOML_COLORS
+        assert "primary" in AUTOML_COLORS
+        assert "secondary" in AUTOML_COLORS
+        assert "positive" in AUTOML_COLORS
+        assert "negative" in AUTOML_COLORS
 
     def test_model_type_colors(self):
         """Test MODEL_TYPE_COLORS dict."""
-        assert 'LightGBM' in MODEL_TYPE_COLORS
-        assert 'XGBoost' in MODEL_TYPE_COLORS
-        assert 'RandomForest' in MODEL_TYPE_COLORS
-        assert 'NeuralNet' in MODEL_TYPE_COLORS
-        assert 'default' in MODEL_TYPE_COLORS
+        assert "LightGBM" in MODEL_TYPE_COLORS
+        assert "XGBoost" in MODEL_TYPE_COLORS
+        assert "RandomForest" in MODEL_TYPE_COLORS
+        assert "NeuralNet" in MODEL_TYPE_COLORS
+        assert "default" in MODEL_TYPE_COLORS
 
 
-if __name__ == '__main__':
-    pytest.main([__file__, '-v'])
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

@@ -14,6 +14,7 @@ Usage:
     cd tests
     python -m pytest test_e2e_visualization.py -v
 """
+
 import asyncio
 import os
 import time
@@ -45,11 +46,9 @@ SAMPLE_DATA = {
 # Helper Functions
 # =============================================================================
 
+
 async def wait_for_job(
-    client: httpx.AsyncClient,
-    job_id: str,
-    timeout: int = 120,
-    poll_interval: int = POLL_INTERVAL
+    client: httpx.AsyncClient, job_id: str, timeout: int = 120, poll_interval: int = POLL_INTERVAL
 ) -> dict:
     """Wait for a job to complete."""
     start = time.time()
@@ -73,6 +72,7 @@ async def wait_for_job(
 # Fixtures
 # =============================================================================
 
+
 @pytest.fixture(scope="module")
 def event_loop():
     """Create event loop for async tests."""
@@ -91,6 +91,7 @@ def stats_client():
 # Test: MinIO Results Storage
 # =============================================================================
 
+
 @pytest.mark.e2e
 @pytest.mark.asyncio
 class TestMinIOResultsFlow:
@@ -106,7 +107,7 @@ class TestMinIOResultsFlow:
                     "group_column": "species",
                     "value_column": "sepal_length",
                     "user_id": TEST_USER_ID,
-                }
+                },
             )
 
             if resp.status_code == 200:
@@ -122,10 +123,7 @@ class TestMinIOResultsFlow:
     async def test_list_analysis_results(self, stats_client):
         """Test listing analysis results from Redis."""
         async with stats_client as client:
-            resp = await client.get(
-                f"{STATS_API_URL}/storage/redis/keys",
-                params={"pattern": "stats:result:*"}
-            )
+            resp = await client.get(f"{STATS_API_URL}/storage/redis/keys", params={"pattern": "stats:result:*"})
 
             if resp.status_code == 200:
                 data = resp.json()
@@ -138,6 +136,7 @@ class TestMinIOResultsFlow:
 # =============================================================================
 # Test: ROC Visualization
 # =============================================================================
+
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
@@ -155,7 +154,7 @@ class TestROCVisualizationFlow:
                     "y_score_col": "mean_radius",
                     "user_id": TEST_USER_ID,
                     "generate_plot": True,
-                }
+                },
             )
 
             if resp.status_code == 200:
@@ -183,7 +182,7 @@ class TestROCVisualizationFlow:
                     "y_score_col_1": "mean_radius",
                     "y_score_col_2": "mean_texture",
                     "user_id": TEST_USER_ID,
-                }
+                },
             )
 
             if resp.status_code == 200:
@@ -197,6 +196,7 @@ class TestROCVisualizationFlow:
 # =============================================================================
 # Test: Survival Visualization
 # =============================================================================
+
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
@@ -214,7 +214,7 @@ class TestSurvivalVisualizationFlow:
                     "event_column": "arrest",
                     "user_id": TEST_USER_ID,
                     "generate_plot": True,
-                }
+                },
             )
 
             if resp.status_code == 200:
@@ -224,9 +224,9 @@ class TestSurvivalVisualizationFlow:
                     viz = data["visualizations"]
                     # Check for KM curve
                     has_km = any(
-                        "km" in v.get("filename", "").lower() or
-                        "kaplan" in v.get("filename", "").lower() or
-                        "survival" in v.get("filename", "").lower()
+                        "km" in v.get("filename", "").lower()
+                        or "kaplan" in v.get("filename", "").lower()
+                        or "survival" in v.get("filename", "").lower()
                         for v in viz
                     )
                     if viz:
@@ -245,7 +245,7 @@ class TestSurvivalVisualizationFlow:
                     "event_column": "arrest",
                     "group_column": "fin",
                     "user_id": TEST_USER_ID,
-                }
+                },
             )
 
             if resp.status_code == 200:
@@ -260,6 +260,7 @@ class TestSurvivalVisualizationFlow:
 # =============================================================================
 # Test: Full Evaluation Workflow
 # =============================================================================
+
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
@@ -277,7 +278,7 @@ class TestFullEvaluationFlow:
                     "y_score_col": "mean_radius",
                     "user_id": TEST_USER_ID,
                     "job_name": "viz_test_roc",
-                }
+                },
             )
 
             if resp.status_code == 200:
@@ -301,6 +302,7 @@ class TestFullEvaluationFlow:
 # Test: Visualization URLs
 # =============================================================================
 
+
 @pytest.mark.e2e
 @pytest.mark.asyncio
 class TestVisualizationURLs:
@@ -317,7 +319,7 @@ class TestVisualizationURLs:
                     "y_score_col": "mean_radius",
                     "user_id": TEST_USER_ID,
                     "generate_plot": True,
-                }
+                },
             )
 
             if resp.status_code == 200:
@@ -336,6 +338,7 @@ class TestVisualizationURLs:
 # =============================================================================
 # Test: Complete Visualization Workflow
 # =============================================================================
+
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
@@ -362,7 +365,7 @@ class TestCompleteVisualizationWorkflow:
                     "y_score_col": "mean_radius",
                     "user_id": TEST_USER_ID,
                     "job_name": "complete_viz_workflow",
-                }
+                },
             )
 
             if resp.status_code != 200:
@@ -401,6 +404,7 @@ class TestCompleteVisualizationWorkflow:
 # Test: Storage API
 # =============================================================================
 
+
 @pytest.mark.e2e
 @pytest.mark.asyncio
 class TestStorageAPI:
@@ -419,7 +423,7 @@ class TestStorageAPI:
                     "key": test_key,
                     "value": test_value,
                     "ttl": 60,
-                }
+                },
             )
 
             if resp.status_code == 404:
@@ -427,10 +431,7 @@ class TestStorageAPI:
 
             if resp.status_code == 200:
                 # Get value
-                resp = await client.get(
-                    f"{STATS_API_URL}/storage/redis/get",
-                    params={"key": test_key}
-                )
+                resp = await client.get(f"{STATS_API_URL}/storage/redis/get", params={"key": test_key})
 
                 if resp.status_code == 200:
                     data = resp.json()
@@ -444,7 +445,7 @@ class TestStorageAPI:
                 params={
                     "bucket": "stats-reports",
                     "prefix": TEST_USER_ID,
-                }
+                },
             )
 
             if resp.status_code == 404:

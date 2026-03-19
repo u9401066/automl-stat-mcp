@@ -7,6 +7,7 @@ Run:
     cd stats-worker
     python -m pytest tests/test_results_manager.py -v
 """
+
 import json
 import shutil
 import tempfile
@@ -16,7 +17,7 @@ from unittest.mock import patch
 import matplotlib
 import pytest
 
-matplotlib.use('Agg')
+matplotlib.use("Agg")
 # Add src to path for imports
 import sys
 
@@ -36,6 +37,7 @@ from results.worker_mixin import WorkerResultsMixin
 # =============================================================================
 # Fixtures
 # =============================================================================
+
 
 @pytest.fixture
 def temp_results_dir():
@@ -89,6 +91,7 @@ def sample_result():
 # Test SourceInfo
 # =============================================================================
 
+
 class TestSourceInfo:
     """Test SourceInfo dataclass."""
 
@@ -138,6 +141,7 @@ class TestSourceInfo:
 # =============================================================================
 # Test JobMetadata
 # =============================================================================
+
 
 class TestJobMetadata:
     """Test JobMetadata dataclass."""
@@ -197,6 +201,7 @@ class TestJobMetadata:
 # =============================================================================
 # Test JobResultsManager - Initialization
 # =============================================================================
+
 
 class TestJobResultsManagerInit:
     """Test JobResultsManager initialization."""
@@ -272,6 +277,7 @@ class TestJobResultsManagerInit:
 # Test JobResultsManager - Directory Creation
 # =============================================================================
 
+
 class TestJobResultsManagerDirectories:
     """Test directory creation functionality."""
 
@@ -312,6 +318,7 @@ class TestJobResultsManagerDirectories:
 # Test JobResultsManager - Save Operations
 # =============================================================================
 
+
 class TestJobResultsManagerSave:
     """Test save operations."""
 
@@ -341,7 +348,7 @@ class TestJobResultsManagerSave:
             metadata_dict={
                 "preprocessing_steps": ["normalize", "encode"],
                 "custom_field": "value",
-            }
+            },
         )
 
         with open(path) as f:
@@ -420,6 +427,7 @@ class TestJobResultsManagerSave:
 # Test JobResultsManager - HTML Report
 # =============================================================================
 
+
 class TestJobResultsManagerHTML:
     """Test HTML report generation."""
 
@@ -466,6 +474,7 @@ class TestJobResultsManagerHTML:
 # Test JobResultsManager - Finalize
 # =============================================================================
 
+
 class TestJobResultsManagerFinalize:
     """Test finalization and summary."""
 
@@ -507,7 +516,7 @@ class TestJobResultsManagerFinalize:
         # Save multiple figures
         for i in range(3):
             fig, ax = plt.subplots()
-            ax.plot([1, 2, 3], [i, i*2, i*3])
+            ax.plot([1, 2, 3], [i, i * 2, i * 3])
             results_manager.save_figure(fig, f"fig_{i}.png")
 
         results_manager.finalize()
@@ -518,6 +527,7 @@ class TestJobResultsManagerFinalize:
 # =============================================================================
 # Test JobResultsManager - Cleanup
 # =============================================================================
+
 
 class TestJobResultsManagerCleanup:
     """Test cleanup functionality."""
@@ -531,6 +541,7 @@ class TestJobResultsManagerCleanup:
 
         # 使用 shutil 清理（目前 manager 沒有 cleanup 方法）
         import shutil
+
         shutil.rmtree(job_dir, ignore_errors=True)
 
         assert not job_dir.exists()
@@ -546,11 +557,13 @@ class TestJobResultsManagerCleanup:
 # Test WorkerResultsMixin
 # =============================================================================
 
+
 class TestWorkerResultsMixin:
     """Test WorkerResultsMixin integration."""
 
     def test_create_results_manager(self, temp_results_dir):
         """Test creating results manager from job dict."""
+
         # Create a mock worker with the mixin
         class MockWorker(WorkerResultsMixin):
             pass
@@ -564,7 +577,7 @@ class TestWorkerResultsMixin:
             "params": {},
         }
 
-        with patch('results.worker_mixin.RESULTS_BASE_PATH', temp_results_dir):
+        with patch("results.worker_mixin.RESULTS_BASE_PATH", temp_results_dir):
             manager = worker.create_results_manager(job, job_type="roc_analysis")
 
         assert manager.user_id == "eric"
@@ -572,6 +585,7 @@ class TestWorkerResultsMixin:
 
     def test_create_results_manager_from_params(self, temp_results_dir):
         """Test extracting user_id from params."""
+
         class MockWorker(WorkerResultsMixin):
             pass
 
@@ -585,13 +599,14 @@ class TestWorkerResultsMixin:
             },
         }
 
-        with patch('results.worker_mixin.RESULTS_BASE_PATH', temp_results_dir):
+        with patch("results.worker_mixin.RESULTS_BASE_PATH", temp_results_dir):
             manager = worker.create_results_manager(job, job_type="test")
 
         assert manager.user_id == "from_params"
 
     def test_save_source_info_from_job(self, temp_results_dir):
         """Test saving source info from job dict."""
+
         class MockWorker(WorkerResultsMixin):
             pass
 
@@ -607,10 +622,11 @@ class TestWorkerResultsMixin:
             },
         }
 
-        with patch('results.worker_mixin.RESULTS_BASE_PATH', temp_results_dir):
+        with patch("results.worker_mixin.RESULTS_BASE_PATH", temp_results_dir):
             manager = worker.create_results_manager(job, job_type="test")
             worker.save_source_info_from_job(
-                manager, job,
+                manager,
+                job,
                 df_shape=(303, 14),
                 columns_used=["age", "sex", "target"],
             )
@@ -630,6 +646,7 @@ class TestWorkerResultsMixin:
 # Test Edge Cases
 # =============================================================================
 
+
 class TestEdgeCases:
     """Test edge cases and error handling."""
 
@@ -648,7 +665,7 @@ class TestEdgeCases:
         """Test special characters are properly sanitized."""
         manager = JobResultsManager(
             user_id="user1",
-            job_name="test<>:\"\\|?*",
+            job_name='test<>:"\\|?*',
             base_path=temp_results_dir,
         )
 
@@ -660,8 +677,8 @@ class TestEdgeCases:
     def test_save_result_with_nan(self, results_manager):
         """Test saving result containing NaN values."""
         result = {
-            "value": float('nan'),
-            "list_with_nan": [1.0, float('nan'), 3.0],
+            "value": float("nan"),
+            "list_with_nan": [1.0, float("nan"), 3.0],
         }
 
         # Should not raise
@@ -698,6 +715,7 @@ class TestEdgeCases:
 # Test Integration Scenarios
 # =============================================================================
 
+
 class TestIntegrationScenarios:
     """Test complete workflow scenarios."""
 
@@ -712,10 +730,12 @@ class TestIntegrationScenarios:
         )
 
         # Set parameters
-        manager.set_parameters({
-            "threshold": 0.5,
-            "ci_level": 0.95,
-        })
+        manager.set_parameters(
+            {
+                "threshold": 0.5,
+                "ci_level": 0.95,
+            }
+        )
 
         # Save source info
         manager.save_source_info(

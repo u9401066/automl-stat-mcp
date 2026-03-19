@@ -18,6 +18,7 @@ from typing import List, Optional
 # Isolated implementations (copied from orchestration_tools.py)
 # ============================================================
 
+
 def get_recommendations(row_count: int, columns: list, target_column: str, dataset: dict) -> dict:
     """Generate training recommendations based on dataset characteristics"""
     recommendations = {
@@ -58,7 +59,9 @@ def get_recommendations(row_count: int, columns: list, target_column: str, datas
     # Estimate
     time_limit = recommendations["recommendations"]["time_limit"]
     recommendations["estimated_training_time"] = f"{time_limit // 60}-{time_limit * 2 // 60} minutes"
-    recommendations["next_step"] = f"Run: train_and_wait(dataset_id='{dataset.get('dataset_id')}', target_column='{target_column}', problem_type='<your_type>', ...)"
+    recommendations["next_step"] = (
+        f"Run: train_and_wait(dataset_id='{dataset.get('dataset_id')}', target_column='{target_column}', problem_type='<your_type>', ...)"
+    )
 
     return recommendations
 
@@ -92,16 +95,18 @@ def build_training_summary(
             "jobs_completed": len(categorized["completed"]),
             "jobs_failed": len(categorized["failed"]),
         },
-        "datasets": [
-            {"id": d.get("dataset_id"), "name": d.get("name"), "rows": d.get("row_count")}
-            for d in datasets
-        ],
+        "datasets": [{"id": d.get("dataset_id"), "name": d.get("name"), "rows": d.get("row_count")} for d in datasets],
         "active_jobs": [
             {"id": j.get("job_id"), "type": j.get("job_type"), "status": j.get("status"), "progress": j.get("progress")}
             for j in (categorized["pending"] + categorized["running"])
         ],
         "recent_models": [
-            {"id": m.get("model_id"), "name": m.get("name"), "best_model": m.get("best_model_name"), "score": m.get("best_score")}
+            {
+                "id": m.get("model_id"),
+                "name": m.get("name"),
+                "best_model": m.get("best_model_name"),
+                "score": m.get("best_score"),
+            }
             for m in models[:5]
         ],
         "tips": [
@@ -143,7 +148,9 @@ def build_train_response(
     if status == "completed":
         response["model_id"] = model_id
         response["result"] = result
-        response["summary"] = f"✅ Model ready! Dataset '{dataset_name}' → Model '{model_id}' in {round(elapsed/60, 1)} min"
+        response["summary"] = (
+            f"✅ Model ready! Dataset '{dataset_name}' → Model '{model_id}' in {round(elapsed / 60, 1)} min"
+        )
     elif status == "failed":
         response["error_message"] = error_message
         response["summary"] = f"❌ Training failed: {error_message}"
@@ -157,6 +164,7 @@ def build_train_response(
 # TEST CLASSES
 # ============================================================
 
+
 class TestRecommendations:
     """Tests for dataset recommendations"""
 
@@ -166,7 +174,7 @@ class TestRecommendations:
             row_count=500,
             columns=["a", "b", "c", "target"],
             target_column="target",
-            dataset={"name": "test", "dataset_id": "ds_123"}
+            dataset={"name": "test", "dataset_id": "ds_123"},
         )
         assert rec["recommendations"]["presets"] == "best_quality"
         assert rec["recommendations"]["time_limit"] == 300
@@ -177,7 +185,7 @@ class TestRecommendations:
             row_count=5000,
             columns=["a", "b", "c", "target"],
             target_column="target",
-            dataset={"name": "test", "dataset_id": "ds_123"}
+            dataset={"name": "test", "dataset_id": "ds_123"},
         )
         assert rec["recommendations"]["presets"] == "high_quality"
         assert rec["recommendations"]["time_limit"] == 600
@@ -188,7 +196,7 @@ class TestRecommendations:
             row_count=50000,
             columns=["a", "b", "c", "target"],
             target_column="target",
-            dataset={"name": "test", "dataset_id": "ds_123"}
+            dataset={"name": "test", "dataset_id": "ds_123"},
         )
         assert rec["recommendations"]["presets"] == "good_quality"
         assert rec["recommendations"]["time_limit"] == 900
@@ -199,7 +207,7 @@ class TestRecommendations:
             row_count=200000,
             columns=["a", "b", "c", "target"],
             target_column="target",
-            dataset={"name": "test", "dataset_id": "ds_123"}
+            dataset={"name": "test", "dataset_id": "ds_123"},
         )
         assert rec["recommendations"]["presets"] == "medium_quality"
         assert rec["recommendations"]["time_limit"] == 1200
@@ -211,7 +219,7 @@ class TestRecommendations:
             row_count=1000,
             columns=["a", "target"],
             target_column="target",
-            dataset={"name": "test", "dataset_id": "ds_123"}
+            dataset={"name": "test", "dataset_id": "ds_123"},
         )
         assert any("few features" in w for w in rec["warnings"])
 
@@ -221,7 +229,7 @@ class TestRecommendations:
             row_count=1000,
             columns=["a", "b", "c", "target"],
             target_column="target",
-            dataset={"name": "test_ds", "dataset_id": "ds_123"}
+            dataset={"name": "test_ds", "dataset_id": "ds_123"},
         )
         info = rec["dataset_info"]
         assert info["name"] == "test_ds"
@@ -236,7 +244,7 @@ class TestRecommendations:
             row_count=1000,
             columns=["a", "b", "target"],
             target_column="target",
-            dataset={"name": "test", "dataset_id": "ds_abc123"}
+            dataset={"name": "test", "dataset_id": "ds_abc123"},
         )
         assert "ds_abc123" in rec["next_step"]
 
@@ -246,7 +254,7 @@ class TestRecommendations:
             row_count=1000,
             columns=["a", "b", "c", "target"],
             target_column="target",
-            dataset={"name": "test", "dataset_id": "ds_123"}
+            dataset={"name": "test", "dataset_id": "ds_123"},
         )
         assert "minutes" in rec["estimated_training_time"]
 
@@ -424,7 +432,7 @@ class TestBoundaryConditions:
             row_count=1000,
             columns=["a", "b", "target"],
             target_column="target",
-            dataset={"name": "test", "dataset_id": "ds_123"}
+            dataset={"name": "test", "dataset_id": "ds_123"},
         )
         # 1000 is NOT < 1000, so should be high_quality
         assert rec["recommendations"]["presets"] == "high_quality"
@@ -435,7 +443,7 @@ class TestBoundaryConditions:
             row_count=10000,
             columns=["a", "b", "target"],
             target_column="target",
-            dataset={"name": "test", "dataset_id": "ds_123"}
+            dataset={"name": "test", "dataset_id": "ds_123"},
         )
         assert rec["recommendations"]["presets"] == "good_quality"
 
@@ -445,7 +453,7 @@ class TestBoundaryConditions:
             row_count=100000,
             columns=["a", "b", "target"],
             target_column="target",
-            dataset={"name": "test", "dataset_id": "ds_123"}
+            dataset={"name": "test", "dataset_id": "ds_123"},
         )
         assert rec["recommendations"]["presets"] == "medium_quality"
 
@@ -453,6 +461,7 @@ class TestBoundaryConditions:
 # ============================================================
 # RUN TESTS
 # ============================================================
+
 
 def run_tests():
     """Run all tests"""
@@ -501,5 +510,6 @@ def run_tests():
 
 if __name__ == "__main__":
     import sys
+
     success = run_tests()
     sys.exit(0 if success else 1)

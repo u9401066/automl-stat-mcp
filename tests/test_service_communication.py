@@ -9,6 +9,7 @@ Tests HTTP communication between services:
 
 Requires: Services running (docker compose up)
 """
+
 import asyncio
 import time
 
@@ -31,6 +32,7 @@ MCP_SERVER_URL = "http://localhost:8002"
 # Test: Health Endpoints
 # =============================================================================
 
+
 @pytest.mark.e2e
 @pytest.mark.asyncio
 class TestServiceHealth:
@@ -47,7 +49,7 @@ class TestServiceHealth:
                     "health_response",
                     service="stats",
                     status=resp.status_code,
-                    body=resp.json() if resp.status_code == 200 else resp.text[:100]
+                    body=resp.json() if resp.status_code == 200 else resp.text[:100],
                 )
                 assert resp.status_code == 200
             except httpx.ConnectError:
@@ -60,11 +62,7 @@ class TestServiceHealth:
         async with httpx.AsyncClient(timeout=10.0) as client:
             try:
                 resp = await client.get(f"{AUTOML_API_URL}/health")
-                test_logger.info(
-                    "health_response",
-                    service="automl",
-                    status=resp.status_code
-                )
+                test_logger.info("health_response", service="automl", status=resp.status_code)
                 assert resp.status_code == 200
             except httpx.ConnectError:
                 pytest.skip("AutoML service not available")
@@ -106,6 +104,7 @@ class TestServiceHealth:
 # Test: API Endpoints
 # =============================================================================
 
+
 @pytest.mark.e2e
 @pytest.mark.asyncio
 class TestAPIEndpoints:
@@ -139,13 +138,7 @@ class TestAPIEndpoints:
                     # 405 means method not allowed, 422 means validation error
                     # Both indicate endpoint exists
                     exists = resp.status_code not in [404]
-                    test_logger.info(
-                        "endpoint_check",
-                        method=method,
-                        path=path,
-                        status=resp.status_code,
-                        exists=exists
-                    )
+                    test_logger.info("endpoint_check", method=method, path=path, status=resp.status_code, exists=exists)
                 except Exception as e:
                     test_logger.error("endpoint_error", path=path, error=str(e))
 
@@ -174,13 +167,7 @@ class TestAPIEndpoints:
                         resp = await client.post(url, json={})
 
                     exists = resp.status_code not in [404]
-                    test_logger.info(
-                        "endpoint_check",
-                        method=method,
-                        path=path,
-                        status=resp.status_code,
-                        exists=exists
-                    )
+                    test_logger.info("endpoint_check", method=method, path=path, status=resp.status_code, exists=exists)
                 except Exception as e:
                     test_logger.error("endpoint_error", path=path, error=str(e))
 
@@ -188,6 +175,7 @@ class TestAPIEndpoints:
 # =============================================================================
 # Test: Timeout Handling
 # =============================================================================
+
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
@@ -221,11 +209,7 @@ class TestTimeoutHandling:
             resp = await client.get(f"{STATS_API_URL}/health")
             elapsed = time.time() - start
 
-            test_logger.info(
-                "request_completed",
-                status=resp.status_code,
-                elapsed_ms=round(elapsed * 1000)
-            )
+            test_logger.info("request_completed", status=resp.status_code, elapsed_ms=round(elapsed * 1000))
 
             assert resp.status_code == 200
             assert elapsed < 5.0  # Should be fast
@@ -234,6 +218,7 @@ class TestTimeoutHandling:
 # =============================================================================
 # Test: Error Responses
 # =============================================================================
+
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
@@ -252,14 +237,10 @@ class TestErrorResponses:
             resp = await client.post(
                 f"{STATS_API_URL}/direct/quick-stats",
                 content="invalid json{{{",
-                headers={"Content-Type": "application/json"}
+                headers={"Content-Type": "application/json"},
             )
 
-            test_logger.info(
-                "invalid_json_response",
-                status=resp.status_code,
-                body=resp.text[:200]
-            )
+            test_logger.info("invalid_json_response", status=resp.status_code, body=resp.text[:200])
 
             # Should return 4xx error
             assert resp.status_code >= 400
@@ -275,14 +256,10 @@ class TestErrorResponses:
         async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.post(
                 f"{STATS_API_URL}/direct/quick-stats",
-                json={}  # Empty body - missing required fields
+                json={},  # Empty body - missing required fields
             )
 
-            test_logger.info(
-                "missing_fields_response",
-                status=resp.status_code,
-                body=resp.text[:200]
-            )
+            test_logger.info("missing_fields_response", status=resp.status_code, body=resp.text[:200])
 
             # Should return validation error (422) or bad request (400)
             assert resp.status_code in [400, 422]
@@ -296,14 +273,9 @@ class TestErrorResponses:
         test_logger.info("test_start", test="nonexistent_endpoint")
 
         async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.get(
-                f"{STATS_API_URL}/this/endpoint/does/not/exist"
-            )
+            resp = await client.get(f"{STATS_API_URL}/this/endpoint/does/not/exist")
 
-            test_logger.info(
-                "notfound_response",
-                status=resp.status_code
-            )
+            test_logger.info("notfound_response", status=resp.status_code)
 
             assert resp.status_code == 404
 
@@ -311,6 +283,7 @@ class TestErrorResponses:
 # =============================================================================
 # Test: Response Format
 # =============================================================================
+
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
@@ -346,10 +319,7 @@ class TestResponseFormat:
         test_logger.info("test_start", test="error_format")
 
         async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.post(
-                f"{STATS_API_URL}/direct/quick-stats",
-                json={}
-            )
+            resp = await client.post(f"{STATS_API_URL}/direct/quick-stats", json={})
 
             # Check error response has useful information
             data = resp.json()
@@ -364,6 +334,7 @@ class TestResponseFormat:
 # =============================================================================
 # Test: Concurrent Requests
 # =============================================================================
+
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
@@ -392,17 +363,9 @@ class TestConcurrentRequests:
             tasks = [check_health(client, i) for i in range(10)]
             results = await asyncio.gather(*tasks, return_exceptions=True)
 
-        success_count = sum(
-            1 for r in results
-            if isinstance(r, dict) and r.get("status") == 200
-        )
+        success_count = sum(1 for r in results if isinstance(r, dict) and r.get("status") == 200)
 
-        test_logger.info(
-            "concurrent_results",
-            total=len(results),
-            success=success_count,
-            results=results
-        )
+        test_logger.info("concurrent_results", total=len(results), success=success_count, results=results)
 
         assert success_count == len(results), "Some concurrent requests failed"
 
@@ -410,6 +373,7 @@ class TestConcurrentRequests:
 # =============================================================================
 # Test: Service Discovery
 # =============================================================================
+
 
 @pytest.mark.e2e
 @pytest.mark.asyncio

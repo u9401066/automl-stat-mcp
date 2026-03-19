@@ -9,6 +9,7 @@ Tests data integrity throughout the system:
 
 Requires: Services running (docker compose up)
 """
+
 import asyncio
 import base64
 from typing import Any, Dict
@@ -32,6 +33,7 @@ TIMEOUT = 30.0
 # =============================================================================
 # Helper Functions
 # =============================================================================
+
 
 def df_to_csv_content(df: pd.DataFrame) -> str:
     """Convert DataFrame to CSV string."""
@@ -61,7 +63,7 @@ async def wait_for_job(
 
         data = resp.json()
         status = data.get("status")
-        log.debug("job_poll", attempt=i+1, status=status)
+        log.debug("job_poll", attempt=i + 1, status=status)
 
         if status == "completed":
             return data
@@ -77,6 +79,7 @@ async def wait_for_job(
 # =============================================================================
 # Test: Path Resolution Chain
 # =============================================================================
+
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
@@ -97,7 +100,7 @@ class TestPathResolutionChain:
             json={
                 "csv_path": "/data/sample_data/iris.csv",
                 "user_id": "test_user",
-            }
+            },
         )
 
         test_logger.info("response_received", status=resp.status_code)
@@ -126,7 +129,7 @@ class TestPathResolutionChain:
             json={
                 "csv_path": "iris.csv",  # Relative path
                 "user_id": "test_user",
-            }
+            },
         )
 
         test_logger.info("response_received", status=resp.status_code)
@@ -147,7 +150,7 @@ class TestPathResolutionChain:
             json={
                 "csv_path": "/home/eric/workspace251204/sample_data/iris.csv",
                 "user_id": "test_user",
-            }
+            },
         )
 
         test_logger.info("response_received", status=resp.status_code)
@@ -155,15 +158,13 @@ class TestPathResolutionChain:
         # Host paths should fail or be converted
         # Document actual behavior
         if resp.status_code == 200:
-            test_logger.warning(
-                "host_path_accepted",
-                note="Host path was accepted - potential security concern"
-            )
+            test_logger.warning("host_path_accepted", note="Host path was accepted - potential security concern")
 
 
 # =============================================================================
 # Test: Data Format Preservation
 # =============================================================================
+
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
@@ -190,7 +191,7 @@ class TestDataFormatPreservation:
             json={
                 "csv_content": original_csv,
                 "user_id": "test_user",
-            }
+            },
         )
 
         if resp.status_code == 200:
@@ -199,11 +200,13 @@ class TestDataFormatPreservation:
 
             # Verify row count matches
             if "n_rows" in data:
-                assert data["n_rows"] == original_shape[0], \
+                assert data["n_rows"] == original_shape[0], (
                     f"Row count mismatch: {data['n_rows']} vs {original_shape[0]}"
+                )
             if "n_cols" in data:
-                assert data["n_cols"] == original_shape[1], \
+                assert data["n_cols"] == original_shape[1], (
                     f"Column count mismatch: {data['n_cols']} vs {original_shape[1]}"
+                )
         else:
             test_logger.warning("request_failed", status=resp.status_code)
 
@@ -226,7 +229,7 @@ class TestDataFormatPreservation:
                 "csv_content": base64_content,
                 "is_base64": True,
                 "user_id": "test_user",
-            }
+            },
         )
 
         if resp.status_code == 200:
@@ -245,13 +248,15 @@ class TestDataFormatPreservation:
         test_logger.info("test_start", test="special_characters")
 
         # Create DataFrame with special characters
-        df = pd.DataFrame({
-            "Column With Spaces": [1, 2, 3],
-            "column_with_underscore": [4, 5, 6],
-            "中文欄位": [7, 8, 9],
-            "column/with/slash": [10, 11, 12],
-            "column.with.dot": [13, 14, 15],
-        })
+        df = pd.DataFrame(
+            {
+                "Column With Spaces": [1, 2, 3],
+                "column_with_underscore": [4, 5, 6],
+                "中文欄位": [7, 8, 9],
+                "column/with/slash": [10, 11, 12],
+                "column.with.dot": [13, 14, 15],
+            }
+        )
 
         csv_content = df_to_csv_content(df)
         test_logger.info("test_data", columns=list(df.columns))
@@ -261,18 +266,14 @@ class TestDataFormatPreservation:
             json={
                 "csv_content": csv_content,
                 "user_id": "test_user",
-            }
+            },
         )
 
         if resp.status_code == 200:
             data = resp.json()
             test_logger.info("special_chars_handled", result_keys=list(data.keys()))
         else:
-            test_logger.warning(
-                "special_chars_failed",
-                status=resp.status_code,
-                note="May need column sanitization"
-            )
+            test_logger.warning("special_chars_failed", status=resp.status_code, note="May need column sanitization")
 
     async def test_missing_values_preserved(
         self,
@@ -293,7 +294,7 @@ class TestDataFormatPreservation:
             json={
                 "csv_content": df_to_csv_content(titanic_df),
                 "user_id": "test_user",
-            }
+            },
         )
 
         if resp.status_code == 200:
@@ -304,6 +305,7 @@ class TestDataFormatPreservation:
 # =============================================================================
 # Test: Result Storage and Retrieval
 # =============================================================================
+
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
@@ -326,7 +328,7 @@ class TestResultStorageRetrieval:
             json={
                 "csv_content": df_to_csv_content(iris_df),
                 "user_id": "test_user",
-            }
+            },
         )
 
         if resp.status_code != 200:
@@ -367,7 +369,7 @@ class TestResultStorageRetrieval:
             json={
                 "csv_content": df_to_csv_content(iris_df),
                 "user_id": "test_user",
-            }
+            },
         )
 
         if resp.status_code != 200:
@@ -383,16 +385,13 @@ class TestResultStorageRetrieval:
                 resp2 = await stats_client.get(f"/jobs/{result_id}")
                 if resp2.status_code == 200:
                     data2 = resp2.json()
-                    test_logger.info(
-                        "result_query",
-                        attempt=i+1,
-                        status=data2.get("status")
-                    )
+                    test_logger.info("result_query", attempt=i + 1, status=data2.get("status"))
 
 
 # =============================================================================
 # Test: Concurrent Operations
 # =============================================================================
+
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
@@ -416,7 +415,7 @@ class TestConcurrentOperations:
                 json={
                     "csv_content": df_to_csv_content(df),
                     "user_id": user_id,
-                }
+                },
             )
             return {
                 "user_id": user_id,
@@ -456,13 +455,13 @@ class TestConcurrentOperations:
                     expected = len(titanic_df)
 
                 if n_rows:
-                    assert n_rows == expected, \
-                        f"User {user} got wrong data: {n_rows} vs {expected}"
+                    assert n_rows == expected, f"User {user} got wrong data: {n_rows} vs {expected}"
 
 
 # =============================================================================
 # Test: Data Type Handling
 # =============================================================================
+
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
@@ -478,19 +477,21 @@ class TestDataTypeHandling:
         """Test that numeric types (int, float) are preserved."""
         test_logger.info("test_start", test="numeric_types")
 
-        df = pd.DataFrame({
-            "int_col": [1, 2, 3, 4, 5],
-            "float_col": [1.1, 2.2, 3.3, 4.4, 5.5],
-            "large_int": [10**10, 10**11, 10**12, 10**13, 10**14],
-            "small_float": [1e-10, 1e-11, 1e-12, 1e-13, 1e-14],
-        })
+        df = pd.DataFrame(
+            {
+                "int_col": [1, 2, 3, 4, 5],
+                "float_col": [1.1, 2.2, 3.3, 4.4, 5.5],
+                "large_int": [10**10, 10**11, 10**12, 10**13, 10**14],
+                "small_float": [1e-10, 1e-11, 1e-12, 1e-13, 1e-14],
+            }
+        )
 
         resp = await stats_client.post(
             "/direct/quick-stats",
             json={
                 "csv_content": df_to_csv_content(df),
                 "user_id": "test_user",
-            }
+            },
         )
 
         test_logger.info("numeric_test", status=resp.status_code)
@@ -508,18 +509,20 @@ class TestDataTypeHandling:
         """Test boolean values are handled correctly."""
         test_logger.info("test_start", test="boolean_handling")
 
-        df = pd.DataFrame({
-            "bool_col": [True, False, True, False, True],
-            "int_bool": [1, 0, 1, 0, 1],
-            "str_bool": ["yes", "no", "yes", "no", "yes"],
-        })
+        df = pd.DataFrame(
+            {
+                "bool_col": [True, False, True, False, True],
+                "int_bool": [1, 0, 1, 0, 1],
+                "str_bool": ["yes", "no", "yes", "no", "yes"],
+            }
+        )
 
         resp = await stats_client.post(
             "/direct/quick-stats",
             json={
                 "csv_content": df_to_csv_content(df),
                 "user_id": "test_user",
-            }
+            },
         )
 
         test_logger.info("boolean_test", status=resp.status_code)
@@ -533,17 +536,19 @@ class TestDataTypeHandling:
         """Test datetime values are handled correctly."""
         test_logger.info("test_start", test="datetime_handling")
 
-        df = pd.DataFrame({
-            "date_col": pd.date_range("2024-01-01", periods=5),
-            "value": [1, 2, 3, 4, 5],
-        })
+        df = pd.DataFrame(
+            {
+                "date_col": pd.date_range("2024-01-01", periods=5),
+                "value": [1, 2, 3, 4, 5],
+            }
+        )
 
         resp = await stats_client.post(
             "/direct/quick-stats",
             json={
                 "csv_content": df_to_csv_content(df),
                 "user_id": "test_user",
-            }
+            },
         )
 
         test_logger.info("datetime_test", status=resp.status_code)
@@ -552,6 +557,7 @@ class TestDataTypeHandling:
 # =============================================================================
 # Test: Edge Cases
 # =============================================================================
+
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
@@ -574,7 +580,7 @@ class TestEdgeCases:
             json={
                 "csv_content": df_to_csv_content(df),
                 "user_id": "test_user",
-            }
+            },
         )
 
         test_logger.info("empty_df_result", status=resp.status_code)
@@ -596,7 +602,7 @@ class TestEdgeCases:
             json={
                 "csv_content": df_to_csv_content(df),
                 "user_id": "test_user",
-            }
+            },
         )
 
         test_logger.info("single_row_result", status=resp.status_code)
@@ -617,7 +623,7 @@ class TestEdgeCases:
             json={
                 "csv_content": df_to_csv_content(df),
                 "user_id": "test_user",
-            }
+            },
         )
 
         test_logger.info("single_col_result", status=resp.status_code)
@@ -632,17 +638,20 @@ class TestEdgeCases:
         test_logger.info("test_start", test="all_missing_column")
 
         import numpy as np
-        df = pd.DataFrame({
-            "normal": [1, 2, 3, 4, 5],
-            "all_missing": [np.nan, np.nan, np.nan, np.nan, np.nan],
-        })
+
+        df = pd.DataFrame(
+            {
+                "normal": [1, 2, 3, 4, 5],
+                "all_missing": [np.nan, np.nan, np.nan, np.nan, np.nan],
+            }
+        )
 
         resp = await stats_client.post(
             "/direct/quick-stats",
             json={
                 "csv_content": df_to_csv_content(df),
                 "user_id": "test_user",
-            }
+            },
         )
 
         test_logger.info("all_missing_result", status=resp.status_code)
@@ -664,7 +673,7 @@ class TestEdgeCases:
             json={
                 "csv_content": df_to_csv_content(df),
                 "user_id": "test_user",
-            }
+            },
         )
 
         test_logger.info("long_name_result", status=resp.status_code)

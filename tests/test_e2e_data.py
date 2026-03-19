@@ -12,6 +12,7 @@ Usage:
     python -m pytest test_e2e_data.py -v
     python -m pytest test_e2e_data.py -v -k "upload"  # Only upload tests
 """
+
 import asyncio
 import os
 import time
@@ -44,6 +45,7 @@ SAMPLE_DATA = {
 # =============================================================================
 # Helper Functions
 # =============================================================================
+
 
 async def mcp_call(client: httpx.AsyncClient, tool: str, params: dict) -> dict:
     """Call MCP tool via HTTP proxy (simulating MCP call)."""
@@ -82,6 +84,7 @@ async def wait_for_services(timeout: int = 30) -> bool:
 # Fixtures
 # =============================================================================
 
+
 @pytest.fixture(scope="module")
 def event_loop():
     """Create event loop for async tests."""
@@ -109,6 +112,7 @@ def async_client():
 # Test: Service Health
 # =============================================================================
 
+
 @pytest.mark.e2e
 @pytest.mark.asyncio
 class TestServiceHealth:
@@ -133,6 +137,7 @@ class TestServiceHealth:
 # Test: File Listing
 # =============================================================================
 
+
 @pytest.mark.e2e
 @pytest.mark.asyncio
 class TestFileListingFlow:
@@ -143,10 +148,7 @@ class TestFileListingFlow:
         async with async_client as client:
             # This would call MCP list_available_files tool
             # For now, verify via stats-service API
-            resp = await client.get(
-                f"{STATS_API_URL}/files/list",
-                params={"directory": "/data/sample_data"}
-            )
+            resp = await client.get(f"{STATS_API_URL}/files/list", params={"directory": "/data/sample_data"})
 
             # If endpoint exists
             if resp.status_code == 200:
@@ -174,6 +176,7 @@ class TestFileListingFlow:
 # Test: Dataset Upload Flow
 # =============================================================================
 
+
 @pytest.mark.e2e
 @pytest.mark.asyncio
 class TestDataUploadFlow:
@@ -192,7 +195,7 @@ class TestDataUploadFlow:
                     "source_path": "/data/sample_data/iris.csv",
                     "storage_mode": "temporary",
                 },
-                headers={"x-user-id": TEST_USER_ID}
+                headers={"x-user-id": TEST_USER_ID},
             )
 
             if resp.status_code == 200:
@@ -217,7 +220,7 @@ class TestDataUploadFlow:
                     "source_type": "local",
                     "source_path": "/data/sample_data/heart_disease.csv",
                     "storage_mode": "permanent",
-                }
+                },
             )
 
             if resp.status_code == 200:
@@ -238,10 +241,7 @@ class TestDataUploadFlow:
     async def test_list_user_datasets(self, async_client, services_ready):
         """Test listing datasets for a user."""
         async with async_client as client:
-            resp = await client.get(
-                f"{AUTOML_API_URL}/datasets",
-                params={"user_id": TEST_USER_ID}
-            )
+            resp = await client.get(f"{AUTOML_API_URL}/datasets", params={"user_id": TEST_USER_ID})
 
             if resp.status_code == 200:
                 data = resp.json()
@@ -251,6 +251,7 @@ class TestDataUploadFlow:
 # =============================================================================
 # Test: Data Cleaning Flow
 # =============================================================================
+
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
@@ -265,7 +266,7 @@ class TestDataCleaningFlow:
                 json={
                     "csv_path": "/data/sample_data/heart_disease.csv",
                     "user_id": TEST_USER_ID,
-                }
+                },
             )
 
             if resp.status_code == 200:
@@ -284,7 +285,7 @@ class TestDataCleaningFlow:
                     "column": "sex",
                     "positive_value": "male",
                     "user_id": TEST_USER_ID,
-                }
+                },
             )
 
             if resp.status_code == 200:
@@ -302,7 +303,7 @@ class TestDataCleaningFlow:
                     "csv_path": "/data/sample_data/titanic.csv",
                     "strategy": "mean",  # or 'median', 'mode', 'drop'
                     "user_id": TEST_USER_ID,
-                }
+                },
             )
 
             if resp.status_code == 200:
@@ -321,7 +322,7 @@ class TestDataCleaningFlow:
                     "columns": ["embarked"],
                     "method": "label",
                     "user_id": TEST_USER_ID,
-                }
+                },
             )
 
             if resp.status_code == 200:
@@ -334,6 +335,7 @@ class TestDataCleaningFlow:
 # =============================================================================
 # Test: Quick Stats Flow
 # =============================================================================
+
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
@@ -348,7 +350,7 @@ class TestQuickStatsFlow:
                 json={
                     "csv_path": "/data/sample_data/iris.csv",
                     "user_id": TEST_USER_ID,
-                }
+                },
             )
 
             if resp.status_code == 200:
@@ -367,7 +369,7 @@ class TestQuickStatsFlow:
                     "csv_path": "/data/sample_data/iris.csv",
                     "n_rows": 5,
                     "user_id": TEST_USER_ID,
-                }
+                },
             )
 
             if resp.status_code == 200:
@@ -378,6 +380,7 @@ class TestQuickStatsFlow:
 # =============================================================================
 # Test: Complete Data Workflow
 # =============================================================================
+
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
@@ -403,6 +406,7 @@ class TestCompleteDataWorkflow:
 # =============================================================================
 # Cleanup
 # =============================================================================
+
 
 @pytest.fixture(scope="module", autouse=True)
 async def cleanup_test_data():

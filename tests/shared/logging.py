@@ -10,6 +10,7 @@ Usage:
     logger = get_logger(__name__)
     logger.info("event_name", key1="value1", key2=123)
 """
+
 import logging
 import os
 import sys
@@ -17,6 +18,7 @@ from typing import Any, Optional
 
 try:
     import structlog
+
     STRUCTLOG_AVAILABLE = True
 except ImportError:
     STRUCTLOG_AVAILABLE = False
@@ -78,9 +80,11 @@ def _configure_structlog(
 
 def _add_service_name(service_name: str):
     """Create processor that adds service name to all logs."""
+
     def processor(logger, method_name, event_dict):
         event_dict["service"] = service_name
         return event_dict
+
     return processor
 
 
@@ -137,6 +141,7 @@ def clear_context() -> None:
 # =============================================================================
 # Convenience Logger Classes
 # =============================================================================
+
 
 class LoggerAdapter:
     """
@@ -203,6 +208,7 @@ class LoggerAdapter:
 # =============================================================================
 # Pre-configured Loggers
 # =============================================================================
+
 
 def get_test_logger(test_name: str) -> LoggerAdapter:
     """Get logger configured for testing."""

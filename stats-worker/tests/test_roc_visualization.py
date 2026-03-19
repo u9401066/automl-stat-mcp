@@ -8,13 +8,14 @@ Tests covering:
 - Confusion matrix plotting
 - Threshold analysis plotting
 """
+
 import sys
 from unittest.mock import patch
 
 import numpy as np
 import pytest
 
-sys.path.insert(0, '/home/eric/workspace251204/stats-worker/src')
+sys.path.insert(0, "/home/eric/workspace251204/stats-worker/src")
 
 from visualization.roc import (
     create_roc_visualizations,
@@ -31,6 +32,7 @@ from visualization.schemas import VisualizationType
 # Sample Data Fixtures
 # =============================================================================
 
+
 @pytest.fixture
 def roc_result():
     """Sample ROC analysis result."""
@@ -44,18 +46,106 @@ def roc_result():
         "n_negative": 200,
         "n_points": 11,
         "curve": [
-            {"threshold": 1.0, "fpr": 0.0, "tpr": 0.0, "specificity": 1.0, "sensitivity": 0.0, "ppv": None, "npv": 0.667},
-            {"threshold": 0.9, "fpr": 0.05, "tpr": 0.20, "specificity": 0.95, "sensitivity": 0.20, "ppv": 0.67, "npv": 0.70},
-            {"threshold": 0.8, "fpr": 0.10, "tpr": 0.40, "specificity": 0.90, "sensitivity": 0.40, "ppv": 0.67, "npv": 0.75},
-            {"threshold": 0.7, "fpr": 0.15, "tpr": 0.55, "specificity": 0.85, "sensitivity": 0.55, "ppv": 0.65, "npv": 0.79},
-            {"threshold": 0.6, "fpr": 0.20, "tpr": 0.70, "specificity": 0.80, "sensitivity": 0.70, "ppv": 0.64, "npv": 0.84},
-            {"threshold": 0.5, "fpr": 0.25, "tpr": 0.80, "specificity": 0.75, "sensitivity": 0.80, "ppv": 0.62, "npv": 0.88},
-            {"threshold": 0.45, "fpr": 0.28, "tpr": 0.84, "specificity": 0.72, "sensitivity": 0.84, "ppv": 0.60, "npv": 0.90},
-            {"threshold": 0.4, "fpr": 0.35, "tpr": 0.88, "specificity": 0.65, "sensitivity": 0.88, "ppv": 0.56, "npv": 0.92},
-            {"threshold": 0.3, "fpr": 0.45, "tpr": 0.92, "specificity": 0.55, "sensitivity": 0.92, "ppv": 0.51, "npv": 0.93},
-            {"threshold": 0.2, "fpr": 0.60, "tpr": 0.96, "specificity": 0.40, "sensitivity": 0.96, "ppv": 0.44, "npv": 0.95},
-            {"threshold": 0.1, "fpr": 0.80, "tpr": 0.99, "specificity": 0.20, "sensitivity": 0.99, "ppv": 0.38, "npv": 0.98},
-        ]
+            {
+                "threshold": 1.0,
+                "fpr": 0.0,
+                "tpr": 0.0,
+                "specificity": 1.0,
+                "sensitivity": 0.0,
+                "ppv": None,
+                "npv": 0.667,
+            },
+            {
+                "threshold": 0.9,
+                "fpr": 0.05,
+                "tpr": 0.20,
+                "specificity": 0.95,
+                "sensitivity": 0.20,
+                "ppv": 0.67,
+                "npv": 0.70,
+            },
+            {
+                "threshold": 0.8,
+                "fpr": 0.10,
+                "tpr": 0.40,
+                "specificity": 0.90,
+                "sensitivity": 0.40,
+                "ppv": 0.67,
+                "npv": 0.75,
+            },
+            {
+                "threshold": 0.7,
+                "fpr": 0.15,
+                "tpr": 0.55,
+                "specificity": 0.85,
+                "sensitivity": 0.55,
+                "ppv": 0.65,
+                "npv": 0.79,
+            },
+            {
+                "threshold": 0.6,
+                "fpr": 0.20,
+                "tpr": 0.70,
+                "specificity": 0.80,
+                "sensitivity": 0.70,
+                "ppv": 0.64,
+                "npv": 0.84,
+            },
+            {
+                "threshold": 0.5,
+                "fpr": 0.25,
+                "tpr": 0.80,
+                "specificity": 0.75,
+                "sensitivity": 0.80,
+                "ppv": 0.62,
+                "npv": 0.88,
+            },
+            {
+                "threshold": 0.45,
+                "fpr": 0.28,
+                "tpr": 0.84,
+                "specificity": 0.72,
+                "sensitivity": 0.84,
+                "ppv": 0.60,
+                "npv": 0.90,
+            },
+            {
+                "threshold": 0.4,
+                "fpr": 0.35,
+                "tpr": 0.88,
+                "specificity": 0.65,
+                "sensitivity": 0.88,
+                "ppv": 0.56,
+                "npv": 0.92,
+            },
+            {
+                "threshold": 0.3,
+                "fpr": 0.45,
+                "tpr": 0.92,
+                "specificity": 0.55,
+                "sensitivity": 0.92,
+                "ppv": 0.51,
+                "npv": 0.93,
+            },
+            {
+                "threshold": 0.2,
+                "fpr": 0.60,
+                "tpr": 0.96,
+                "specificity": 0.40,
+                "sensitivity": 0.96,
+                "ppv": 0.44,
+                "npv": 0.95,
+            },
+            {
+                "threshold": 0.1,
+                "fpr": 0.80,
+                "tpr": 0.99,
+                "specificity": 0.20,
+                "sensitivity": 0.99,
+                "ppv": 0.38,
+                "npv": 0.98,
+            },
+        ],
     }
 
 
@@ -74,7 +164,7 @@ def roc_result_2():
             {"threshold": 0.6, "fpr": 0.25, "tpr": 0.55, "specificity": 0.75, "sensitivity": 0.55},
             {"threshold": 0.4, "fpr": 0.40, "tpr": 0.75, "specificity": 0.60, "sensitivity": 0.75},
             {"threshold": 0.2, "fpr": 0.65, "tpr": 0.90, "specificity": 0.35, "sensitivity": 0.90},
-        ]
+        ],
     }
 
 
@@ -96,7 +186,7 @@ def pr_result():
             {"threshold": 0.3, "recall": 0.82, "precision": 0.55},
             {"threshold": 0.2, "recall": 0.90, "precision": 0.45},
             {"threshold": 0.1, "recall": 0.95, "precision": 0.38},
-        ]
+        ],
     }
 
 
@@ -121,19 +211,14 @@ def calibration_result():
             {"bin": 7, "mean_predicted": 0.75, "fraction_positive": 0.72, "count": 18},
             {"bin": 8, "mean_predicted": 0.85, "fraction_positive": 0.88, "count": 15},
             {"bin": 9, "mean_predicted": 0.95, "fraction_positive": 0.93, "count": 12},
-        ]
+        ],
     }
 
 
 @pytest.fixture
 def confusion_matrix_dict():
     """Sample confusion matrix as dict."""
-    return {
-        "tn": 150,
-        "fp": 50,
-        "fn": 20,
-        "tp": 80
-    }
+    return {"tn": 150, "fp": 50, "fn": 20, "tp": 80}
 
 
 @pytest.fixture
@@ -145,6 +230,7 @@ def confusion_matrix_array():
 # =============================================================================
 # Unit Tests - ROC Curve
 # =============================================================================
+
 
 class TestROCCurvePlot:
     """Tests for ROC curve plotting."""
@@ -194,7 +280,7 @@ class TestROCCurvePlot:
         """Test ROC curve with custom color."""
         import matplotlib.pyplot as plt
 
-        fig = plot_roc_curve(roc_result, color='#FF0000')
+        fig = plot_roc_curve(roc_result, color="#FF0000")
 
         assert fig is not None
 
@@ -228,10 +314,7 @@ class TestROCComparison:
         """Test comparing two ROC curves."""
         import matplotlib.pyplot as plt
 
-        fig = plot_roc_curves_comparison(
-            [roc_result, roc_result_2],
-            labels=["Model A", "Model B"]
-        )
+        fig = plot_roc_curves_comparison([roc_result, roc_result_2], labels=["Model A", "Model B"])
 
         assert fig is not None
 
@@ -241,15 +324,9 @@ class TestROCComparison:
         """Test comparison with DeLong test result."""
         import matplotlib.pyplot as plt
 
-        comparison = {
-            "difference": 0.07,
-            "p_value": 0.02
-        }
+        comparison = {"difference": 0.07, "p_value": 0.02}
 
-        fig = plot_roc_curves_comparison(
-            [roc_result, roc_result_2],
-            comparison_result=comparison
-        )
+        fig = plot_roc_curves_comparison([roc_result, roc_result_2], comparison_result=comparison)
 
         assert fig is not None
 
@@ -269,6 +346,7 @@ class TestROCComparison:
 # =============================================================================
 # Unit Tests - PR Curve
 # =============================================================================
+
 
 class TestPRCurvePlot:
     """Tests for Precision-Recall curve plotting."""
@@ -317,6 +395,7 @@ class TestPRCurvePlot:
 # =============================================================================
 # Unit Tests - Calibration Curve
 # =============================================================================
+
 
 class TestCalibrationPlot:
     """Tests for calibration curve plotting."""
@@ -367,6 +446,7 @@ class TestCalibrationPlot:
 # Unit Tests - Confusion Matrix
 # =============================================================================
 
+
 class TestConfusionMatrixPlot:
     """Tests for confusion matrix plotting."""
 
@@ -404,10 +484,7 @@ class TestConfusionMatrixPlot:
         """Test with custom labels."""
         import matplotlib.pyplot as plt
 
-        fig = plot_confusion_matrix(
-            confusion_matrix_dict,
-            labels=['Control', 'Disease']
-        )
+        fig = plot_confusion_matrix(confusion_matrix_dict, labels=["Control", "Disease"])
 
         assert fig is not None
 
@@ -417,10 +494,7 @@ class TestConfusionMatrixPlot:
         """Test without percentages."""
         import matplotlib.pyplot as plt
 
-        fig = plot_confusion_matrix(
-            confusion_matrix_dict,
-            show_percentages=False
-        )
+        fig = plot_confusion_matrix(confusion_matrix_dict, show_percentages=False)
 
         assert fig is not None
 
@@ -450,6 +524,7 @@ class TestConfusionMatrixPlot:
 # Unit Tests - Threshold Analysis
 # =============================================================================
 
+
 class TestThresholdAnalysis:
     """Tests for threshold analysis plotting."""
 
@@ -467,10 +542,7 @@ class TestThresholdAnalysis:
         """Test with selected metrics only."""
         import matplotlib.pyplot as plt
 
-        fig = plot_threshold_analysis(
-            roc_result,
-            metrics=['sensitivity', 'specificity']
-        )
+        fig = plot_threshold_analysis(roc_result, metrics=["sensitivity", "specificity"])
 
         assert fig is not None
 
@@ -480,10 +552,7 @@ class TestThresholdAnalysis:
         """Test with custom title."""
         import matplotlib.pyplot as plt
 
-        fig = plot_threshold_analysis(
-            roc_result,
-            title="Classification Threshold Selection"
-        )
+        fig = plot_threshold_analysis(roc_result, title="Classification Threshold Selection")
 
         assert fig is not None
 
@@ -494,10 +563,11 @@ class TestThresholdAnalysis:
 # Integration Tests
 # =============================================================================
 
+
 class TestCreateROCVisualizations:
     """Tests for high-level visualization creation."""
 
-    @patch('visualization.roc.save_figure_to_minio')
+    @patch("visualization.roc.save_figure_to_minio")
     def test_create_roc_only(self, mock_save, roc_result):
         """Test creating visualizations with ROC data only."""
         mock_save.return_value = "https://minio.example.com/test.png"
@@ -515,7 +585,7 @@ class TestCreateROCVisualizations:
         assert VisualizationType.ROC_CURVE in types
         assert VisualizationType.THRESHOLD_ANALYSIS in types
 
-    @patch('visualization.roc.save_figure_to_minio')
+    @patch("visualization.roc.save_figure_to_minio")
     def test_create_full_suite(self, mock_save, roc_result, pr_result, calibration_result, confusion_matrix_dict):
         """Test creating full visualization suite."""
         mock_save.return_value = "https://minio.example.com/test.png"
@@ -538,7 +608,7 @@ class TestCreateROCVisualizations:
         assert VisualizationType.CALIBRATION_CURVE in types
         assert VisualizationType.CONFUSION_MATRIX in types
 
-    @patch('visualization.roc.save_figure_to_minio')
+    @patch("visualization.roc.save_figure_to_minio")
     def test_roc_visualization_result_metadata(self, mock_save, roc_result):
         """Test ROCVisualizationResult has correct metadata."""
         mock_save.return_value = "https://minio.example.com/test.png"

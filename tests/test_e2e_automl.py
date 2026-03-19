@@ -19,6 +19,7 @@ Usage:
     python -m pytest test_e2e_automl.py -v -k "quick"  # Quick tests only
     python -m pytest test_e2e_automl.py -v -m "not slow"  # Skip slow tests
 """
+
 import asyncio
 import os
 import time
@@ -52,11 +53,9 @@ SAMPLE_DATA = {
 # Helper Functions
 # =============================================================================
 
+
 async def wait_for_training_job(
-    client: httpx.AsyncClient,
-    job_id: str,
-    timeout: int = 300,
-    poll_interval: int = POLL_INTERVAL
+    client: httpx.AsyncClient, job_id: str, timeout: int = 300, poll_interval: int = POLL_INTERVAL
 ) -> dict:
     """Wait for a training job to complete."""
     start = time.time()
@@ -93,7 +92,7 @@ async def register_dataset(
             "name": name,
             "user_id": TEST_USER_ID,
             "minio_path": csv_path,  # Local path will be used
-        }
+        },
     )
 
     if resp.status_code == 200:
@@ -106,6 +105,7 @@ async def register_dataset(
 # =============================================================================
 # Fixtures
 # =============================================================================
+
 
 @pytest.fixture(scope="module")
 def event_loop():
@@ -125,15 +125,14 @@ def automl_client():
 async def registered_iris_dataset():
     """Register Iris dataset once for all tests."""
     async with httpx.AsyncClient(timeout=60.0) as client:
-        dataset_id = await register_dataset(
-            client, "e2e_iris", SAMPLE_DATA["iris"]
-        )
+        dataset_id = await register_dataset(client, "e2e_iris", SAMPLE_DATA["iris"])
         yield dataset_id
 
 
 # =============================================================================
 # Test: Service Health
 # =============================================================================
+
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
@@ -162,6 +161,7 @@ class TestAutoMLServiceHealth:
 # Test: Dataset Registration
 # =============================================================================
 
+
 @pytest.mark.e2e
 @pytest.mark.asyncio
 class TestDatasetRegistration:
@@ -176,7 +176,7 @@ class TestDatasetRegistration:
                     "name": "test_iris",
                     "user_id": TEST_USER_ID,
                     "minio_path": SAMPLE_DATA["iris"],
-                }
+                },
             )
 
             if resp.status_code == 200:
@@ -192,7 +192,7 @@ class TestDatasetRegistration:
                         "source_type": "local",
                         "source_path": SAMPLE_DATA["iris"],
                         "storage_mode": "temporary",
-                    }
+                    },
                 )
                 if resp.status_code == 200:
                     data = resp.json()
@@ -201,10 +201,7 @@ class TestDatasetRegistration:
     async def test_list_datasets(self, automl_client):
         """Test listing user datasets."""
         async with automl_client as client:
-            resp = await client.get(
-                f"{AUTOML_API_URL}/datasets",
-                params={"user_id": TEST_USER_ID}
-            )
+            resp = await client.get(f"{AUTOML_API_URL}/datasets", params={"user_id": TEST_USER_ID})
 
             if resp.status_code == 200:
                 data = resp.json()
@@ -214,6 +211,7 @@ class TestDatasetRegistration:
 # =============================================================================
 # Test: Quick Training
 # =============================================================================
+
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
@@ -232,7 +230,7 @@ class TestQuickTraining:
                     "target_column": "target",
                     "problem_type": "multiclass",
                     "time_limit": 30,  # 30 seconds only
-                }
+                },
             )
 
             if resp.status_code == 200:
@@ -240,9 +238,7 @@ class TestQuickTraining:
                 assert "job_id" in data
 
                 # Wait for quick training
-                result = await wait_for_training_job(
-                    client, data["job_id"], timeout=QUICK_TIMEOUT
-                )
+                result = await wait_for_training_job(client, data["job_id"], timeout=QUICK_TIMEOUT)
 
                 if result["status"] == "completed":
                     assert "model_id" in result or "leaderboard" in result
@@ -261,7 +257,7 @@ class TestQuickTraining:
                     "target_column": "target",
                     "problem_type": "binary",
                     "time_limit": 30,
-                }
+                },
             )
 
             if resp.status_code == 200:
@@ -274,6 +270,7 @@ class TestQuickTraining:
 # =============================================================================
 # Test: Full AutoML Training
 # =============================================================================
+
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
@@ -295,7 +292,7 @@ class TestAutoMLTraining:
                     "problem_type": "multiclass",
                     "time_limit": 60,
                     "user_id": TEST_USER_ID,
-                }
+                },
             )
 
             if resp.status_code == 200:
@@ -303,9 +300,7 @@ class TestAutoMLTraining:
                 assert "job_id" in data
 
                 # Wait for training
-                result = await wait_for_training_job(
-                    client, data["job_id"], timeout=TIMEOUT
-                )
+                result = await wait_for_training_job(client, data["job_id"], timeout=TIMEOUT)
 
                 assert result["status"] in ["completed", "timeout"]
             elif resp.status_code == 404:
@@ -322,7 +317,7 @@ class TestAutoMLTraining:
                     "problem_type": "regression",
                     "time_limit": 60,
                     "user_id": TEST_USER_ID,
-                }
+                },
             )
 
             if resp.status_code == 200:
@@ -335,6 +330,7 @@ class TestAutoMLTraining:
 # =============================================================================
 # Test: Specific Algorithm Training
 # =============================================================================
+
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
@@ -352,7 +348,7 @@ class TestSpecificAlgorithmTraining:
                     "algorithms": ["RF"],
                     "time_limit": 30,
                     "user_id": TEST_USER_ID,
-                }
+                },
             )
 
             if resp.status_code == 200:
@@ -372,7 +368,7 @@ class TestSpecificAlgorithmTraining:
                     "algorithms": ["XGB"],
                     "time_limit": 30,
                     "user_id": TEST_USER_ID,
-                }
+                },
             )
 
             if resp.status_code == 200:
@@ -392,7 +388,7 @@ class TestSpecificAlgorithmTraining:
                     "algorithms": ["GBM"],
                     "time_limit": 30,
                     "user_id": TEST_USER_ID,
-                }
+                },
             )
 
             if resp.status_code == 200:
@@ -405,6 +401,7 @@ class TestSpecificAlgorithmTraining:
 # =============================================================================
 # Test: Algorithm Comparison
 # =============================================================================
+
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
@@ -423,7 +420,7 @@ class TestAlgorithmComparison:
                     "algorithms": ["RF", "XGB", "GBM"],
                     "time_limit": 120,
                     "user_id": TEST_USER_ID,
-                }
+                },
             )
 
             if resp.status_code == 200:
@@ -431,9 +428,7 @@ class TestAlgorithmComparison:
                 assert "job_id" in data
 
                 # Wait for comparison
-                result = await wait_for_training_job(
-                    client, data["job_id"], timeout=TIMEOUT
-                )
+                result = await wait_for_training_job(client, data["job_id"], timeout=TIMEOUT)
 
                 if result["status"] == "completed":
                     # Should have leaderboard
@@ -446,6 +441,7 @@ class TestAlgorithmComparison:
 # Test: Model Management
 # =============================================================================
 
+
 @pytest.mark.e2e
 @pytest.mark.asyncio
 class TestModelManagement:
@@ -454,10 +450,7 @@ class TestModelManagement:
     async def test_list_models(self, automl_client):
         """Test listing trained models."""
         async with automl_client as client:
-            resp = await client.get(
-                f"{AUTOML_API_URL}/models",
-                params={"user_id": TEST_USER_ID}
-            )
+            resp = await client.get(f"{AUTOML_API_URL}/models", params={"user_id": TEST_USER_ID})
 
             if resp.status_code == 200:
                 data = resp.json()
@@ -469,10 +462,7 @@ class TestModelManagement:
         # This test assumes some model exists
         async with automl_client as client:
             # List models first
-            resp = await client.get(
-                f"{AUTOML_API_URL}/models",
-                params={"user_id": TEST_USER_ID}
-            )
+            resp = await client.get(f"{AUTOML_API_URL}/models", params={"user_id": TEST_USER_ID})
 
             if resp.status_code == 200:
                 models = resp.json()
@@ -480,9 +470,7 @@ class TestModelManagement:
                     model_id = models[0].get("model_id") or models[0].get("id")
 
                     # Get leaderboard
-                    resp = await client.get(
-                        f"{AUTOML_API_URL}/models/{model_id}/leaderboard"
-                    )
+                    resp = await client.get(f"{AUTOML_API_URL}/models/{model_id}/leaderboard")
 
                     if resp.status_code == 200:
                         data = resp.json()
@@ -492,10 +480,7 @@ class TestModelManagement:
         """Test getting feature importance."""
         async with automl_client as client:
             # List models first
-            resp = await client.get(
-                f"{AUTOML_API_URL}/models",
-                params={"user_id": TEST_USER_ID}
-            )
+            resp = await client.get(f"{AUTOML_API_URL}/models", params={"user_id": TEST_USER_ID})
 
             if resp.status_code == 200:
                 models = resp.json()
@@ -503,9 +488,7 @@ class TestModelManagement:
                     model_id = models[0].get("model_id") or models[0].get("id")
 
                     # Get feature importance
-                    resp = await client.get(
-                        f"{AUTOML_API_URL}/models/{model_id}/importance"
-                    )
+                    resp = await client.get(f"{AUTOML_API_URL}/models/{model_id}/importance")
 
                     if resp.status_code == 200:
                         data = resp.json()
@@ -515,6 +498,7 @@ class TestModelManagement:
 # =============================================================================
 # Test: Prediction
 # =============================================================================
+
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
@@ -527,10 +511,7 @@ class TestPrediction:
         # This test assumes some model exists
         async with automl_client as client:
             # List models
-            resp = await client.get(
-                f"{AUTOML_API_URL}/models",
-                params={"user_id": TEST_USER_ID}
-            )
+            resp = await client.get(f"{AUTOML_API_URL}/models", params={"user_id": TEST_USER_ID})
 
             if resp.status_code == 200:
                 models = resp.json()
@@ -543,11 +524,10 @@ class TestPrediction:
                         json={
                             "model_id": model_id,
                             "data": [
-                                {"sepal_length": 5.1, "sepal_width": 3.5,
-                                 "petal_length": 1.4, "petal_width": 0.2}
+                                {"sepal_length": 5.1, "sepal_width": 3.5, "petal_length": 1.4, "petal_width": 0.2}
                             ],
                             "user_id": TEST_USER_ID,
-                        }
+                        },
                     )
 
                     if resp.status_code == 200:
@@ -563,6 +543,7 @@ class TestPrediction:
 # =============================================================================
 # Test: Complete AutoML Workflow
 # =============================================================================
+
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
@@ -588,7 +569,7 @@ class TestCompleteAutoMLWorkflow:
                     "name": "workflow_iris",
                     "user_id": TEST_USER_ID,
                     "minio_path": SAMPLE_DATA["iris"],
-                }
+                },
             )
 
             if resp.status_code != 200:
@@ -605,7 +586,7 @@ class TestCompleteAutoMLWorkflow:
                     "problem_type": "multiclass",
                     "time_limit": 60,
                     "user_id": TEST_USER_ID,
-                }
+                },
             )
 
             if resp.status_code != 200:
@@ -638,12 +619,9 @@ class TestCompleteAutoMLWorkflow:
                 f"{AUTOML_API_URL}/predict",
                 json={
                     "model_id": model_id,
-                    "data": [
-                        {"sepal_length": 5.1, "sepal_width": 3.5,
-                         "petal_length": 1.4, "petal_width": 0.2}
-                    ],
+                    "data": [{"sepal_length": 5.1, "sepal_width": 3.5, "petal_length": 1.4, "petal_width": 0.2}],
                     "user_id": TEST_USER_ID,
-                }
+                },
             )
 
             if resp.status_code == 200:

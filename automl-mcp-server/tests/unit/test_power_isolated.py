@@ -11,6 +11,7 @@ from scipy import stats
 # Tests
 # ==============================================================================
 
+
 class TestEffectSizeCalculations:
     """Test effect size calculations"""
 
@@ -25,7 +26,7 @@ class TestEffectSizeCalculations:
         var2 = group2.var(ddof=1)
 
         # Pooled standard deviation
-        pooled_std = np.sqrt(((n1-1)*var1 + (n2-1)*var2) / (n1+n2-2))
+        pooled_std = np.sqrt(((n1 - 1) * var1 + (n2 - 1) * var2) / (n1 + n2 - 2))
         d = (mean1 - mean2) / pooled_std
 
         assert abs(d) > 2.0  # Very large effect
@@ -55,6 +56,7 @@ class TestEffectSizeCalculations:
 
     def test_effect_size_interpretation(self):
         """Test effect size interpretation"""
+
         def interpret_d(d):
             d = abs(d)
             if d < 0.2:
@@ -84,13 +86,13 @@ class TestEffectSizeCalculations:
 
         # SS_between
         ss_between = (
-            len(group1) * (group1.mean() - grand_mean)**2 +
-            len(group2) * (group2.mean() - grand_mean)**2 +
-            len(group3) * (group3.mean() - grand_mean)**2
+            len(group1) * (group1.mean() - grand_mean) ** 2
+            + len(group2) * (group2.mean() - grand_mean) ** 2
+            + len(group3) * (group3.mean() - grand_mean) ** 2
         )
 
         # SS_total
-        ss_total = np.sum((all_data - grand_mean)**2)
+        ss_total = np.sum((all_data - grand_mean) ** 2)
 
         eta_sq = ss_between / ss_total
 
@@ -99,10 +101,7 @@ class TestEffectSizeCalculations:
 
     def test_cramers_v(self):
         """Test Cramér's V for chi-square"""
-        contingency = np.array([
-            [50, 10],
-            [10, 50]
-        ])
+        contingency = np.array([[50, 10], [10, 50]])
 
         chi2, _, _, _ = stats.chi2_contingency(contingency)
         n = contingency.sum()
@@ -124,7 +123,7 @@ class TestTTestPower:
 
         # Critical t-value
         df = 2 * n - 2
-        t_crit = stats.t.ppf(1 - alpha/2, df)
+        t_crit = stats.t.ppf(1 - alpha / 2, df)
 
         # Power = P(T > t_crit | ncp) + P(T < -t_crit | ncp)
         power = 1 - stats.nct.cdf(t_crit, df, ncp) + stats.nct.cdf(-t_crit, df, ncp)
@@ -138,7 +137,7 @@ class TestTTestPower:
         powers = [self._calculate_power(d, n) for n in [10, 30, 50, 100]]
 
         for i in range(1, len(powers)):
-            assert powers[i] > powers[i-1], "Power should increase with n"
+            assert powers[i] > powers[i - 1], "Power should increase with n"
 
         print("✓ Power increases with n")
 
@@ -149,7 +148,7 @@ class TestTTestPower:
         powers = [self._calculate_power(d, n) for d in [0.2, 0.5, 0.8, 1.0]]
 
         for i in range(1, len(powers)):
-            assert powers[i] > powers[i-1], "Power should increase with effect size"
+            assert powers[i] > powers[i - 1], "Power should increase with effect size"
 
         print("✓ Power increases with effect size")
 
@@ -197,7 +196,7 @@ class TestProportionPower:
         h = 2 * np.arcsin(np.sqrt(p1)) - 2 * np.arcsin(np.sqrt(p2))
 
         # Sample size formula (normal approximation)
-        z_alpha = stats.norm.ppf(1 - alpha/2)
+        z_alpha = stats.norm.ppf(1 - alpha / 2)
         z_beta = stats.norm.ppf(power)
 
         n = 2 * ((z_alpha + z_beta) / h) ** 2
@@ -218,7 +217,7 @@ class TestANOVAPower:
         alpha = 0.05
 
         # Non-centrality parameter
-        ncp = (k * n * f**2)
+        ncp = k * n * f**2
 
         # Degrees of freedom
         df1 = k - 1
@@ -278,12 +277,12 @@ class TestSurvivalPower:
         power = 0.8
 
         # Required events (Schoenfeld formula)
-        z_alpha = stats.norm.ppf(1 - alpha/2)
+        z_alpha = stats.norm.ppf(1 - alpha / 2)
         z_beta = stats.norm.ppf(power)
 
         # Events needed
         # d = 4 * (z_alpha + z_beta)^2 / (log(hr))^2
-        d = 4 * (z_alpha + z_beta)**2 / (np.log(hr))**2
+        d = 4 * (z_alpha + z_beta) ** 2 / (np.log(hr)) ** 2
 
         assert d > 0
         print(f"✓ Required events for HR={hr}: {d:.0f}")
@@ -314,13 +313,13 @@ class TestPowerCurves:
         for n in ns:
             ncp = d * np.sqrt(n / 2)
             df = 2 * n - 2
-            t_crit = stats.t.ppf(1 - alpha/2, df)
+            t_crit = stats.t.ppf(1 - alpha / 2, df)
             power = 1 - stats.nct.cdf(t_crit, df, ncp) + stats.nct.cdf(-t_crit, df, ncp)
             powers.append(power)
 
         # Powers should be monotonically increasing
         for i in range(1, len(powers)):
-            assert powers[i] >= powers[i-1] - 0.01  # Allow small numerical errors
+            assert powers[i] >= powers[i - 1] - 0.01  # Allow small numerical errors
 
         # Eventually should reach ~80% power
         assert powers[-1] > 0.8
@@ -337,13 +336,13 @@ class TestPowerCurves:
         for d in ds:
             ncp = d * np.sqrt(n / 2)
             df = 2 * n - 2
-            t_crit = stats.t.ppf(1 - alpha/2, df)
+            t_crit = stats.t.ppf(1 - alpha / 2, df)
             power = 1 - stats.nct.cdf(t_crit, df, ncp) + stats.nct.cdf(-t_crit, df, ncp)
             powers.append(power)
 
         # Powers should be monotonically increasing
         for i in range(1, len(powers)):
-            assert powers[i] >= powers[i-1]
+            assert powers[i] >= powers[i - 1]
 
         print("✓ Power vs effect size curve")
 
@@ -365,7 +364,7 @@ class TestSensitivityAnalysis:
 
             ncp = d_mid * np.sqrt(n / 2)
             df = 2 * n - 2
-            t_crit = stats.t.ppf(1 - alpha/2, df)
+            t_crit = stats.t.ppf(1 - alpha / 2, df)
             curr_power = 1 - stats.nct.cdf(t_crit, df, ncp) + stats.nct.cdf(-t_crit, df, ncp)
 
             if curr_power < power:
@@ -400,7 +399,7 @@ def run_all_tests():
         print(f"\n{class_name}:")
         print("-" * 40)
 
-        test_methods = [m for m in dir(test_class) if m.startswith('test_')]
+        test_methods = [m for m in dir(test_class) if m.startswith("test_")]
 
         for method_name in test_methods:
             try:

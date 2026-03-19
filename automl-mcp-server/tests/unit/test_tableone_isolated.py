@@ -12,6 +12,7 @@ from scipy import stats
 # Tests
 # ==============================================================================
 
+
 class TestDescriptiveStatistics:
     """Test descriptive statistics for TableOne"""
 
@@ -45,7 +46,7 @@ class TestDescriptiveStatistics:
 
     def test_categorical_n_percent(self):
         """Test n (%) format"""
-        data = pd.Series(['A', 'A', 'A', 'B', 'B', 'C'])
+        data = pd.Series(["A", "A", "A", "B", "B", "C"])
 
         counts = data.value_counts()
         n_total = len(data)
@@ -55,8 +56,8 @@ class TestDescriptiveStatistics:
             pct = count / n_total * 100
             results[cat] = f"{count} ({pct:.1f}%)"
 
-        assert "3 (50.0%)" == results['A']
-        assert "2 (33.3%)" == results['B']
+        assert "3 (50.0%)" == results["A"]
+        assert "2 (33.3%)" == results["B"]
         print("✓ Categorical n (%)")
 
     def test_missing_values_reporting(self):
@@ -91,17 +92,14 @@ class TestGroupComparisons:
         group1 = np.array([1, 2, 2, 3, 100])  # Skewed
         group2 = np.array([10, 20, 30, 40, 50])
 
-        u_stat, p_value = stats.mannwhitneyu(group1, group2, alternative='two-sided')
+        u_stat, p_value = stats.mannwhitneyu(group1, group2, alternative="two-sided")
 
         print(f"✓ Mann-Whitney U: U={u_stat:.1f}, p={p_value:.4f}")
 
     def test_chisquare_categorical(self):
         """Test chi-square for categorical variables"""
         # 2x2 contingency table
-        table = np.array([
-            [30, 10],
-            [15, 25]
-        ])
+        table = np.array([[30, 10], [15, 25]])
 
         chi2, p_value, dof, expected = stats.chi2_contingency(table)
 
@@ -111,10 +109,7 @@ class TestGroupComparisons:
     def test_fisher_exact(self):
         """Test Fisher's exact test for small samples"""
         # Small sample 2x2 table
-        table = np.array([
-            [3, 1],
-            [1, 3]
-        ])
+        table = np.array([[3, 1], [1, 3]])
 
         odds_ratio, p_value = stats.fisher_exact(table)
 
@@ -190,10 +185,7 @@ class TestColumnClassification:
 
     def test_detect_numeric(self):
         """Test numeric column detection"""
-        df = pd.DataFrame({
-            'age': [25, 30, 35, 40],
-            'weight': [60.5, 70.2, 65.0, 80.1]
-        })
+        df = pd.DataFrame({"age": [25, 30, 35, 40], "weight": [60.5, 70.2, 65.0, 80.1]})
 
         for col in df.columns:
             assert pd.api.types.is_numeric_dtype(df[col])
@@ -201,14 +193,11 @@ class TestColumnClassification:
 
     def test_detect_categorical(self):
         """Test categorical column detection"""
-        df = pd.DataFrame({
-            'gender': ['M', 'F', 'M', 'F'],
-            'grade': pd.Categorical(['A', 'B', 'A', 'C'])
-        })
+        df = pd.DataFrame({"gender": ["M", "F", "M", "F"], "grade": pd.Categorical(["A", "B", "A", "C"])})
 
         # String or category type
-        assert df['gender'].dtype == object or pd.api.types.is_categorical_dtype(df['gender'])
-        assert pd.api.types.is_categorical_dtype(df['grade'])
+        assert df["gender"].dtype == object or pd.api.types.is_categorical_dtype(df["gender"])
+        assert pd.api.types.is_categorical_dtype(df["grade"])
         print("✓ Categorical columns detected")
 
     def test_detect_binary(self):
@@ -241,33 +230,28 @@ class TestTableFormatting:
 
     def test_overall_column(self):
         """Test overall (ungrouped) column"""
-        df = pd.DataFrame({
-            'age': [25, 30, 35, 40, 45],
-            'weight': [60, 70, 65, 80, 75]
-        })
+        df = pd.DataFrame({"age": [25, 30, 35, 40, 45], "weight": [60, 70, 65, 80, 75]})
 
         overall = {
-            'age': f"{df['age'].mean():.1f} ± {df['age'].std():.1f}",
-            'weight': f"{df['weight'].mean():.1f} ± {df['weight'].std():.1f}"
+            "age": f"{df['age'].mean():.1f} ± {df['age'].std():.1f}",
+            "weight": f"{df['weight'].mean():.1f} ± {df['weight'].std():.1f}",
         }
 
-        assert '35.0' in overall['age']
+        assert "35.0" in overall["age"]
         print("✓ Overall column formatting")
 
     def test_grouped_columns(self):
         """Test grouped columns"""
-        df = pd.DataFrame({
-            'group': ['A', 'A', 'A', 'B', 'B'],
-            'age': [25, 30, 35, 40, 45]
-        })
+        df = pd.DataFrame({"group": ["A", "A", "A", "B", "B"], "age": [25, 30, 35, 40, 45]})
 
-        grouped = df.groupby('group')['age'].agg(['mean', 'std'])
+        grouped = df.groupby("group")["age"].agg(["mean", "std"])
 
         assert len(grouped) == 2
         print("✓ Grouped columns")
 
     def test_p_value_formatting(self):
         """Test p-value formatting"""
+
         def format_p(p):
             if p < 0.001:
                 return "<0.001"
@@ -285,6 +269,7 @@ class TestTableFormatting:
 
     def test_significance_markers(self):
         """Test significance markers"""
+
         def get_marker(p):
             if p < 0.001:
                 return "***"
@@ -307,14 +292,11 @@ class TestSpecialCases:
 
     def test_single_group(self):
         """Test table with single group (no comparison)"""
-        df = pd.DataFrame({
-            'age': [25, 30, 35, 40, 45],
-            'gender': ['M', 'F', 'M', 'F', 'M']
-        })
+        df = pd.DataFrame({"age": [25, 30, 35, 40, 45], "gender": ["M", "F", "M", "F", "M"]})
 
         # Should produce descriptive stats without p-values
         stats_age = f"{df['age'].mean():.1f} ± {df['age'].std():.1f}"
-        stats_gender = df['gender'].value_counts()
+        stats_gender = df["gender"].value_counts()
 
         assert stats_age is not None
         assert stats_gender is not None
@@ -322,37 +304,28 @@ class TestSpecialCases:
 
     def test_all_missing(self):
         """Test handling of all-missing column"""
-        df = pd.DataFrame({
-            'complete': [1, 2, 3, 4, 5],
-            'missing': [np.nan, np.nan, np.nan, np.nan, np.nan]
-        })
+        df = pd.DataFrame({"complete": [1, 2, 3, 4, 5], "missing": [np.nan, np.nan, np.nan, np.nan, np.nan]})
 
-        n_valid = df['missing'].notna().sum()
+        n_valid = df["missing"].notna().sum()
 
         assert n_valid == 0
         print("✓ All-missing column handled")
 
     def test_constant_column(self):
         """Test handling of constant column"""
-        df = pd.DataFrame({
-            'variable': [1, 2, 3, 4, 5],
-            'constant': [1, 1, 1, 1, 1]
-        })
+        df = pd.DataFrame({"variable": [1, 2, 3, 4, 5], "constant": [1, 1, 1, 1, 1]})
 
-        std = df['constant'].std()
+        std = df["constant"].std()
 
         assert std == 0
         print("✓ Constant column handled")
 
     def test_small_sample(self):
         """Test small sample handling"""
-        df = pd.DataFrame({
-            'group': ['A', 'B'],
-            'value': [10, 20]
-        })
+        df = pd.DataFrame({"group": ["A", "B"], "value": [10, 20]})
 
         # Should use Fisher's exact or skip test
-        n_per_group = df.groupby('group').size()
+        n_per_group = df.groupby("group").size()
         min_n = n_per_group.min()
 
         assert min_n == 1
@@ -379,7 +352,7 @@ class TestSMD:
         p2 = 0.5  # Proportion in group 2
 
         # SMD for proportions
-        pooled_sd = np.sqrt((p1*(1-p1) + p2*(1-p2)) / 2)
+        pooled_sd = np.sqrt((p1 * (1 - p1) + p2 * (1 - p2)) / 2)
         smd = (p1 - p2) / pooled_sd
 
         assert abs(smd) > 0.3  # Moderate imbalance
@@ -418,7 +391,7 @@ def run_all_tests():
         print(f"\n{class_name}:")
         print("-" * 40)
 
-        test_methods = [m for m in dir(test_class) if m.startswith('test_')]
+        test_methods = [m for m in dir(test_class) if m.startswith("test_")]
 
         for method_name in test_methods:
             try:

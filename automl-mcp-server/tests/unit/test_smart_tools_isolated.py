@@ -27,8 +27,10 @@ import pandas as pd
 # Isolated implementations (copied from smart_tools.py)
 # ============================================================
 
+
 class IssueSeverity(Enum):
     """Severity levels for data issues"""
+
     CRITICAL = "critical"
     HIGH = "high"
     MEDIUM = "medium"
@@ -37,6 +39,7 @@ class IssueSeverity(Enum):
 
 class IssueType(Enum):
     """Types of data issues"""
+
     PII_DETECTED = "pii_detected"
     HIGH_MISSING_RATIO = "high_missing_ratio"
     OUTLIERS_DETECTED = "outliers_detected"
@@ -48,6 +51,7 @@ class IssueType(Enum):
 @dataclass
 class DataIssue:
     """Represents a single data issue"""
+
     issue_type: IssueType
     severity: IssueSeverity
     column: Optional[str]
@@ -69,6 +73,7 @@ class DataIssue:
 @dataclass
 class ValidationReport:
     """Validation report containing all issues"""
+
     issues: List[DataIssue]
 
     @property
@@ -145,9 +150,7 @@ def generate_questions_from_issues(report: ValidationReport) -> List[str]:
         )
 
     # Always add storage question
-    questions.append(
-        "Do you want to save this dataset for future use, or is this a one-time analysis?"
-    )
+    questions.append("Do you want to save this dataset for future use, or is this a one-time analysis?")
 
     return questions
 
@@ -223,6 +226,7 @@ def get_default_cleaning_actions(report: ValidationReport) -> Dict[str, Any]:
 # ============================================================
 # TEST CLASSES
 # ============================================================
+
 
 class TestCSVParsing:
     """Tests for CSV parsing utilities"""
@@ -590,6 +594,7 @@ class TestDataIssueToDict:
 # RUN TESTS
 # ============================================================
 
+
 def run_tests():
     """Run all tests"""
     test_classes = [
@@ -638,5 +643,6 @@ def run_tests():
 
 if __name__ == "__main__":
     import sys
+
     success = run_tests()
     sys.exit(0 if success else 1)

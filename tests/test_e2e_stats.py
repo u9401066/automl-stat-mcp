@@ -19,6 +19,7 @@ Usage:
     python -m pytest test_e2e_stats.py -v -k "tableone"  # Only TableOne tests
     python -m pytest test_e2e_stats.py -v -m "not slow"  # Skip slow tests
 """
+
 import asyncio
 import os
 import time
@@ -52,11 +53,9 @@ SAMPLE_DATA = {
 # Helper Functions
 # =============================================================================
 
+
 async def wait_for_job(
-    client: httpx.AsyncClient,
-    job_id: str,
-    timeout: int = 120,
-    poll_interval: int = POLL_INTERVAL
+    client: httpx.AsyncClient, job_id: str, timeout: int = 120, poll_interval: int = POLL_INTERVAL
 ) -> dict:
     """Wait for a job to complete."""
     start = time.time()
@@ -88,6 +87,7 @@ async def get_job_result(client: httpx.AsyncClient, job_id: str) -> Optional[dic
 # Fixtures
 # =============================================================================
 
+
 @pytest.fixture(scope="module")
 def event_loop():
     """Create event loop for async tests."""
@@ -107,6 +107,7 @@ async def stats_client():
 # Test: TableOne Generation
 # =============================================================================
 
+
 @pytest.mark.e2e
 @pytest.mark.asyncio
 class TestTableOneFlow:
@@ -120,7 +121,7 @@ class TestTableOneFlow:
                 "csv_path": SAMPLE_DATA["heart"],
                 "groupby": "target",
                 "user_id": TEST_USER_ID,
-            }
+            },
         )
 
         if resp.status_code == 200:
@@ -140,7 +141,7 @@ class TestTableOneFlow:
                     "csv_path": SAMPLE_DATA["heart"],
                     "groupby": "target",
                     "user_id": TEST_USER_ID,
-                }
+                },
             )
             if resp.status_code == 200:
                 data = resp.json()
@@ -156,7 +157,7 @@ class TestTableOneFlow:
                 "columns": ["age", "sex", "cp", "trestbps", "chol"],
                 "categorical": ["sex", "cp"],
                 "user_id": TEST_USER_ID,
-            }
+            },
         )
 
         if resp.status_code == 200:
@@ -173,7 +174,7 @@ class TestTableOneFlow:
                 "csv_path": SAMPLE_DATA["titanic"],
                 "groupby": "survived",
                 "user_id": TEST_USER_ID,
-            }
+            },
         )
 
         if resp.status_code == 200:
@@ -187,6 +188,7 @@ class TestTableOneFlow:
 # Test: EDA (Exploratory Data Analysis)
 # =============================================================================
 
+
 @pytest.mark.e2e
 @pytest.mark.asyncio
 class TestEDAFlow:
@@ -199,7 +201,7 @@ class TestEDAFlow:
             json={
                 "csv_path": SAMPLE_DATA["iris"],
                 "user_id": TEST_USER_ID,
-            }
+            },
         )
 
         if resp.status_code == 200:
@@ -220,7 +222,7 @@ class TestEDAFlow:
                 "csv_path": SAMPLE_DATA["breast_cancer"],
                 "target_column": "diagnosis",
                 "user_id": TEST_USER_ID,
-            }
+            },
         )
 
         if resp.status_code == 200:
@@ -236,7 +238,7 @@ class TestEDAFlow:
             json={
                 "csv_path": SAMPLE_DATA["iris"],
                 "user_id": TEST_USER_ID,
-            }
+            },
         )
 
         # Try both possible endpoints
@@ -246,7 +248,7 @@ class TestEDAFlow:
                 json={
                     "csv_path": SAMPLE_DATA["iris"],
                     "user_id": TEST_USER_ID,
-                }
+                },
             )
 
         if resp.status_code == 200:
@@ -258,6 +260,7 @@ class TestEDAFlow:
 # =============================================================================
 # Test: Power Analysis
 # =============================================================================
+
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
@@ -273,7 +276,7 @@ class TestPowerAnalysisFlow:
                 "alpha": 0.05,
                 "n1": 50,
                 "user_id": TEST_USER_ID,
-            }
+            },
         )
 
         if resp.status_code == 200:
@@ -294,7 +297,7 @@ class TestPowerAnalysisFlow:
                 "alpha": 0.05,
                 "power": 0.8,
                 "user_id": TEST_USER_ID,
-            }
+            },
         )
 
         if resp.status_code == 200:
@@ -313,7 +316,7 @@ class TestPowerAnalysisFlow:
                 "alpha": 0.05,
                 "n": 100,
                 "user_id": TEST_USER_ID,
-            }
+            },
         )
 
         if resp.status_code == 200:
@@ -333,7 +336,7 @@ class TestPowerAnalysisFlow:
                 "n": 30,  # sample size per group
                 "alpha": 0.05,
                 "user_id": TEST_USER_ID,
-            }
+            },
         )
 
         if resp.status_code == 200:
@@ -347,6 +350,7 @@ class TestPowerAnalysisFlow:
 # =============================================================================
 # Test: Survival Analysis
 # =============================================================================
+
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
@@ -362,7 +366,7 @@ class TestSurvivalAnalysisFlow:
                 "time_column": "week",
                 "event_column": "arrest",
                 "user_id": TEST_USER_ID,
-            }
+            },
         )
 
         if resp.status_code == 200:
@@ -381,7 +385,7 @@ class TestSurvivalAnalysisFlow:
                 "event_column": "arrest",
                 "group_column": "fin",  # financial aid
                 "user_id": TEST_USER_ID,
-            }
+            },
         )
 
         if resp.status_code == 200:
@@ -400,7 +404,7 @@ class TestSurvivalAnalysisFlow:
                 "event_column": "arrest",
                 "covariates": ["fin", "age", "prio"],
                 "user_id": TEST_USER_ID,
-            }
+            },
         )
 
         if resp.status_code == 200:
@@ -419,7 +423,7 @@ class TestSurvivalAnalysisFlow:
                 "event_column": "arrest",
                 "group_column": "fin",
                 "user_id": TEST_USER_ID,
-            }
+            },
         )
 
         if resp.status_code == 200:
@@ -432,6 +436,7 @@ class TestSurvivalAnalysisFlow:
 # =============================================================================
 # Test: ROC Analysis
 # =============================================================================
+
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
@@ -447,7 +452,7 @@ class TestROCAnalysisFlow:
                 "y_true_col": "diagnosis",
                 "y_score_col": "mean_radius",  # Using a feature as proxy score
                 "user_id": TEST_USER_ID,
-            }
+            },
         )
 
         if resp.status_code == 200:
@@ -467,7 +472,7 @@ class TestROCAnalysisFlow:
                 "compute_ci": True,
                 "n_bootstraps": 100,
                 "user_id": TEST_USER_ID,
-            }
+            },
         )
 
         if resp.status_code == 200:
@@ -490,7 +495,7 @@ class TestROCAnalysisFlow:
                 "y_score_col_1": "mean_radius",
                 "y_score_col_2": "mean_texture",
                 "user_id": TEST_USER_ID,
-            }
+            },
         )
 
         if resp.status_code == 200:
@@ -508,7 +513,7 @@ class TestROCAnalysisFlow:
                 "y_true_col": "diagnosis",
                 "y_score_col": "mean_radius",
                 "user_id": TEST_USER_ID,
-            }
+            },
         )
 
         if resp.status_code == 200:
@@ -526,6 +531,7 @@ class TestROCAnalysisFlow:
 # Test: Propensity Score Analysis
 # =============================================================================
 
+
 @pytest.mark.e2e
 @pytest.mark.asyncio
 class TestPropensityScoreFlow:
@@ -540,7 +546,7 @@ class TestPropensityScoreFlow:
                 "treatment_col": "sex_binary",  # Needs binary column
                 "covariates": ["age", "pclass", "fare"],
                 "user_id": TEST_USER_ID,
-            }
+            },
         )
 
         if resp.status_code == 200:
@@ -560,7 +566,7 @@ class TestPropensityScoreFlow:
                 "treatment_col": "sex_binary",
                 "covariates": ["age", "pclass", "fare"],
                 "user_id": TEST_USER_ID,
-            }
+            },
         )
 
         if resp.status_code == 200:
@@ -573,6 +579,7 @@ class TestPropensityScoreFlow:
 # =============================================================================
 # Test: Correlation Analysis
 # =============================================================================
+
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
@@ -587,7 +594,7 @@ class TestCorrelationFlow:
                 "csv_path": SAMPLE_DATA["iris"],
                 "method": "pearson",
                 "user_id": TEST_USER_ID,
-            }
+            },
         )
 
         if resp.status_code == 200:
@@ -604,7 +611,7 @@ class TestCorrelationFlow:
                 "csv_path": SAMPLE_DATA["iris"],
                 "columns": ["sepal_length", "sepal_width", "petal_length", "petal_width"],
                 "user_id": TEST_USER_ID,
-            }
+            },
         )
 
         if resp.status_code == 200:
@@ -617,6 +624,7 @@ class TestCorrelationFlow:
 # =============================================================================
 # Test: Complete Statistical Workflow
 # =============================================================================
+
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
@@ -638,7 +646,7 @@ class TestCompleteStatisticalWorkflow:
             json={
                 "csv_path": SAMPLE_DATA["heart"],
                 "user_id": TEST_USER_ID,
-            }
+            },
         )
 
         if resp.status_code != 200:
@@ -654,7 +662,7 @@ class TestCompleteStatisticalWorkflow:
                 "csv_path": SAMPLE_DATA["heart"],
                 "groupby": "target",
                 "user_id": TEST_USER_ID,
-            }
+            },
         )
 
         # Continue even if TableOne fails

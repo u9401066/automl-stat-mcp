@@ -9,6 +9,7 @@ Tests MCP tool parameter validation and edge case handling:
 
 These tests can run locally with mocked services or against real services.
 """
+
 import json
 from typing import Any, Dict, List, Optional
 
@@ -27,14 +28,13 @@ logger = structlog.get_logger(__name__)
 # Mock Fixtures for Local Testing
 # =============================================================================
 
+
 @pytest.fixture
 def mock_stats_response():
     """Create mock stats service responses."""
+
     def _create(
-        status: str = "completed",
-        n_rows: int = 100,
-        n_cols: int = 5,
-        error: Optional[str] = None
+        status: str = "completed", n_rows: int = 100, n_cols: int = 5, error: Optional[str] = None
     ) -> Dict[str, Any]:
         if error:
             return {"status": "failed", "error": error}
@@ -45,6 +45,7 @@ def mock_stats_response():
             "columns": [f"col_{i}" for i in range(n_cols)],
             "summary": {"mean": {}, "std": {}},
         }
+
     return _create
 
 
@@ -54,35 +55,44 @@ def sample_dataframes():
     import numpy as np
 
     return {
-        "normal": pd.DataFrame({
-            "num1": [1, 2, 3, 4, 5],
-            "num2": [1.1, 2.2, 3.3, 4.4, 5.5],
-            "cat": ["A", "B", "A", "B", "A"],
-            "target": [0, 1, 0, 1, 0],
-        }),
-        "with_missing": pd.DataFrame({
-            "num1": [1, np.nan, 3, np.nan, 5],
-            "num2": [1.1, 2.2, np.nan, 4.4, np.nan],
-            "cat": ["A", None, "A", "B", None],
-            "target": [0, 1, 0, 1, 0],
-        }),
-        "all_missing": pd.DataFrame({
-            "col1": [np.nan] * 5,
-            "col2": [None] * 5,
-        }),
+        "normal": pd.DataFrame(
+            {
+                "num1": [1, 2, 3, 4, 5],
+                "num2": [1.1, 2.2, 3.3, 4.4, 5.5],
+                "cat": ["A", "B", "A", "B", "A"],
+                "target": [0, 1, 0, 1, 0],
+            }
+        ),
+        "with_missing": pd.DataFrame(
+            {
+                "num1": [1, np.nan, 3, np.nan, 5],
+                "num2": [1.1, 2.2, np.nan, 4.4, np.nan],
+                "cat": ["A", None, "A", "B", None],
+                "target": [0, 1, 0, 1, 0],
+            }
+        ),
+        "all_missing": pd.DataFrame(
+            {
+                "col1": [np.nan] * 5,
+                "col2": [None] * 5,
+            }
+        ),
         "empty": pd.DataFrame(columns=["a", "b", "c"]),
         "single_row": pd.DataFrame({"a": [1], "b": [2]}),
-        "unicode": pd.DataFrame({
-            "中文": [1, 2, 3],
-            "日本語": [4, 5, 6],
-            "emoji_🎉": [7, 8, 9],
-        }),
+        "unicode": pd.DataFrame(
+            {
+                "中文": [1, 2, 3],
+                "日本語": [4, 5, 6],
+                "emoji_🎉": [7, 8, 9],
+            }
+        ),
     }
 
 
 # =============================================================================
 # Test: Parameter Validation
 # =============================================================================
+
 
 class TestParameterValidation:
     """Test tool parameter validation logic."""
@@ -167,17 +177,13 @@ class TestParameterValidation:
         for params, _expected_errors in test_cases:
             errors = validate_tableone_params(params)
             has_errors = len(errors) > 0
-            test_logger.info(
-                "param_validation",
-                params=params,
-                has_errors=has_errors,
-                error_count=len(errors)
-            )
+            test_logger.info("param_validation", params=params, has_errors=has_errors, error_count=len(errors))
 
 
 # =============================================================================
 # Test: Type Handling
 # =============================================================================
+
 
 class TestTypeHandling:
     """Test data type handling in tools."""
@@ -191,11 +197,7 @@ class TestTypeHandling:
         numeric_cols = df.select_dtypes(include=["number"]).columns.tolist()
         categorical_cols = df.select_dtypes(include=["object", "category"]).columns.tolist()
 
-        test_logger.info(
-            "type_detection",
-            numeric=numeric_cols,
-            categorical=categorical_cols
-        )
+        test_logger.info("type_detection", numeric=numeric_cols, categorical=categorical_cols)
 
         assert "num1" in numeric_cols
         assert "num2" in numeric_cols
@@ -205,10 +207,12 @@ class TestTypeHandling:
         """Test handling when column type doesn't match expected."""
         test_logger.info("test_start", test="type_mismatch")
 
-        df = pd.DataFrame({
-            "str_as_num": ["1", "2", "3", "4", "5"],
-            "mixed": [1, "two", 3, "four", 5],
-        })
+        df = pd.DataFrame(
+            {
+                "str_as_num": ["1", "2", "3", "4", "5"],
+                "mixed": [1, "two", 3, "four", 5],
+            }
+        )
 
         # Attempt to compute mean on string column
         try:
@@ -226,22 +230,20 @@ class TestTypeHandling:
 
         import numpy as np
 
-        df = pd.DataFrame({
-            "with_nan": [1.0, np.nan, 3.0, np.nan, 5.0],
-            "with_inf": [1.0, np.inf, 3.0, -np.inf, 5.0],
-            "normal": [1.0, 2.0, 3.0, 4.0, 5.0],
-        })
+        df = pd.DataFrame(
+            {
+                "with_nan": [1.0, np.nan, 3.0, np.nan, 5.0],
+                "with_inf": [1.0, np.inf, 3.0, -np.inf, 5.0],
+                "normal": [1.0, 2.0, 3.0, 4.0, 5.0],
+            }
+        )
 
         # Check handling
         nan_counts = df.isna().sum().to_dict()
         inf_mask = df.isin([np.inf, -np.inf])
         inf_counts = inf_mask.sum().to_dict()
 
-        test_logger.info(
-            "special_values",
-            nan_counts=nan_counts,
-            inf_counts=inf_counts
-        )
+        test_logger.info("special_values", nan_counts=nan_counts, inf_counts=inf_counts)
 
         # Verify JSON serialization safety
         result = {
@@ -254,7 +256,7 @@ class TestTypeHandling:
             if isinstance(obj, float):
                 if pd.isna(obj) or obj != obj:
                     return None
-                if obj == float('inf') or obj == float('-inf'):
+                if obj == float("inf") or obj == float("-inf"):
                     return str(obj)
             return obj
 
@@ -268,6 +270,7 @@ class TestTypeHandling:
 # =============================================================================
 # Test: Tool-Specific Logic
 # =============================================================================
+
 
 class TestToolSpecificLogic:
     """Test specific tool logic."""
@@ -288,23 +291,20 @@ class TestToolSpecificLogic:
         for col in df.columns:
             valid = is_valid_groupby(df, col)
             nunique = df[col].nunique()
-            test_logger.info(
-                "groupby_check",
-                column=col,
-                valid=valid,
-                unique_values=nunique
-            )
+            test_logger.info("groupby_check", column=col, valid=valid, unique_values=nunique)
 
     def test_survival_column_validation(self, test_logger):
         """Test survival analysis column validation."""
         test_logger.info("test_start", test="survival_validation")
 
-        df = pd.DataFrame({
-            "time": [10, 20, 30, 40, 50],
-            "event": [1, 0, 1, 0, 1],
-            "invalid_time": [-1, 0, 10, 20, 30],  # Negative value
-            "invalid_event": [0, 1, 2, 0, 1],  # Non-binary
-        })
+        df = pd.DataFrame(
+            {
+                "time": [10, 20, 30, 40, 50],
+                "event": [1, 0, 1, 0, 1],
+                "invalid_time": [-1, 0, 10, 20, 30],  # Negative value
+                "invalid_event": [0, 1, 2, 0, 1],  # Non-binary
+            }
+        )
 
         def validate_survival_data(df, time_col, event_col):
             errors = []
@@ -341,12 +341,14 @@ class TestToolSpecificLogic:
 
         import numpy as np
 
-        df = pd.DataFrame({
-            "y_true": [0, 1, 0, 1, 0, 1],
-            "y_score": [0.1, 0.9, 0.2, 0.8, 0.3, 0.7],
-            "invalid_true": [0, 1, 2, 0, 1, 2],  # Non-binary
-            "invalid_score": [0.1, np.nan, 0.3, 0.4, np.nan, 0.6],  # Has NaN
-        })
+        df = pd.DataFrame(
+            {
+                "y_true": [0, 1, 0, 1, 0, 1],
+                "y_score": [0.1, 0.9, 0.2, 0.8, 0.3, 0.7],
+                "invalid_true": [0, 1, 2, 0, 1, 2],  # Non-binary
+                "invalid_score": [0.1, np.nan, 0.3, 0.4, np.nan, 0.6],  # Has NaN
+            }
+        )
 
         def validate_roc_data(df, true_col, score_col):
             errors = []
@@ -380,6 +382,7 @@ class TestToolSpecificLogic:
 # Test: Error Handling
 # =============================================================================
 
+
 class TestErrorHandling:
     """Test error handling in tools."""
 
@@ -412,11 +415,7 @@ class TestErrorHandling:
             stats = df.describe()
             missing_pct = (df.isna().sum() / len(df) * 100).to_dict()
 
-            test_logger.info(
-                "all_missing_handled",
-                missing_pct=missing_pct,
-                stats_shape=stats.shape
-            )
+            test_logger.info("all_missing_handled", missing_pct=missing_pct, stats_shape=stats.shape)
         except Exception as e:
             test_logger.error("all_missing_error", error=str(e))
 
@@ -431,11 +430,7 @@ class TestErrorHandling:
             columns = list(df.columns)
             dtypes = {col: str(df[col].dtype) for col in df.columns}
 
-            test_logger.info(
-                "unicode_handled",
-                columns=columns,
-                dtypes=dtypes
-            )
+            test_logger.info("unicode_handled", columns=columns, dtypes=dtypes)
 
             # Test JSON serialization
             json_str = json.dumps({"columns": columns})
@@ -449,6 +444,7 @@ class TestErrorHandling:
 # =============================================================================
 # Test: Path Resolution Logic
 # =============================================================================
+
 
 class TestPathResolutionLogic:
     """Test path resolution logic (can run locally)."""
@@ -471,7 +467,7 @@ class TestPathResolutionLogic:
                 parts = path.split("/")
                 if "sample_data" in parts:
                     idx = parts.index("sample_data")
-                    path = "/data/sample_data/" + "/".join(parts[idx+1:])
+                    path = "/data/sample_data/" + "/".join(parts[idx + 1 :])
 
             # Handle relative paths
             if not path.startswith("/"):
@@ -492,13 +488,7 @@ class TestPathResolutionLogic:
         for input_path, expected in test_cases:
             result = normalize_path(input_path)
             matches = result == expected
-            test_logger.info(
-                "path_normalized",
-                input=input_path,
-                result=result,
-                expected=expected,
-                matches=matches
-            )
+            test_logger.info("path_normalized", input=input_path, result=result, expected=expected, matches=matches)
             assert matches, f"Path normalization failed: {input_path} -> {result}, expected {expected}"
 
 

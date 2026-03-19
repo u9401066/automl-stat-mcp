@@ -9,12 +9,14 @@ Based on test-generator Skill requirements:
 2. Invalid inputs
 3. Exception handling
 """
+
 import numpy as np
 import pandas as pd
 import pytest
 from scipy import stats
 
 # ==================== BOUNDARY CONDITIONS ====================
+
 
 class TestBoundaryConditions:
     """Test edge cases and boundary values"""
@@ -30,93 +32,94 @@ class TestBoundaryConditions:
 
     def test_single_row_dataframe(self):
         """Single row should calculate stats without error"""
-        df = pd.DataFrame({'value': [42]})
+        df = pd.DataFrame({"value": [42]})
 
         # Mean should work
-        assert df['value'].mean() == 42
+        assert df["value"].mean() == 42
 
         # Std should be NaN for single value (no variance)
-        assert pd.isna(df['value'].std())
+        assert pd.isna(df["value"].std())
         print("✓ Single row DataFrame handled")
 
     def test_single_column_dataframe(self):
         """Single column DataFrame should work"""
-        df = pd.DataFrame({'only_col': [1, 2, 3, 4, 5]})
+        df = pd.DataFrame({"only_col": [1, 2, 3, 4, 5]})
 
         assert len(df.columns) == 1
-        assert df['only_col'].sum() == 15
+        assert df["only_col"].sum() == 15
         print("✓ Single column DataFrame handled")
 
     def test_all_nan_column(self):
         """Column with all NaN values"""
-        df = pd.DataFrame({'all_nan': [np.nan, np.nan, np.nan]})
+        df = pd.DataFrame({"all_nan": [np.nan, np.nan, np.nan]})
 
-        assert pd.isna(df['all_nan'].mean())
-        assert df['all_nan'].notna().sum() == 0
+        assert pd.isna(df["all_nan"].mean())
+        assert df["all_nan"].notna().sum() == 0
         print("✓ All-NaN column handled")
 
     def test_mixed_nan_values(self):
         """Column with some NaN values"""
-        df = pd.DataFrame({'mixed': [1, np.nan, 3, np.nan, 5]})
+        df = pd.DataFrame({"mixed": [1, np.nan, 3, np.nan, 5]})
 
         # Mean should ignore NaN
-        assert df['mixed'].mean() == 3.0  # (1+3+5)/3
-        assert df['mixed'].count() == 3
+        assert df["mixed"].mean() == 3.0  # (1+3+5)/3
+        assert df["mixed"].count() == 3
         print("✓ Mixed NaN values handled")
 
     def test_very_large_numbers(self):
         """Handle very large numbers without overflow"""
-        df = pd.DataFrame({'large': [1e308, 1e307, 1e306]})
+        df = pd.DataFrame({"large": [1e308, 1e307, 1e306]})
 
         # Should not overflow
-        mean = df['large'].mean()
+        mean = df["large"].mean()
         assert np.isfinite(mean)
         assert mean > 1e305
         print("✓ Very large numbers handled")
 
     def test_very_small_numbers(self):
         """Handle very small numbers without underflow"""
-        df = pd.DataFrame({'small': [1e-308, 1e-307, 1e-306]})
+        df = pd.DataFrame({"small": [1e-308, 1e-307, 1e-306]})
 
-        mean = df['small'].mean()
+        mean = df["small"].mean()
         assert np.isfinite(mean)
         assert mean < 1e-304
         print("✓ Very small numbers handled")
 
     def test_infinity_values(self):
         """Handle infinity values"""
-        df = pd.DataFrame({'inf_col': [1, np.inf, -np.inf, 4]})
+        df = pd.DataFrame({"inf_col": [1, np.inf, -np.inf, 4]})
 
         # Mean with inf is inf
-        assert not np.isfinite(df['inf_col'].mean())
+        assert not np.isfinite(df["inf_col"].mean())
 
         # Can filter inf
-        finite = df[np.isfinite(df['inf_col'])]
-        assert finite['inf_col'].mean() == 2.5  # (1+4)/2
+        finite = df[np.isfinite(df["inf_col"])]
+        assert finite["inf_col"].mean() == 2.5  # (1+4)/2
         print("✓ Infinity values handled")
 
     def test_constant_column(self):
         """Column with all same values (zero variance)"""
-        df = pd.DataFrame({'constant': [42, 42, 42, 42]})
+        df = pd.DataFrame({"constant": [42, 42, 42, 42]})
 
-        assert df['constant'].std() == 0
-        assert df['constant'].var() == 0
-        assert df['constant'].nunique() == 1
+        assert df["constant"].std() == 0
+        assert df["constant"].var() == 0
+        assert df["constant"].nunique() == 1
         print("✓ Constant column handled")
 
 
 # ==================== INVALID INPUTS ====================
+
 
 class TestInvalidInputs:
     """Test handling of invalid input data"""
 
     def test_string_in_numeric_column(self):
         """Mixed types in column"""
-        df = pd.DataFrame({'mixed': [1, 2, 'three', 4]})
+        df = pd.DataFrame({"mixed": [1, 2, "three", 4]})
 
         # Should fail or coerce
         with pytest.raises((TypeError, ValueError)):
-            df['mixed'].astype(float).mean()
+            df["mixed"].astype(float).mean()
         print("✓ String in numeric column caught")
 
     def test_negative_percentile(self):
@@ -175,20 +178,21 @@ class TestInvalidInputs:
 
 # ==================== EXCEPTION HANDLING ====================
 
+
 class TestExceptionHandling:
     """Test proper exception handling"""
 
     def test_file_not_found(self):
         """Handle missing file gracefully"""
         with pytest.raises(FileNotFoundError):
-            pd.read_csv('/nonexistent/path/file.csv')
+            pd.read_csv("/nonexistent/path/file.csv")
         print("✓ FileNotFoundError raised for missing file")
 
     def test_invalid_csv_content(self, tmp_path):
         """Handle invalid CSV content"""
         # Create file with binary content
         bad_file = tmp_path / "bad.csv"
-        bad_file.write_bytes(b'\x00\x01\x02\x03')
+        bad_file.write_bytes(b"\x00\x01\x02\x03")
 
         # Should either raise error or handle gracefully
         try:
@@ -250,12 +254,12 @@ class TestExceptionHandling:
                 z = X @ beta
                 p = 1 / (1 + np.exp(-z))
                 # Handle edge cases
-                p = np.clip(p, 1e-10, 1-1e-10)
-                return -np.sum(y * np.log(p) + (1-y) * np.log(1-p))
+                p = np.clip(p, 1e-10, 1 - 1e-10)
+                return -np.sum(y * np.log(p) + (1 - y) * np.log(1 - p))
 
-            result = minimize(neg_log_likelihood, [0], method='L-BFGS-B')
+            result = minimize(neg_log_likelihood, [0], method="L-BFGS-B")
             # May not converge but shouldn't crash
-            assert hasattr(result, 'x')
+            assert hasattr(result, "x")
         except Exception:
             # Some failure is acceptable
             pass
@@ -264,84 +268,74 @@ class TestExceptionHandling:
 
 # ==================== DATA TYPE EDGE CASES ====================
 
+
 class TestDataTypeEdgeCases:
     """Test handling of various data types"""
 
     def test_boolean_column(self):
         """Boolean column statistics"""
-        df = pd.DataFrame({'bool_col': [True, False, True, True]})
+        df = pd.DataFrame({"bool_col": [True, False, True, True]})
 
         # Should work as 0/1
-        assert df['bool_col'].mean() == 0.75
-        assert df['bool_col'].sum() == 3
+        assert df["bool_col"].mean() == 0.75
+        assert df["bool_col"].sum() == 3
         print("✓ Boolean column handled")
 
     def test_datetime_column(self):
         """DateTime column handling"""
-        df = pd.DataFrame({
-            'date': pd.date_range('2024-01-01', periods=5)
-        })
+        df = pd.DataFrame({"date": pd.date_range("2024-01-01", periods=5)})
 
-        assert df['date'].dtype == 'datetime64[ns]'
+        assert df["date"].dtype == "datetime64[ns]"
         # Range calculation
-        date_range = df['date'].max() - df['date'].min()
+        date_range = df["date"].max() - df["date"].min()
         assert date_range.days == 4
         print("✓ DateTime column handled")
 
     def test_categorical_column(self):
         """Categorical data handling"""
-        df = pd.DataFrame({
-            'category': pd.Categorical(['A', 'B', 'A', 'C', 'B'])
-        })
+        df = pd.DataFrame({"category": pd.Categorical(["A", "B", "A", "C", "B"])})
 
-        assert df['category'].dtype.name == 'category'
-        value_counts = df['category'].value_counts()
-        assert value_counts['A'] == 2
-        assert value_counts['B'] == 2
-        assert value_counts['C'] == 1
+        assert df["category"].dtype.name == "category"
+        value_counts = df["category"].value_counts()
+        assert value_counts["A"] == 2
+        assert value_counts["B"] == 2
+        assert value_counts["C"] == 1
         print("✓ Categorical column handled")
 
     def test_object_column_with_numbers(self):
         """Object column that looks numeric"""
-        df = pd.DataFrame({'obj_num': ['1', '2', '3', '4']})
+        df = pd.DataFrame({"obj_num": ["1", "2", "3", "4"]})
 
-        assert df['obj_num'].dtype == 'object'
+        assert df["obj_num"].dtype == "object"
 
         # Can convert to numeric
-        numeric = pd.to_numeric(df['obj_num'])
+        numeric = pd.to_numeric(df["obj_num"])
         assert numeric.mean() == 2.5
         print("✓ Object column with numbers handled")
 
     def test_unicode_column_names(self):
         """Unicode characters in column names"""
-        df = pd.DataFrame({
-            '年齡': [25, 30, 35],
-            '性別': ['M', 'F', 'M'],
-            'αβγ': [1.1, 2.2, 3.3]
-        })
+        df = pd.DataFrame({"年齡": [25, 30, 35], "性別": ["M", "F", "M"], "αβγ": [1.1, 2.2, 3.3]})
 
-        assert '年齡' in df.columns
-        assert df['年齢' if '年齢' in df.columns else '年齡'].mean() == 30
+        assert "年齡" in df.columns
+        assert df["年齢" if "年齢" in df.columns else "年齡"].mean() == 30
         print("✓ Unicode column names handled")
 
     def test_whitespace_column_names(self):
         """Columns with whitespace in names"""
-        df = pd.DataFrame({
-            '  leading': [1, 2],
-            'trailing  ': [3, 4],
-            'middle space': [5, 6]
-        })
+        df = pd.DataFrame({"  leading": [1, 2], "trailing  ": [3, 4], "middle space": [5, 6]})
 
         # Accessing with exact name
-        assert '  leading' in df.columns
+        assert "  leading" in df.columns
 
         # Can strip
         df.columns = df.columns.str.strip()
-        assert 'leading' in df.columns
+        assert "leading" in df.columns
         print("✓ Whitespace column names handled")
 
 
 # ==================== NUMERICAL STABILITY ====================
+
 
 class TestNumericalStability:
     """Test numerical stability in calculations"""
@@ -398,6 +392,7 @@ class TestNumericalStability:
 
 # ==================== SAMPLE SIZE EDGE CASES ====================
 
+
 class TestSampleSizeEdgeCases:
     """Test handling of various sample sizes"""
 
@@ -451,11 +446,11 @@ class TestSampleSizeEdgeCases:
         group1 = [1, 2, 3]
         group2 = [4, 5, 6]
 
-        stat, p = stats.mannwhitneyu(group1, group2, alternative='two-sided')
+        stat, p = stats.mannwhitneyu(group1, group2, alternative="two-sided")
         assert np.isfinite(stat)
         assert 0 <= p <= 1
         print("✓ Mann-Whitney with small n")
 
 
-if __name__ == '__main__':
-    pytest.main([__file__, '-v'])
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

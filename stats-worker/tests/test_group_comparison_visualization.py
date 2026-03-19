@@ -9,6 +9,7 @@ Tests covering:
 - Correlation heatmaps
 - T-test visualization
 """
+
 import sys
 from unittest.mock import patch
 
@@ -16,7 +17,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-sys.path.insert(0, '/home/eric/workspace251204/stats-worker/src')
+sys.path.insert(0, "/home/eric/workspace251204/stats-worker/src")
 
 from visualization.group_comparison import (
     create_group_comparison_visualizations,
@@ -32,50 +33,52 @@ from visualization.group_comparison import (
 # Sample Data Fixtures
 # =============================================================================
 
+
 @pytest.fixture
 def two_group_df():
     """DataFrame with two groups for t-test."""
     np.random.seed(42)
-    return pd.DataFrame({
-        'group': ['A'] * 50 + ['B'] * 50,
-        'value': np.concatenate([
-            np.random.normal(10, 2, 50),
-            np.random.normal(12, 2, 50)
-        ])
-    })
+    return pd.DataFrame(
+        {
+            "group": ["A"] * 50 + ["B"] * 50,
+            "value": np.concatenate([np.random.normal(10, 2, 50), np.random.normal(12, 2, 50)]),
+        }
+    )
 
 
 @pytest.fixture
 def multi_group_df():
     """DataFrame with multiple groups for ANOVA."""
     np.random.seed(42)
-    return pd.DataFrame({
-        'group': ['A'] * 30 + ['B'] * 30 + ['C'] * 30,
-        'value': np.concatenate([
-            np.random.normal(10, 2, 30),
-            np.random.normal(12, 2, 30),
-            np.random.normal(15, 2, 30)
-        ])
-    })
+    return pd.DataFrame(
+        {
+            "group": ["A"] * 30 + ["B"] * 30 + ["C"] * 30,
+            "value": np.concatenate(
+                [np.random.normal(10, 2, 30), np.random.normal(12, 2, 30), np.random.normal(15, 2, 30)]
+            ),
+        }
+    )
 
 
 @pytest.fixture
 def categorical_df():
     """DataFrame with categorical variables for chi-square."""
     np.random.seed(42)
-    return pd.DataFrame({
-        'treatment': np.random.choice(['Drug', 'Placebo'], 100),
-        'outcome': np.random.choice(['Improved', 'No Change', 'Worsened'], 100),
-    })
+    return pd.DataFrame(
+        {
+            "treatment": np.random.choice(["Drug", "Placebo"], 100),
+            "outcome": np.random.choice(["Improved", "No Change", "Worsened"], 100),
+        }
+    )
 
 
 @pytest.fixture
 def group_stats():
     """Sample group statistics for ANOVA plot."""
     return {
-        'Control': {'mean': 10.5, 'std': 2.1, 'n': 30},
-        'Treatment A': {'mean': 12.8, 'std': 2.3, 'n': 28},
-        'Treatment B': {'mean': 15.2, 'std': 2.0, 'n': 32},
+        "Control": {"mean": 10.5, "std": 2.1, "n": 30},
+        "Treatment A": {"mean": 12.8, "std": 2.3, "n": 28},
+        "Treatment B": {"mean": 15.2, "std": 2.0, "n": 32},
     }
 
 
@@ -83,42 +86,31 @@ def group_stats():
 def test_result_ttest():
     """Sample t-test result."""
     return {
-        'test_name': 'Independent t-test',
-        'statistic': 2.85,
-        'p_value': 0.0052,
-        'effect_size': 0.65,
-        'effect_size_name': "Cohen's d"
+        "test_name": "Independent t-test",
+        "statistic": 2.85,
+        "p_value": 0.0052,
+        "effect_size": 0.65,
+        "effect_size_name": "Cohen's d",
     }
 
 
 @pytest.fixture
 def test_result_anova():
     """Sample ANOVA result."""
-    return {
-        'test_name': 'One-way ANOVA',
-        'statistic': 15.32,
-        'p_value': 0.0001,
-        'effect_size': 0.18
-    }
+    return {"test_name": "One-way ANOVA", "statistic": 15.32, "p_value": 0.0001, "effect_size": 0.18}
 
 
 @pytest.fixture
 def test_result_chisquare():
     """Sample chi-square result."""
-    return {
-        'chi2': 8.45,
-        'p_value': 0.015,
-        'cramers_v': 0.29
-    }
+    return {"chi2": 8.45, "p_value": 0.015, "cramers_v": 0.29}
 
 
 @pytest.fixture
 def contingency_table():
     """Sample contingency table."""
     return pd.DataFrame(
-        [[40, 25, 10], [15, 30, 20]],
-        index=['Drug', 'Placebo'],
-        columns=['Improved', 'No Change', 'Worsened']
+        [[40, 25, 10], [15, 30, 20]], index=["Drug", "Placebo"], columns=["Improved", "No Change", "Worsened"]
     )
 
 
@@ -127,7 +119,7 @@ def correlation_matrix():
     """Sample correlation matrix."""
     np.random.seed(42)
     data = np.random.randn(100, 5)
-    df = pd.DataFrame(data, columns=['Var1', 'Var2', 'Var3', 'Var4', 'Var5'])
+    df = pd.DataFrame(data, columns=["Var1", "Var2", "Var3", "Var4", "Var5"])
     return df.corr()
 
 
@@ -135,15 +127,16 @@ def correlation_matrix():
 def post_hoc_results():
     """Sample post-hoc test results."""
     return [
-        {'group1': 'Control', 'group2': 'Treatment A', 'p_value': 0.02},
-        {'group1': 'Control', 'group2': 'Treatment B', 'p_value': 0.001},
-        {'group1': 'Treatment A', 'group2': 'Treatment B', 'p_value': 0.08},
+        {"group1": "Control", "group2": "Treatment A", "p_value": 0.02},
+        {"group1": "Control", "group2": "Treatment B", "p_value": 0.001},
+        {"group1": "Treatment A", "group2": "Treatment B", "p_value": 0.08},
     ]
 
 
 # =============================================================================
 # Unit Tests - Group Comparison Plot
 # =============================================================================
+
 
 class TestGroupComparisonPlot:
     """Tests for plot_group_comparison function."""
@@ -152,12 +145,7 @@ class TestGroupComparisonPlot:
         """Test basic boxplot."""
         import matplotlib.pyplot as plt
 
-        fig = plot_group_comparison(
-            data=two_group_df,
-            x='group',
-            y='value',
-            plot_type='boxplot'
-        )
+        fig = plot_group_comparison(data=two_group_df, x="group", y="value", plot_type="boxplot")
 
         assert fig is not None
         assert len(fig.axes) >= 1
@@ -168,12 +156,7 @@ class TestGroupComparisonPlot:
         """Test violin plot."""
         import matplotlib.pyplot as plt
 
-        fig = plot_group_comparison(
-            data=two_group_df,
-            x='group',
-            y='value',
-            plot_type='violin'
-        )
+        fig = plot_group_comparison(data=two_group_df, x="group", y="value", plot_type="violin")
 
         assert fig is not None
 
@@ -183,12 +166,7 @@ class TestGroupComparisonPlot:
         """Test bar plot."""
         import matplotlib.pyplot as plt
 
-        fig = plot_group_comparison(
-            data=two_group_df,
-            x='group',
-            y='value',
-            plot_type='bar'
-        )
+        fig = plot_group_comparison(data=two_group_df, x="group", y="value", plot_type="bar")
 
         assert fig is not None
 
@@ -198,12 +176,7 @@ class TestGroupComparisonPlot:
         """Test strip plot."""
         import matplotlib.pyplot as plt
 
-        fig = plot_group_comparison(
-            data=two_group_df,
-            x='group',
-            y='value',
-            plot_type='strip'
-        )
+        fig = plot_group_comparison(data=two_group_df, x="group", y="value", plot_type="strip")
 
         assert fig is not None
 
@@ -213,13 +186,7 @@ class TestGroupComparisonPlot:
         """Test with pre-computed p-values."""
         import matplotlib.pyplot as plt
 
-        fig = plot_group_comparison(
-            data=two_group_df,
-            x='group',
-            y='value',
-            pairs=[('A', 'B')],
-            p_values=[0.005]
-        )
+        fig = plot_group_comparison(data=two_group_df, x="group", y="value", pairs=[("A", "B")], p_values=[0.005])
 
         assert fig is not None
 
@@ -229,12 +196,7 @@ class TestGroupComparisonPlot:
         """Test with multiple groups."""
         import matplotlib.pyplot as plt
 
-        fig = plot_group_comparison(
-            data=multi_group_df,
-            x='group',
-            y='value',
-            plot_type='boxplot'
-        )
+        fig = plot_group_comparison(data=multi_group_df, x="group", y="value", plot_type="boxplot")
 
         assert fig is not None
 
@@ -245,16 +207,11 @@ class TestGroupComparisonPlot:
         import matplotlib.pyplot as plt
 
         data = {
-            'Group A': np.random.normal(10, 2, 30),
-            'Group B': np.random.normal(12, 2, 30),
+            "Group A": np.random.normal(10, 2, 30),
+            "Group B": np.random.normal(12, 2, 30),
         }
 
-        fig = plot_group_comparison(
-            data=data,
-            x='group',
-            y='value',
-            plot_type='boxplot'
-        )
+        fig = plot_group_comparison(data=data, x="group", y="value", plot_type="boxplot")
 
         assert fig is not None
 
@@ -265,19 +222,14 @@ class TestGroupComparisonPlot:
         import matplotlib.pyplot as plt
 
         fig = plot_group_comparison(
-            data=two_group_df,
-            x='group',
-            y='value',
-            title='Custom Title',
-            xlabel='Treatment',
-            ylabel='Outcome Value'
+            data=two_group_df, x="group", y="value", title="Custom Title", xlabel="Treatment", ylabel="Outcome Value"
         )
 
         assert fig is not None
         ax = fig.axes[0]
-        assert ax.get_title() == 'Custom Title'
-        assert ax.get_xlabel() == 'Treatment'
-        assert ax.get_ylabel() == 'Outcome Value'
+        assert ax.get_title() == "Custom Title"
+        assert ax.get_xlabel() == "Treatment"
+        assert ax.get_ylabel() == "Outcome Value"
 
         plt.close(fig)
 
@@ -285,6 +237,7 @@ class TestGroupComparisonPlot:
 # =============================================================================
 # Unit Tests - ANOVA Results Plot
 # =============================================================================
+
 
 class TestANOVAResultsPlot:
     """Tests for plot_anova_results function."""
@@ -303,10 +256,7 @@ class TestANOVAResultsPlot:
         """Test with statistical test annotation."""
         import matplotlib.pyplot as plt
 
-        fig = plot_anova_results(
-            group_stats,
-            test_result=test_result_anova
-        )
+        fig = plot_anova_results(group_stats, test_result=test_result_anova)
 
         assert fig is not None
 
@@ -316,11 +266,7 @@ class TestANOVAResultsPlot:
         """Test with post-hoc annotations."""
         import matplotlib.pyplot as plt
 
-        fig = plot_anova_results(
-            group_stats,
-            test_result=test_result_anova,
-            post_hoc=post_hoc_results
-        )
+        fig = plot_anova_results(group_stats, test_result=test_result_anova, post_hoc=post_hoc_results)
 
         assert fig is not None
 
@@ -330,10 +276,7 @@ class TestANOVAResultsPlot:
         """Test with custom title."""
         import matplotlib.pyplot as plt
 
-        fig = plot_anova_results(
-            group_stats,
-            title="Treatment Effect Analysis"
-        )
+        fig = plot_anova_results(group_stats, title="Treatment Effect Analysis")
 
         assert fig is not None
         ax = fig.axes[0]
@@ -345,6 +288,7 @@ class TestANOVAResultsPlot:
 # =============================================================================
 # Unit Tests - Contingency Heatmap
 # =============================================================================
+
 
 class TestContingencyHeatmap:
     """Tests for plot_contingency_heatmap function."""
@@ -363,10 +307,7 @@ class TestContingencyHeatmap:
         """Test with chi-square annotation."""
         import matplotlib.pyplot as plt
 
-        fig = plot_contingency_heatmap(
-            contingency_table,
-            test_result=test_result_chisquare
-        )
+        fig = plot_contingency_heatmap(contingency_table, test_result=test_result_chisquare)
 
         assert fig is not None
 
@@ -378,11 +319,7 @@ class TestContingencyHeatmap:
 
         arr = np.array([[40, 25], [15, 30]])
 
-        fig = plot_contingency_heatmap(
-            arr,
-            row_labels=['Drug', 'Placebo'],
-            col_labels=['Improved', 'Not Improved']
-        )
+        fig = plot_contingency_heatmap(arr, row_labels=["Drug", "Placebo"], col_labels=["Improved", "Not Improved"])
 
         assert fig is not None
 
@@ -392,10 +329,7 @@ class TestContingencyHeatmap:
         """Test without percentages."""
         import matplotlib.pyplot as plt
 
-        fig = plot_contingency_heatmap(
-            contingency_table,
-            show_percentages=False
-        )
+        fig = plot_contingency_heatmap(contingency_table, show_percentages=False)
 
         assert fig is not None
 
@@ -406,6 +340,7 @@ class TestContingencyHeatmap:
 # Unit Tests - Categorical Comparison
 # =============================================================================
 
+
 class TestCategoricalComparison:
     """Tests for plot_categorical_comparison function."""
 
@@ -413,11 +348,7 @@ class TestCategoricalComparison:
         """Test basic categorical comparison."""
         import matplotlib.pyplot as plt
 
-        fig = plot_categorical_comparison(
-            categorical_df,
-            x='outcome',
-            hue='treatment'
-        )
+        fig = plot_categorical_comparison(categorical_df, x="outcome", hue="treatment")
 
         assert fig is not None
 
@@ -428,10 +359,7 @@ class TestCategoricalComparison:
         import matplotlib.pyplot as plt
 
         fig = plot_categorical_comparison(
-            categorical_df,
-            x='outcome',
-            hue='treatment',
-            test_result=test_result_chisquare
+            categorical_df, x="outcome", hue="treatment", test_result=test_result_chisquare
         )
 
         assert fig is not None
@@ -442,12 +370,7 @@ class TestCategoricalComparison:
         """Test without normalization."""
         import matplotlib.pyplot as plt
 
-        fig = plot_categorical_comparison(
-            categorical_df,
-            x='outcome',
-            hue='treatment',
-            normalize=None
-        )
+        fig = plot_categorical_comparison(categorical_df, x="outcome", hue="treatment", normalize=None)
 
         assert fig is not None
 
@@ -457,6 +380,7 @@ class TestCategoricalComparison:
 # =============================================================================
 # Unit Tests - Correlation Heatmap
 # =============================================================================
+
 
 class TestCorrelationHeatmap:
     """Tests for plot_correlation_heatmap function."""
@@ -475,10 +399,7 @@ class TestCorrelationHeatmap:
         """Test without upper triangle mask."""
         import matplotlib.pyplot as plt
 
-        fig = plot_correlation_heatmap(
-            correlation_matrix,
-            mask_upper=False
-        )
+        fig = plot_correlation_heatmap(correlation_matrix, mask_upper=False)
 
         assert fig is not None
 
@@ -488,10 +409,7 @@ class TestCorrelationHeatmap:
         """Test without value annotations."""
         import matplotlib.pyplot as plt
 
-        fig = plot_correlation_heatmap(
-            correlation_matrix,
-            annot=False
-        )
+        fig = plot_correlation_heatmap(correlation_matrix, annot=False)
 
         assert fig is not None
 
@@ -504,10 +422,7 @@ class TestCorrelationHeatmap:
         np.random.seed(42)
         arr = np.corrcoef(np.random.randn(5, 50))
 
-        fig = plot_correlation_heatmap(
-            arr,
-            labels=['A', 'B', 'C', 'D', 'E']
-        )
+        fig = plot_correlation_heatmap(arr, labels=["A", "B", "C", "D", "E"])
 
         assert fig is not None
 
@@ -517,6 +432,7 @@ class TestCorrelationHeatmap:
 # =============================================================================
 # Unit Tests - T-Test Result
 # =============================================================================
+
 
 class TestTTestResult:
     """Tests for plot_ttest_result function."""
@@ -543,12 +459,7 @@ class TestTTestResult:
         g1 = np.random.normal(10, 2, 30)
         g2 = np.random.normal(12, 2, 30)
 
-        fig = plot_ttest_result(
-            g1, g2,
-            group1_name='Control',
-            group2_name='Treatment',
-            test_result=test_result_ttest
-        )
+        fig = plot_ttest_result(g1, g2, group1_name="Control", group2_name="Treatment", test_result=test_result_ttest)
 
         assert fig is not None
 
@@ -562,10 +473,7 @@ class TestTTestResult:
         g1 = np.random.normal(10, 2, 30)
         g2 = np.random.normal(12, 2, 30)
 
-        fig = plot_ttest_result(
-            g1, g2,
-            plot_type='violin'
-        )
+        fig = plot_ttest_result(g1, g2, plot_type="violin")
 
         assert fig is not None
 
@@ -576,29 +484,27 @@ class TestTTestResult:
 # Integration Tests
 # =============================================================================
 
+
 class TestCreateGroupComparisonVisualizations:
     """Tests for high-level visualization creation."""
 
-    @patch('visualization.group_comparison.save_figure_to_minio')
+    @patch("visualization.group_comparison.save_figure_to_minio")
     def test_ttest_result(self, mock_save):
         """Test visualization from t-test comparison result."""
         mock_save.return_value = "https://minio.example.com/test.png"
 
         comparison_result = {
-            'main_test': {
-                'test_name': 'Independent t-test',
-                'statistic': 2.85,
-                'p_value': 0.005,
-                'interpretation': 'Significant',
-                'details': {
-                    'effect_size': 0.65,
-                    'effect_size_name': "Cohen's d"
-                }
+            "main_test": {
+                "test_name": "Independent t-test",
+                "statistic": 2.85,
+                "p_value": 0.005,
+                "interpretation": "Significant",
+                "details": {"effect_size": 0.65, "effect_size_name": "Cohen's d"},
             },
-            'group_statistics': {
-                'Control': {'mean': 10.5, 'std': 2.1, 'n': 30},
-                'Treatment': {'mean': 12.8, 'std': 2.3, 'n': 30},
-            }
+            "group_statistics": {
+                "Control": {"mean": 10.5, "std": 2.1, "n": 30},
+                "Treatment": {"mean": 12.8, "std": 2.3, "n": 30},
+            },
         }
 
         results = create_group_comparison_visualizations(
@@ -610,31 +516,28 @@ class TestCreateGroupComparisonVisualizations:
 
         assert len(results) >= 1
 
-    @patch('visualization.group_comparison.save_figure_to_minio')
+    @patch("visualization.group_comparison.save_figure_to_minio")
     def test_anova_result(self, mock_save):
         """Test visualization from ANOVA comparison result."""
         mock_save.return_value = "https://minio.example.com/test.png"
 
         comparison_result = {
-            'main_test': {
-                'test_name': 'One-way ANOVA',
-                'statistic': 15.32,
-                'p_value': 0.0001,
-                'interpretation': 'Significant',
-                'details': {
-                    'effect_size': 0.18,
-                    'effect_size_name': "η²"
-                }
+            "main_test": {
+                "test_name": "One-way ANOVA",
+                "statistic": 15.32,
+                "p_value": 0.0001,
+                "interpretation": "Significant",
+                "details": {"effect_size": 0.18, "effect_size_name": "η²"},
             },
-            'group_statistics': {
-                'Control': {'mean': 10.5, 'std': 2.1, 'n': 30},
-                'Treatment A': {'mean': 12.8, 'std': 2.3, 'n': 28},
-                'Treatment B': {'mean': 15.2, 'std': 2.0, 'n': 32},
+            "group_statistics": {
+                "Control": {"mean": 10.5, "std": 2.1, "n": 30},
+                "Treatment A": {"mean": 12.8, "std": 2.3, "n": 28},
+                "Treatment B": {"mean": 15.2, "std": 2.0, "n": 32},
             },
-            'post_hoc': [
-                {'group1': 'Control', 'group2': 'Treatment A', 'p_value': 0.02},
-                {'group1': 'Control', 'group2': 'Treatment B', 'p_value': 0.001},
-            ]
+            "post_hoc": [
+                {"group1": "Control", "group2": "Treatment A", "p_value": 0.02},
+                {"group1": "Control", "group2": "Treatment B", "p_value": 0.001},
+            ],
         }
 
         results = create_group_comparison_visualizations(

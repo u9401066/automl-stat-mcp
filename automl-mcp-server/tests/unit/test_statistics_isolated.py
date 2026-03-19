@@ -110,17 +110,19 @@ class TestCorrelationAnalysis:
 
     def test_correlation_matrix(self):
         """Test correlation matrix calculation"""
-        df = pd.DataFrame({
-            'a': [1, 2, 3, 4, 5],
-            'b': [2, 4, 6, 8, 10],  # Perfect with a
-            'c': [5, 4, 3, 2, 1]   # Perfect negative with a
-        })
+        df = pd.DataFrame(
+            {
+                "a": [1, 2, 3, 4, 5],
+                "b": [2, 4, 6, 8, 10],  # Perfect with a
+                "c": [5, 4, 3, 2, 1],  # Perfect negative with a
+            }
+        )
 
         corr_matrix = df.corr()
 
-        assert abs(corr_matrix.loc['a', 'b'] - 1.0) < 0.0001
-        assert abs(corr_matrix.loc['a', 'c'] - (-1.0)) < 0.0001
-        assert abs(corr_matrix.loc['b', 'c'] - (-1.0)) < 0.0001
+        assert abs(corr_matrix.loc["a", "b"] - 1.0) < 0.0001
+        assert abs(corr_matrix.loc["a", "c"] - (-1.0)) < 0.0001
+        assert abs(corr_matrix.loc["b", "c"] - (-1.0)) < 0.0001
         print("✓ Correlation matrix calculation")
 
 
@@ -193,7 +195,7 @@ class TestGroupComparisons:
         group1 = [1, 2, 3, 4, 5]
         group2 = [6, 7, 8, 9, 10]
 
-        stat, p = stats.mannwhitneyu(group1, group2, alternative='two-sided')
+        stat, p = stats.mannwhitneyu(group1, group2, alternative="two-sided")
         assert p < 0.05  # Significantly different distributions
         print("✓ Mann-Whitney U: significant difference")
 
@@ -225,10 +227,12 @@ class TestChiSquareTests:
     def test_chi_square_independence(self):
         """Test chi-square test of independence"""
         # Strong association
-        contingency = np.array([
-            [50, 10],  # Group A: mostly outcome 1
-            [10, 50]   # Group B: mostly outcome 2
-        ])
+        contingency = np.array(
+            [
+                [50, 10],  # Group A: mostly outcome 1
+                [10, 50],  # Group B: mostly outcome 2
+            ]
+        )
 
         chi2, p, dof, expected = stats.chi2_contingency(contingency)
         assert p < 0.001  # Strong association
@@ -237,10 +241,7 @@ class TestChiSquareTests:
 
     def test_chi_square_no_association(self):
         """Test chi-square with no association"""
-        contingency = np.array([
-            [25, 25],
-            [25, 25]
-        ])
+        contingency = np.array([[25, 25], [25, 25]])
 
         chi2, p, dof, expected = stats.chi2_contingency(contingency)
         assert p > 0.9  # No association
@@ -249,10 +250,7 @@ class TestChiSquareTests:
 
     def test_cramers_v(self):
         """Test Cramér's V effect size"""
-        contingency = np.array([
-            [50, 10],
-            [10, 50]
-        ])
+        contingency = np.array([[50, 10], [10, 50]])
 
         chi2, p, dof, expected = stats.chi2_contingency(contingency)
         n = contingency.sum()
@@ -278,7 +276,7 @@ class TestEffectSizes:
         var1 = group1.var(ddof=1)
         var2 = group2.var(ddof=1)
 
-        pooled_std = np.sqrt(((n1-1)*var1 + (n2-1)*var2) / (n1+n2-2))
+        pooled_std = np.sqrt(((n1 - 1) * var1 + (n2 - 1) * var2) / (n1 + n2 - 2))
         cohens_d = (mean1 - mean2) / pooled_std
 
         assert abs(cohens_d) > 2.0  # Very large effect
@@ -286,6 +284,7 @@ class TestEffectSizes:
 
     def test_effect_size_interpretation(self):
         """Test effect size interpretation"""
+
         def interpret_cohens_d(d):
             d = abs(d)
             if d < 0.2:
@@ -315,9 +314,9 @@ class TestRegressionAnalysis:
         slope, intercept, r, p, se = stats.linregress(x, y)
 
         assert abs(slope - 2.0) < 0.1  # Slope ≈ 2
-        assert abs(intercept) < 0.5    # Intercept ≈ 0
-        assert r > 0.99                # High correlation
-        assert p < 0.001               # Significant
+        assert abs(intercept) < 0.5  # Intercept ≈ 0
+        assert r > 0.99  # High correlation
+        assert p < 0.001  # Significant
         print(f"✓ Linear regression: y = {slope:.2f}x + {intercept:.2f}, R²={r**2:.3f}")
 
     def test_r_squared(self):
@@ -326,7 +325,7 @@ class TestRegressionAnalysis:
         y = np.array([2, 4, 6, 8, 10])  # Perfect linear
 
         slope, intercept, r, p, se = stats.linregress(x, y)
-        r_squared = r ** 2
+        r_squared = r**2
 
         assert abs(r_squared - 1.0) < 0.0001  # Perfect fit
         print(f"✓ R² = {r_squared:.4f}")
@@ -374,7 +373,7 @@ class TestConfidenceIntervals:
 
         mean = np.mean(data)
         sem = stats.sem(data)
-        ci = stats.t.interval(0.95, len(data)-1, loc=mean, scale=sem)
+        ci = stats.t.interval(0.95, len(data) - 1, loc=mean, scale=sem)
 
         assert ci[0] < mean < ci[1]  # Mean is in CI
         assert 100 > ci[0] and 100 < ci[1]  # True mean in CI
@@ -389,8 +388,8 @@ class TestConfidenceIntervals:
 
         # Normal approximation
         z = 1.96
-        se = np.sqrt(p * (1-p) / total)
-        ci = (p - z*se, p + z*se)
+        se = np.sqrt(p * (1 - p) / total)
+        ci = (p - z * se, p + z * se)
 
         assert 0.65 < ci[0] < p
         assert p < ci[1] < 0.85
@@ -421,7 +420,7 @@ def run_all_tests():
         print("-" * 40)
 
         # Get all test methods
-        test_methods = [m for m in dir(test_class) if m.startswith('test_')]
+        test_methods = [m for m in dir(test_class) if m.startswith("test_")]
 
         for method_name in test_methods:
             try:

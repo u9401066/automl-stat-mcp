@@ -24,7 +24,7 @@ if [[ "$1" == "--isolated" || "$1" == "-i" ]]; then
     echo "Running ALL isolated tests (no Docker required)"
     echo "=============================================="
     echo ""
-    
+
     # Find and run all isolated test files
     ISOLATED_TESTS=(
         "tests/unit/test_result_storage_isolated.py"
@@ -43,10 +43,10 @@ if [[ "$1" == "--isolated" || "$1" == "-i" ]]; then
         "tests/unit/test_smart_tools_isolated.py"
         "tests/unit/test_orchestration_isolated.py"
     )
-    
+
     PASSED=0
     FAILED=0
-    
+
     for test_file in "${ISOLATED_TESTS[@]}"; do
         if [[ -f "$test_file" ]]; then
             echo ">>> Running: $test_file"
@@ -58,11 +58,11 @@ if [[ "$1" == "--isolated" || "$1" == "-i" ]]; then
             echo ""
         fi
     done
-    
+
     echo "=============================================="
     echo "Summary: $PASSED passed, $FAILED failed"
     echo "=============================================="
-    
+
     if [[ $FAILED -gt 0 ]]; then
         exit 1
     fi

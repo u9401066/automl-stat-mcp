@@ -3,6 +3,7 @@ Isolated tests for data validation utilities.
 
 Tests the DataValidator class and related data quality checks.
 """
+
 import re
 from dataclasses import dataclass, field
 from enum import Enum
@@ -14,6 +15,7 @@ import pandas as pd
 # ==============================================================================
 # Copied enums and dataclasses for isolated testing
 # ==============================================================================
+
 
 class IssueSeverity(str, Enum):
     CRITICAL = "critical"
@@ -51,17 +53,18 @@ class DataIssue:
 # Tests
 # ==============================================================================
 
+
 class TestPIIDetection:
     """Test PII pattern detection"""
 
     # PII patterns
     PII_PATTERNS = {
-        "email": r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',
-        "phone": r'\b(?:\+?1[-.\s]?)?\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}\b',
-        "ssn": r'\b\d{3}[-\s]?\d{2}[-\s]?\d{4}\b',
-        "credit_card": r'\b(?:\d{4}[-\s]?){3}\d{4}\b',
-        "tw_id": r'\b[A-Z][12]\d{8}\b',
-        "ip_address": r'\b(?:\d{1,3}\.){3}\d{1,3}\b',
+        "email": r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b",
+        "phone": r"\b(?:\+?1[-.\s]?)?\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}\b",
+        "ssn": r"\b\d{3}[-\s]?\d{2}[-\s]?\d{4}\b",
+        "credit_card": r"\b(?:\d{4}[-\s]?){3}\d{4}\b",
+        "tw_id": r"\b[A-Z][12]\d{8}\b",
+        "ip_address": r"\b(?:\d{1,3}\.){3}\d{1,3}\b",
     }
 
     def _detect_pii(self, value: str) -> List[str]:
@@ -143,8 +146,8 @@ class TestPIIDetection:
     def test_taiwan_id_detection(self):
         """Test Taiwan ID pattern detection"""
         test_cases = [
-            ("A123456789", True),   # Male ID (1 = male)
-            ("B223456789", True),   # Female ID (2 = female)
+            ("A123456789", True),  # Male ID (1 = male)
+            ("B223456789", True),  # Female ID (2 = female)
             ("A323456789", False),  # Invalid second digit (must be 1 or 2)
             ("12345678901", False),  # No letter
         ]
@@ -177,19 +180,38 @@ class TestPIIColumnNames:
     """Test PII detection in column names"""
 
     PII_COLUMN_PATTERNS = [
-        r'(?i)^name$', r'(?i).*_name$', r'(?i)^.*name_.*',
-        r'(?i).*fullname.*', r'(?i).*first.*name.*', r'(?i).*last.*name.*',
-        r'(?i)^姓名$', r'(?i).*姓名.*',
-        r'(?i).*email.*', r'(?i).*e-mail.*',
-        r'(?i).*phone.*', r'(?i).*mobile.*', r'(?i).*cell.*',
-        r'(?i).*ssn.*', r'(?i).*social.*security.*',
-        r'(?i).*credit.*card.*', r'(?i).*card.*number.*',
-        r'(?i).*address.*', r'(?i).*addr.*',
-        r'(?i).*passport.*', r'(?i).*license.*',
-        r'(?i).*身分證.*', r'(?i).*電話.*', r'(?i).*地址.*',
-        r'(?i).*password.*', r'(?i).*secret.*', r'(?i).*token.*',
-        r'(?i).*birthday.*', r'(?i).*birth.*date.*', r'(?i).*dob.*',
-        r'(?i).*生日.*', r'(?i).*出生.*',
+        r"(?i)^name$",
+        r"(?i).*_name$",
+        r"(?i)^.*name_.*",
+        r"(?i).*fullname.*",
+        r"(?i).*first.*name.*",
+        r"(?i).*last.*name.*",
+        r"(?i)^姓名$",
+        r"(?i).*姓名.*",
+        r"(?i).*email.*",
+        r"(?i).*e-mail.*",
+        r"(?i).*phone.*",
+        r"(?i).*mobile.*",
+        r"(?i).*cell.*",
+        r"(?i).*ssn.*",
+        r"(?i).*social.*security.*",
+        r"(?i).*credit.*card.*",
+        r"(?i).*card.*number.*",
+        r"(?i).*address.*",
+        r"(?i).*addr.*",
+        r"(?i).*passport.*",
+        r"(?i).*license.*",
+        r"(?i).*身分證.*",
+        r"(?i).*電話.*",
+        r"(?i).*地址.*",
+        r"(?i).*password.*",
+        r"(?i).*secret.*",
+        r"(?i).*token.*",
+        r"(?i).*birthday.*",
+        r"(?i).*birth.*date.*",
+        r"(?i).*dob.*",
+        r"(?i).*生日.*",
+        r"(?i).*出生.*",
     ]
 
     def _is_pii_column(self, col_name: str) -> bool:
@@ -246,34 +268,38 @@ class TestMissingValueDetection:
 
     def test_missing_ratio_calculation(self):
         """Test missing value ratio calculation"""
-        df = pd.DataFrame({
-            'no_missing': [1, 2, 3, 4, 5],
-            'some_missing': [1, None, 3, None, 5],
-            'all_missing': [None, None, None, None, None],
-        })
+        df = pd.DataFrame(
+            {
+                "no_missing": [1, 2, 3, 4, 5],
+                "some_missing": [1, None, 3, None, 5],
+                "all_missing": [None, None, None, None, None],
+            }
+        )
 
         ratios = df.isnull().mean()
 
-        assert ratios['no_missing'] == 0.0
-        assert ratios['some_missing'] == 0.4
-        assert ratios['all_missing'] == 1.0
+        assert ratios["no_missing"] == 0.0
+        assert ratios["some_missing"] == 0.4
+        assert ratios["all_missing"] == 1.0
         print("✓ Missing ratio calculation")
 
     def test_high_missing_threshold(self):
         """Test high missing value threshold detection"""
         threshold = 0.2
 
-        df = pd.DataFrame({
-            'ok': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-            'borderline': [1, 2, None, 4, 5, 6, 7, 8, 9, 10],  # 10%
-            'high': [1, None, None, None, 5, 6, 7, 8, 9, 10],  # 30%
-        })
+        df = pd.DataFrame(
+            {
+                "ok": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                "borderline": [1, 2, None, 4, 5, 6, 7, 8, 9, 10],  # 10%
+                "high": [1, None, None, None, 5, 6, 7, 8, 9, 10],  # 30%
+            }
+        )
 
         high_missing_cols = [col for col in df.columns if df[col].isnull().mean() > threshold]
 
-        assert 'ok' not in high_missing_cols
-        assert 'borderline' not in high_missing_cols
-        assert 'high' in high_missing_cols
+        assert "ok" not in high_missing_cols
+        assert "borderline" not in high_missing_cols
+        assert "high" in high_missing_cols
         print("✓ High missing threshold")
 
 
@@ -317,9 +343,14 @@ class TestIDColumnDetection:
     """Test ID column detection"""
 
     ID_PATTERNS = [
-        r'(?i)^id$', r'(?i).*_id$', r'(?i)^.*id_.*',
-        r'(?i)^index$', r'(?i)^row.*', r'(?i)^record.*',
-        r'(?i)^key$', r'(?i).*_key$',
+        r"(?i)^id$",
+        r"(?i).*_id$",
+        r"(?i)^.*id_.*",
+        r"(?i)^index$",
+        r"(?i)^row.*",
+        r"(?i)^record.*",
+        r"(?i)^key$",
+        r"(?i).*_key$",
     ]
 
     def _is_id_column(self, col_name: str) -> bool:
@@ -331,7 +362,18 @@ class TestIDColumnDetection:
 
     def test_id_column_patterns(self):
         """Test ID column name patterns"""
-        id_cols = ["id", "ID", "user_id", "customer_id", "id_number", "index", "row_num", "record_id", "key", "primary_key"]
+        id_cols = [
+            "id",
+            "ID",
+            "user_id",
+            "customer_id",
+            "id_number",
+            "index",
+            "row_num",
+            "record_id",
+            "key",
+            "primary_key",
+        ]
         non_id_cols = ["identity", "idea", "video", "keyword"]
 
         for col in id_cols:
@@ -345,11 +387,13 @@ class TestIDColumnDetection:
 
     def test_sequential_id_detection(self):
         """Test sequential ID detection by values"""
-        df = pd.DataFrame({
-            'sequential': [1, 2, 3, 4, 5],
-            'non_sequential': [1, 3, 7, 8, 15],
-            'repeated': [1, 1, 2, 2, 3],
-        })
+        df = pd.DataFrame(
+            {
+                "sequential": [1, 2, 3, 4, 5],
+                "non_sequential": [1, 3, 7, 8, 15],
+                "repeated": [1, 1, 2, 2, 3],
+            }
+        )
 
         # Check if column is sequential (all unique, increasing by 1)
         def is_sequential(col):
@@ -362,9 +406,9 @@ class TestIDColumnDetection:
             diffs = np.diff(sorted_vals)
             return np.all(diffs == 1)
 
-        assert is_sequential(df['sequential'])
-        assert not is_sequential(df['non_sequential'])
-        assert not is_sequential(df['repeated'])
+        assert is_sequential(df["sequential"])
+        assert not is_sequential(df["non_sequential"])
+        assert not is_sequential(df["repeated"])
         print("✓ Sequential ID detection")
 
 
@@ -373,17 +417,19 @@ class TestConstantColumnDetection:
 
     def test_constant_column(self):
         """Test detection of constant columns"""
-        df = pd.DataFrame({
-            'constant': [1, 1, 1, 1, 1],
-            'varied': [1, 2, 3, 4, 5],
-            'almost_constant': [1, 1, 1, 1, 2],
-        })
+        df = pd.DataFrame(
+            {
+                "constant": [1, 1, 1, 1, 1],
+                "varied": [1, 2, 3, 4, 5],
+                "almost_constant": [1, 1, 1, 1, 2],
+            }
+        )
 
         constant_cols = [col for col in df.columns if df[col].nunique() == 1]
 
-        assert 'constant' in constant_cols
-        assert 'varied' not in constant_cols
-        assert 'almost_constant' not in constant_cols
+        assert "constant" in constant_cols
+        assert "varied" not in constant_cols
+        assert "almost_constant" not in constant_cols
         print("✓ Constant column detection")
 
 
@@ -392,10 +438,12 @@ class TestDuplicateDetection:
 
     def test_duplicate_rows(self):
         """Test duplicate row detection"""
-        df = pd.DataFrame({
-            'a': [1, 2, 1, 3, 2],
-            'b': ['x', 'y', 'x', 'z', 'y'],
-        })
+        df = pd.DataFrame(
+            {
+                "a": [1, 2, 1, 3, 2],
+                "b": ["x", "y", "x", "z", "y"],
+            }
+        )
 
         n_duplicates = df.duplicated().sum()
 
@@ -404,16 +452,18 @@ class TestDuplicateDetection:
 
     def test_duplicate_subset(self):
         """Test duplicate detection on column subset"""
-        df = pd.DataFrame({
-            'id': [1, 2, 3, 4, 5],
-            'category': ['A', 'B', 'A', 'B', 'A'],
-        })
+        df = pd.DataFrame(
+            {
+                "id": [1, 2, 3, 4, 5],
+                "category": ["A", "B", "A", "B", "A"],
+            }
+        )
 
         # No full duplicates
         assert df.duplicated().sum() == 0
 
         # But category has duplicates: A appears 3 times (2 extra), B appears 2 times (1 extra)
-        assert df['category'].duplicated().sum() == 3  # 2 extra A + 1 extra B
+        assert df["category"].duplicated().sum() == 3  # 2 extra A + 1 extra B
         print("✓ Duplicate subset detection")
 
 
@@ -422,11 +472,9 @@ class TestClassImbalanceDetection:
 
     def test_balanced_classes(self):
         """Test balanced class detection"""
-        df = pd.DataFrame({
-            'label': ['A'] * 50 + ['B'] * 50
-        })
+        df = pd.DataFrame({"label": ["A"] * 50 + ["B"] * 50})
 
-        value_counts = df['label'].value_counts(normalize=True)
+        value_counts = df["label"].value_counts(normalize=True)
         min_ratio = value_counts.min()
 
         assert min_ratio >= 0.3  # Balanced (each class >= 30%)
@@ -434,11 +482,9 @@ class TestClassImbalanceDetection:
 
     def test_imbalanced_classes(self):
         """Test imbalanced class detection"""
-        df = pd.DataFrame({
-            'label': ['A'] * 95 + ['B'] * 5
-        })
+        df = pd.DataFrame({"label": ["A"] * 95 + ["B"] * 5})
 
-        value_counts = df['label'].value_counts(normalize=True)
+        value_counts = df["label"].value_counts(normalize=True)
         min_ratio = value_counts.min()
 
         assert min_ratio < 0.1  # Imbalanced (minority < 10%)
@@ -446,16 +492,14 @@ class TestClassImbalanceDetection:
 
     def test_multiclass_imbalance(self):
         """Test multiclass imbalance"""
-        df = pd.DataFrame({
-            'label': ['A'] * 80 + ['B'] * 15 + ['C'] * 5
-        })
+        df = pd.DataFrame({"label": ["A"] * 80 + ["B"] * 15 + ["C"] * 5})
 
-        value_counts = df['label'].value_counts(normalize=True)
+        value_counts = df["label"].value_counts(normalize=True)
 
         # Check distribution
-        assert value_counts['A'] == 0.8
-        assert value_counts['B'] == 0.15
-        assert value_counts['C'] == 0.05
+        assert value_counts["A"] == 0.8
+        assert value_counts["B"] == 0.15
+        assert value_counts["C"] == 0.05
         print("✓ Multiclass imbalance detection")
 
 
@@ -465,11 +509,13 @@ class TestHighCardinalityDetection:
     def test_high_cardinality(self):
         """Test high cardinality detection"""
         n = 100
-        df = pd.DataFrame({
-            'low_card': ['A', 'B'] * 50,  # 2 unique
-            'med_card': list(range(10)) * 10,  # 10 unique
-            'high_card': list(range(n)),  # 100 unique (all different)
-        })
+        df = pd.DataFrame(
+            {
+                "low_card": ["A", "B"] * 50,  # 2 unique
+                "med_card": list(range(10)) * 10,  # 10 unique
+                "high_card": list(range(n)),  # 100 unique (all different)
+            }
+        )
 
         threshold = 0.9  # >90% unique values = high cardinality
 
@@ -479,9 +525,9 @@ class TestHighCardinalityDetection:
             if ratio > threshold:
                 high_card_cols.append(col)
 
-        assert 'low_card' not in high_card_cols
-        assert 'med_card' not in high_card_cols
-        assert 'high_card' in high_card_cols
+        assert "low_card" not in high_card_cols
+        assert "med_card" not in high_card_cols
+        assert "high_card" in high_card_cols
         print("✓ High cardinality detection")
 
 
@@ -508,7 +554,7 @@ def run_all_tests():
         print(f"\n{class_name}:")
         print("-" * 40)
 
-        test_methods = [m for m in dir(test_class) if m.startswith('test_')]
+        test_methods = [m for m in dir(test_class) if m.startswith("test_")]
 
         for method_name in test_methods:
             try:

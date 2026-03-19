@@ -11,6 +11,7 @@ Usage:
     pip install -r requirements-dev.txt
     python tests/test_local.py
 """
+
 import asyncio
 import os
 import sys
@@ -150,7 +151,7 @@ async def test_automl_flow():
         if model and model.leaderboard:
             print("\n   Leaderboard:")
             for i, entry in enumerate(model.leaderboard[:5]):
-                print(f"   {i+1}. {entry.model_name}: {entry.score:.4f}")
+                print(f"   {i + 1}. {entry.model_name}: {entry.score:.4f}")
 
         print("\n" + "=" * 60)
         print("TEST PASSED ✅")
@@ -169,6 +170,7 @@ if __name__ == "__main__":
     # Check if AutoGluon is installed
     try:
         import autogluon.tabular
+
         print(f"AutoGluon version: {autogluon.tabular.__version__}")
     except ImportError:
         print("ERROR: AutoGluon not installed!")

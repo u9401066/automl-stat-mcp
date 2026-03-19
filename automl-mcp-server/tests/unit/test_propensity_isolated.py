@@ -11,6 +11,7 @@ from scipy import stats
 # Tests
 # ==============================================================================
 
+
 class TestPropensityScoreEstimation:
     """Test propensity score calculation"""
 
@@ -95,7 +96,7 @@ class TestMatching:
 
         for i, ps_t in enumerate(ps_treated):
             best_j = None
-            best_dist = float('inf')
+            best_dist = float("inf")
 
             for j, ps_c in enumerate(ps_control):
                 if j not in used_controls:
@@ -206,10 +207,10 @@ class TestBalanceAssessment:
         np.random.seed(42)
 
         # Before matching (imbalanced)
-        smd_before = {'age': 0.35, 'male': 0.25, 'bmi': 0.40}
+        smd_before = {"age": 0.35, "male": 0.25, "bmi": 0.40}
 
         # After matching (balanced)
-        smd_after = {'age': 0.05, 'male': 0.03, 'bmi': 0.08}
+        smd_after = {"age": 0.05, "male": 0.03, "bmi": 0.08}
 
         # Verify improvement
         for var in smd_before:
@@ -226,13 +227,7 @@ class TestTreatmentEffectEstimation:
         np.random.seed(42)
 
         # Matched pairs: (treated outcome, control outcome)
-        matched_pairs = [
-            (10, 8),
-            (12, 9),
-            (15, 11),
-            (8, 7),
-            (11, 10)
-        ]
+        matched_pairs = [(10, 8), (12, 9), (15, 11), (8, 7), (11, 10)]
 
         # Pair differences
         differences = [t - c for t, c in matched_pairs]
@@ -338,8 +333,8 @@ class TestSubgroupAnalysis:
         np.random.seed(42)
 
         # Data with heterogeneous effects
-        subgroups = ['young', 'old']
-        effects = {'young': 3.0, 'old': 1.0}  # Effect modifier
+        subgroups = ["young", "old"]
+        effects = {"young": 3.0, "old": 1.0}  # Effect modifier
 
         results = {}
         for group in subgroups:
@@ -352,7 +347,7 @@ class TestSubgroupAnalysis:
             results[group] = ate
 
         # Heterogeneity: effects differ
-        assert abs(results['young'] - results['old']) > 1
+        assert abs(results["young"] - results["old"]) > 1
         print(f"✓ Subgroup effects: young={results['young']:.2f}, old={results['old']:.2f}")
 
     def test_interaction_test(self):
@@ -365,7 +360,7 @@ class TestSubgroupAnalysis:
         modifier = np.random.binomial(1, 0.5, n)  # Binary modifier
 
         # Outcome with interaction
-        y = 5 + 2*treatment + 1*modifier + 1.5*treatment*modifier + np.random.normal(0, 1, n)
+        y = 5 + 2 * treatment + 1 * modifier + 1.5 * treatment * modifier + np.random.normal(0, 1, n)
 
         # Estimate interaction (simple comparison)
         effect_mod0 = y[(treatment == 1) & (modifier == 0)].mean() - y[(treatment == 0) & (modifier == 0)].mean()
@@ -398,7 +393,7 @@ def run_all_tests():
         print(f"\n{class_name}:")
         print("-" * 40)
 
-        test_methods = [m for m in dir(test_class) if m.startswith('test_')]
+        test_methods = [m for m in dir(test_class) if m.startswith("test_")]
 
         for method_name in test_methods:
             try:

@@ -7,13 +7,14 @@ Tests cover:
 - Effect size conversions (Cohen's f, eta-squared, Cohen's w)
 - Convenience wrapper functions
 """
+
 import os
 import sys
 
 import numpy as np
 import pytest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from src.tasks.power_analysis import (
     # ANOVA
@@ -34,6 +35,7 @@ from src.tasks.power_analysis import (
 # =============================================================================
 # ANOVA Helper Function Tests
 # =============================================================================
+
 
 class TestANOVAHelperFunctions:
     """Tests for ANOVA effect size helper functions"""
@@ -89,6 +91,7 @@ class TestANOVAHelperFunctions:
 # ANOVA Sample Size Tests
 # =============================================================================
 
+
 class TestANOVASampleSize:
     """Tests for ANOVA sample size calculation"""
 
@@ -109,23 +112,15 @@ class TestANOVASampleSize:
 
     def test_small_effect_requires_larger_sample(self):
         """Test that small effects need larger samples"""
-        small = ANOVAPowerAnalysis.calculate_sample_size(
-            effect_size=0.10, k_groups=3, power=0.80
-        )
-        medium = ANOVAPowerAnalysis.calculate_sample_size(
-            effect_size=0.25, k_groups=3, power=0.80
-        )
+        small = ANOVAPowerAnalysis.calculate_sample_size(effect_size=0.10, k_groups=3, power=0.80)
+        medium = ANOVAPowerAnalysis.calculate_sample_size(effect_size=0.25, k_groups=3, power=0.80)
 
         assert small.n_per_group > medium.n_per_group
 
     def test_more_groups_needs_larger_sample(self):
         """Test that more groups require larger total sample"""
-        three = ANOVAPowerAnalysis.calculate_sample_size(
-            effect_size=0.25, k_groups=3, power=0.80
-        )
-        five = ANOVAPowerAnalysis.calculate_sample_size(
-            effect_size=0.25, k_groups=5, power=0.80
-        )
+        three = ANOVAPowerAnalysis.calculate_sample_size(effect_size=0.25, k_groups=3, power=0.80)
+        five = ANOVAPowerAnalysis.calculate_sample_size(effect_size=0.25, k_groups=5, power=0.80)
 
         assert five.total_n > three.total_n
 
@@ -155,9 +150,7 @@ class TestANOVASampleSize:
 
     def test_sensitivity_analysis_included(self):
         """Test that sensitivity analysis is generated"""
-        result = ANOVAPowerAnalysis.calculate_sample_size(
-            effect_size=0.25, k_groups=3, power=0.80
-        )
+        result = ANOVAPowerAnalysis.calculate_sample_size(effect_size=0.25, k_groups=3, power=0.80)
 
         assert result.sensitivity_analysis is not None
         assert "by_power_level" in result.sensitivity_analysis
@@ -165,18 +158,14 @@ class TestANOVASampleSize:
 
     def test_interpretation_generated(self):
         """Test that interpretation text is generated"""
-        result = ANOVAPowerAnalysis.calculate_sample_size(
-            effect_size=0.25, k_groups=3, power=0.80
-        )
+        result = ANOVAPowerAnalysis.calculate_sample_size(effect_size=0.25, k_groups=3, power=0.80)
 
         assert result.interpretation != ""
         assert "80%" in result.interpretation
 
     def test_to_dict_serialization(self):
         """Test result serialization"""
-        result = ANOVAPowerAnalysis.calculate_sample_size(
-            effect_size=0.25, k_groups=3, power=0.80
-        )
+        result = ANOVAPowerAnalysis.calculate_sample_size(effect_size=0.25, k_groups=3, power=0.80)
 
         d = result.to_dict()
         assert "results" in d
@@ -187,14 +176,16 @@ class TestANOVASampleSize:
         """Test validation of k_groups"""
         with pytest.raises(ValueError):
             ANOVAPowerAnalysis.calculate_sample_size(
-                effect_size=0.25, k_groups=1  # Need at least 2
+                effect_size=0.25,
+                k_groups=1,  # Need at least 2
             )
 
     def test_missing_effect_size_info(self):
         """Test error when no effect size information provided"""
         with pytest.raises(ValueError):
             ANOVAPowerAnalysis.calculate_sample_size(
-                k_groups=3, power=0.80
+                k_groups=3,
+                power=0.80,
                 # No effect_size, eta_squared, or group_means
             )
 
@@ -202,6 +193,7 @@ class TestANOVASampleSize:
 # =============================================================================
 # ANOVA Power Tests
 # =============================================================================
+
 
 class TestANOVAPower:
     """Tests for ANOVA power calculation"""
@@ -220,31 +212,21 @@ class TestANOVAPower:
 
     def test_power_increases_with_n(self):
         """Test that power increases with sample size"""
-        small = ANOVAPowerAnalysis.calculate_power(
-            n_per_group=20, effect_size=0.25, k_groups=3
-        )
-        large = ANOVAPowerAnalysis.calculate_power(
-            n_per_group=100, effect_size=0.25, k_groups=3
-        )
+        small = ANOVAPowerAnalysis.calculate_power(n_per_group=20, effect_size=0.25, k_groups=3)
+        large = ANOVAPowerAnalysis.calculate_power(n_per_group=100, effect_size=0.25, k_groups=3)
 
         assert large.power > small.power
 
     def test_power_increases_with_effect_size(self):
         """Test that power increases with effect size"""
-        small_effect = ANOVAPowerAnalysis.calculate_power(
-            n_per_group=50, effect_size=0.10, k_groups=3
-        )
-        large_effect = ANOVAPowerAnalysis.calculate_power(
-            n_per_group=50, effect_size=0.40, k_groups=3
-        )
+        small_effect = ANOVAPowerAnalysis.calculate_power(n_per_group=50, effect_size=0.10, k_groups=3)
+        large_effect = ANOVAPowerAnalysis.calculate_power(n_per_group=50, effect_size=0.40, k_groups=3)
 
         assert large_effect.power > small_effect.power
 
     def test_underpowered_recommendation(self):
         """Test that underpowered studies get recommendations"""
-        result = ANOVAPowerAnalysis.calculate_power(
-            n_per_group=10, effect_size=0.25, k_groups=3
-        )
+        result = ANOVAPowerAnalysis.calculate_power(n_per_group=10, effect_size=0.25, k_groups=3)
 
         # Should be underpowered and have recommendations
         assert result.power < 0.80
@@ -254,6 +236,7 @@ class TestANOVAPower:
 # =============================================================================
 # Chi-Square Helper Function Tests
 # =============================================================================
+
 
 class TestChiSquareHelperFunctions:
     """Tests for chi-square effect size functions"""
@@ -271,10 +254,7 @@ class TestChiSquareHelperFunctions:
 
     def test_effect_size_w_custom_expected(self):
         """Test with custom expected distribution"""
-        w = effect_size_w_from_proportions(
-            [0.30, 0.30, 0.20, 0.20],
-            [0.25, 0.25, 0.25, 0.25]
-        )
+        w = effect_size_w_from_proportions([0.30, 0.30, 0.20, 0.20], [0.25, 0.25, 0.25, 0.25])
         assert w > 0
 
     def test_cramers_v_from_table(self):
@@ -293,6 +273,7 @@ class TestChiSquareHelperFunctions:
 # =============================================================================
 # Chi-Square Sample Size Tests
 # =============================================================================
+
 
 class TestChiSquareSampleSize:
     """Tests for chi-square sample size calculation"""
@@ -325,23 +306,15 @@ class TestChiSquareSampleSize:
 
     def test_small_effect_requires_larger_sample(self):
         """Test that small effects need larger samples"""
-        small = ChiSquarePowerAnalysis.calculate_sample_size(
-            effect_size=0.1, n_bins=4, power=0.80
-        )
-        medium = ChiSquarePowerAnalysis.calculate_sample_size(
-            effect_size=0.3, n_bins=4, power=0.80
-        )
+        small = ChiSquarePowerAnalysis.calculate_sample_size(effect_size=0.1, n_bins=4, power=0.80)
+        medium = ChiSquarePowerAnalysis.calculate_sample_size(effect_size=0.3, n_bins=4, power=0.80)
 
         assert small.n > medium.n
 
     def test_more_df_needs_larger_sample(self):
         """Test that more df require larger samples"""
-        small_df = ChiSquarePowerAnalysis.calculate_sample_size(
-            effect_size=0.3, df=1, power=0.80
-        )
-        large_df = ChiSquarePowerAnalysis.calculate_sample_size(
-            effect_size=0.3, df=5, power=0.80
-        )
+        small_df = ChiSquarePowerAnalysis.calculate_sample_size(effect_size=0.3, df=1, power=0.80)
+        large_df = ChiSquarePowerAnalysis.calculate_sample_size(effect_size=0.3, df=5, power=0.80)
 
         assert large_df.n > small_df.n
 
@@ -359,9 +332,7 @@ class TestChiSquareSampleSize:
 
     def test_sensitivity_analysis_included(self):
         """Test sensitivity analysis generation"""
-        result = ChiSquarePowerAnalysis.calculate_sample_size(
-            effect_size=0.3, n_bins=4, power=0.80
-        )
+        result = ChiSquarePowerAnalysis.calculate_sample_size(effect_size=0.3, n_bins=4, power=0.80)
 
         assert result.sensitivity_analysis is not None
         assert "by_power_level" in result.sensitivity_analysis
@@ -370,6 +341,7 @@ class TestChiSquareSampleSize:
 # =============================================================================
 # Chi-Square Power Tests
 # =============================================================================
+
 
 class TestChiSquarePower:
     """Tests for chi-square power calculation"""
@@ -388,20 +360,14 @@ class TestChiSquarePower:
 
     def test_power_increases_with_n(self):
         """Test that power increases with sample size"""
-        small = ChiSquarePowerAnalysis.calculate_power(
-            n=50, effect_size=0.3, df=3
-        )
-        large = ChiSquarePowerAnalysis.calculate_power(
-            n=200, effect_size=0.3, df=3
-        )
+        small = ChiSquarePowerAnalysis.calculate_power(n=50, effect_size=0.3, df=3)
+        large = ChiSquarePowerAnalysis.calculate_power(n=200, effect_size=0.3, df=3)
 
         assert large.power > small.power
 
     def test_underpowered_recommendation(self):
         """Test recommendations for underpowered studies"""
-        result = ChiSquarePowerAnalysis.calculate_power(
-            n=30, effect_size=0.3, df=3
-        )
+        result = ChiSquarePowerAnalysis.calculate_power(n=30, effect_size=0.3, df=3)
 
         assert result.power < 0.80
         assert len(result.recommendations) > 0
@@ -410,6 +376,7 @@ class TestChiSquarePower:
 # =============================================================================
 # Convenience Function Tests
 # =============================================================================
+
 
 class TestConvenienceFunctions:
     """Tests for MCP-friendly wrapper functions"""
@@ -462,6 +429,7 @@ class TestConvenienceFunctions:
 # =============================================================================
 # Integration Tests
 # =============================================================================
+
 
 class TestIntegration:
     """Integration tests for sample size and power consistency"""

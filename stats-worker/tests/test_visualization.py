@@ -13,7 +13,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-sys.path.insert(0, '/home/eric/workspace251204/stats-worker/src')
+sys.path.insert(0, "/home/eric/workspace251204/stats-worker/src")
 
 from visualization.schemas import (
     GroupComparisonVisualizationResult,
@@ -36,6 +36,7 @@ from visualization.style import (
 # =============================================================================
 # Schema Tests
 # =============================================================================
+
 
 class TestVisualizationType:
     """Tests for VisualizationType enum."""
@@ -65,9 +66,7 @@ class TestVisualizationResult:
     def test_basic_creation(self):
         """Test basic result creation."""
         result = VisualizationResult(
-            type=VisualizationType.ROC_CURVE,
-            url="https://example.com/roc.png",
-            title="ROC Curve"
+            type=VisualizationType.ROC_CURVE, url="https://example.com/roc.png", title="ROC Curve"
         )
         assert result.type == VisualizationType.ROC_CURVE
         assert result.url == "https://example.com/roc.png"
@@ -84,7 +83,7 @@ class TestVisualizationResult:
             metadata={"auc": 0.85, "ci": [0.80, 0.90]},
             format="svg",
             width=800,
-            height=600
+            height=600,
         )
         assert result.description == "AUC = 0.85"
         assert result.metadata["auc"] == 0.85
@@ -97,7 +96,7 @@ class TestVisualizationResult:
             type=VisualizationType.BOXPLOT,
             url="https://example.com/boxplot.png",
             title="Group Comparison",
-            metadata={"p_value": 0.03}
+            metadata={"p_value": 0.03},
         )
         d = result.to_dict()
         assert d["type"] == "boxplot"
@@ -110,7 +109,7 @@ class TestVisualizationResult:
             "type": "kaplan_meier",
             "url": "https://example.com/km.png",
             "title": "Survival Curve",
-            "description": "Log-rank p < 0.001"
+            "description": "Log-rank p < 0.001",
         }
         result = VisualizationResult.from_dict(data)
         assert result.type == VisualizationType.KAPLAN_MEIER
@@ -122,10 +121,7 @@ class TestVisualizationBundle:
 
     def test_bundle_creation(self):
         """Test bundle creation."""
-        bundle = VisualizationBundle(
-            job_id="job123",
-            user_id="user456"
-        )
+        bundle = VisualizationBundle(job_id="job123", user_id="user456")
         assert bundle.job_id == "job123"
         assert bundle.user_id == "user456"
         assert len(bundle.visualizations) == 0
@@ -133,11 +129,7 @@ class TestVisualizationBundle:
     def test_add_visualization(self):
         """Test adding visualization to bundle."""
         bundle = VisualizationBundle(job_id="job123", user_id="user456")
-        viz = VisualizationResult(
-            type=VisualizationType.ROC_CURVE,
-            url="https://example.com/roc.png",
-            title="ROC"
-        )
+        viz = VisualizationResult(type=VisualizationType.ROC_CURVE, url="https://example.com/roc.png", title="ROC")
         bundle.add(viz)
         assert len(bundle.visualizations) == 1
         assert bundle.visualizations[0].title == "ROC"
@@ -145,21 +137,13 @@ class TestVisualizationBundle:
     def test_get_by_type(self):
         """Test filtering by type."""
         bundle = VisualizationBundle(job_id="job123", user_id="user456")
-        bundle.add(VisualizationResult(
-            type=VisualizationType.ROC_CURVE,
-            url="https://example.com/roc.png",
-            title="ROC"
-        ))
-        bundle.add(VisualizationResult(
-            type=VisualizationType.PR_CURVE,
-            url="https://example.com/pr.png",
-            title="PR"
-        ))
-        bundle.add(VisualizationResult(
-            type=VisualizationType.ROC_CURVE,
-            url="https://example.com/roc2.png",
-            title="ROC 2"
-        ))
+        bundle.add(
+            VisualizationResult(type=VisualizationType.ROC_CURVE, url="https://example.com/roc.png", title="ROC")
+        )
+        bundle.add(VisualizationResult(type=VisualizationType.PR_CURVE, url="https://example.com/pr.png", title="PR"))
+        bundle.add(
+            VisualizationResult(type=VisualizationType.ROC_CURVE, url="https://example.com/roc2.png", title="ROC 2")
+        )
 
         roc_plots = bundle.get_by_type(VisualizationType.ROC_CURVE)
         assert len(roc_plots) == 2
@@ -170,11 +154,11 @@ class TestVisualizationBundle:
     def test_bundle_to_dict(self):
         """Test bundle serialization."""
         bundle = VisualizationBundle(job_id="job123", user_id="user456")
-        bundle.add(VisualizationResult(
-            type=VisualizationType.HEATMAP,
-            url="https://example.com/heatmap.png",
-            title="Correlation"
-        ))
+        bundle.add(
+            VisualizationResult(
+                type=VisualizationType.HEATMAP, url="https://example.com/heatmap.png", title="Correlation"
+            )
+        )
         d = bundle.to_dict()
         assert d["job_id"] == "job123"
         assert len(d["visualizations"]) == 1
@@ -195,11 +179,7 @@ class TestVisualizationConfig:
 
     def test_custom_config(self):
         """Test custom configuration."""
-        config = VisualizationConfig(
-            dpi=600,
-            format="svg",
-            transparent=True
-        )
+        config = VisualizationConfig(dpi=600, format="svg", transparent=True)
         assert config.dpi == 600
         assert config.format == "svg"
         assert config.transparent is True
@@ -217,7 +197,7 @@ class TestSpecializedResults:
             auc=0.85,
             auc_ci_lower=0.80,
             auc_ci_upper=0.90,
-            optimal_threshold=0.45
+            optimal_threshold=0.45,
         )
         assert result.auc == 0.85
         assert result.metadata["auc"] == 0.85
@@ -233,7 +213,7 @@ class TestSpecializedResults:
             hazard_ratio=1.5,
             hr_ci_lower=1.2,
             hr_ci_upper=1.9,
-            p_value=0.001
+            p_value=0.001,
         )
         assert result.hazard_ratio == 1.5
         assert result.metadata["hazard_ratio"] == 1.5
@@ -247,7 +227,7 @@ class TestSpecializedResults:
             title="Treatment vs Control",
             p_value=0.03,
             effect_size=0.72,
-            test_name="Mann-Whitney U"
+            test_name="Mann-Whitney U",
         )
         assert result.p_value == 0.03
         assert result.metadata["test_name"] == "Mann-Whitney U"
@@ -256,6 +236,7 @@ class TestSpecializedResults:
 # =============================================================================
 # Style Tests
 # =============================================================================
+
 
 class TestPublicationStyle:
     """Tests for publication style configuration."""
@@ -268,22 +249,22 @@ class TestPublicationStyle:
     def test_publication_style_has_required_keys(self):
         """Test that required style keys exist."""
         required_keys = [
-            'figure.dpi',
-            'font.size',
-            'axes.labelsize',
-            'savefig.dpi',
+            "figure.dpi",
+            "font.size",
+            "axes.labelsize",
+            "savefig.dpi",
         ]
         for key in required_keys:
             assert key in PUBLICATION_STYLE, f"Missing key: {key}"
 
     def test_savefig_dpi_is_300(self):
         """Test that save DPI is publication quality."""
-        assert PUBLICATION_STYLE['savefig.dpi'] == 300
+        assert PUBLICATION_STYLE["savefig.dpi"] == 300
 
     def test_spines_hidden(self):
         """Test that top/right spines are hidden."""
-        assert PUBLICATION_STYLE['axes.spines.top'] is False
-        assert PUBLICATION_STYLE['axes.spines.right'] is False
+        assert PUBLICATION_STYLE["axes.spines.top"] is False
+        assert PUBLICATION_STYLE["axes.spines.right"] is False
 
 
 class TestColorPalettes:
@@ -291,25 +272,26 @@ class TestColorPalettes:
 
     def test_clinical_colors_defined(self):
         """Test clinical colors palette."""
-        assert 'primary' in CLINICAL_COLORS
-        assert 'treatment' in CLINICAL_COLORS
-        assert 'control' in CLINICAL_COLORS
+        assert "primary" in CLINICAL_COLORS
+        assert "treatment" in CLINICAL_COLORS
+        assert "control" in CLINICAL_COLORS
 
     def test_roc_colors_defined(self):
         """Test ROC colors palette."""
-        assert 'curve' in ROC_COLORS
-        assert 'diagonal' in ROC_COLORS
-        assert 'optimal' in ROC_COLORS
+        assert "curve" in ROC_COLORS
+        assert "diagonal" in ROC_COLORS
+        assert "optimal" in ROC_COLORS
 
     def test_survival_colors_defined(self):
         """Test survival colors palette."""
-        assert 'group1' in SURVIVAL_COLORS
-        assert 'censored' in SURVIVAL_COLORS
+        assert "group1" in SURVIVAL_COLORS
+        assert "censored" in SURVIVAL_COLORS
 
     def test_colors_are_valid_hex(self):
         """Test that colors are valid hex codes."""
         import re
-        hex_pattern = re.compile(r'^#[0-9a-fA-F]{6}$')
+
+        hex_pattern = re.compile(r"^#[0-9a-fA-F]{6}$")
 
         for name, color in CLINICAL_COLORS.items():
             assert hex_pattern.match(color), f"Invalid hex color: {name} = {color}"
@@ -326,8 +308,8 @@ class TestStyleFunctions:
         apply_publication_style()
 
         # Check a few rcParams
-        assert plt.rcParams['savefig.dpi'] == 300
-        assert plt.rcParams['axes.spines.top'] is False
+        assert plt.rcParams["savefig.dpi"] == 300
+        assert plt.rcParams["axes.spines.top"] is False
 
     def test_get_figure_with_style(self):
         """Test creating figure with style."""
@@ -338,6 +320,7 @@ class TestStyleFunctions:
 
         # Clean up
         import matplotlib.pyplot as plt
+
         plt.close(fig)
 
     def test_get_figure_custom_size(self):
@@ -358,10 +341,11 @@ class TestStyleFunctions:
 # Storage Tests (Mocked)
 # =============================================================================
 
+
 class TestStorageFunctions:
     """Tests for storage functions with mocked MinIO."""
 
-    @patch('visualization.storage.Minio')
+    @patch("visualization.storage.Minio")
     def test_save_figure_to_minio(self, mock_minio_class):
         """Test saving figure to MinIO."""
         import matplotlib.pyplot as plt
@@ -378,12 +362,7 @@ class TestStorageFunctions:
 
         # This should not raise an error
         try:
-            save_figure_to_minio(
-                fig=fig,
-                user_id="test_user",
-                job_id="test_job",
-                filename="test_plot.png"
-            )
+            save_figure_to_minio(fig=fig, user_id="test_user", job_id="test_job", filename="test_plot.png")
             # Check that put_object was called
             assert mock_client.put_object.called
         except Exception:
@@ -396,11 +375,7 @@ class TestStorageFunctions:
         """Test URL generation."""
         from visualization.storage import get_figure_url
 
-        url = get_figure_url(
-            bucket="stats-reports",
-            object_path="user123/job456/roc.png",
-            presigned=False
-        )
+        url = get_figure_url(bucket="stats-reports", object_path="user123/job456/roc.png", presigned=False)
 
         assert "stats-reports" in url
         assert "user123/job456/roc.png" in url
@@ -409,6 +384,7 @@ class TestStorageFunctions:
 # =============================================================================
 # Integration Tests (Require Full Environment)
 # =============================================================================
+
 
 @pytest.mark.skip(reason="Requires full environment with MinIO")
 class TestIntegration:

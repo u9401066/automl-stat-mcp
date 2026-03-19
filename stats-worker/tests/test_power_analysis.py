@@ -9,7 +9,6 @@ Tests for:
 """
 
 import pytest
-
 from src.tasks.power_analysis import (
     ProportionPowerAnalysis,
     # Classes
@@ -30,6 +29,7 @@ from src.tasks.power_analysis import (
 # Helper Function Tests
 # =============================================================================
 
+
 class TestHelperFunctions:
     """Tests for helper functions"""
 
@@ -42,9 +42,9 @@ class TestHelperFunctions:
     def test_safe_round_edge_cases(self):
         """Test safe_round with edge cases"""
         assert safe_round(None) is None
-        assert safe_round(float('nan')) is None
-        assert safe_round(float('inf')) is None
-        assert safe_round(float('-inf')) is None
+        assert safe_round(float("nan")) is None
+        assert safe_round(float("inf")) is None
+        assert safe_round(float("-inf")) is None
 
     def test_cohens_d_from_means_basic(self):
         """Test Cohen's d calculation from means"""
@@ -89,6 +89,7 @@ class TestHelperFunctions:
 # =============================================================================
 # T-Test Power Analysis Tests
 # =============================================================================
+
 
 class TestTTestSampleSize:
     """Tests for t-test sample size calculation"""
@@ -411,6 +412,7 @@ class TestTTestPower:
 # Proportion Test Power Analysis Tests
 # =============================================================================
 
+
 class TestProportionSampleSize:
     """Tests for proportion test sample size calculation"""
 
@@ -622,6 +624,7 @@ class TestProportionPower:
 # Convenience Function Tests
 # =============================================================================
 
+
 class TestConvenienceFunctions:
     """Tests for MCP-friendly wrapper functions"""
 
@@ -687,6 +690,7 @@ class TestConvenienceFunctions:
 # =============================================================================
 # Integration Tests
 # =============================================================================
+
 
 class TestIntegration:
     """Integration tests verifying consistency"""

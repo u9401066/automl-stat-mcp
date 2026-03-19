@@ -11,6 +11,7 @@ Data Quality Testing Suite
 
 推薦架構: 所有分析端點應該返回 quality_warnings 欄位
 """
+
 import math
 
 import httpx
@@ -31,9 +32,7 @@ class TestAllNaNColumns:
     def test_quick_stats_detects_all_nan(self, csv_with_all_nan):
         """quick-stats 應該能偵測全 NaN 欄"""
         with httpx.Client(timeout=TIMEOUT) as client:
-            r = client.post(f"{BASE_URL}/direct/quick-stats", json={
-                "csv_content": csv_with_all_nan
-            })
+            r = client.post(f"{BASE_URL}/direct/quick-stats", json={"csv_content": csv_with_all_nan})
             assert r.status_code == 200
             data = r.json()
 
@@ -45,25 +44,19 @@ class TestAllNaNColumns:
     def test_quick_stats_all_nan_excluded_from_numeric(self, csv_with_all_nan):
         """全 NaN 欄不應該出現在 numeric_summary（或應標記為 NaN）"""
         with httpx.Client(timeout=TIMEOUT) as client:
-            r = client.post(f"{BASE_URL}/direct/quick-stats", json={
-                "csv_content": csv_with_all_nan
-            })
+            r = client.post(f"{BASE_URL}/direct/quick-stats", json={"csv_content": csv_with_all_nan})
             data = r.json()
 
             if "all_nan" in data.get("numeric_summary", {}):
                 stats = data["numeric_summary"]["all_nan"]
                 # std 應該是 NaN 或 None
-                assert stats.get("std") is None or (
-                    isinstance(stats.get("std"), float) and math.isnan(stats["std"])
-                )
+                assert stats.get("std") is None or (isinstance(stats.get("std"), float) and math.isnan(stats["std"]))
 
     def test_entirely_nan_csv(self):
         """完全沒有資料的 CSV（只有 NaN）"""
         csv = "a,b,c\n,,\n,,\n,,"
         with httpx.Client(timeout=TIMEOUT) as client:
-            r = client.post(f"{BASE_URL}/direct/quick-stats", json={
-                "csv_content": csv
-            })
+            r = client.post(f"{BASE_URL}/direct/quick-stats", json={"csv_content": csv})
             assert r.status_code == 200
             data = r.json()
             # 所有欄位都應該是全 NaN
@@ -81,9 +74,7 @@ class TestConstantColumns:
     def test_quick_stats_detects_constant(self, csv_with_constant):
         """quick-stats 應該能偵測常數欄"""
         with httpx.Client(timeout=TIMEOUT) as client:
-            r = client.post(f"{BASE_URL}/direct/quick-stats", json={
-                "csv_content": csv_with_constant
-            })
+            r = client.post(f"{BASE_URL}/direct/quick-stats", json={"csv_content": csv_with_constant})
             assert r.status_code == 200
             data = r.json()
 
@@ -94,9 +85,7 @@ class TestConstantColumns:
     def test_constant_column_zero_std(self, csv_with_constant):
         """常數欄的 std 應該是 0"""
         with httpx.Client(timeout=TIMEOUT) as client:
-            r = client.post(f"{BASE_URL}/direct/quick-stats", json={
-                "csv_content": csv_with_constant
-            })
+            r = client.post(f"{BASE_URL}/direct/quick-stats", json={"csv_content": csv_with_constant})
             data = r.json()
 
             if "constant_num" in data.get("numeric_summary", {}):
@@ -107,9 +96,7 @@ class TestConstantColumns:
         """常數欄的相關性應該是 NaN（無法計算）"""
         csv = "const,var1,var2\n5,1,10\n5,2,20\n5,3,30\n5,4,40"
         with httpx.Client(timeout=TIMEOUT) as client:
-            r = client.post(f"{BASE_URL}/direct/quick-stats", json={
-                "csv_content": csv
-            })
+            r = client.post(f"{BASE_URL}/direct/quick-stats", json={"csv_content": csv})
             data = r.json()
             # 常數欄的標準差為 0，相關性會是 NaN
             assert data["numeric_summary"]["const"]["std"] == 0.0
@@ -130,9 +117,7 @@ P005,MRN0005,550e8400-e29b-41d4-a716-446655440005,45,1"""
     def test_detects_high_cardinality(self, csv_with_id_columns):
         """應該能偵測高基數 ID 欄"""
         with httpx.Client(timeout=TIMEOUT) as client:
-            r = client.post(f"{BASE_URL}/direct/quick-stats", json={
-                "csv_content": csv_with_id_columns
-            })
+            r = client.post(f"{BASE_URL}/direct/quick-stats", json={"csv_content": csv_with_id_columns})
             assert r.status_code == 200
             data = r.json()
 
@@ -145,9 +130,7 @@ P005,MRN0005,550e8400-e29b-41d4-a716-446655440005,45,1"""
         """ID 欄不應該被用於相關性或統計分析"""
         # 這是一個警告：高基數欄通常不適合用於統計分析
         with httpx.Client(timeout=TIMEOUT) as client:
-            r = client.post(f"{BASE_URL}/direct/quick-stats", json={
-                "csv_content": csv_with_id_columns
-            })
+            r = client.post(f"{BASE_URL}/direct/quick-stats", json={"csv_content": csv_with_id_columns})
             data = r.json()
 
             # 檢查 age 和 outcome 是有意義的（低基數）
@@ -178,9 +161,7 @@ class TestSkewedDataNeedingTransform:
     def test_detects_skewness(self, csv_with_skewed_data):
         """應該能偵測偏態資料"""
         with httpx.Client(timeout=TIMEOUT) as client:
-            r = client.post(f"{BASE_URL}/direct/quick-stats", json={
-                "csv_content": csv_with_skewed_data
-            })
+            r = client.post(f"{BASE_URL}/direct/quick-stats", json={"csv_content": csv_with_skewed_data})
             assert r.status_code == 200
             data = r.json()
 
@@ -189,15 +170,13 @@ class TestSkewedDataNeedingTransform:
             median = income_stats["50%"]
 
             # 偏態指標：mean 遠大於 median
-            skew_ratio = abs(mean - median) / median if median > 0 else float('inf')
+            skew_ratio = abs(mean - median) / median if median > 0 else float("inf")
             assert skew_ratio > 1, "Income 應該是嚴重偏態"
 
     def test_log_transform_reduces_skewness(self, csv_with_skewed_data):
         """Log transform 後偏態應該減少"""
         with httpx.Client(timeout=TIMEOUT) as client:
-            r = client.post(f"{BASE_URL}/direct/quick-stats", json={
-                "csv_content": csv_with_skewed_data
-            })
+            r = client.post(f"{BASE_URL}/direct/quick-stats", json={"csv_content": csv_with_skewed_data})
             data = r.json()
 
             log_stats = data["numeric_summary"]["log_income"]
@@ -205,7 +184,7 @@ class TestSkewedDataNeedingTransform:
             median = log_stats["50%"]
 
             # Log transform 後偏態應該減少
-            skew_ratio = abs(mean - median) / median if median > 0 else float('inf')
+            skew_ratio = abs(mean - median) / median if median > 0 else float("inf")
             # 注意：這只是示範，實際的 log_income 在原資料中已經是 log 過的
             assert skew_ratio < 5, "Log income 偏態應該較小"
 
@@ -226,9 +205,7 @@ class TestOutliers:
     def test_detects_outliers_via_iqr(self, csv_with_outliers):
         """應該能通過 IQR 偵測極端值"""
         with httpx.Client(timeout=TIMEOUT) as client:
-            r = client.post(f"{BASE_URL}/direct/quick-stats", json={
-                "csv_content": csv_with_outliers
-            })
+            r = client.post(f"{BASE_URL}/direct/quick-stats", json={"csv_content": csv_with_outliers})
             data = r.json()
 
             value_stats = data["numeric_summary"]["value"]
@@ -249,9 +226,7 @@ class TestMixedTypes:
         """數字欄位中混有文字"""
         csv = "id,value\n1,100\n2,N/A\n3,200\n4,missing\n5,300"
         with httpx.Client(timeout=TIMEOUT) as client:
-            r = client.post(f"{BASE_URL}/direct/quick-stats", json={
-                "csv_content": csv
-            })
+            r = client.post(f"{BASE_URL}/direct/quick-stats", json={"csv_content": csv})
             assert r.status_code == 200
             data = r.json()
 
@@ -263,9 +238,7 @@ class TestMixedTypes:
         """日期格式偵測"""
         csv = "id,date,value\n1,2024-01-15,100\n2,2024-02-20,200\n3,2024-03-25,300"
         with httpx.Client(timeout=TIMEOUT) as client:
-            r = client.post(f"{BASE_URL}/direct/quick-stats", json={
-                "csv_content": csv
-            })
+            r = client.post(f"{BASE_URL}/direct/quick-stats", json={"csv_content": csv})
             assert r.status_code == 200
             data = r.json()
 
@@ -282,12 +255,10 @@ class TestStatisticalAnalysisRobustness:
         """Survival: 常數 time 應該優雅失敗"""
         csv = "time,event\n10,1\n10,1\n10,0\n10,1"
         with httpx.Client(timeout=TIMEOUT) as client:
-            r = client.post(f"{BASE_URL}/survival/kaplan-meier/submit", json={
-                "user_id": "test",
-                "time_column": "time",
-                "event_column": "event",
-                "csv_content": csv
-            })
+            r = client.post(
+                f"{BASE_URL}/survival/kaplan-meier/submit",
+                json={"user_id": "test", "time_column": "time", "event_column": "event", "csv_content": csv},
+            )
             # 應該返回 400 而不是 500
             assert r.status_code in [200, 400, 422], f"Got {r.status_code}: {r.text[:200]}"
             if r.status_code == 500:
@@ -297,24 +268,20 @@ class TestStatisticalAnalysisRobustness:
         """Survival: 全部 censored（沒有事件）"""
         csv = "time,event\n10,0\n20,0\n30,0\n40,0"
         with httpx.Client(timeout=TIMEOUT) as client:
-            r = client.post(f"{BASE_URL}/survival/kaplan-meier/submit", json={
-                "user_id": "test",
-                "time_column": "time",
-                "event_column": "event",
-                "csv_content": csv
-            })
+            r = client.post(
+                f"{BASE_URL}/survival/kaplan-meier/submit",
+                json={"user_id": "test", "time_column": "time", "event_column": "event", "csv_content": csv},
+            )
             assert r.status_code in [200, 400, 422], f"Got {r.status_code}"
 
     def test_survival_negative_time(self):
         """Survival: 負值 time"""
         csv = "time,event\n-10,1\n20,0\n30,1\n40,0"
         with httpx.Client(timeout=TIMEOUT) as client:
-            r = client.post(f"{BASE_URL}/survival/kaplan-meier/submit", json={
-                "user_id": "test",
-                "time_column": "time",
-                "event_column": "event",
-                "csv_content": csv
-            })
+            r = client.post(
+                f"{BASE_URL}/survival/kaplan-meier/submit",
+                json={"user_id": "test", "time_column": "time", "event_column": "event", "csv_content": csv},
+            )
             # 應該返回 400（負數 time 沒有意義）
             assert r.status_code in [200, 400, 422]
 
@@ -322,12 +289,10 @@ class TestStatisticalAnalysisRobustness:
         """ROC: 常數預測值"""
         csv = "actual,predicted\n1,0.5\n0,0.5\n1,0.5\n0,0.5"
         with httpx.Client(timeout=TIMEOUT) as client:
-            r = client.post(f"{BASE_URL}/roc/compute/submit", json={
-                "user_id": "test",
-                "true_column": "actual",
-                "score_column": "predicted",
-                "csv_content": csv
-            })
+            r = client.post(
+                f"{BASE_URL}/roc/compute/submit",
+                json={"user_id": "test", "true_column": "actual", "score_column": "predicted", "csv_content": csv},
+            )
             # 常數預測的 AUC = 0.5，應該能處理
             assert r.status_code in [200, 400, 422]
 
@@ -335,24 +300,25 @@ class TestStatisticalAnalysisRobustness:
         """ROC: 完美分離（AUC=1.0）"""
         csv = "actual,predicted\n1,0.9\n1,0.95\n0,0.1\n0,0.05"
         with httpx.Client(timeout=TIMEOUT) as client:
-            r = client.post(f"{BASE_URL}/roc/compute/submit", json={
-                "user_id": "test",
-                "true_column": "actual",
-                "score_column": "predicted",
-                "csv_content": csv
-            })
+            r = client.post(
+                f"{BASE_URL}/roc/compute/submit",
+                json={"user_id": "test", "true_column": "actual", "score_column": "predicted", "csv_content": csv},
+            )
             assert r.status_code in [200, 422]
 
     def test_propensity_extreme_imbalance(self):
         """Propensity: 極端不平衡的 treatment"""
         csv = "treatment,age,bmi\n1,25,22\n0,30,25\n0,35,28\n0,40,30\n0,45,32\n0,50,35"
         with httpx.Client(timeout=TIMEOUT) as client:
-            r = client.post(f"{BASE_URL}/propensity/estimate/submit", json={
-                "user_id": "test",
-                "treatment_column": "treatment",
-                "covariates": ["age", "bmi"],
-                "csv_content": csv
-            })
+            r = client.post(
+                f"{BASE_URL}/propensity/estimate/submit",
+                json={
+                    "user_id": "test",
+                    "treatment_column": "treatment",
+                    "covariates": ["age", "bmi"],
+                    "csv_content": csv,
+                },
+            )
             # 極端不平衡可能導致估計不穩定
             assert r.status_code in [200, 400, 422]
 
@@ -360,12 +326,15 @@ class TestStatisticalAnalysisRobustness:
         """Propensity: treatment 全部相同"""
         csv = "treatment,age,bmi\n1,25,22\n1,30,25\n1,35,28\n1,40,30"
         with httpx.Client(timeout=TIMEOUT) as client:
-            r = client.post(f"{BASE_URL}/propensity/estimate/submit", json={
-                "user_id": "test",
-                "treatment_column": "treatment",
-                "covariates": ["age", "bmi"],
-                "csv_content": csv
-            })
+            r = client.post(
+                f"{BASE_URL}/propensity/estimate/submit",
+                json={
+                    "user_id": "test",
+                    "treatment_column": "treatment",
+                    "covariates": ["age", "bmi"],
+                    "csv_content": csv,
+                },
+            )
             # 返回 200 表示 job 已提交（異步處理）
             # 實際錯誤會在 worker 中處理，job status 會變成 failed
             # 這裡只驗證 API 接受請求
@@ -388,9 +357,7 @@ P005,MRN005,,999,1200,A,1"""
     def test_identify_all_issues(self, problematic_csv):
         """應該能識別所有資料品質問題"""
         with httpx.Client(timeout=TIMEOUT) as client:
-            r = client.post(f"{BASE_URL}/direct/quick-stats", json={
-                "csv_content": problematic_csv
-            })
+            r = client.post(f"{BASE_URL}/direct/quick-stats", json={"csv_content": problematic_csv})
             data = r.json()
 
             issues_found = []
@@ -442,9 +409,7 @@ class TestTransformRequirements:
         """收入類資料通常需要 log transform"""
         csv = "income\n1000\n2000\n1500\n50000000\n1200"
         with httpx.Client(timeout=TIMEOUT) as client:
-            r = client.post(f"{BASE_URL}/direct/quick-stats", json={
-                "csv_content": csv
-            })
+            r = client.post(f"{BASE_URL}/direct/quick-stats", json={"csv_content": csv})
             data = r.json()
 
             stats = data["numeric_summary"]["income"]
@@ -455,7 +420,7 @@ class TestTransformRequirements:
             # 嚴重偏態的判定
             if median > 0:
                 skew_ratio = abs(mean - median) / median
-                coefficient_of_variation = std / mean if mean > 0 else float('inf')
+                coefficient_of_variation = std / mean if mean > 0 else float("inf")
 
                 needs_transform = skew_ratio > 1 or coefficient_of_variation > 2
                 assert needs_transform, "高度偏態資料應該需要 transform"
@@ -464,22 +429,14 @@ class TestTransformRequirements:
         """Power analysis 應該能處理極端 effect size"""
         with httpx.Client(timeout=TIMEOUT) as client:
             # 極小 effect size
-            r = client.post(f"{BASE_URL}/power/ttest", json={
-                "effect_size": 0.01,
-                "alpha": 0.05,
-                "power": 0.8
-            })
+            r = client.post(f"{BASE_URL}/power/ttest", json={"effect_size": 0.01, "alpha": 0.05, "power": 0.8})
             assert r.status_code == 200
             data = r.json()
             # 極小 effect 需要極大樣本
             assert data["result"] > 10000
 
             # 極大 effect size
-            r = client.post(f"{BASE_URL}/power/ttest", json={
-                "effect_size": 5.0,
-                "alpha": 0.05,
-                "power": 0.8
-            })
+            r = client.post(f"{BASE_URL}/power/ttest", json={"effect_size": 5.0, "alpha": 0.05, "power": 0.8})
             assert r.status_code == 200
             data = r.json()
             # 極大 effect 只需要極小樣本
