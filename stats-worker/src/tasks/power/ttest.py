@@ -8,6 +8,7 @@ Contains:
     - ProportionPowerAnalysis: Two proportions and one proportion tests
     - Convenience wrapper functions for MCP tools
 """
+
 import logging
 import math
 from typing import Any, Dict, Literal, Optional, cast
@@ -34,6 +35,7 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 # T-Test Power Analysis
 # =============================================================================
+
 
 class TTestPowerAnalysis:
     """
@@ -80,9 +82,7 @@ class TTestPowerAnalysis:
             if mean1 is not None and mean2 is not None and sd is not None:
                 effect_size = cohens_d_from_means(mean1, mean2, sd)
             else:
-                raise ValueError(
-                    "Either effect_size or (mean1, mean2, sd) must be provided"
-                )
+                raise ValueError("Either effect_size or (mean1, mean2, sd) must be provided")
 
         # Ensure positive effect size for calculation
         effect_size_abs = abs(effect_size)
@@ -148,20 +148,20 @@ class TTestPowerAnalysis:
         if test_type == "two-sample":
             interpretation = (
                 f"To detect a {es_interpretation} effect (Cohen's d = {effect_size_abs:.3f}) "
-                f"with {power*100:.0f}% power at α = {alpha}, "
+                f"with {power * 100:.0f}% power at α = {alpha}, "
                 f"you need {n1} participants in group 1 and {n2} in group 2 "
                 f"(total N = {total_n})."
             )
         elif test_type == "paired":
             interpretation = (
                 f"To detect a {es_interpretation} effect (Cohen's d = {effect_size_abs:.3f}) "
-                f"with {power*100:.0f}% power at α = {alpha}, "
+                f"with {power * 100:.0f}% power at α = {alpha}, "
                 f"you need {n1} pairs of measurements."
             )
         else:  # one-sample
             interpretation = (
                 f"To detect a {es_interpretation} effect (Cohen's d = {effect_size_abs:.3f}) "
-                f"with {power*100:.0f}% power at α = {alpha}, "
+                f"with {power * 100:.0f}% power at α = {alpha}, "
                 f"you need {n1} participants."
             )
 
@@ -169,18 +169,15 @@ class TTestPowerAnalysis:
         recommendations = []
         if es_interpretation == "small":
             recommendations.append(
-                "Small effect sizes require large samples. "
-                "Consider whether this effect is clinically meaningful."
+                "Small effect sizes require large samples. Consider whether this effect is clinically meaningful."
             )
         if power < 0.80:
             recommendations.append(
-                "Power < 80% may result in false negatives. "
-                "Consider increasing sample size if feasible."
+                "Power < 80% may result in false negatives. Consider increasing sample size if feasible."
             )
         if total_n > 500:
             recommendations.append(
-                "Large sample requirement. Consider pilot study first "
-                "to verify effect size estimate."
+                "Large sample requirement. Consider pilot study first to verify effect size estimate."
             )
 
         # Sensitivity analysis
@@ -246,9 +243,7 @@ class TTestPowerAnalysis:
             if mean1 is not None and mean2 is not None and sd is not None:
                 effect_size = cohens_d_from_means(mean1, mean2, sd)
             else:
-                raise ValueError(
-                    "Either effect_size or (mean1, mean2, sd) must be provided"
-                )
+                raise ValueError("Either effect_size or (mean1, mean2, sd) must be provided")
 
         effect_size_abs = abs(effect_size)
 
@@ -295,18 +290,15 @@ class TTestPowerAnalysis:
         interpretation = (
             f"With n = {n} {'per group' if test_type == 'two-sample' else ''}, "
             f"effect size d = {effect_size_abs:.3f} ({es_interpretation}), "
-            f"and α = {alpha}, the study has {power*100:.1f}% power."
+            f"and α = {alpha}, the study has {power * 100:.1f}% power."
         )
 
         recommendations = []
         if power < 0.80:
-            recommendations.append(
-                "Power is below 80%. Consider increasing sample size to achieve adequate power."
-            )
+            recommendations.append("Power is below 80%. Consider increasing sample size to achieve adequate power.")
         if power > 0.95:
             recommendations.append(
-                "Power > 95% may indicate over-sampling. "
-                "Resources could be optimized with fewer participants."
+                "Power > 95% may indicate over-sampling. Resources could be optimized with fewer participants."
             )
 
         return PowerAnalysisResult(
@@ -403,6 +395,7 @@ class TTestPowerAnalysis:
 # Proportion Test Power Analysis
 # =============================================================================
 
+
 class ProportionPowerAnalysis:
     """
     Power analysis for proportion tests.
@@ -470,8 +463,8 @@ class ProportionPowerAnalysis:
 
             interpretation = (
                 f"To detect a difference between proportions "
-                f"({p1*100:.1f}% vs {p2*100:.1f}%, Cohen's h = {effect_size_abs:.3f}) "
-                f"with {power*100:.0f}% power at α = {alpha}, "
+                f"({p1 * 100:.1f}% vs {p2 * 100:.1f}%, Cohen's h = {effect_size_abs:.3f}) "
+                f"with {power * 100:.0f}% power at α = {alpha}, "
                 f"you need {n1} in group 1 and {n2} in group 2 (total N = {total_n})."
             )
 
@@ -502,8 +495,8 @@ class ProportionPowerAnalysis:
 
             interpretation = (
                 f"To detect a difference from hypothesized proportion "
-                f"({p1*100:.1f}% vs {p0*100:.1f}%, Cohen's h = {effect_size_abs:.3f}) "
-                f"with {power*100:.0f}% power at α = {alpha}, "
+                f"({p1 * 100:.1f}% vs {p0 * 100:.1f}%, Cohen's h = {effect_size_abs:.3f}) "
+                f"with {power * 100:.0f}% power at α = {alpha}, "
                 f"you need {n1} participants."
             )
 
@@ -522,23 +515,25 @@ class ProportionPowerAnalysis:
         # Absolute risk difference
         if test_type == "two-sample" and p2:
             ard = abs(p1 - p2)
-            nnt = 1 / ard if ard > 0 else float('inf')
+            nnt = 1 / ard if ard > 0 else float("inf")
             recommendations.append(
-                f"Absolute risk difference: {ard*100:.1f}%. "
-                f"Number needed to treat (NNT): {nnt:.1f}."
+                f"Absolute risk difference: {ard * 100:.1f}%. Number needed to treat (NNT): {nnt:.1f}."
             )
 
         if es_interpretation == "small":
             recommendations.append(
-                "Small effect size requires large sample. "
-                "Verify if this difference is clinically meaningful."
+                "Small effect size requires large sample. Verify if this difference is clinically meaningful."
             )
 
         # Sensitivity analysis
         sensitivity = ProportionPowerAnalysis._sensitivity_analysis(
-            p1=p1, p2=p2, p0=p0,
-            alpha=alpha, power=power,
-            test_type=test_type, ratio=ratio,
+            p1=p1,
+            p2=p2,
+            p0=p0,
+            alpha=alpha,
+            power=power,
+            test_type=test_type,
+            ratio=ratio,
             alternative=alternative,
         )
 
@@ -623,22 +618,21 @@ class ProportionPowerAnalysis:
 
         if test_type == "two-sample":
             interpretation = (
-                f"With n = {n} per group, comparing {p1*100:.1f}% vs {p2_val*100:.1f}% "
+                f"With n = {n} per group, comparing {p1 * 100:.1f}% vs {p2_val * 100:.1f}% "
                 f"(Cohen's h = {effect_size_abs:.3f}), "
-                f"the study has {power*100:.1f}% power at α = {alpha}."
+                f"the study has {power * 100:.1f}% power at α = {alpha}."
             )
         else:
             interpretation = (
-                f"With n = {n}, comparing {p1*100:.1f}% vs hypothesized {p0_val*100:.1f}% "
+                f"With n = {n}, comparing {p1 * 100:.1f}% vs hypothesized {p0_val * 100:.1f}% "
                 f"(Cohen's h = {effect_size_abs:.3f}), "
-                f"the study has {power*100:.1f}% power at α = {alpha}."
+                f"the study has {power * 100:.1f}% power at α = {alpha}."
             )
 
         recommendations = []
         if power < 0.80:
             recommendations.append(
-                f"Power is {power*100:.1f}%, below the recommended 80%. "
-                "Consider increasing sample size."
+                f"Power is {power * 100:.1f}%, below the recommended 80%. Consider increasing sample size."
             )
 
         return PowerAnalysisResult(
@@ -712,11 +706,7 @@ class ProportionPowerAnalysis:
                         ratio=ratio,
                         alternative=alternative,
                     )
-                    p2_variations.append({
-                        "p2": round(new_p2, 3),
-                        "effect_size": round(es, 3),
-                        "n": math.ceil(n)
-                    })
+                    p2_variations.append({"p2": round(new_p2, 3), "effect_size": round(es, 3), "n": math.ceil(n)})
                 except Exception:
                     pass
 
@@ -733,6 +723,7 @@ class ProportionPowerAnalysis:
 # =============================================================================
 # Convenience Functions (for MCP tools)
 # =============================================================================
+
 
 def calculate_ttest_sample_size(
     effect_size: Optional[float] = None,

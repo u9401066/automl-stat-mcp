@@ -20,9 +20,10 @@ Usage:
         test='t-test_ind'
     )
 """
+
 import matplotlib
 
-matplotlib.use('Agg')
+matplotlib.use("Agg")
 import logging
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
@@ -46,6 +47,7 @@ logger = logging.getLogger(__name__)
 # Try to import statannotations for p-value annotations
 try:
     from statannotations.Annotator import Annotator
+
     HAS_STATANNOTATIONS = True
 except ImportError:
     HAS_STATANNOTATIONS = False
@@ -57,17 +59,18 @@ except ImportError:
 # =============================================================================
 
 GROUP_COLORS = {
-    'palette': 'Set2',  # Colorblind-friendly
-    'highlight': '#E41A1C',  # Red for significant
-    'neutral': '#377EB8',  # Blue
-    'positive': '#4DAF4A',  # Green
-    'negative': '#984EA3',  # Purple
+    "palette": "Set2",  # Colorblind-friendly
+    "highlight": "#E41A1C",  # Red for significant
+    "neutral": "#377EB8",  # Blue
+    "positive": "#4DAF4A",  # Green
+    "negative": "#984EA3",  # Purple
 }
 
 
 # =============================================================================
 # Box Plot with Statistical Annotation
 # =============================================================================
+
 
 def plot_group_comparison(
     data: Union[pd.DataFrame, Dict[str, Any]],
@@ -125,29 +128,30 @@ def plot_group_comparison(
         df_data = []
         for group, values in data.items():
             for v in values:
-                df_data.append({x or 'group': group, y or 'value': v})
+                df_data.append({x or "group": group, y or "value": v})
         data = pd.DataFrame(df_data)
         if x is None:
-            x = 'group'
+            x = "group"
         if y is None:
-            y = 'value'
+            y = "value"
 
     # Create the base plot
     if plot_type == "boxplot":
         sns.boxplot(data=data, x=x, y=y, hue=hue, ax=ax, palette=palette)
         if show_data_points:
-            sns.stripplot(data=data, x=x, y=y, hue=hue, ax=ax,
-                         color='black', alpha=0.5, size=4, dodge=True if hue else False)
+            sns.stripplot(
+                data=data, x=x, y=y, hue=hue, ax=ax, color="black", alpha=0.5, size=4, dodge=True if hue else False
+            )
 
     elif plot_type == "violin":
         sns.violinplot(data=data, x=x, y=y, hue=hue, ax=ax, palette=palette, inner="box")
         if show_data_points:
-            sns.stripplot(data=data, x=x, y=y, hue=hue, ax=ax,
-                         color='black', alpha=0.5, size=3, dodge=True if hue else False)
+            sns.stripplot(
+                data=data, x=x, y=y, hue=hue, ax=ax, color="black", alpha=0.5, size=3, dodge=True if hue else False
+            )
 
     elif plot_type == "bar":
-        sns.barplot(data=data, x=x, y=y, hue=hue, ax=ax, palette=palette,
-                   errorbar='se', capsize=0.1)
+        sns.barplot(data=data, x=x, y=y, hue=hue, ax=ax, palette=palette, errorbar="se", capsize=0.1)
 
     elif plot_type == "strip":
         sns.stripplot(data=data, x=x, y=y, hue=hue, ax=ax, palette=palette, size=6)
@@ -165,7 +169,7 @@ def plot_group_comparison(
                 annotator.set_pvalues(p_values)
             else:
                 # Calculate p-values using specified test
-                annotator.configure(test=test, text_format='star', loc='inside')
+                annotator.configure(test=test, text_format="star", loc="inside")
                 annotator.apply_test()
 
             annotator.annotate()
@@ -181,9 +185,9 @@ def plot_group_comparison(
         _add_manual_pvalue_annotations(ax, pairs, p_values, data, cast(str, x), cast(str, y))
 
     # Labels
-    ax.set_xlabel(xlabel or x or '')
-    ax.set_ylabel(ylabel or y or '')
-    ax.set_title(title or f'{y} by {x}')
+    ax.set_xlabel(xlabel or x or "")
+    ax.set_ylabel(ylabel or y or "")
+    ax.set_title(title or f"{y} by {x}")
 
     # Remove duplicate legend entries if hue and show_data_points
     if hue and show_data_points:
@@ -217,30 +221,31 @@ def _add_manual_pvalue_annotations(
         # Draw bracket
         y_pos = y_max + y_range * (0.05 + i * 0.08)
 
-        ax.plot([x1, x1, x2, x2], [y_pos - y_range*0.01, y_pos, y_pos, y_pos - y_range*0.01],
-                color='black', linewidth=1)
+        ax.plot(
+            [x1, x1, x2, x2], [y_pos - y_range * 0.01, y_pos, y_pos, y_pos - y_range * 0.01], color="black", linewidth=1
+        )
 
         # Add p-value text
         pval_text = _format_pvalue(pval)
-        ax.text((x1 + x2) / 2, y_pos + y_range*0.01, pval_text,
-                ha='center', va='bottom', fontsize=10)
+        ax.text((x1 + x2) / 2, y_pos + y_range * 0.01, pval_text, ha="center", va="bottom", fontsize=10)
 
 
 def _format_pvalue(p: float) -> str:
     """Format p-value for display."""
     if p < 0.001:
-        return '***'
+        return "***"
     elif p < 0.01:
-        return '**'
+        return "**"
     elif p < 0.05:
-        return '*'
+        return "*"
     else:
-        return 'ns'
+        return "ns"
 
 
 # =============================================================================
 # ANOVA Results Visualization
 # =============================================================================
+
 
 def plot_anova_results(
     group_stats: Dict[str, Dict],
@@ -274,9 +279,9 @@ def plot_anova_results(
     groups = list(group_stats.keys())
     n_groups = len(groups)
 
-    means = [group_stats[g].get('mean', 0) for g in groups]
-    stds = [group_stats[g].get('std', 0) for g in groups]
-    ns = [group_stats[g].get('n', 1) for g in groups]
+    means = [group_stats[g].get("mean", 0) for g in groups]
+    stds = [group_stats[g].get("std", 0) for g in groups]
+    ns = [group_stats[g].get("n", 1) for g in groups]
 
     # Calculate standard errors
     ses = [s / np.sqrt(n) if n > 0 else 0 for s, n in zip(stds, ns, strict=False)]
@@ -286,56 +291,70 @@ def plot_anova_results(
 
     # Create bar plot
     colors = sns.color_palette("Set2", n_groups)
-    bars = ax.bar(x_pos, means, yerr=ses, capsize=5, color=colors,
-                  edgecolor='black', linewidth=1)
+    bars = ax.bar(x_pos, means, yerr=ses, capsize=5, color=colors, edgecolor="black", linewidth=1)
 
     # Add sample sizes on bars
     for i, (bar, n) in enumerate(zip(bars, ns, strict=False)):
         height = bar.get_height()
-        ax.text(bar.get_x() + bar.get_width()/2., height + ses[i] + 0.02 * max(means),
-                f'n={n}', ha='center', va='bottom', fontsize=9)
+        ax.text(
+            bar.get_x() + bar.get_width() / 2.0,
+            height + ses[i] + 0.02 * max(means),
+            f"n={n}",
+            ha="center",
+            va="bottom",
+            fontsize=9,
+        )
 
     # Add test result annotation
     if test_result:
-        stat = test_result.get('statistic', 0)
-        p = test_result.get('p_value', 1)
-        effect = test_result.get('effect_size', 0)
-        test_name = test_result.get('test_name', 'ANOVA')
+        stat = test_result.get("statistic", 0)
+        p = test_result.get("p_value", 1)
+        effect = test_result.get("effect_size", 0)
+        test_name = test_result.get("test_name", "ANOVA")
 
         sig_text = "***" if p < 0.001 else "**" if p < 0.01 else "*" if p < 0.05 else "ns"
 
         annotation = f"{test_name}\nF = {stat:.2f}, p = {p:.4f} {sig_text}\nη² = {effect:.3f}"
 
-        ax.text(0.95, 0.95, annotation, transform=ax.transAxes,
-                ha='right', va='top', fontsize=10,
-                bbox={'boxstyle': 'round', 'facecolor': 'white', 'alpha': 0.8})
+        ax.text(
+            0.95,
+            0.95,
+            annotation,
+            transform=ax.transAxes,
+            ha="right",
+            va="top",
+            fontsize=10,
+            bbox={"boxstyle": "round", "facecolor": "white", "alpha": 0.8},
+        )
 
     # Add post-hoc significance brackets
     if post_hoc and len(post_hoc) > 0:
         y_max = max(m + s for m, s in zip(means, ses, strict=False))
         y_range = max(means) - min(means) if means else 1
 
-        sig_pairs = [ph for ph in post_hoc if ph.get('p_value', 1) < 0.05]
+        sig_pairs = [ph for ph in post_hoc if ph.get("p_value", 1) < 0.05]
 
         for i, ph in enumerate(sig_pairs[:5]):  # Limit to 5 brackets
-            g1 = ph.get('group1', ph.get('groups', ('', ''))[0])
-            g2 = ph.get('group2', ph.get('groups', ('', ''))[1])
-            p = ph.get('p_value', 1)
+            g1 = ph.get("group1", ph.get("groups", ("", ""))[0])
+            g2 = ph.get("group2", ph.get("groups", ("", ""))[1])
+            p = ph.get("p_value", 1)
 
             if g1 in groups and g2 in groups:
                 x1 = groups.index(g1)
                 x2 = groups.index(g2)
                 y_pos = y_max + y_range * (0.1 + i * 0.08)
 
-                ax.plot([x1, x1, x2, x2],
-                        [y_pos - 0.02*y_range, y_pos, y_pos, y_pos - 0.02*y_range],
-                        color='black', linewidth=1)
-                ax.text((x1 + x2) / 2, y_pos + 0.01*y_range, _format_pvalue(p),
-                        ha='center', va='bottom', fontsize=9)
+                ax.plot(
+                    [x1, x1, x2, x2],
+                    [y_pos - 0.02 * y_range, y_pos, y_pos, y_pos - 0.02 * y_range],
+                    color="black",
+                    linewidth=1,
+                )
+                ax.text((x1 + x2) / 2, y_pos + 0.01 * y_range, _format_pvalue(p), ha="center", va="bottom", fontsize=9)
 
     # Labels
     ax.set_xticks(x_pos)
-    ax.set_xticklabels(groups, rotation=45 if n_groups > 5 else 0, ha='right' if n_groups > 5 else 'center')
+    ax.set_xticklabels(groups, rotation=45 if n_groups > 5 else 0, ha="right" if n_groups > 5 else "center")
     ax.set_ylabel(ylabel)
     ax.set_title(title)
 
@@ -347,6 +366,7 @@ def plot_anova_results(
 # =============================================================================
 # Chi-Square / Contingency Table Visualization
 # =============================================================================
+
 
 def plot_contingency_heatmap(
     contingency_table: Union[pd.DataFrame, np.ndarray],
@@ -386,9 +406,9 @@ def plot_contingency_heatmap(
     # Convert to DataFrame if needed
     if isinstance(contingency_table, np.ndarray):
         if row_labels is None:
-            row_labels = [f"Row {i+1}" for i in range(contingency_table.shape[0])]
+            row_labels = [f"Row {i + 1}" for i in range(contingency_table.shape[0])]
         if col_labels is None:
-            col_labels = [f"Col {j+1}" for j in range(contingency_table.shape[1])]
+            col_labels = [f"Col {j + 1}" for j in range(contingency_table.shape[1])]
         df = pd.DataFrame(contingency_table, index=row_labels, columns=col_labels)
     else:
         df = contingency_table.copy()
@@ -408,16 +428,22 @@ def plot_contingency_heatmap(
         annot_data = True if annot else None
 
     # Create heatmap
-    sns.heatmap(df, annot=annot_data if show_percentages else annot,
-                fmt='' if show_percentages else 'd',
-                cmap=cmap, ax=ax, cbar_kws={'label': 'Count'},
-                linewidths=0.5, linecolor='white')
+    sns.heatmap(
+        df,
+        annot=annot_data if show_percentages else annot,
+        fmt="" if show_percentages else "d",
+        cmap=cmap,
+        ax=ax,
+        cbar_kws={"label": "Count"},
+        linewidths=0.5,
+        linecolor="white",
+    )
 
     # Add test result annotation
     if test_result:
-        chi2 = test_result.get('chi2', test_result.get('statistic', 0))
-        p = test_result.get('p_value', 1)
-        cramers = test_result.get('cramers_v', test_result.get('effect_size', None))
+        chi2 = test_result.get("chi2", test_result.get("statistic", 0))
+        p = test_result.get("p_value", 1)
+        cramers = test_result.get("cramers_v", test_result.get("effect_size", None))
 
         sig_text = "***" if p < 0.001 else "**" if p < 0.01 else "*" if p < 0.05 else "ns"
 
@@ -426,9 +452,16 @@ def plot_contingency_heatmap(
         else:
             annotation = f"χ² = {chi2:.2f}, p = {p:.4f} {sig_text}"
 
-        ax.text(1.02, 0.98, annotation, transform=ax.transAxes,
-                ha='left', va='top', fontsize=10,
-                bbox={'boxstyle': 'round', 'facecolor': 'white', 'alpha': 0.8})
+        ax.text(
+            1.02,
+            0.98,
+            annotation,
+            transform=ax.transAxes,
+            ha="left",
+            va="top",
+            fontsize=10,
+            bbox={"boxstyle": "round", "facecolor": "white", "alpha": 0.8},
+        )
 
     ax.set_title(title)
 
@@ -441,7 +474,7 @@ def plot_categorical_comparison(
     data: pd.DataFrame,
     x: str,
     hue: str,
-    normalize: str = 'index',  # 'index' (row), 'columns' (col), or None
+    normalize: str = "index",  # 'index' (row), 'columns' (col), or None
     test_result: Optional[Dict] = None,
     title: Optional[str] = None,
     figsize: Tuple[float, float] = (10, 6),
@@ -475,13 +508,13 @@ def plot_categorical_comparison(
         cross = cross * 100  # Convert to percentage
 
     # Plot
-    cross.plot(kind='bar', ax=ax, colormap='Set2', edgecolor='black', linewidth=0.5)
+    cross.plot(kind="bar", ax=ax, colormap="Set2", edgecolor="black", linewidth=0.5)
 
     # Add test result
     if test_result:
-        chi2 = test_result.get('chi2', test_result.get('statistic', 0))
-        p = test_result.get('p_value', 1)
-        cramers = test_result.get('cramers_v', test_result.get('effect_size', None))
+        chi2 = test_result.get("chi2", test_result.get("statistic", 0))
+        p = test_result.get("p_value", 1)
+        cramers = test_result.get("cramers_v", test_result.get("effect_size", None))
 
         sig = "***" if p < 0.001 else "**" if p < 0.01 else "*" if p < 0.05 else "ns"
 
@@ -489,18 +522,25 @@ def plot_categorical_comparison(
         if cramers:
             annotation += f"\nCramér's V = {cramers:.3f}"
 
-        ax.text(0.95, 0.95, annotation, transform=ax.transAxes,
-                ha='right', va='top', fontsize=10,
-                bbox={'boxstyle': 'round', 'facecolor': 'white', 'alpha': 0.8})
+        ax.text(
+            0.95,
+            0.95,
+            annotation,
+            transform=ax.transAxes,
+            ha="right",
+            va="top",
+            fontsize=10,
+            bbox={"boxstyle": "round", "facecolor": "white", "alpha": 0.8},
+        )
 
     # Labels
-    ylabel = 'Percentage (%)' if normalize else 'Count'
+    ylabel = "Percentage (%)" if normalize else "Count"
     ax.set_ylabel(ylabel)
     ax.set_xlabel(x)
-    ax.set_title(title or f'{x} by {hue}')
+    ax.set_title(title or f"{x} by {hue}")
     ax.legend(title=hue)
 
-    plt.xticks(rotation=45, ha='right')
+    plt.xticks(rotation=45, ha="right")
     plt.tight_layout()
 
     return fig
@@ -509,6 +549,7 @@ def plot_categorical_comparison(
 # =============================================================================
 # Correlation Heatmap
 # =============================================================================
+
 
 def plot_correlation_heatmap(
     corr_matrix: Union[pd.DataFrame, np.ndarray],
@@ -546,7 +587,7 @@ def plot_correlation_heatmap(
     # Convert to DataFrame if needed
     if isinstance(corr_matrix, np.ndarray):
         if labels is None:
-            labels = [f"Var{i+1}" for i in range(corr_matrix.shape[0])]
+            labels = [f"Var{i + 1}" for i in range(corr_matrix.shape[0])]
         corr_df = pd.DataFrame(corr_matrix, index=labels, columns=labels)
     else:
         corr_df = corr_matrix
@@ -561,14 +602,14 @@ def plot_correlation_heatmap(
         corr_df,
         mask=mask,
         annot=annot,
-        fmt='.2f',
+        fmt=".2f",
         cmap=cmap,
         vmin=vmin,
         vmax=vmax,
         center=0,
         square=True,
         linewidths=0.5,
-        cbar_kws={'shrink': 0.8, 'label': f'{method.capitalize()} Correlation'},
+        cbar_kws={"shrink": 0.8, "label": f"{method.capitalize()} Correlation"},
         ax=ax,
     )
 
@@ -582,6 +623,7 @@ def plot_correlation_heatmap(
 # =============================================================================
 # T-Test Visualization
 # =============================================================================
+
 
 def plot_ttest_result(
     group1_data: np.ndarray,
@@ -615,19 +657,21 @@ def plot_ttest_result(
         matplotlib Figure object
     """
     # Create DataFrame
-    df = pd.DataFrame({
-        'group': [group1_name] * len(group1_data) + [group2_name] * len(group2_data),
-        'value': list(group1_data) + list(group2_data)
-    })
+    df = pd.DataFrame(
+        {
+            "group": [group1_name] * len(group1_data) + [group2_name] * len(group2_data),
+            "value": list(group1_data) + list(group2_data),
+        }
+    )
 
     # Set up pairs
     pairs = [(group1_name, group2_name)]
-    p_values = [test_result.get('p_value', 1)] if test_result else None
+    p_values = [test_result.get("p_value", 1)] if test_result else None
 
     fig = plot_group_comparison(
         data=df,
-        x='group',
-        y='value',
+        x="group",
+        y="value",
         plot_type=plot_type,
         pairs=pairs,
         p_values=p_values,
@@ -639,19 +683,26 @@ def plot_ttest_result(
     # Add detailed test annotation
     if test_result:
         ax = fig.axes[0]
-        stat = test_result.get('statistic', 0)
-        p = test_result.get('p_value', 1)
-        effect = test_result.get('effect_size', None)
-        test_name = test_result.get('test_name', 't-test')
+        stat = test_result.get("statistic", 0)
+        p = test_result.get("p_value", 1)
+        effect = test_result.get("effect_size", None)
+        test_name = test_result.get("test_name", "t-test")
 
         annotation_lines = [f"{test_name}", f"t = {stat:.3f}, p = {p:.4f}"]
         if effect is not None:
-            effect_name = test_result.get('effect_size_name', "Cohen's d")
+            effect_name = test_result.get("effect_size_name", "Cohen's d")
             annotation_lines.append(f"{effect_name} = {effect:.3f}")
 
-        ax.text(0.95, 0.95, '\n'.join(annotation_lines), transform=ax.transAxes,
-                ha='right', va='top', fontsize=10,
-                bbox={'boxstyle': 'round', 'facecolor': 'white', 'alpha': 0.8})
+        ax.text(
+            0.95,
+            0.95,
+            "\n".join(annotation_lines),
+            transform=ax.transAxes,
+            ha="right",
+            va="top",
+            fontsize=10,
+            bbox={"boxstyle": "round", "facecolor": "white", "alpha": 0.8},
+        )
 
     return fig
 
@@ -659,6 +710,7 @@ def plot_ttest_result(
 # =============================================================================
 # High-Level Visualization Creator
 # =============================================================================
+
 
 def create_group_comparison_visualizations(
     comparison_result: Dict[str, Any],
@@ -689,18 +741,18 @@ def create_group_comparison_visualizations(
 
     try:
         # Extract test info
-        main_test = comparison_result.get('main_test', {})
-        test_name = main_test.get('test_name', '')
-        p_value = main_test.get('p_value')
-        statistic = main_test.get('statistic')
-        details = main_test.get('details', {})
-        effect_size = details.get('effect_size')
+        main_test = comparison_result.get("main_test", {})
+        test_name = main_test.get("test_name", "")
+        p_value = main_test.get("p_value")
+        statistic = main_test.get("statistic")
+        details = main_test.get("details", {})
+        effect_size = details.get("effect_size")
 
-        group_stats = comparison_result.get('group_statistics', comparison_result.get('group_stats', {}))
-        post_hoc = comparison_result.get('post_hoc', [])
+        group_stats = comparison_result.get("group_statistics", comparison_result.get("group_stats", {}))
+        post_hoc = comparison_result.get("post_hoc", [])
 
         # Determine plot type based on test
-        if 't-test' in test_name.lower() or 'mann-whitney' in test_name.lower():
+        if "t-test" in test_name.lower() or "mann-whitney" in test_name.lower():
             # Two-group comparison
             if group_stats:
                 groups = list(group_stats.keys())
@@ -709,10 +761,10 @@ def create_group_comparison_visualizations(
                     fig = plot_anova_results(
                         group_stats=group_stats,
                         test_result={
-                            'test_name': test_name,
-                            'statistic': statistic,
-                            'p_value': p_value,
-                            'effect_size': effect_size or 0,
+                            "test_name": test_name,
+                            "statistic": statistic,
+                            "p_value": p_value,
+                            "effect_size": effect_size or 0,
                         },
                         title=f"Group Comparison ({test_name})",
                     )
@@ -734,15 +786,15 @@ def create_group_comparison_visualizations(
                     results.append(viz_result)
                     plt.close(fig)
 
-        elif 'anova' in test_name.lower() or 'kruskal' in test_name.lower():
+        elif "anova" in test_name.lower() or "kruskal" in test_name.lower():
             # Multi-group comparison
             fig = plot_anova_results(
                 group_stats=group_stats,
                 test_result={
-                    'test_name': test_name,
-                    'statistic': statistic,
-                    'p_value': p_value,
-                    'effect_size': effect_size or 0,
+                    "test_name": test_name,
+                    "statistic": statistic,
+                    "p_value": p_value,
+                    "effect_size": effect_size or 0,
                 },
                 post_hoc=post_hoc,
                 title=f"Group Comparison ({test_name})",
@@ -765,15 +817,15 @@ def create_group_comparison_visualizations(
             results.append(viz_result)
             plt.close(fig)
 
-        elif 'chi' in test_name.lower():
+        elif "chi" in test_name.lower():
             # Categorical comparison - need contingency table
-            if 'contingency_table' in comparison_result:
+            if "contingency_table" in comparison_result:
                 fig = plot_contingency_heatmap(
-                    contingency_table=comparison_result['contingency_table'],
+                    contingency_table=comparison_result["contingency_table"],
                     test_result={
-                        'chi2': statistic,
-                        'p_value': p_value,
-                        'cramers_v': effect_size,
+                        "chi2": statistic,
+                        "p_value": p_value,
+                        "cramers_v": effect_size,
                     },
                     title="Chi-Square Test",
                 )

@@ -6,6 +6,7 @@ Actual data/models are stored in MinIO.
 
 For production, consider using Redis or PostgreSQL for metadata.
 """
+
 import json
 import os
 from datetime import datetime
@@ -88,18 +89,20 @@ class InMemoryDatasetRepository(DatasetRepository):
 
     def _save_to_redis(self, dataset: Dataset):
         """Save dataset metadata to Redis for cross-service access"""
-        redis_dataset_store.save_dataset({
-            "dataset_id": str(dataset.id),
-            "name": dataset.name,
-            "minio_path": dataset.minio_path,
-            "user_id": dataset.user_id,
-            "session_id": dataset.session_id,
-            "description": dataset.description,
-            "columns": dataset.columns,
-            "row_count": dataset.row_count,
-            "file_size_bytes": dataset.file_size_bytes,
-            "created_at": dataset.created_at.isoformat(),
-        })
+        redis_dataset_store.save_dataset(
+            {
+                "dataset_id": str(dataset.id),
+                "name": dataset.name,
+                "minio_path": dataset.minio_path,
+                "user_id": dataset.user_id,
+                "session_id": dataset.session_id,
+                "description": dataset.description,
+                "columns": dataset.columns,
+                "row_count": dataset.row_count,
+                "file_size_bytes": dataset.file_size_bytes,
+                "created_at": dataset.created_at.isoformat(),
+            }
+        )
 
     async def save(self, dataset: Dataset) -> None:
         self._datasets[str(dataset.id)] = dataset
@@ -109,15 +112,8 @@ class InMemoryDatasetRepository(DatasetRepository):
     async def get_by_id(self, dataset_id: DatasetId) -> Optional[Dataset]:
         return self._datasets.get(str(dataset_id))
 
-    async def find_by_user(
-        self,
-        user_id: str,
-        session_id: Optional[str] = None
-    ) -> List[Dataset]:
-        return [
-            ds for ds in self._datasets.values()
-            if ds.belongs_to(user_id, session_id)
-        ]
+    async def find_by_user(self, user_id: str, session_id: Optional[str] = None) -> List[Dataset]:
+        return [ds for ds in self._datasets.values() if ds.belongs_to(user_id, session_id)]
 
     async def delete(self, dataset_id: DatasetId) -> bool:
         key = str(dataset_id)
@@ -150,10 +146,7 @@ class InMemoryModelRepository(ModelRepository):
                 try:
                     with open(meta_file, "r") as f:
                         data = json.load(f)
-                        leaderboard = [
-                            LeaderboardEntry(**entry)
-                            for entry in data.get("leaderboard", [])
-                        ]
+                        leaderboard = [LeaderboardEntry(**entry) for entry in data.get("leaderboard", [])]
                         model = MLModel(
                             id=ModelId.from_string(data["id"]),
                             name=data["name"],
@@ -209,15 +202,8 @@ class InMemoryModelRepository(ModelRepository):
     async def get_by_id(self, model_id: ModelId) -> Optional[MLModel]:
         return self._models.get(str(model_id))
 
-    async def find_by_user(
-        self,
-        user_id: str,
-        session_id: Optional[str] = None
-    ) -> List[MLModel]:
-        return [
-            m for m in self._models.values()
-            if m.belongs_to(user_id, session_id)
-        ]
+    async def find_by_user(self, user_id: str, session_id: Optional[str] = None) -> List[MLModel]:
+        return [m for m in self._models.values() if m.belongs_to(user_id, session_id)]
 
     async def delete(self, model_id: ModelId) -> bool:
         key = str(model_id)
@@ -227,6 +213,7 @@ class InMemoryModelRepository(ModelRepository):
             model_path = Path(model.model_path)
             if model_path.exists():
                 import shutil
+
                 shutil.rmtree(model_path)
 
             del self._models[key]
@@ -266,7 +253,9 @@ class InMemoryJobRepository(JobRepository):
                             session_id=data.get("session_id"),
                             created_at=datetime.fromisoformat(data["created_at"]),
                             started_at=datetime.fromisoformat(data["started_at"]) if data.get("started_at") else None,
-                            completed_at=datetime.fromisoformat(data["completed_at"]) if data.get("completed_at") else None,
+                            completed_at=datetime.fromisoformat(data["completed_at"])
+                            if data.get("completed_at")
+                            else None,
                         )
                         self._jobs[str(job.id)] = job
                 except Exception:
@@ -302,21 +291,11 @@ class InMemoryJobRepository(JobRepository):
     async def get_by_id(self, job_id: JobId) -> Optional[Job]:
         return self._jobs.get(str(job_id))
 
-    async def find_by_user(
-        self,
-        user_id: str,
-        session_id: Optional[str] = None
-    ) -> List[Job]:
-        return [
-            j for j in self._jobs.values()
-            if j.belongs_to(user_id, session_id)
-        ]
+    async def find_by_user(self, user_id: str, session_id: Optional[str] = None) -> List[Job]:
+        return [j for j in self._jobs.values() if j.belongs_to(user_id, session_id)]
 
     async def find_pending(self) -> List[Job]:
-        return [
-            j for j in self._jobs.values()
-            if j.status == JobStatus.PENDING
-        ]
+        return [j for j in self._jobs.values() if j.status == JobStatus.PENDING]
 
     async def update(self, job: Job) -> None:
         self._jobs[str(job.id)] = job

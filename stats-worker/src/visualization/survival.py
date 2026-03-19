@@ -19,9 +19,10 @@ Usage:
     # Plot forest plot from Cox regression
     fig = plot_forest_plot(cox_result)
 """
+
 import matplotlib
 
-matplotlib.use('Agg')
+matplotlib.use("Agg")
 import logging
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -46,6 +47,7 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 # Kaplan-Meier Curves
 # =============================================================================
+
 
 def plot_kaplan_meier(
     km_results: Union[Dict[str, Any], List[Dict[str, Any]]],
@@ -91,18 +93,14 @@ def plot_kaplan_meier(
 
     # Set up colors
     if colors is None:
-        color_list = [
-            SURVIVAL_COLORS.get(f'group{i+1}', CLINICAL_COLORS['primary'])
-            for i in range(n_groups)
-        ]
+        color_list = [SURVIVAL_COLORS.get(f"group{i + 1}", CLINICAL_COLORS["primary"]) for i in range(n_groups)]
     else:
         color_list = colors
 
     # Create figure with risk table if requested
     if show_at_risk:
         fig, (ax_main, ax_risk) = plt.subplots(
-            2, 1, figsize=figsize,
-            gridspec_kw={'height_ratios': [4, 1], 'hspace': 0.05}
+            2, 1, figsize=figsize, gridspec_kw={"height_ratios": [4, 1], "hspace": 0.05}
         )
     else:
         fig, ax_main = plt.subplots(figsize=figsize)
@@ -114,17 +112,17 @@ def plot_kaplan_meier(
     # Plot each group
     for idx, km_result in enumerate(km_results):
         color = color_list[idx % len(color_list)]
-        group_name = km_result.get('group', f'Group {idx + 1}')
+        group_name = km_result.get("group", f"Group {idx + 1}")
 
         # Extract survival curve data
-        curve_data = km_result.get('survival_curve', [])
+        curve_data = km_result.get("survival_curve", [])
         if not curve_data:
             continue
 
-        times = [p['time'] for p in curve_data]
-        survivals = [p['survival'] for p in curve_data]
-        ci_lower = [p.get('ci_lower', p['survival']) for p in curve_data]
-        ci_upper = [p.get('ci_upper', p['survival']) for p in curve_data]
+        times = [p["time"] for p in curve_data]
+        survivals = [p["survival"] for p in curve_data]
+        ci_lower = [p.get("ci_lower", p["survival"]) for p in curve_data]
+        ci_upper = [p.get("ci_upper", p["survival"]) for p in curve_data]
 
         max_time = max(max_time, max(times) if times else 0)
 
@@ -139,25 +137,19 @@ def plot_kaplan_meier(
         if show_ci:
             step_times_ci, step_lower = _make_step_curve(times, ci_lower)
             _, step_upper = _make_step_curve(times, ci_upper)
-            ax_main.fill_between(
-                step_times_ci, step_lower, step_upper,
-                alpha=0.2, color=color, step='post'
-            )
+            ax_main.fill_between(step_times_ci, step_lower, step_upper, alpha=0.2, color=color, step="post")
 
         # Plot censoring marks
         if show_censored:
             censored_times = []
             censored_survivals = []
             for i, p in enumerate(curve_data):
-                if p.get('censored', 0) > 0 and i > 0:
-                    censored_times.append(p['time'])
-                    censored_survivals.append(curve_data[i-1]['survival'] if i > 0 else 1.0)
+                if p.get("censored", 0) > 0 and i > 0:
+                    censored_times.append(p["time"])
+                    censored_survivals.append(curve_data[i - 1]["survival"] if i > 0 else 1.0)
 
             if censored_times:
-                ax_main.scatter(
-                    censored_times, censored_survivals,
-                    marker='|', s=50, color=color, zorder=5
-                )
+                ax_main.scatter(censored_times, censored_survivals, marker="|", s=50, color=color, zorder=5)
 
     # Style the main plot
     style_survival_plot(ax_main, title)
@@ -168,9 +160,8 @@ def plot_kaplan_meier(
 
     # Add median survival line
     if show_median:
-        ax_main.axhline(y=0.5, linestyle=':', color='gray', alpha=0.7, linewidth=1)
-        ax_main.text(max_time * 0.98, 0.52, 'Median', ha='right', va='bottom',
-                     fontsize=9, color='gray')
+        ax_main.axhline(y=0.5, linestyle=":", color="gray", alpha=0.7, linewidth=1)
+        ax_main.text(max_time * 0.98, 0.52, "Median", ha="right", va="bottom", fontsize=9, color="gray")
 
     # Add log-rank p-value if provided
     if log_rank_p is not None:
@@ -178,12 +169,19 @@ def plot_kaplan_meier(
             p_text = "Log-rank p < 0.001"
         else:
             p_text = f"Log-rank p = {log_rank_p:.3f}"
-        ax_main.text(0.98, 0.02, p_text, transform=ax_main.transAxes,
-                     ha='right', va='bottom', fontsize=11,
-                     bbox={'boxstyle': 'round', 'facecolor': 'white', 'alpha': 0.8})
+        ax_main.text(
+            0.98,
+            0.02,
+            p_text,
+            transform=ax_main.transAxes,
+            ha="right",
+            va="bottom",
+            fontsize=11,
+            bbox={"boxstyle": "round", "facecolor": "white", "alpha": 0.8},
+        )
 
     # Legend
-    ax_main.legend(loc='lower left', frameon=True)
+    ax_main.legend(loc="lower left", frameon=True)
 
     # Number at risk table
     if show_at_risk and ax_risk is not None:
@@ -205,7 +203,7 @@ def _make_step_curve(times: List[float], values: List[float]) -> Tuple[List[floa
         if i > 0:
             # Horizontal line from previous point
             step_times.append(t)
-            step_values.append(values[i-1])
+            step_values.append(values[i - 1])
         # Vertical drop
         step_times.append(t)
         step_values.append(v)
@@ -228,26 +226,42 @@ def _add_risk_table(
 
     ax.set_xlim(0, max_time)
     ax.set_ylim(0, len(km_results) + 1)
-    ax.axis('off')
+    ax.axis("off")
 
     # Add header
-    ax.text(-0.02, len(km_results) + 0.5, "At Risk", transform=ax.transData,
-            ha='right', va='center', fontsize=10, fontweight='bold')
+    ax.text(
+        -0.02,
+        len(km_results) + 0.5,
+        "At Risk",
+        transform=ax.transData,
+        ha="right",
+        va="center",
+        fontsize=10,
+        fontweight="bold",
+    )
 
     for idx, km_result in enumerate(km_results):
-        group_name = km_result.get('group', f'Group {idx + 1}')
-        curve_data = km_result.get('survival_curve', [])
+        group_name = km_result.get("group", f"Group {idx + 1}")
+        curve_data = km_result.get("survival_curve", [])
 
         y_pos = len(km_results) - idx - 0.5
 
         # Group label
-        ax.text(-0.02, y_pos, group_name[:15], transform=ax.transData,
-                ha='right', va='center', fontsize=9, color=colors[idx % len(colors)])
+        ax.text(
+            -0.02,
+            y_pos,
+            group_name[:15],
+            transform=ax.transData,
+            ha="right",
+            va="center",
+            fontsize=9,
+            color=colors[idx % len(colors)],
+        )
 
         # Number at risk at each time point
         for t in at_risk_times:
             at_risk = _get_at_risk_at_time(curve_data, t)
-            ax.text(t, y_pos, str(at_risk), ha='center', va='center', fontsize=9)
+            ax.text(t, y_pos, str(at_risk), ha="center", va="center", fontsize=9)
 
 
 def _get_at_risk_at_time(curve_data: List[Dict], t: float) -> int:
@@ -256,9 +270,10 @@ def _get_at_risk_at_time(curve_data: List[Dict], t: float) -> int:
         return 0
 
     for i, p in enumerate(curve_data):
-        if p['time'] > t:
-            return int(curve_data[i-1].get("at_risk", 0)) if i > 0 else int(curve_data[0].get("at_risk", 0))
+        if p["time"] > t:
+            return int(curve_data[i - 1].get("at_risk", 0)) if i > 0 else int(curve_data[0].get("at_risk", 0))
     return int(curve_data[-1].get("at_risk", 0))
+
 
 def plot_cumulative_hazard(
     km_results: Union[Dict[str, Any], List[Dict[str, Any]]],
@@ -296,10 +311,7 @@ def plot_cumulative_hazard(
 
     # Set up colors
     if colors is None:
-        color_list = [
-            SURVIVAL_COLORS.get(f'group{i+1}', CLINICAL_COLORS['primary'])
-            for i in range(n_groups)
-        ]
+        color_list = [SURVIVAL_COLORS.get(f"group{i + 1}", CLINICAL_COLORS["primary"]) for i in range(n_groups)]
     else:
         color_list = colors
 
@@ -307,14 +319,14 @@ def plot_cumulative_hazard(
 
     for idx, km_result in enumerate(km_results):
         color = color_list[idx % len(color_list)]
-        group_name = km_result.get('group', f'Group {idx + 1}')
+        group_name = km_result.get("group", f"Group {idx + 1}")
 
-        curve_data = km_result.get('survival_curve', [])
+        curve_data = km_result.get("survival_curve", [])
         if not curve_data:
             continue
 
-        times = [p['time'] for p in curve_data if p['survival'] > 0]
-        survivals = [p['survival'] for p in curve_data if p['survival'] > 0]
+        times = [p["time"] for p in curve_data if p["survival"] > 0]
+        survivals = [p["survival"] for p in curve_data if p["survival"] > 0]
 
         # Convert to cumulative hazard: H(t) = -log(S(t))
         cum_hazard = [-np.log(s) for s in survivals]
@@ -327,8 +339,8 @@ def plot_cumulative_hazard(
 
         # CI for cumulative hazard
         if show_ci:
-            ci_lower = [p.get('ci_upper', p['survival']) for p in curve_data if p['survival'] > 0]
-            ci_upper = [p.get('ci_lower', p['survival']) for p in curve_data if p['survival'] > 0]
+            ci_lower = [p.get("ci_upper", p["survival"]) for p in curve_data if p["survival"] > 0]
+            ci_upper = [p.get("ci_lower", p["survival"]) for p in curve_data if p["survival"] > 0]
 
             hazard_lower = [-np.log(max(s, 0.001)) for s in ci_lower]
             hazard_upper = [-np.log(max(s, 0.001)) for s in ci_upper]
@@ -336,10 +348,7 @@ def plot_cumulative_hazard(
             step_times_ci, step_lower = _make_step_curve(times, hazard_lower)
             _, step_upper = _make_step_curve(times, hazard_upper)
 
-            ax.fill_between(
-                step_times_ci, step_lower, step_upper,
-                alpha=0.2, color=color, step='post'
-            )
+            ax.fill_between(step_times_ci, step_lower, step_upper, alpha=0.2, color=color, step="post")
 
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
@@ -349,9 +358,9 @@ def plot_cumulative_hazard(
     if title:
         ax.set_title(title)
 
-    ax.legend(loc='upper left', frameon=True)
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
+    ax.legend(loc="upper left", frameon=True)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
 
     plt.tight_layout()
     return fig
@@ -361,6 +370,7 @@ def plot_cumulative_hazard(
 # Forest Plot (Hazard Ratios)
 # =============================================================================
 
+
 def plot_forest_plot(
     cox_result: Dict[str, Any],
     title: Optional[str] = "Forest Plot - Hazard Ratios",
@@ -368,7 +378,7 @@ def plot_forest_plot(
     show_reference_line: bool = True,
     log_scale: bool = True,
     figsize: Tuple[float, float] = (10, 6),
-    sort_by: str = 'default',  # 'default', 'hr', 'pvalue', 'name'
+    sort_by: str = "default",  # 'default', 'hr', 'pvalue', 'name'
 ) -> plt.Figure:
     """
     Plot forest plot for Cox regression hazard ratios.
@@ -387,20 +397,20 @@ def plot_forest_plot(
     """
     apply_publication_style()
 
-    coefficients = cox_result.get('coefficients', [])
+    coefficients = cox_result.get("coefficients", [])
     if not coefficients:
         # Create empty plot
         fig, ax = plt.subplots(figsize=figsize)
-        ax.text(0.5, 0.5, 'No coefficients to display', ha='center', va='center')
+        ax.text(0.5, 0.5, "No coefficients to display", ha="center", va="center")
         return fig
 
     # Sort coefficients if requested
-    if sort_by == 'hr':
-        coefficients = sorted(coefficients, key=lambda x: x.get('hazard_ratio', 1))
-    elif sort_by == 'pvalue':
-        coefficients = sorted(coefficients, key=lambda x: x.get('p_value', 1))
-    elif sort_by == 'name':
-        coefficients = sorted(coefficients, key=lambda x: x.get('variable', ''))
+    if sort_by == "hr":
+        coefficients = sorted(coefficients, key=lambda x: x.get("hazard_ratio", 1))
+    elif sort_by == "pvalue":
+        coefficients = sorted(coefficients, key=lambda x: x.get("p_value", 1))
+    elif sort_by == "name":
+        coefficients = sorted(coefficients, key=lambda x: x.get("variable", ""))
 
     n_vars = len(coefficients)
 
@@ -415,24 +425,24 @@ def plot_forest_plot(
     for idx, coef in enumerate(coefficients):
         y = y_positions[idx]
 
-        hr = coef.get('hazard_ratio', 1)
-        hr_ci = coef.get('hr_ci', {})
-        hr_lower = hr_ci.get('lower', hr * 0.8)
-        hr_upper = hr_ci.get('upper', hr * 1.2)
-        p_value = coef.get('p_value', 1)
-        var_name = coef.get('variable', f'Var {idx + 1}')
+        hr = coef.get("hazard_ratio", 1)
+        hr_ci = coef.get("hr_ci", {})
+        hr_lower = hr_ci.get("lower", hr * 0.8)
+        hr_upper = hr_ci.get("upper", hr * 1.2)
+        p_value = coef.get("p_value", 1)
+        var_name = coef.get("variable", f"Var {idx + 1}")
 
         # Determine color based on significance
         if p_value < 0.05:
             if hr > 1:
-                color = CLINICAL_COLORS['danger']  # Increased risk
+                color = CLINICAL_COLORS["danger"]  # Increased risk
             else:
-                color = CLINICAL_COLORS['success']  # Decreased risk
+                color = CLINICAL_COLORS["success"]  # Decreased risk
         else:
-            color = CLINICAL_COLORS['neutral']  # Not significant
+            color = CLINICAL_COLORS["neutral"]  # Not significant
 
         # Plot point estimate
-        ax.scatter([hr], [y], s=100, color=color, zorder=10, marker='s')
+        ax.scatter([hr], [y], s=100, color=color, zorder=10, marker="s")
 
         # Plot confidence interval
         ax.plot([hr_lower, hr_upper], [y, y], color=color, linewidth=2, zorder=5)
@@ -443,32 +453,29 @@ def plot_forest_plot(
         ax.plot([hr_upper, hr_upper], [y - cap_height, y + cap_height], color=color, linewidth=2)
 
         # Variable name on left
-        ax.text(-0.02, y, var_name, ha='right', va='center', fontsize=10,
-                transform=ax.get_yaxis_transform())
+        ax.text(-0.02, y, var_name, ha="right", va="center", fontsize=10, transform=ax.get_yaxis_transform())
 
         # HR and CI on right
         ci_text = f"{hr:.2f} ({hr_lower:.2f}-{hr_upper:.2f})"
-        ax.text(1.02, y, ci_text, ha='left', va='center', fontsize=9,
-                transform=ax.get_yaxis_transform())
+        ax.text(1.02, y, ci_text, ha="left", va="center", fontsize=9, transform=ax.get_yaxis_transform())
 
         # P-value
         if p_value < 0.001:
             p_text = "p<0.001"
         else:
             p_text = f"p={p_value:.3f}"
-        ax.text(1.25, y, p_text, ha='left', va='center', fontsize=9,
-                transform=ax.get_yaxis_transform())
+        ax.text(1.25, y, p_text, ha="left", va="center", fontsize=9, transform=ax.get_yaxis_transform())
 
     # Reference line at HR=1
     if show_reference_line:
-        ax.axvline(x=1, color='gray', linestyle='-', linewidth=1, zorder=1)
+        ax.axvline(x=1, color="gray", linestyle="-", linewidth=1, zorder=1)
 
     # Set scale
     if log_scale:
-        ax.set_xscale('log')
+        ax.set_xscale("log")
         # Nice tick marks
         ax.set_xticks([0.1, 0.25, 0.5, 1, 2, 4, 10])
-        ax.set_xticklabels(['0.1', '0.25', '0.5', '1', '2', '4', '10'])
+        ax.set_xticklabels(["0.1", "0.25", "0.5", "1", "2", "4", "10"])
 
     ax.set_xlabel(xlabel)
     ax.set_ylim(-0.5, n_vars - 0.5)
@@ -478,23 +485,46 @@ def plot_forest_plot(
         ax.set_title(title)
 
     # Style
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    ax.spines['left'].set_visible(False)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_visible(False)
 
     # Add header row
-    ax.text(-0.02, n_vars + 0.5, "Variable", ha='right', va='center', fontsize=10,
-            fontweight='bold', transform=ax.get_yaxis_transform())
-    ax.text(1.02, n_vars + 0.5, "HR (95% CI)", ha='left', va='center', fontsize=10,
-            fontweight='bold', transform=ax.get_yaxis_transform())
-    ax.text(1.25, n_vars + 0.5, "P-value", ha='left', va='center', fontsize=10,
-            fontweight='bold', transform=ax.get_yaxis_transform())
+    ax.text(
+        -0.02,
+        n_vars + 0.5,
+        "Variable",
+        ha="right",
+        va="center",
+        fontsize=10,
+        fontweight="bold",
+        transform=ax.get_yaxis_transform(),
+    )
+    ax.text(
+        1.02,
+        n_vars + 0.5,
+        "HR (95% CI)",
+        ha="left",
+        va="center",
+        fontsize=10,
+        fontweight="bold",
+        transform=ax.get_yaxis_transform(),
+    )
+    ax.text(
+        1.25,
+        n_vars + 0.5,
+        "P-value",
+        ha="left",
+        va="center",
+        fontsize=10,
+        fontweight="bold",
+        transform=ax.get_yaxis_transform(),
+    )
 
     # Add footer with model info
-    n_subjects = cox_result.get('n_subjects', '?')
-    n_events = cox_result.get('n_events', '?')
-    ax.text(0.5, -0.1, f"n={n_subjects}, events={n_events}",
-            ha='center', va='top', fontsize=9, transform=ax.transAxes)
+    n_subjects = cox_result.get("n_subjects", "?")
+    n_events = cox_result.get("n_events", "?")
+    ax.text(0.5, -0.1, f"n={n_subjects}, events={n_events}", ha="center", va="top", fontsize=9, transform=ax.transAxes)
 
     plt.tight_layout()
     return fig
@@ -503,6 +533,7 @@ def plot_forest_plot(
 # =============================================================================
 # Hazard Ratio Plot (Single Variable)
 # =============================================================================
+
 
 def plot_hazard_ratio(
     hr: float,
@@ -536,14 +567,14 @@ def plot_hazard_ratio(
 
     # Determine color
     if ci_lower > 1:
-        color = CLINICAL_COLORS['danger']  # Significantly higher
+        color = CLINICAL_COLORS["danger"]  # Significantly higher
     elif ci_upper < 1:
-        color = CLINICAL_COLORS['success']  # Significantly lower
+        color = CLINICAL_COLORS["success"]  # Significantly lower
     else:
-        color = CLINICAL_COLORS['neutral']  # Not significant
+        color = CLINICAL_COLORS["neutral"]  # Not significant
 
     # Plot point and CI
-    ax.scatter([hr], [0], s=150, color=color, zorder=10, marker='D')
+    ax.scatter([hr], [0], s=150, color=color, zorder=10, marker="D")
     ax.plot([ci_lower, ci_upper], [0, 0], color=color, linewidth=3, zorder=5)
 
     # Caps
@@ -551,14 +582,21 @@ def plot_hazard_ratio(
     ax.plot([ci_upper, ci_upper], [-0.1, 0.1], color=color, linewidth=2)
 
     # Reference line
-    ax.axvline(x=1, color='gray', linestyle='--', linewidth=1.5, zorder=1)
-    ax.text(1, 0.3, reference_label, ha='center', va='bottom', fontsize=10, color='gray')
+    ax.axvline(x=1, color="gray", linestyle="--", linewidth=1.5, zorder=1)
+    ax.text(1, 0.3, reference_label, ha="center", va="bottom", fontsize=10, color="gray")
 
     # Labels
-    ax.text(hr, -0.3, f"HR = {hr:.2f}\n({ci_lower:.2f} - {ci_upper:.2f})",
-            ha='center', va='top', fontsize=11, fontweight='bold')
+    ax.text(
+        hr,
+        -0.3,
+        f"HR = {hr:.2f}\n({ci_lower:.2f} - {ci_upper:.2f})",
+        ha="center",
+        va="top",
+        fontsize=11,
+        fontweight="bold",
+    )
 
-    ax.set_xscale('log')
+    ax.set_xscale("log")
     ax.set_xlim(min(0.2, ci_lower * 0.8), max(5, ci_upper * 1.2))
     ax.set_ylim(-0.6, 0.5)
     ax.set_yticks([])
@@ -568,9 +606,9 @@ def plot_hazard_ratio(
     if title:
         ax.set_title(title)
 
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    ax.spines['left'].set_visible(False)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_visible(False)
 
     plt.tight_layout()
     return fig
@@ -579,6 +617,7 @@ def plot_hazard_ratio(
 # =============================================================================
 # High-Level Integration Functions
 # =============================================================================
+
 
 def create_survival_visualizations(
     km_results: Dict[str, Any],
@@ -607,9 +646,9 @@ def create_survival_visualizations(
     visualizations: List[VisualizationResult] = []
 
     # Extract group results if nested
-    if 'groups' in km_results:
-        group_data = [km_results['groups'][g] for g in km_results['groups']]
-    elif 'survival_curve' in km_results:
+    if "groups" in km_results:
+        group_data = [km_results["groups"][g] for g in km_results["groups"]]
+    elif "survival_curve" in km_results:
         group_data = [km_results]
     else:
         group_data = list(km_results.values()) if isinstance(km_results, dict) else km_results
@@ -620,17 +659,20 @@ def create_survival_visualizations(
 
         if save_to_minio:
             from .storage import save_figure_to_minio
+
             url = save_figure_to_minio(fig_km, user_id, job_id, "kaplan_meier.png")
         else:
             url = ""
 
-        visualizations.append(SurvivalVisualizationResult(
-            type=VisualizationType.KAPLAN_MEIER,
-            url=url,
-            title="Kaplan-Meier Survival Curves",
-            description=f"Log-rank p = {log_rank_p:.4f}" if log_rank_p else "Survival curves",
-            p_value=log_rank_p,
-        ))
+        visualizations.append(
+            SurvivalVisualizationResult(
+                type=VisualizationType.KAPLAN_MEIER,
+                url=url,
+                title="Kaplan-Meier Survival Curves",
+                description=f"Log-rank p = {log_rank_p:.4f}" if log_rank_p else "Survival curves",
+                p_value=log_rank_p,
+            )
+        )
         plt.close(fig_km)
     except Exception as e:
         logger.error(f"Error creating KM plot: {e}")
@@ -644,18 +686,20 @@ def create_survival_visualizations(
         else:
             url = ""
 
-        visualizations.append(VisualizationResult(
-            type=VisualizationType.CUMULATIVE_HAZARD,
-            url=url,
-            title="Nelson-Aalen Cumulative Hazard",
-            description="Cumulative hazard function",
-        ))
+        visualizations.append(
+            VisualizationResult(
+                type=VisualizationType.CUMULATIVE_HAZARD,
+                url=url,
+                title="Nelson-Aalen Cumulative Hazard",
+                description="Cumulative hazard function",
+            )
+        )
         plt.close(fig_ch)
     except Exception as e:
         logger.error(f"Error creating cumulative hazard plot: {e}")
 
     # 3. Forest plot from Cox regression
-    if cox_result and cox_result.get('coefficients'):
+    if cox_result and cox_result.get("coefficients"):
         try:
             fig_forest = plot_forest_plot(cox_result)
 
@@ -665,21 +709,23 @@ def create_survival_visualizations(
                 url = ""
 
             # Get overall model p-value
-            global_tests = cox_result.get('global_tests', {})
-            lr_test = global_tests.get('likelihood_ratio', {})
-            model_p = lr_test.get('p_value')
+            global_tests = cox_result.get("global_tests", {})
+            lr_test = global_tests.get("likelihood_ratio", {})
+            model_p = lr_test.get("p_value")
 
-            visualizations.append(VisualizationResult(
-                type=VisualizationType.FOREST_PLOT,
-                url=url,
-                title="Forest Plot - Cox Regression",
-                description=f"Model likelihood ratio p = {model_p:.4f}" if model_p else "Hazard ratios with 95% CI",
-                metadata={
-                    "n_subjects": cox_result.get('n_subjects'),
-                    "n_events": cox_result.get('n_events'),
-                    "concordance": cox_result.get('model_fit', {}).get('concordance'),
-                }
-            ))
+            visualizations.append(
+                VisualizationResult(
+                    type=VisualizationType.FOREST_PLOT,
+                    url=url,
+                    title="Forest Plot - Cox Regression",
+                    description=f"Model likelihood ratio p = {model_p:.4f}" if model_p else "Hazard ratios with 95% CI",
+                    metadata={
+                        "n_subjects": cox_result.get("n_subjects"),
+                        "n_events": cox_result.get("n_events"),
+                        "concordance": cox_result.get("model_fit", {}).get("concordance"),
+                    },
+                )
+            )
             plt.close(fig_forest)
         except Exception as e:
             logger.error(f"Error creating forest plot: {e}")

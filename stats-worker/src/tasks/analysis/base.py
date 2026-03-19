@@ -4,6 +4,7 @@ Base utilities for advanced analysis.
 Contains:
     - safe_round: Safe rounding with None/NaN handling
 """
+
 import math
 from typing import Optional
 

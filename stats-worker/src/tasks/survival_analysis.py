@@ -13,6 +13,7 @@ Suitable for:
 - Clinical trial endpoints
 - Treatment comparison studies
 """
+
 import logging
 import math
 import warnings
@@ -24,7 +25,7 @@ import pandas as pd
 from scipy import stats
 
 logger = logging.getLogger(__name__)
-warnings.filterwarnings('ignore', category=RuntimeWarning)
+warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 # Optional visualization support
 try:
@@ -34,6 +35,7 @@ try:
         plot_forest_plot,
         plot_kaplan_meier,
     )
+
     HAS_VISUALIZATION = True
 except ImportError:
     HAS_VISUALIZATION = False
@@ -67,9 +69,11 @@ def safe_round(value: Optional[float], decimals: int = 4) -> Optional[float]:
 # Data Structures
 # =============================================================================
 
+
 @dataclass
 class SurvivalPoint:
     """A single point on a survival curve."""
+
     time: float
     survival: float
     survival_ci_lower: float
@@ -83,6 +87,7 @@ class SurvivalPoint:
 @dataclass
 class KaplanMeierResult:
     """Result of Kaplan-Meier estimation."""
+
     group_name: str
     n_subjects: int
     n_events: int
@@ -131,7 +136,7 @@ class KaplanMeierResult:
             if point.time > t:
                 if i == 0:
                     return 1.0, 1.0, 1.0
-                prev = self.survival_table[i-1]
+                prev = self.survival_table[i - 1]
                 return prev.survival, prev.survival_ci_lower, prev.survival_ci_upper
         if self.survival_table:
             last = self.survival_table[-1]
@@ -142,6 +147,7 @@ class KaplanMeierResult:
 @dataclass
 class LogRankResult:
     """Result of log-rank test."""
+
     groups: List[str]
     test_statistic: float
     degrees_of_freedom: int
@@ -166,6 +172,7 @@ class LogRankResult:
 @dataclass
 class CoxCoefficient:
     """A single coefficient from Cox regression."""
+
     variable: str
     coefficient: float
     std_error: float
@@ -194,6 +201,7 @@ class CoxCoefficient:
 @dataclass
 class CoxRegressionResult:
     """Result of Cox proportional hazards regression."""
+
     n_subjects: int
     n_events: int
 
@@ -241,6 +249,7 @@ class CoxRegressionResult:
 # Kaplan-Meier Estimator
 # =============================================================================
 
+
 class KaplanMeierEstimator:
     """
     Kaplan-Meier survival curve estimator.
@@ -265,7 +274,7 @@ class KaplanMeierEstimator:
             alpha: Significance level for confidence intervals (default: 0.05 for 95% CI)
         """
         self.alpha = alpha
-        self.z_alpha = stats.norm.ppf(1 - alpha/2)
+        self.z_alpha = stats.norm.ppf(1 - alpha / 2)
 
     def fit(
         self,
@@ -320,16 +329,18 @@ class KaplanMeierEstimator:
         variance_sum = 0.0  # Greenwood's formula
 
         # Add time 0
-        survival_points.append(SurvivalPoint(
-            time=0.0,
-            survival=1.0,
-            survival_ci_lower=1.0,
-            survival_ci_upper=1.0,
-            at_risk=n_subjects,
-            events=0,
-            censored=0,
-            std_error=0.0,
-        ))
+        survival_points.append(
+            SurvivalPoint(
+                time=0.0,
+                survival=1.0,
+                survival_ci_lower=1.0,
+                survival_ci_upper=1.0,
+                at_risk=n_subjects,
+                events=0,
+                censored=0,
+                std_error=0.0,
+            )
+        )
 
         for t in unique_times:
             # Number at risk just before time t
@@ -343,7 +354,7 @@ class KaplanMeierEstimator:
 
             if at_risk > 0:
                 # Kaplan-Meier product
-                survival *= (1 - d / at_risk)
+                survival *= 1 - d / at_risk
 
                 # Greenwood's formula for variance
                 if at_risk > d:
@@ -362,16 +373,18 @@ class KaplanMeierEstimator:
                 ci_lower = survival
                 ci_upper = survival
 
-            survival_points.append(SurvivalPoint(
-                time=float(t),
-                survival=float(survival),
-                survival_ci_lower=float(max(0, ci_lower)),
-                survival_ci_upper=float(min(1, ci_upper)),
-                at_risk=int(at_risk),
-                events=int(d),
-                censored=int(c),
-                std_error=float(std_error),
-            ))
+            survival_points.append(
+                SurvivalPoint(
+                    time=float(t),
+                    survival=float(survival),
+                    survival_ci_lower=float(max(0, ci_lower)),
+                    survival_ci_upper=float(min(1, ci_upper)),
+                    at_risk=int(at_risk),
+                    events=int(d),
+                    censored=int(c),
+                    std_error=float(std_error),
+                )
+            )
 
         # Calculate median survival
         median, median_ci_lower, median_ci_upper = self._calculate_median(survival_points)
@@ -474,6 +487,7 @@ class KaplanMeierEstimator:
 # Log-Rank Test
 # =============================================================================
 
+
 def log_rank_test(
     times: np.ndarray,
     events: np.ndarray,
@@ -542,17 +556,25 @@ def log_rank_test(
 
             # Variance contribution
             if at_risk_total > 1:
-                variance_matrix[i, i] += (at_risk_g * (at_risk_total - at_risk_g) *
-                           events_total * (at_risk_total - events_total) /
-                           (at_risk_total ** 2 * (at_risk_total - 1)))
+                variance_matrix[i, i] += (
+                    at_risk_g
+                    * (at_risk_total - at_risk_g)
+                    * events_total
+                    * (at_risk_total - events_total)
+                    / (at_risk_total**2 * (at_risk_total - 1))
+                )
 
                 for j in range(i + 1, n_groups):
                     mask_j = groups == unique_groups[j]
                     at_risk_j = np.sum(times[mask_j] >= t)
 
-                    variance_matrix[i, j] -= (at_risk_g * at_risk_j *
-                               events_total * (at_risk_total - events_total) /
-                               (at_risk_total ** 2 * (at_risk_total - 1)))
+                    variance_matrix[i, j] -= (
+                        at_risk_g
+                        * at_risk_j
+                        * events_total
+                        * (at_risk_total - events_total)
+                        / (at_risk_total**2 * (at_risk_total - 1))
+                    )
                     variance_matrix[j, i] = variance_matrix[i, j]
 
     # Test statistic (use first n-1 groups due to linear dependency)
@@ -594,8 +616,7 @@ def log_rank_test(
                         "p_value": safe_round(pair_result.p_value, 4),
                         # Bonferroni correction
                         "p_value_adjusted": safe_round(
-                            min(1.0, pair_result.p_value * (n_groups * (n_groups - 1) / 2)),
-                            4
+                            min(1.0, pair_result.p_value * (n_groups * (n_groups - 1) / 2)), 4
                         ),
                     }
         result.pairwise = pairwise_results
@@ -606,6 +627,7 @@ def log_rank_test(
 # =============================================================================
 # Cox Proportional Hazards Regression
 # =============================================================================
+
 
 class CoxPHFitter:
     """
@@ -632,7 +654,7 @@ class CoxPHFitter:
             tol: Tolerance for convergence
         """
         self.alpha = alpha
-        self.z_alpha = stats.norm.ppf(1 - alpha/2)
+        self.z_alpha = stats.norm.ppf(1 - alpha / 2)
         self.max_iter = max_iter
         self.tol = tol
 
@@ -660,8 +682,9 @@ class CoxPHFitter:
 
         # Handle covariates
         if covariates is None:
-            covariates = [c for c in df.select_dtypes(include=[np.number]).columns
-                         if c not in [duration_col, event_col]]
+            covariates = [
+                c for c in df.select_dtypes(include=[np.number]).columns if c not in [duration_col, event_col]
+            ]
 
         # Remove rows with missing values
         cols = [duration_col, event_col] + covariates
@@ -721,7 +744,7 @@ class CoxPHFitter:
                 # Weighted mean of covariates
                 X_risk = X_norm[at_risk]
                 weights = risk[at_risk] / risk_sum
-                X_bar = (X_risk.T @ weights)
+                X_bar = X_risk.T @ weights
 
                 # Gradient
                 gradient += X_norm[i] - X_bar
@@ -777,16 +800,18 @@ class CoxPHFitter:
                 hr_lower = np.nan
                 hr_upper = np.nan
 
-            coefficients.append(CoxCoefficient(
-                variable=var,
-                coefficient=float(coef),
-                std_error=float(se),
-                hazard_ratio=float(hr),
-                hr_ci_lower=float(hr_lower),
-                hr_ci_upper=float(hr_upper),
-                z_score=float(z),
-                p_value=float(p_value),
-            ))
+            coefficients.append(
+                CoxCoefficient(
+                    variable=var,
+                    coefficient=float(coef),
+                    std_error=float(se),
+                    hazard_ratio=float(hr),
+                    hr_ci_lower=float(hr_lower),
+                    hr_ci_upper=float(hr_upper),
+                    z_score=float(z),
+                    p_value=float(p_value),
+                )
+            )
 
         # Calculate null model log-likelihood
         log_likelihood_null = -n_events * np.log(n_subjects)
@@ -862,6 +887,7 @@ class CoxPHFitter:
 # Convenience Functions
 # =============================================================================
 
+
 def kaplan_meier_analysis(
     df: pd.DataFrame,
     time_col: str,
@@ -928,12 +954,14 @@ def kaplan_meier_analysis(
                 )
                 if user_id and job_id:
                     url = save_figure_to_minio(fig_km, user_id, job_id, "kaplan_meier.png")
-                    visualizations.append({
-                        "type": "kaplan_meier",
-                        "url": url,
-                        "title": "Kaplan-Meier Survival Curves by Group",
-                        "description": f"Log-rank p = {lr.p_value:.4f}",
-                    })
+                    visualizations.append(
+                        {
+                            "type": "kaplan_meier",
+                            "url": url,
+                            "title": "Kaplan-Meier Survival Curves by Group",
+                            "description": f"Log-rank p = {lr.p_value:.4f}",
+                        }
+                    )
                 plt.close(fig_km)
 
                 result["visualizations"] = visualizations
@@ -960,12 +988,14 @@ def kaplan_meier_analysis(
                 )
                 if user_id and job_id:
                     url = save_figure_to_minio(fig_km, user_id, job_id, "kaplan_meier.png")
-                    visualizations.append({
-                        "type": "kaplan_meier",
-                        "url": url,
-                        "title": "Kaplan-Meier Survival Curve",
-                        "description": "Overall survival probability over time",
-                    })
+                    visualizations.append(
+                        {
+                            "type": "kaplan_meier",
+                            "url": url,
+                            "title": "Kaplan-Meier Survival Curve",
+                            "description": "Overall survival probability over time",
+                        }
+                    )
                 plt.close(fig_km)
 
                 result["visualizations"] = visualizations
@@ -1025,17 +1055,19 @@ def cox_regression(
             fig_forest = plot_forest_plot(result.to_dict())
             if user_id and job_id:
                 url = save_figure_to_minio(fig_forest, user_id, job_id, "forest_plot.png")
-                visualizations.append({
-                    "type": "forest_plot",
-                    "url": url,
-                    "title": "Forest Plot - Cox Regression",
-                    "description": "Hazard ratios with 95% confidence intervals",
-                    "metadata": {
-                        "n_subjects": result.n_subjects,
-                        "n_events": result.n_events,
-                        "concordance": result.concordance,
+                visualizations.append(
+                    {
+                        "type": "forest_plot",
+                        "url": url,
+                        "title": "Forest Plot - Cox Regression",
+                        "description": "Hazard ratios with 95% confidence intervals",
+                        "metadata": {
+                            "n_subjects": result.n_subjects,
+                            "n_events": result.n_events,
+                            "concordance": result.concordance,
+                        },
                     }
-                })
+                )
             plt.close(fig_forest)
 
             output["visualizations"] = visualizations
@@ -1191,24 +1223,28 @@ def compare_survival_curves(
             )
             if user_id and job_id:
                 url = save_figure_to_minio(fig_km, user_id, job_id, "kaplan_meier.png")
-                visualizations.append({
-                    "type": "kaplan_meier",
-                    "url": url,
-                    "title": "Kaplan-Meier Survival Curves",
-                    "description": f"Log-rank p = {lr.p_value:.4f}",
-                })
+                visualizations.append(
+                    {
+                        "type": "kaplan_meier",
+                        "url": url,
+                        "title": "Kaplan-Meier Survival Curves",
+                        "description": f"Log-rank p = {lr.p_value:.4f}",
+                    }
+                )
             plt.close(fig_km)
 
             # Cumulative hazard
             fig_ch = plot_cumulative_hazard(group_data)
             if user_id and job_id:
                 url = save_figure_to_minio(fig_ch, user_id, job_id, "cumulative_hazard.png")
-                visualizations.append({
-                    "type": "cumulative_hazard",
-                    "url": url,
-                    "title": "Nelson-Aalen Cumulative Hazard",
-                    "description": "Cumulative hazard function by group",
-                })
+                visualizations.append(
+                    {
+                        "type": "cumulative_hazard",
+                        "url": url,
+                        "title": "Nelson-Aalen Cumulative Hazard",
+                        "description": "Cumulative hazard function by group",
+                    }
+                )
             plt.close(fig_ch)
 
             result["visualizations"] = visualizations

@@ -28,7 +28,7 @@ class DatasetId:
 class Dataset:
     """
     Dataset Aggregate Root
-    
+
     Represents a registered dataset in the system.
     Datasets are stored in MinIO, this entity holds metadata.
     """
@@ -37,21 +37,21 @@ class Dataset:
     minio_path: str  # e.g., "bucket/path/to/file.csv"
     user_id: str
     session_id: Optional[str] = None
-    
+
     # Metadata
     description: Optional[str] = None
     columns: List[str] = field(default_factory=list)
     row_count: int = 0
     file_size_bytes: int = 0
-    
+
     # Timestamps
     created_at: datetime = field(default_factory=datetime.utcnow)
     updated_at: datetime = field(default_factory=datetime.utcnow)
 
     def update_metadata(
-        self, 
-        columns: List[str], 
-        row_count: int, 
+        self,
+        columns: List[str],
+        row_count: int,
         file_size_bytes: int
     ) -> None:
         """Update dataset metadata after file validation"""

@@ -10,6 +10,7 @@ Data Quality Analyzer - 資料品質分析模組
 - Transform 建議
 - 分析可行性評估
 """
+
 from dataclasses import asdict, dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional
@@ -20,13 +21,15 @@ import pandas as pd
 
 class IssueSeverity(str, Enum):
     """品質問題嚴重程度"""
+
     CRITICAL = "critical"  # 阻斷分析
-    WARNING = "warning"    # 需要注意
-    INFO = "info"          # 建議改進
+    WARNING = "warning"  # 需要注意
+    INFO = "info"  # 建議改進
 
 
 class IssueType(str, Enum):
     """品質問題類型"""
+
     ALL_NAN = "ALL_NAN"
     CONSTANT = "CONSTANT"
     HIGH_CARDINALITY_ID = "HIGH_CARDINALITY_ID"
@@ -38,6 +41,7 @@ class IssueType(str, Enum):
 
 class TransformType(str, Enum):
     """Transform 類型"""
+
     LOG = "log"
     LOG1P = "log1p"
     SQRT = "sqrt"
@@ -48,6 +52,7 @@ class TransformType(str, Enum):
 @dataclass
 class QualityWarning:
     """品質警告"""
+
     column: str
     issue: str
     severity: str
@@ -62,6 +67,7 @@ class QualityWarning:
 @dataclass
 class TransformSuggestion:
     """Transform 建議"""
+
     column: str
     suggested_transform: str
     reason: str
@@ -75,6 +81,7 @@ class TransformSuggestion:
 @dataclass
 class AnalysisReadiness:
     """分析可行性評估"""
+
     ready: bool
     blocking_issues: List[str]
     warnings: List[str]
@@ -89,6 +96,7 @@ class AnalysisReadiness:
 @dataclass
 class DataQualityReport:
     """資料品質報告"""
+
     warnings: List[QualityWarning]
     transform_suggestions: List[TransformSuggestion]
     analysis_readiness: AnalysisReadiness
@@ -97,7 +105,7 @@ class DataQualityReport:
         return {
             "quality_warnings": [w.to_dict() for w in self.warnings],
             "transform_suggestions": [t.to_dict() for t in self.transform_suggestions],
-            "analysis_readiness": self.analysis_readiness.to_dict()
+            "analysis_readiness": self.analysis_readiness.to_dict(),
         }
 
 
@@ -114,10 +122,10 @@ class DataQualityAnalyzer:
     """
 
     # 閾值設定
-    SKEW_THRESHOLD = 1.0           # mean/median 比率閾值
+    SKEW_THRESHOLD = 1.0  # mean/median 比率閾值
     HIGH_CARDINALITY_THRESHOLD = 0.9  # unique/rows 比率閾值
-    OUTLIER_IQR_MULTIPLIER = 1.5   # IQR 乘數
-    HIGH_MISSING_THRESHOLD = 0.5   # 缺失值比率閾值
+    OUTLIER_IQR_MULTIPLIER = 1.5  # IQR 乘數
+    HIGH_MISSING_THRESHOLD = 0.5  # 缺失值比率閾值
     MIN_ROWS_FOR_ID_DETECTION = 5  # ID 欄偵測最小行數
 
     def __init__(
@@ -125,7 +133,7 @@ class DataQualityAnalyzer:
         skew_threshold: float = 1.0,
         high_cardinality_threshold: float = 0.9,
         outlier_iqr_multiplier: float = 1.5,
-        high_missing_threshold: float = 0.5
+        high_missing_threshold: float = 0.5,
     ):
         """
         初始化分析器
@@ -172,10 +180,7 @@ class DataQualityAnalyzer:
                     severity=IssueSeverity.CRITICAL.value,
                     recommendation="移除此欄或填補缺失值",
                     impact="此欄不會被納入任何統計分析",
-                    stats={
-                        "null_count": int(n_rows),
-                        "null_pct": 100.0
-                    }
+                    stats={"null_count": int(n_rows), "null_pct": 100.0},
                 )
                 col_warnings.append(warning)
                 blocking_issues.append(f"{IssueType.ALL_NAN.value}:{col}")
@@ -194,10 +199,7 @@ class DataQualityAnalyzer:
                     severity=IssueSeverity.WARNING.value,
                     recommendation="考慮填補缺失值或排除此欄",
                     impact=f"有 {null_pct:.1%} 的資料缺失，可能影響分析結果",
-                    stats={
-                        "null_count": int(null_count),
-                        "null_pct": round(null_pct * 100, 1)
-                    }
+                    stats={"null_count": int(null_count), "null_pct": round(null_pct * 100, 1)},
                 )
                 col_warnings.append(warning)
                 warning_issues.append(f"{IssueType.HIGH_MISSING.value}:{col}")
@@ -212,10 +214,7 @@ class DataQualityAnalyzer:
                     severity=IssueSeverity.WARNING.value,
                     recommendation="移除此欄，無分析價值",
                     impact="常數欄的相關性為 NaN，無法用於迴歸或分組",
-                    stats={
-                        "unique": 1,
-                        "value": str(df[col].dropna().iloc[0]) if len(df[col].dropna()) > 0 else None
-                    }
+                    stats={"unique": 1, "value": str(df[col].dropna().iloc[0]) if len(df[col].dropna()) > 0 else None},
                 )
                 col_warnings.append(warning)
                 warning_issues.append(f"{IssueType.CONSTANT.value}:{col}")
@@ -226,12 +225,10 @@ class DataQualityAnalyzer:
 
             # 4. 檢查高基數 ID 欄
             cardinality_ratio = n_unique / n_rows if n_rows > 0 else 0
-            if (cardinality_ratio >= self.HIGH_CARDINALITY_THRESHOLD and
-                n_rows >= self.MIN_ROWS_FOR_ID_DETECTION):
+            if cardinality_ratio >= self.HIGH_CARDINALITY_THRESHOLD and n_rows >= self.MIN_ROWS_FOR_ID_DETECTION:
                 # 檢查是否像 ID 欄位（字串類型或名稱含 id/uuid/mrn 等）
-                is_likely_id = (
-                    df[col].dtype == 'object' or
-                    any(pattern in col.lower() for pattern in ['id', 'uuid', 'mrn', 'key', 'code', 'no.', 'num'])
+                is_likely_id = df[col].dtype == "object" or any(
+                    pattern in col.lower() for pattern in ["id", "uuid", "mrn", "key", "code", "no.", "num"]
                 )
                 if is_likely_id:
                     warning = QualityWarning(
@@ -240,10 +237,7 @@ class DataQualityAnalyzer:
                         severity=IssueSeverity.WARNING.value,
                         recommendation="排除於統計分析外",
                         impact="不適合作為分類或分組變數",
-                        stats={
-                            "unique": int(n_unique),
-                            "cardinality_ratio": round(float(cardinality_ratio), 3)
-                        }
+                        stats={"unique": int(n_unique), "cardinality_ratio": round(float(cardinality_ratio), 3)},
                     )
                     col_warnings.append(warning)
                     warning_issues.append(f"{IssueType.HIGH_CARDINALITY_ID.value}:{col}")
@@ -253,7 +247,7 @@ class DataQualityAnalyzer:
                     continue
 
             # 5. 檢查數值欄位的偏態和極端值
-            if pd.api.types.is_numeric_dtype(df[col]) and df[col].dtype != 'bool':
+            if pd.api.types.is_numeric_dtype(df[col]) and df[col].dtype != "bool":
                 non_null = df[col].dropna()
                 if len(non_null) > 0:
                     mean = non_null.mean()
@@ -273,8 +267,8 @@ class DataQualityAnalyzer:
                                 stats={
                                     "mean": round(float(mean), 4),
                                     "median": round(float(median), 4),
-                                    "skew_ratio": round(float(skew_ratio), 2)
-                                }
+                                    "skew_ratio": round(float(skew_ratio), 2),
+                                },
                             )
                             col_warnings.append(warning)
                             warning_issues.append(f"{IssueType.SKEWED.value}:{col}")
@@ -309,8 +303,8 @@ class DataQualityAnalyzer:
                                         "lower_bound": round(float(lower_bound), 4),
                                         "upper_bound": round(float(upper_bound), 4),
                                         "min": round(float(non_null.min()), 4),
-                                        "max": round(float(non_null.max()), 4)
-                                    }
+                                        "max": round(float(non_null.max()), 4),
+                                    },
                                 )
                                 col_warnings.append(warning)
                                 warning_issues.append(f"{IssueType.OUTLIERS.value}:{col}")
@@ -339,22 +333,15 @@ class DataQualityAnalyzer:
             warnings=warning_issues,
             recommended_actions=recommended_actions,
             usable_columns=usable_columns,
-            problematic_columns=list(set(problematic_columns))
+            problematic_columns=list(set(problematic_columns)),
         )
 
         return DataQualityReport(
-            warnings=warnings,
-            transform_suggestions=transform_suggestions,
-            analysis_readiness=analysis_readiness
+            warnings=warnings, transform_suggestions=transform_suggestions, analysis_readiness=analysis_readiness
         )
 
     def _suggest_transform(
-        self,
-        data: pd.Series,
-        col: str,
-        mean: float,
-        median: float,
-        skew_ratio: float
+        self, data: pd.Series, col: str, mean: float, median: float, skew_ratio: float
     ) -> Optional[TransformSuggestion]:
         """建議適當的 Transform"""
 
@@ -365,14 +352,8 @@ class DataQualityAnalyzer:
                 column=col,
                 suggested_transform=TransformType.LOG.value,
                 reason=f"嚴重正偏態 (skew_ratio={skew_ratio:.2f})，所有值為正",
-                before_stats={
-                    "mean": round(float(mean), 4),
-                    "median": round(float(median), 4)
-                },
-                after_preview={
-                    "mean": round(float(log_data.mean()), 4),
-                    "median": round(float(log_data.median()), 4)
-                }
+                before_stats={"mean": round(float(mean), 4), "median": round(float(median), 4)},
+                after_preview={"mean": round(float(log_data.mean()), 4), "median": round(float(log_data.median()), 4)},
             )
 
         # 檢查是否可以使用 log1p（所有值必須 >= 0）
@@ -382,14 +363,11 @@ class DataQualityAnalyzer:
                 column=col,
                 suggested_transform=TransformType.LOG1P.value,
                 reason=f"嚴重正偏態 (skew_ratio={skew_ratio:.2f})，含零值",
-                before_stats={
-                    "mean": round(float(mean), 4),
-                    "median": round(float(median), 4)
-                },
+                before_stats={"mean": round(float(mean), 4), "median": round(float(median), 4)},
                 after_preview={
                     "mean": round(float(log1p_data.mean()), 4),
-                    "median": round(float(log1p_data.median()), 4)
-                }
+                    "median": round(float(log1p_data.median()), 4),
+                },
             )
 
         # 含負值，建議 zscore
@@ -397,14 +375,8 @@ class DataQualityAnalyzer:
             column=col,
             suggested_transform=TransformType.ZSCORE.value,
             reason=f"偏態 (skew_ratio={skew_ratio:.2f})，含負值，建議標準化",
-            before_stats={
-                "mean": round(float(mean), 4),
-                "median": round(float(median), 4)
-            },
-            after_preview={
-                "mean": 0.0,
-                "std": 1.0
-            }
+            before_stats={"mean": round(float(mean), 4), "median": round(float(median), 4)},
+            after_preview={"mean": 0.0, "std": 1.0},
         )
 
     def _generate_recommendations(self, warnings: List[QualityWarning]) -> List[str]:
@@ -451,9 +423,7 @@ class DataQualityAnalyzer:
             "analysis_ready": report.analysis_readiness.ready,
             "usable_columns": len(report.analysis_readiness.usable_columns),
             "problematic_columns": len(report.analysis_readiness.problematic_columns),
-            "issues_summary": [
-                f"{w.issue}:{w.column}" for w in report.warnings
-            ]
+            "issues_summary": [f"{w.issue}:{w.column}" for w in report.warnings],
         }
 
 

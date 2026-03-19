@@ -1,6 +1,7 @@
 """
 Use Cases - Application Layer Business Logic
 """
+
 from typing import List, Optional
 
 from ..domain.models import (
@@ -19,6 +20,7 @@ from .dto import (
 
 class DatasetNotFoundError(Exception):
     """Dataset not found in Redis"""
+
     pass
 
 
@@ -29,7 +31,7 @@ class SubmitAutoAnalyzeUseCase:
         self,
         job_repo: StatsJobRepository,
         dataset_store,  # redis_dataset_store
-        job_queue,      # redis job queue
+        job_queue,  # redis job queue
     ):
         self.job_repo = job_repo
         self.dataset_store = dataset_store
@@ -40,8 +42,7 @@ class SubmitAutoAnalyzeUseCase:
         dataset_info = self.dataset_store.get_dataset(request.dataset_id)
         if not dataset_info:
             raise DatasetNotFoundError(
-                f"Dataset {request.dataset_id} not found. "
-                "Please register it first using AutoML service."
+                f"Dataset {request.dataset_id} not found. Please register it first using AutoML service."
             )
 
         # 2. Create job entity
@@ -91,8 +92,7 @@ class SubmitEDAUseCase:
         dataset_info = self.dataset_store.get_dataset(request.dataset_id)
         if not dataset_info:
             raise DatasetNotFoundError(
-                f"Dataset {request.dataset_id} not found. "
-                "Please register it first using AutoML service."
+                f"Dataset {request.dataset_id} not found. Please register it first using AutoML service."
             )
 
         # 2. Create job entity
@@ -140,8 +140,7 @@ class SubmitTableOneUseCase:
         dataset_info = self.dataset_store.get_dataset(request.dataset_id)
         if not dataset_info:
             raise DatasetNotFoundError(
-                f"Dataset {request.dataset_id} not found. "
-                "Please register it first using AutoML service."
+                f"Dataset {request.dataset_id} not found. Please register it first using AutoML service."
             )
 
         # 2. Create job entity

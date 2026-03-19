@@ -4,6 +4,7 @@ Stats Service - EDA Routes (DDD)
 Routes for Exploratory Data Analysis using ydata-profiling.
 Refactored to use Domain-Driven Design with Use Cases.
 """
+
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException
@@ -19,6 +20,7 @@ router = APIRouter(prefix="/eda", tags=["EDA"])
 
 class EDARequest(BaseModel):
     """Request model for EDA job submission"""
+
     dataset_id: str = Field(..., description="Dataset ID in MinIO")
     user_id: str = Field(..., description="User ID for isolation")
     session_id: Optional[str] = Field(None, description="Optional session ID")
@@ -28,6 +30,7 @@ class EDARequest(BaseModel):
 
 class EDAResponse(BaseModel):
     """Response model for EDA job submission"""
+
     job_id: str
     job_type: str
     status: str

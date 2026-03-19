@@ -13,6 +13,7 @@ Features:
 - Missing value reporting
 - SMD (Standardized Mean Difference) calculation
 """
+
 import logging
 import math
 import warnings
@@ -26,7 +27,7 @@ from scipy import stats
 
 logger = logging.getLogger(__name__)
 
-warnings.filterwarnings('ignore', category=RuntimeWarning)
+warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 
 def safe_round(value: Optional[float], decimals: int = 2) -> Optional[float]:
@@ -43,6 +44,7 @@ def safe_round(value: Optional[float], decimals: int = 2) -> Optional[float]:
 
 class VariableType(Enum):
     """Type of variable for Table 1."""
+
     CONTINUOUS = "continuous"
     CATEGORICAL = "categorical"
     BINARY = "binary"
@@ -50,6 +52,7 @@ class VariableType(Enum):
 
 class TestType(Enum):
     """Statistical test types."""
+
     TTEST = "t-test"
     MANN_WHITNEY = "Mann-Whitney U"
     ANOVA = "ANOVA"
@@ -62,6 +65,7 @@ class TestType(Enum):
 @dataclass
 class VariableStats:
     """Statistics for a single variable."""
+
     name: str
     var_type: VariableType
 
@@ -101,20 +105,24 @@ class VariableStats:
         }
 
         if self.var_type == VariableType.CONTINUOUS:
-            result.update({
-                "mean": safe_round(self.mean, 2),
-                "std": safe_round(self.std, 2),
-                "median": safe_round(self.median, 2),
-                "q25": safe_round(self.q25, 2),
-                "q75": safe_round(self.q75, 2),
-                "min": safe_round(self.min_val, 2),
-                "max": safe_round(self.max_val, 2),
-            })
+            result.update(
+                {
+                    "mean": safe_round(self.mean, 2),
+                    "std": safe_round(self.std, 2),
+                    "median": safe_round(self.median, 2),
+                    "q25": safe_round(self.q25, 2),
+                    "q75": safe_round(self.q75, 2),
+                    "min": safe_round(self.min_val, 2),
+                    "max": safe_round(self.max_val, 2),
+                }
+            )
         elif self.var_type in [VariableType.CATEGORICAL, VariableType.BINARY]:
-            result.update({
-                "categories": self.categories,
-                "category_percentages": {k: safe_round(v, 1) for k, v in (self.category_pcts or {}).items()},
-            })
+            result.update(
+                {
+                    "categories": self.categories,
+                    "category_percentages": {k: safe_round(v, 1) for k, v in (self.category_pcts or {}).items()},
+                }
+            )
 
         if self.test_type:
             result["test"] = {
@@ -132,6 +140,7 @@ class VariableStats:
 @dataclass
 class TableOneResult:
     """Complete Table 1 result."""
+
     title: str
     n_total: int
     n_groups: int
@@ -302,23 +311,17 @@ class TableOneGenerator:
 
             # Overall stats
             if overall:
-                overall_stats[col] = self._calculate_stats(
-                    df[col], col, var_type, is_nonnormal
-                )
+                overall_stats[col] = self._calculate_stats(df[col], col, var_type, is_nonnormal)
 
             # Group stats
             if groups and groupby:
                 for g in groups:
                     group_data = df[df[groupby] == g][col]
-                    group_stats[str(g)][col] = self._calculate_stats(
-                        group_data, col, var_type, is_nonnormal
-                    )
+                    group_stats[str(g)][col] = self._calculate_stats(group_data, col, var_type, is_nonnormal)
 
                 # Calculate p-value if requested
                 if pval and len(groups) >= 2:
-                    p_val, test_type, test_stat = self._calculate_pvalue(
-                        df, col, groupby, groups, var_type
-                    )
+                    p_val, test_type, test_stat = self._calculate_pvalue(df, col, groupby, groups, var_type)
                     # Store in overall or first group stats
                     target = overall_stats.get(col) or group_stats[str(groups[0])].get(col)
                     if target:
@@ -328,9 +331,7 @@ class TableOneGenerator:
 
                 # Calculate SMD if requested (only for 2 groups)
                 if smd and len(groups) == 2:
-                    smd_val = self._calculate_smd(
-                        df, col, groupby, groups, var_type
-                    )
+                    smd_val = self._calculate_smd(df, col, groupby, groups, var_type)
                     target = overall_stats.get(col) or group_stats[str(groups[0])].get(col)
                     if target:
                         target.smd = smd_val
@@ -354,11 +355,11 @@ class TableOneGenerator:
     def _is_categorical(self, series: pd.Series) -> bool:
         """Determine if a series should be treated as categorical."""
         # Object/category dtypes are categorical
-        if series.dtype == 'object' or series.dtype.name == 'category':
+        if series.dtype == "object" or series.dtype.name == "category":
             return True
 
         # Boolean is categorical
-        if series.dtype == 'bool':
+        if series.dtype == "bool":
             return True
 
         # Few unique values suggests categorical
@@ -437,9 +438,7 @@ class TableOneGenerator:
 
             total = sum(counts.values())
             if total > 0:
-                stats_obj.category_pcts = {
-                    str(k): (v / total * 100) for k, v in counts.items()
-                }
+                stats_obj.category_pcts = {str(k): (v / total * 100) for k, v in counts.items()}
             else:
                 stats_obj.category_pcts = {}
 
@@ -480,7 +479,7 @@ class TableOneGenerator:
                         stat, p = stats.ttest_ind(group_data[0], group_data[1])
                         return float(p), TestType.TTEST, float(stat)
                     else:
-                        stat, p = stats.mannwhitneyu(group_data[0], group_data[1], alternative='two-sided')
+                        stat, p = stats.mannwhitneyu(group_data[0], group_data[1], alternative="two-sided")
                         return float(p), TestType.MANN_WHITNEY, float(stat)
                 else:
                     if all_normal:
@@ -543,9 +542,7 @@ class TableOneGenerator:
                 n1, n2 = len(g1_data), len(g2_data)
 
                 # Pooled standard deviation
-                pooled_std = np.sqrt(
-                    ((n1 - 1) * std1**2 + (n2 - 1) * std2**2) / (n1 + n2 - 2)
-                )
+                pooled_std = np.sqrt(((n1 - 1) * std1**2 + (n2 - 1) * std2**2) / (n1 + n2 - 2))
 
                 if pooled_std > 0:
                     return float(abs(mean1 - mean2) / pooled_std)
@@ -576,6 +573,7 @@ class TableOneGenerator:
 # =============================================================================
 # Formatting Functions
 # =============================================================================
+
 
 def _format_value(
     stats: VariableStats,
@@ -712,22 +710,22 @@ def _format_as_html(result: TableOneResult) -> str:
     """Generate HTML formatted Table 1."""
     lines = []
     lines.append('<table class="tableone">')
-    lines.append(f'<caption>{result.title}</caption>')
-    lines.append('<thead><tr>')
+    lines.append(f"<caption>{result.title}</caption>")
+    lines.append("<thead><tr>")
 
     # Header
-    lines.append('<th>Variable</th>')
+    lines.append("<th>Variable</th>")
     if result.overall_stats:
-        lines.append(f'<th>Overall (n={result.n_total})</th>')
+        lines.append(f"<th>Overall (n={result.n_total})</th>")
     for g in result.group_names:
-        lines.append(f'<th>{g} (n={result.group_sizes.get(g, 0)})</th>')
+        lines.append(f"<th>{g} (n={result.group_sizes.get(g, 0)})</th>")
     if result.show_pvalue and result.n_groups >= 2:
-        lines.append('<th>P-value</th>')
+        lines.append("<th>P-value</th>")
     if result.show_smd and result.n_groups == 2:
-        lines.append('<th>SMD</th>')
+        lines.append("<th>SMD</th>")
 
-    lines.append('</tr></thead>')
-    lines.append('<tbody>')
+    lines.append("</tr></thead>")
+    lines.append("<tbody>")
 
     # Data rows
     for var in result.variables:
@@ -736,19 +734,19 @@ def _format_as_html(result: TableOneResult) -> str:
         overall = result.overall_stats.get(var)
 
         if is_cat:
-            lines.append('<tr>')
-            lines.append(f'<td><strong>{var}</strong></td>')
+            lines.append("<tr>")
+            lines.append(f"<td><strong>{var}</strong></td>")
             if overall:
-                lines.append('<td></td>')
+                lines.append("<td></td>")
             for _ in result.group_names:
                 lines.append("<td></td>")
             if result.show_pvalue and result.n_groups >= 2:
                 p = overall.p_value if overall else None
-                lines.append(f'<td>{_format_pvalue(p)}</td>')
+                lines.append(f"<td>{_format_pvalue(p)}</td>")
             if result.show_smd and result.n_groups == 2:
                 smd = overall.smd if overall else None
-                lines.append(f'<td>{safe_round(smd, 3) if smd else ""}</td>')
-            lines.append('</tr>')
+                lines.append(f"<td>{safe_round(smd, 3) if smd else ''}</td>")
+            lines.append("</tr>")
 
             # Categories
             all_cats: set[str] = set()
@@ -760,56 +758,60 @@ def _format_as_html(result: TableOneResult) -> str:
                     all_cats.update(gstats.categories.keys())
 
             for cat in sorted(all_cats):
-                lines.append('<tr>')
+                lines.append("<tr>")
                 lines.append(f'<td style="padding-left:20px">{cat}</td>')
                 if overall:
                     count = overall.categories.get(cat, 0) if overall.categories else 0
                     pct = overall.category_pcts.get(cat, 0) if overall.category_pcts else 0
-                    lines.append(f'<td>{count} ({safe_round(pct, 1)}%)</td>')
+                    lines.append(f"<td>{count} ({safe_round(pct, 1)}%)</td>")
                 for g in result.group_names:
                     gstats = result.group_stats.get(g, {}).get(var)
                     if gstats:
                         count = gstats.categories.get(cat, 0) if gstats.categories else 0
                         pct = gstats.category_pcts.get(cat, 0) if gstats.category_pcts else 0
-                        lines.append(f'<td>{count} ({safe_round(pct, 1)}%)</td>')
+                        lines.append(f"<td>{count} ({safe_round(pct, 1)}%)</td>")
                     else:
-                        lines.append('<td></td>')
+                        lines.append("<td></td>")
                 if result.show_pvalue and result.n_groups >= 2:
-                    lines.append('<td></td>')
+                    lines.append("<td></td>")
                 if result.show_smd and result.n_groups == 2:
-                    lines.append('<td></td>')
-                lines.append('</tr>')
+                    lines.append("<td></td>")
+                lines.append("</tr>")
 
         else:
-            lines.append('<tr>')
+            lines.append("<tr>")
             suffix = " †" if is_nonnormal else ""
-            lines.append(f'<td>{var}{suffix}</td>')
+            lines.append(f"<td>{var}{suffix}</td>")
 
             if overall:
-                lines.append(f'<td>{_format_value(overall, VariableType.CONTINUOUS, is_nonnormal)}</td>')
+                lines.append(f"<td>{_format_value(overall, VariableType.CONTINUOUS, is_nonnormal)}</td>")
 
             for g in result.group_names:
                 gstats = result.group_stats.get(g, {}).get(var)
                 if gstats:
-                    lines.append(f'<td>{_format_value(gstats, VariableType.CONTINUOUS, is_nonnormal)}</td>')
+                    lines.append(f"<td>{_format_value(gstats, VariableType.CONTINUOUS, is_nonnormal)}</td>")
                 else:
-                    lines.append('<td></td>')
+                    lines.append("<td></td>")
 
             if result.show_pvalue and result.n_groups >= 2:
                 p = overall.p_value if overall else None
-                lines.append(f'<td>{_format_pvalue(p)}</td>')
+                lines.append(f"<td>{_format_pvalue(p)}</td>")
 
             if result.show_smd and result.n_groups == 2:
                 smd = overall.smd if overall else None
-                lines.append(f'<td>{safe_round(smd, 3) if smd else ""}</td>')
+                lines.append(f"<td>{safe_round(smd, 3) if smd else ''}</td>")
 
-            lines.append('</tr>')
+            lines.append("</tr>")
 
-    lines.append('</tbody>')
-    lines.append('<tfoot><tr>')
-    colspan = 1 + (1 if result.overall_stats else 0) + len(result.group_names) + \
-              (1 if result.show_pvalue and result.n_groups >= 2 else 0) + \
-              (1 if result.show_smd and result.n_groups == 2 else 0)
+    lines.append("</tbody>")
+    lines.append("<tfoot><tr>")
+    colspan = (
+        1
+        + (1 if result.overall_stats else 0)
+        + len(result.group_names)
+        + (1 if result.show_pvalue and result.n_groups >= 2 else 0)
+        + (1 if result.show_smd and result.n_groups == 2 else 0)
+    )
 
     footnotes = []
     if result.nonnormal_vars:
@@ -817,8 +819,8 @@ def _format_as_html(result: TableOneResult) -> str:
     footnotes.append("Categorical variables as n (%)")
 
     lines.append(f'<td colspan="{colspan}">{"; ".join(footnotes)}</td>')
-    lines.append('</tr></tfoot>')
-    lines.append('</table>')
+    lines.append("</tr></tfoot>")
+    lines.append("</table>")
 
     return "\n".join(lines)
 
@@ -828,9 +830,13 @@ def _format_as_latex(result: TableOneResult) -> str:
     lines = []
 
     # Column count
-    n_cols = 1 + (1 if result.overall_stats else 0) + len(result.group_names) + \
-             (1 if result.show_pvalue and result.n_groups >= 2 else 0) + \
-             (1 if result.show_smd and result.n_groups == 2 else 0)
+    n_cols = (
+        1
+        + (1 if result.overall_stats else 0)
+        + len(result.group_names)
+        + (1 if result.show_pvalue and result.n_groups >= 2 else 0)
+        + (1 if result.show_smd and result.n_groups == 2 else 0)
+    )
 
     col_spec = "l" + "c" * (n_cols - 1)
 
@@ -947,6 +953,7 @@ def _format_as_latex(result: TableOneResult) -> str:
 # Convenience Functions
 # =============================================================================
 
+
 def generate_tableone(
     df: pd.DataFrame,
     columns: Optional[List[str]] = None,
@@ -1027,9 +1034,12 @@ def quick_tableone(
 
     Returns Markdown format by default.
     """
-    return cast(str, generate_tableone(
-        df=df,
-        groupby=groupby,
-        pval=pval,
-        output_format="markdown",
-    ))
+    return cast(
+        str,
+        generate_tableone(
+            df=df,
+            groupby=groupby,
+            pval=pval,
+            output_format="markdown",
+        ),
+    )

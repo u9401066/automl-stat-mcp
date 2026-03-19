@@ -45,27 +45,27 @@ class JobId:
 class Job:
     """
     Job Aggregate Root
-    
+
     Represents an async training job.
     """
     id: JobId
     job_type: JobType
     user_id: str
     dataset_id: str
-    
+
     # Status
     status: JobStatus = JobStatus.PENDING
     progress: float = 0.0  # 0.0 to 1.0
     status_message: str = ""
-    
+
     # Configuration (stored as dict for flexibility)
     config: Dict[str, Any] = field(default_factory=dict)
-    
+
     # Results
     model_id: Optional[str] = None
     result: Optional[Dict[str, Any]] = None
     error_message: Optional[str] = None
-    
+
     # Metadata
     session_id: Optional[str] = None
     created_at: datetime = field(default_factory=datetime.utcnow)
@@ -109,8 +109,8 @@ class Job:
     def is_terminal(self) -> bool:
         """Check if job is in terminal state"""
         return self.status in (
-            JobStatus.COMPLETED, 
-            JobStatus.FAILED, 
+            JobStatus.COMPLETED,
+            JobStatus.FAILED,
             JobStatus.CANCELLED
         )
 

@@ -4,6 +4,7 @@ Stats Service - TableOne Routes (DDD)
 Routes for generating Table 1 (descriptive statistics) using tableone package.
 Refactored to use Domain-Driven Design with Use Cases.
 """
+
 from typing import List, Optional
 
 from fastapi import APIRouter, HTTPException
@@ -20,6 +21,7 @@ router = APIRouter(prefix="/tableone", tags=["TableOne"])
 
 class TableOneRequest(BaseModel):
     """Request model for TableOne job submission"""
+
     dataset_id: str = Field(..., description="Dataset ID in MinIO")
     user_id: str = Field(..., description="User ID for isolation")
     session_id: Optional[str] = Field(None, description="Optional session ID")
@@ -35,6 +37,7 @@ class TableOneRequest(BaseModel):
 
 class TableOneResponse(BaseModel):
     """Response model for TableOne job submission"""
+
     job_id: str
     job_type: str
     status: str
@@ -107,10 +110,7 @@ async def get_column_suggestions(dataset_id: str, user_id: str):
     # Check dataset exists
     dataset_info = redis_dataset_store.get_dataset(dataset_id)
     if not dataset_info:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Dataset {dataset_id} not found. Please register it first."
-        )
+        raise HTTPException(status_code=404, detail=f"Dataset {dataset_id} not found. Please register it first.")
 
     # Load preview from storage
     minio_path = dataset_info.get("minio_path")
@@ -121,10 +121,7 @@ async def get_column_suggestions(dataset_id: str, user_id: str):
     df = await storage.read_csv(minio_path, n_rows=1000)
 
     if df is None:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Dataset file not found at {minio_path}"
-        )
+        raise HTTPException(status_code=404, detail=f"Dataset file not found at {minio_path}")
 
     categorical = []
     continuous = []
@@ -134,17 +131,17 @@ async def get_column_suggestions(dataset_id: str, user_id: str):
         dtype = df[col].dtype
 
         # Skip ID-like columns
-        if col.lower() in ['id', 'index', 'row_id', 'record_id']:
+        if col.lower() in ["id", "index", "row_id", "record_id"]:
             continue
 
         # Datetime columns
-        if 'datetime' in str(dtype):
+        if "datetime" in str(dtype):
             datetime_cols.append(col)
         # Categorical: object dtype or few unique values
-        elif dtype == 'object' or df[col].nunique() < 10:
+        elif dtype == "object" or df[col].nunique() < 10:
             categorical.append(col)
         # Continuous: numeric types
-        elif 'int' in str(dtype) or 'float' in str(dtype):
+        elif "int" in str(dtype) or "float" in str(dtype):
             continuous.append(col)
 
     # Suggest nonnormal based on simple heuristic
@@ -155,10 +152,7 @@ async def get_column_suggestions(dataset_id: str, user_id: str):
             nonnormal_suggestions.append(col)
 
     # Suggest groupby columns (categorical with 2-5 groups)
-    groupby_suggestions = [
-        col for col in categorical
-        if 2 <= df[col].nunique() <= 5
-    ]
+    groupby_suggestions = [col for col in categorical if 2 <= df[col].nunique() <= 5]
 
     return {
         "dataset_id": dataset_id,

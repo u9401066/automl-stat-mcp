@@ -1,6 +1,7 @@
 """
 FastAPI Router - Job endpoints (Redis Queue based)
 """
+
 from typing import List, Optional
 
 from fastapi import APIRouter, Header, HTTPException
@@ -103,10 +104,7 @@ async def cancel_job(
     success = container.job_queue.cancel_job(job_id, x_user_id)
 
     if not success:
-        raise HTTPException(
-            status_code=400,
-            detail="Cannot cancel job (not found, wrong user, or already running)"
-        )
+        raise HTTPException(status_code=400, detail="Cannot cancel job (not found, wrong user, or already running)")
 
     return {"status": "cancelled", "job_id": job_id}
 

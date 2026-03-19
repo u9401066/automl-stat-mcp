@@ -100,7 +100,6 @@ __all__ = [
     "ANOVAPowerResult",
     "ChiSquarePowerResult",
     "SurvivalPowerResult",
-
     # Helper Functions
     "safe_round",
     "interpret_effect_size",
@@ -115,30 +114,24 @@ __all__ = [
     "log_hr_to_hazard_ratio",
     "events_from_survival",
     "sample_size_from_events",
-
     # Analysis Classes
     "TTestPowerAnalysis",
     "ProportionPowerAnalysis",
     "ANOVAPowerAnalysis",
     "ChiSquarePowerAnalysis",
     "SurvivalPowerAnalysis",
-
     # MCP Convenience Functions - T-test
     "calculate_ttest_sample_size",
     "calculate_ttest_power",
-
     # MCP Convenience Functions - Proportion
     "calculate_proportion_sample_size",
     "calculate_proportion_power",
-
     # MCP Convenience Functions - ANOVA
     "calculate_anova_sample_size",
     "calculate_anova_power",
-
     # MCP Convenience Functions - Chi-square
     "calculate_chisquare_sample_size",
     "calculate_chisquare_power",
-
     # MCP Convenience Functions - Survival
     "calculate_survival_events",
     "calculate_survival_sample_size",

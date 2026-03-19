@@ -3,6 +3,7 @@ MinIO File Storage Service Implementation
 
 All file storage is on MinIO - no local file storage.
 """
+
 import io
 from typing import Any, Dict, List, Tuple
 
@@ -121,10 +122,7 @@ class MinIOStorageService(FileStorageService):
             return False, [], 0
 
     async def upload_content(
-        self,
-        path: str,
-        content: io.BytesIO,
-        content_type: str = "application/octet-stream"
+        self, path: str, content: io.BytesIO, content_type: str = "application/octet-stream"
     ) -> None:
         """
         Upload content to MinIO.
@@ -165,14 +163,17 @@ class LocalFileStorageService(FileStorageService):
 
     async def file_exists(self, path: str) -> bool:
         from pathlib import Path
+
         return Path(path).exists()
 
     async def download_file(self, remote_path: str, local_path: str) -> None:
         import shutil
+
         shutil.copy(remote_path, local_path)
 
     async def get_file_info(self, path: str) -> Dict[str, Any]:
         from pathlib import Path
+
         p = Path(path)
         if not p.exists():
             raise ValueError(f"File not found: {path}")

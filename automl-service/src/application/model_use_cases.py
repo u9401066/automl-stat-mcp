@@ -1,6 +1,7 @@
 """
 Model Use Cases - For model management and prediction
 """
+
 from typing import List, Optional
 
 from ..domain.models import (
@@ -23,11 +24,7 @@ class ListModelsUseCase:
     def __init__(self, model_repo: ModelRepository):
         self.model_repo = model_repo
 
-    async def execute(
-        self,
-        user_id: str,
-        session_id: Optional[str] = None
-    ) -> List[ModelResponse]:
+    async def execute(self, user_id: str, session_id: Optional[str] = None) -> List[ModelResponse]:
         models = await self.model_repo.find_by_user(user_id, session_id)
 
         return [
@@ -63,11 +60,7 @@ class GetModelLeaderboardUseCase:
     def __init__(self, model_repo: ModelRepository):
         self.model_repo = model_repo
 
-    async def execute(
-        self,
-        model_id: str,
-        user_id: str
-    ) -> List[LeaderboardEntryResponse]:
+    async def execute(self, model_id: str, user_id: str) -> List[LeaderboardEntryResponse]:
         model_id_obj = ModelId.from_string(model_id)
         model = await self.model_repo.get_by_id(model_id_obj)
 
@@ -135,9 +128,7 @@ class PredictUseCase:
         probabilities = None
         if model.problem_type in ("binary", "multiclass"):
             try:
-                probabilities = await self.ml_engine.predict_proba(
-                    model.model_path, data
-                )
+                probabilities = await self.ml_engine.predict_proba(model.model_path, data)
             except Exception:
                 pass  # Some models may not support predict_proba
 

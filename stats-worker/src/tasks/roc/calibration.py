@@ -6,6 +6,7 @@ Analyze calibration of predicted probabilities.
 Contains:
     - CalibrationAnalyzer: Hosmer-Lemeshow test, Brier score, calibration curve
 """
+
 from typing import Dict, List, Tuple
 
 import numpy as np
@@ -118,14 +119,16 @@ class CalibrationAnalyzer:
                 mean_obs = 0
                 n_events = 0
 
-            bins.append({
-                "bin_lower": float(lower),
-                "bin_upper": float(upper),
-                "n_samples": int(n_in_bin),
-                "n_events": int(n_events),
-                "mean_predicted": float(mean_pred),
-                "mean_observed": float(mean_obs),
-            })
+            bins.append(
+                {
+                    "bin_lower": float(lower),
+                    "bin_upper": float(upper),
+                    "n_samples": int(n_in_bin),
+                    "n_events": int(n_events),
+                    "mean_predicted": float(mean_pred),
+                    "mean_observed": float(mean_obs),
+                }
+            )
 
         return bins
 

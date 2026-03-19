@@ -5,6 +5,7 @@ Routes for analyzing data directly without storing in MinIO.
 Useful for one-time analysis or temporary data.
 Refactored to use Domain-Driven Design patterns.
 """
+
 import base64
 import io
 from typing import List, Optional
@@ -22,24 +23,17 @@ router = APIRouter(prefix="/direct", tags=["Direct Analysis"])
 
 class DirectAnalyzeRequest(BaseModel):
     """Request model for direct analysis (no MinIO storage)"""
-    csv_content: str = Field(
-        ...,
-        description="CSV content as string (can be base64 encoded for binary safety)"
-    )
-    is_base64: bool = Field(
-        default=False,
-        description="Whether csv_content is base64 encoded"
-    )
+
+    csv_content: str = Field(..., description="CSV content as string (can be base64 encoded for binary safety)")
+    is_base64: bool = Field(default=False, description="Whether csv_content is base64 encoded")
     user_id: str = Field(..., description="User ID")
-    target_column: Optional[str] = Field(
-        None,
-        description="Target column for association analysis"
-    )
+    target_column: Optional[str] = Field(None, description="Target column for association analysis")
     session_id: Optional[str] = Field(None, description="Session ID")
 
 
 class DirectAnalyzeResponse(BaseModel):
     """Response model for direct analysis"""
+
     job_id: str
     job_type: str
     status: str
@@ -93,25 +87,19 @@ async def direct_analyze(request: DirectAnalyzeRequest):
         # Decode CSV content
         if request.is_base64:
             csv_bytes = base64.b64decode(request.csv_content)
-            csv_str = csv_bytes.decode('utf-8')
+            csv_str = csv_bytes.decode("utf-8")
         else:
             csv_str = request.csv_content
 
         # 早期驗證：空內容檢查
         if not csv_str or not csv_str.strip():
-            raise HTTPException(
-                status_code=400,
-                detail="CSV content is empty"
-            )
+            raise HTTPException(status_code=400, detail="CSV content is empty")
 
         # Parse CSV to validate and get preview
         df = pd.read_csv(io.StringIO(csv_str))
 
         if df.empty:
-            raise HTTPException(
-                status_code=400,
-                detail="CSV content is empty or invalid"
-            )
+            raise HTTPException(status_code=400, detail="CSV content is empty or invalid")
 
         # Create preview
         preview = {
@@ -146,36 +134,29 @@ async def direct_analyze(request: DirectAnalyzeRequest):
             job_type=job.job_type.value,
             status=job.status.value,
             message="Direct analysis job submitted. Use /jobs/{job_id} to check status.",
-            data_preview=preview
+            data_preview=preview,
         )
 
     except HTTPException:
         # 讓 HTTPException 直接通過，不要被 except Exception 捕獲
         raise
     except pd.errors.ParserError as e:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid CSV format: {str(e)}"
-        ) from e
+        raise HTTPException(status_code=400, detail=f"Invalid CSV format: {str(e)}") from e
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to process CSV: {str(e)}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Failed to process CSV: {str(e)}") from e
 
 
 class QuickStatsRequest(BaseModel):
     """Request for quick statistics (synchronous, no job queue)"""
+
     csv_content: str = Field(..., description="CSV content as string")
     is_base64: bool = Field(default=False)
-    include_quality_check: bool = Field(
-        default=True,
-        description="Include data quality warnings and recommendations"
-    )
+    include_quality_check: bool = Field(default=True, description="Include data quality warnings and recommendations")
 
 
 class QuickStatsResponse(BaseModel):
     """Quick statistics response"""
+
     rows: int
     columns: int
     column_info: List[dict]
@@ -208,7 +189,7 @@ async def quick_stats(request: QuickStatsRequest):
         # Decode CSV
         if request.is_base64:
             csv_bytes = base64.b64decode(request.csv_content)
-            csv_str = csv_bytes.decode('utf-8')
+            csv_str = csv_bytes.decode("utf-8")
         else:
             csv_str = request.csv_content
 
@@ -240,7 +221,7 @@ async def quick_stats(request: QuickStatsRequest):
         }
 
         # Numeric summary
-        numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+        numeric_cols = df.select_dtypes(include=["number"]).columns.tolist()
         numeric_summary = None
         if numeric_cols:
             desc = df[numeric_cols].describe()
@@ -269,24 +250,24 @@ async def quick_stats(request: QuickStatsRequest):
         )
 
     except Exception as e:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Failed to parse CSV: {str(e)}"
-        ) from e
+        raise HTTPException(status_code=400, detail=f"Failed to parse CSV: {str(e)}") from e
 
 
 # ============================================================================
 # Data Quality Check Endpoint
 # ============================================================================
 
+
 class QualityCheckRequest(BaseModel):
     """Request for data quality check"""
+
     csv_content: str = Field(..., description="CSV content as string")
     is_base64: bool = Field(default=False)
 
 
 class QualityCheckResponse(BaseModel):
     """Data quality check response"""
+
     rows: int
     columns: int
     quality_warnings: List[dict]
@@ -318,7 +299,7 @@ async def quality_check(request: QualityCheckRequest):
         # Decode CSV
         if request.is_base64:
             csv_bytes = base64.b64decode(request.csv_content)
-            csv_str = csv_bytes.decode('utf-8')
+            csv_str = csv_bytes.decode("utf-8")
         else:
             csv_str = request.csv_content
 
@@ -339,7 +320,4 @@ async def quality_check(request: QualityCheckRequest):
         )
 
     except Exception as e:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Failed to analyze CSV: {str(e)}"
-        ) from e
+        raise HTTPException(status_code=400, detail=f"Failed to analyze CSV: {str(e)}") from e

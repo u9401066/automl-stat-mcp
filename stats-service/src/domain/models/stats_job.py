@@ -67,30 +67,30 @@ class StatsJobId:
 class StatsJob:
     """
     StatsJob Aggregate Root
-    
+
     Represents an async statistical analysis job.
     """
     id: StatsJobId
     job_type: StatsJobType
     user_id: str
-    
+
     # Optional references
     dataset_id: Optional[str] = None  # Reference to dataset (if not direct)
     minio_path: Optional[str] = None  # CSV path in MinIO
-    
+
     # Status
     status: StatsJobStatus = StatsJobStatus.PENDING
     progress: float = 0.0  # 0.0 to 1.0
     message: str = ""
-    
+
     # Configuration (job-specific params)
     params: Dict[str, Any] = field(default_factory=dict)
-    
+
     # Results
     result_path: Optional[str] = None  # Path to result in MinIO
     result: Optional[Dict[str, Any]] = None  # Result data (for small results)
     error: Optional[str] = None
-    
+
     # Metadata
     session_id: Optional[str] = None
     created_at: datetime = field(default_factory=datetime.utcnow)
@@ -103,7 +103,7 @@ class StatsJob:
         """Mark job as started"""
         if self.status != StatsJobStatus.PENDING:
             raise ValueError(f"Cannot start job in status {self.status}")
-        
+
         self.status = StatsJobStatus.RUNNING
         self.started_at = datetime.utcnow()
         self.message = f"{self.job_type.value} analysis started"
@@ -112,13 +112,13 @@ class StatsJob:
         """Update job progress"""
         if self.status != StatsJobStatus.RUNNING:
             return
-        
+
         self.progress = min(1.0, max(0.0, progress))
         if message:
             self.message = message
 
     def complete(
-        self, 
+        self,
         result_path: Optional[str] = None,
         result: Optional[Dict[str, Any]] = None,
     ) -> None:
@@ -186,12 +186,12 @@ class StatsJob:
     def from_dict(cls, data: Dict[str, Any]) -> "StatsJob":
         """Create from dictionary"""
         from datetime import datetime as dt
-        
+
         def parse_datetime(s: Optional[str]) -> Optional[datetime]:
             if not s:
                 return None
             return dt.fromisoformat(s)
-        
+
         return cls(
             id=StatsJobId.from_string(data["job_id"]),
             job_type=StatsJobType(data["job_type"]),

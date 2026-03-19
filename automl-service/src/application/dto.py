@@ -1,14 +1,17 @@
 """
 DTOs - Data Transfer Objects for Application Layer
 """
+
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
 # ============== Request DTOs ==============
 
+
 @dataclass
 class RegisterDatasetRequest:
     """Request to register a dataset from MinIO"""
+
     name: str
     minio_path: str
     user_id: str
@@ -19,6 +22,7 @@ class RegisterDatasetRequest:
 @dataclass
 class AutoMLTrainRequest:
     """Request for AutoML training"""
+
     dataset_id: str
     target_column: str
     problem_type: str  # "binary", "multiclass", "regression"
@@ -32,6 +36,7 @@ class AutoMLTrainRequest:
 @dataclass
 class SpecificTrainRequest:
     """Request for training with specific algorithms"""
+
     dataset_id: str
     target_column: str
     problem_type: str
@@ -45,6 +50,7 @@ class SpecificTrainRequest:
 @dataclass
 class CompareModelsRequest:
     """Request to compare multiple algorithms"""
+
     dataset_id: str
     target_column: str
     problem_type: str
@@ -57,6 +63,7 @@ class CompareModelsRequest:
 @dataclass
 class PredictRequest:
     """Request for prediction"""
+
     model_id: str
     dataset_id: str
     user_id: str
@@ -64,9 +71,11 @@ class PredictRequest:
 
 # ============== Response DTOs ==============
 
+
 @dataclass
 class DatasetResponse:
     """Response containing dataset info"""
+
     dataset_id: str
     name: str
     minio_path: str
@@ -80,6 +89,7 @@ class DatasetResponse:
 @dataclass
 class JobResponse:
     """Response containing job info"""
+
     job_id: str
     job_type: str
     status: str
@@ -95,6 +105,7 @@ class JobResponse:
 @dataclass
 class LeaderboardEntryResponse:
     """Single entry in model leaderboard"""
+
     model_name: str
     score: float
     fit_time: float
@@ -105,6 +116,7 @@ class LeaderboardEntryResponse:
 @dataclass
 class ModelResponse:
     """Response containing model info"""
+
     model_id: str
     name: str
     problem_type: str
@@ -121,6 +133,7 @@ class ModelResponse:
 @dataclass
 class PredictResponse:
     """Response containing predictions"""
+
     model_id: str
     predictions: List[Any]
     probabilities: Optional[List[List[float]]] = None
@@ -129,5 +142,6 @@ class PredictResponse:
 @dataclass
 class ErrorResponse:
     """Error response"""
+
     error: str
     detail: Optional[str] = None

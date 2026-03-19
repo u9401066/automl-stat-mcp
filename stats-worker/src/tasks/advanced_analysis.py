@@ -15,6 +15,7 @@ Package structure:
     ├── multicollinearity.py  - VIF analysis
     └── functions.py          - Convenience functions
 """
+
 # Re-export everything from the analysis package for backward compatibility
 from .analysis import (
     # Correlation

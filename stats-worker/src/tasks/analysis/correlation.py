@@ -9,6 +9,7 @@ Contains:
     - EnhancedCorrelationResult: Complete analysis result
     - compute_enhanced_correlation: Main analysis function
 """
+
 import logging
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
@@ -25,6 +26,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class CorrelationPair:
     """Correlation between two variables."""
+
     var1: str
     var2: str
     pearson_r: Optional[float] = None
@@ -60,6 +62,7 @@ class CorrelationPair:
 @dataclass
 class EnhancedCorrelationResult:
     """Enhanced correlation analysis result."""
+
     columns: List[str]
     n_samples: int
 
@@ -139,25 +142,23 @@ def compute_enhanced_correlation(
 
     # Compute correlation matrices
     if method in ["pearson", "all"]:
-        pearson_corr = clean_df.corr(method='pearson')
+        pearson_corr = clean_df.corr(method="pearson")
         result.pearson_matrix = _matrix_to_dict(pearson_corr)
-        result.pearson_pvalue_matrix = _compute_pvalue_matrix(clean_df, 'pearson')
+        result.pearson_pvalue_matrix = _compute_pvalue_matrix(clean_df, "pearson")
 
     if method in ["spearman", "all"]:
-        spearman_corr = clean_df.corr(method='spearman')
+        spearman_corr = clean_df.corr(method="spearman")
         result.spearman_matrix = _matrix_to_dict(spearman_corr)
-        result.spearman_pvalue_matrix = _compute_pvalue_matrix(clean_df, 'spearman')
+        result.spearman_pvalue_matrix = _compute_pvalue_matrix(clean_df, "spearman")
 
     # Find significant pairs
-    result.significant_pairs = _find_significant_correlations(
-        clean_df, numeric_cols, alpha, min_correlation
-    )
+    result.significant_pairs = _find_significant_correlations(clean_df, numeric_cols, alpha, min_correlation)
 
     # Generate heatmap data (for frontend visualization)
     result.heatmap_data = _generate_heatmap_data(
         result.pearson_matrix if result.pearson_matrix else result.spearman_matrix,
         result.pearson_pvalue_matrix if result.pearson_pvalue_matrix else result.spearman_pvalue_matrix,
-        alpha
+        alpha,
     )
 
     # Summary statistics
@@ -178,14 +179,14 @@ def compute_enhanced_correlation(
             strongest_pos = max(pos_pairs, key=lambda x: x.pearson_r or 0)
             result.summary["strongest_positive"] = {
                 "vars": f"{strongest_pos.var1} & {strongest_pos.var2}",
-                "r": safe_round(strongest_pos.pearson_r, 4)
+                "r": safe_round(strongest_pos.pearson_r, 4),
             }
 
         if neg_pairs:
             strongest_neg = min(neg_pairs, key=lambda x: x.pearson_r or 0)
             result.summary["strongest_negative"] = {
                 "vars": f"{strongest_neg.var1} & {strongest_neg.var2}",
-                "r": safe_round(strongest_neg.pearson_r, 4)
+                "r": safe_round(strongest_neg.pearson_r, 4),
             }
 
     return result
@@ -195,10 +196,7 @@ def _matrix_to_dict(matrix: pd.DataFrame) -> Dict[str, Dict[str, Optional[float]
     """Convert correlation matrix to nested dict."""
     result: Dict[str, Dict[str, Optional[float]]] = {}
     for col in matrix.columns:
-        result[str(col)] = {
-            str(row): safe_round(matrix.loc[row, col], 4)
-            for row in matrix.index
-        }
+        result[str(col)] = {str(row): safe_round(matrix.loc[row, col], 4) for row in matrix.index}
     return result
 
 
@@ -214,7 +212,7 @@ def _compute_pvalue_matrix(df: pd.DataFrame, method: str) -> Dict[str, Dict[str,
                 pvalues[str(col1)][str(col2)] = 0.0
             else:
                 try:
-                    if method == 'pearson':
+                    if method == "pearson":
                         _, p = stats.pearsonr(df[col1], df[col2])
                     else:
                         _, p = stats.spearmanr(df[col1], df[col2])
@@ -235,7 +233,7 @@ def _find_significant_correlations(
     pairs = []
 
     for i, col1 in enumerate(columns):
-        for col2 in columns[i+1:]:
+        for col2 in columns[i + 1 :]:
             try:
                 clean = df[[col1, col2]].dropna()
                 if len(clean) < 5:
@@ -314,15 +312,17 @@ def _generate_heatmap_data(
             r = corr_matrix.get(row, {}).get(col)
             p = pvalue_matrix.get(row, {}).get(col) if pvalue_matrix else None
 
-            heatmap.append({
-                "x": j,
-                "y": i,
-                "row": row,
-                "col": col,
-                "value": r,
-                "p_value": p,
-                "significant": p < alpha if p is not None else False,
-                "annotation": f"{r:.2f}" if r is not None else "",
-            })
+            heatmap.append(
+                {
+                    "x": j,
+                    "y": i,
+                    "row": row,
+                    "col": col,
+                    "value": r,
+                    "p_value": p,
+                    "significant": p < alpha if p is not None else False,
+                    "annotation": f"{r:.2f}" if r is not None else "",
+                }
+            )
 
     return heatmap

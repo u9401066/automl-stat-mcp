@@ -8,6 +8,7 @@ Uses shared RedisManager for connection pooling.
 Key format: datasets:{dataset_id}
 Value: JSON with dataset metadata
 """
+
 import json
 import logging
 
@@ -113,11 +114,7 @@ class RedisDatasetStore:
             return json.loads(data)
         return None
 
-    def get_datasets_by_user(
-        self,
-        user_id: str,
-        session_id: Optional[str] = None
-    ) -> List[Dict[str, Any]]:
+    def get_datasets_by_user(self, user_id: str, session_id: Optional[str] = None) -> List[Dict[str, Any]]:
         """
         Get all datasets for a user.
 

@@ -5,6 +5,7 @@ Contains:
     - PrecisionRecallAnalyzer: PR curves for imbalanced data
     - NetBenefitAnalyzer: Decision Curve Analysis
 """
+
 from typing import Any, Dict, Optional
 
 import numpy as np
@@ -82,12 +83,14 @@ class PrecisionRecallAnalyzer:
         # Build curve points
         curve_points = []
         for i in range(len(thresholds)):
-            curve_points.append({
-                "threshold": float(thresholds[i]),
-                "precision": float(precision[i]),
-                "recall": float(recall[i]),
-                "f1": float(f1_scores[i]),
-            })
+            curve_points.append(
+                {
+                    "threshold": float(thresholds[i]),
+                    "precision": float(precision[i]),
+                    "recall": float(recall[i]),
+                    "f1": float(f1_scores[i]),
+                }
+            )
 
         return PrecisionRecallResult(
             auc_pr=float(auc_pr),

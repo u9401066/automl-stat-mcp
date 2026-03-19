@@ -12,6 +12,7 @@ Supports two modes:
 1. Dataset mode: Provide dataset_id (pre-uploaded to MinIO)
 2. Direct mode: Provide csv_path for local file
 """
+
 import os
 from datetime import datetime
 from typing import Any, Dict, List, Optional
@@ -27,8 +28,10 @@ router = APIRouter(prefix="/cleaning", tags=["Data Cleaning"])
 # Request/Response Models
 # =============================================================================
 
+
 class ConvertBinaryRequest(BaseModel):
     """Request for converting a column to binary (0/1)"""
+
     csv_path: str = Field(..., description="Path to CSV file")
     column: str = Field(..., description="Column name to convert")
     mapping: Dict[str, int] = Field(..., description="Value mapping, e.g. {'200': 0, '400': 1}")
@@ -38,6 +41,7 @@ class ConvertBinaryRequest(BaseModel):
 
 class EncodeCategoricalRequest(BaseModel):
     """Request for encoding categorical variables"""
+
     csv_path: str = Field(..., description="Path to CSV file")
     columns: List[str] = Field(..., description="Columns to encode")
     method: str = Field(default="label", description="Encoding method: label, onehot, target")
@@ -47,16 +51,20 @@ class EncodeCategoricalRequest(BaseModel):
 
 class HandleMissingRequest(BaseModel):
     """Request for handling missing values"""
+
     csv_path: str = Field(..., description="Path to CSV file")
     strategy: str = Field(default="auto", description="Strategy: auto, drop, mean, median, mode, constant")
     columns: Optional[List[str]] = Field(None, description="Specific columns to handle (default: all)")
     fill_value: Optional[Any] = Field(None, description="Value for constant fill strategy")
-    threshold: float = Field(default=0.5, description="Drop threshold: columns with > threshold missing will be dropped")
+    threshold: float = Field(
+        default=0.5, description="Drop threshold: columns with > threshold missing will be dropped"
+    )
     save_path: Optional[str] = Field(None, description="Path to save cleaned CSV")
 
 
 class RemoveColumnsRequest(BaseModel):
     """Request for removing columns"""
+
     csv_path: str = Field(..., description="Path to CSV file")
     columns: List[str] = Field(..., description="Columns to remove")
     save_path: Optional[str] = Field(None, description="Path to save cleaned CSV")
@@ -64,6 +72,7 @@ class RemoveColumnsRequest(BaseModel):
 
 class FilterRowsRequest(BaseModel):
     """Request for filtering rows"""
+
     csv_path: str = Field(..., description="Path to CSV file")
     column: str = Field(..., description="Column to filter on")
     operator: str = Field(..., description="Operator: eq, ne, gt, lt, ge, le, in, notin, isna, notna")
@@ -73,6 +82,7 @@ class FilterRowsRequest(BaseModel):
 
 class RenameColumnsRequest(BaseModel):
     """Request for renaming columns"""
+
     csv_path: str = Field(..., description="Path to CSV file")
     mapping: Dict[str, str] = Field(..., description="Column rename mapping, e.g. {'old_name': 'new_name'}")
     save_path: Optional[str] = Field(None, description="Path to save renamed CSV")
@@ -80,6 +90,7 @@ class RenameColumnsRequest(BaseModel):
 
 class AutoCleanRequest(BaseModel):
     """Request for automatic data cleaning"""
+
     csv_path: str = Field(..., description="Path to CSV file")
     target_column: Optional[str] = Field(None, description="Target column to preserve")
     remove_duplicates: bool = Field(default=True, description="Remove duplicate rows")
@@ -93,11 +104,13 @@ class AutoCleanRequest(BaseModel):
 
 class ColumnInfoRequest(BaseModel):
     """Request for column information"""
+
     csv_path: str = Field(..., description="Path to CSV file")
 
 
 class CleaningResponse(BaseModel):
     """Standard cleaning operation response"""
+
     success: bool
     message: str
     input_path: str
@@ -111,6 +124,7 @@ class CleaningResponse(BaseModel):
 
 class ColumnInfoResponse(BaseModel):
     """Column information response"""
+
     success: bool
     csv_path: str
     row_count: int
@@ -154,7 +168,7 @@ def _validate_path(csv_path: str) -> str:
     if not is_allowed:
         raise HTTPException(
             status_code=403,
-            detail=f"Access denied: Path must be within allowed directories ({', '.join(ALLOWED_PATHS)})"
+            detail=f"Access denied: Path must be within allowed directories ({', '.join(ALLOWED_PATHS)})",
         )
 
     return real_path
@@ -224,6 +238,7 @@ def _get_column_info(df: pd.DataFrame) -> List[Dict[str, Any]]:
 # API Endpoints
 # =============================================================================
 
+
 @router.post("/convert-binary", response_model=CleaningResponse)
 async def convert_to_binary(request: ConvertBinaryRequest):
     """
@@ -265,7 +280,7 @@ async def convert_to_binary(request: ConvertBinaryRequest):
         if not matched:
             # Try numeric conversion
             try:
-                numeric_key = int(key) if '.' not in key else float(key)
+                numeric_key = int(key) if "." not in key else float(key)
                 if numeric_key in original_values:
                     mapping[numeric_key] = value
             except ValueError:
@@ -273,8 +288,7 @@ async def convert_to_binary(request: ConvertBinaryRequest):
 
     if not mapping:
         raise HTTPException(
-            status_code=400,
-            detail=f"No mapping matches found. Column values: {list(original_values)[:10]}"
+            status_code=400, detail=f"No mapping matches found. Column values: {list(original_values)[:10]}"
         )
 
     # Create new column
@@ -300,8 +314,8 @@ async def convert_to_binary(request: ConvertBinaryRequest):
             "new_column": output_col,
             "mapping_applied": {str(k): v for k, v in mapping.items()},
             "unmapped_values": int(unmapped),
-            "value_counts": df[output_col].value_counts().to_dict()
-        }
+            "value_counts": df[output_col].value_counts().to_dict(),
+        },
     )
 
 
@@ -330,18 +344,12 @@ async def encode_categorical(request: EncodeCategoricalRequest):
             categories = df[col].unique()
             label_map = {cat: i for i, cat in enumerate(sorted(categories, key=str))}
             df[f"{col}_encoded"] = df[col].map(label_map)
-            changes["encoded_columns"][col] = {
-                "method": "label",
-                "mapping": {str(k): v for k, v in label_map.items()}
-            }
+            changes["encoded_columns"][col] = {"method": "label", "mapping": {str(k): v for k, v in label_map.items()}}
         elif request.method == "onehot":
             # One-hot encoding
             dummies = pd.get_dummies(df[col], prefix=col)
             df = pd.concat([df, dummies], axis=1)
-            changes["encoded_columns"][col] = {
-                "method": "onehot",
-                "new_columns": list(dummies.columns)
-            }
+            changes["encoded_columns"][col] = {"method": "onehot", "new_columns": list(dummies.columns)}
 
     output_path = _save_csv(df, request.save_path, request.csv_path)
 
@@ -354,7 +362,7 @@ async def encode_categorical(request: EncodeCategoricalRequest):
         rows_after=len(df),
         columns_before=cols_before,
         columns_after=len(df.columns),
-        changes=changes
+        changes=changes,
     )
 
 
@@ -441,7 +449,7 @@ async def handle_missing_values(request: HandleMissingRequest):
         rows_after=len(df),
         columns_before=cols_before,
         columns_after=len(df.columns),
-        changes=changes
+        changes=changes,
     )
 
 
@@ -474,10 +482,7 @@ async def remove_columns(request: RemoveColumnsRequest):
         rows_after=len(df),
         columns_before=cols_before,
         columns_after=len(df.columns),
-        changes={
-            "removed_columns": existing_cols,
-            "not_found": missing_cols
-        }
+        changes={"removed_columns": existing_cols, "not_found": missing_cols},
     )
 
 
@@ -543,8 +548,8 @@ async def filter_rows(request: FilterRowsRequest):
         changes={
             "filter_condition": f"{request.column} {request.operator} {request.value}",
             "rows_kept": len(df),
-            "rows_removed": rows_before - len(df)
-        }
+            "rows_removed": rows_before - len(df),
+        },
     )
 
 
@@ -577,10 +582,7 @@ async def rename_columns(request: RenameColumnsRequest):
         rows_after=len(df),
         columns_before=cols_before,
         columns_after=len(df.columns),
-        changes={
-            "renamed": rename_map,
-            "not_found": not_found
-        }
+        changes={"renamed": rename_map, "not_found": not_found},
     )
 
 
@@ -603,7 +605,7 @@ async def get_column_info(request: ColumnInfoRequest):
         csv_path=request.csv_path,
         row_count=len(df),
         column_count=len(df.columns),
-        columns=_get_column_info(df)
+        columns=_get_column_info(df),
     )
 
 
@@ -629,7 +631,7 @@ async def auto_clean_dataset(request: AutoCleanRequest):
         "columns_dropped_missing": [],
         "columns_dropped_constant": [],
         "columns_dropped_high_cardinality": [],
-        "missing_values_imputed": {}
+        "missing_values_imputed": {},
     }
 
     # Columns to protect
@@ -683,8 +685,9 @@ async def auto_clean_dataset(request: AutoCleanRequest):
             unique_ratio = df[col].nunique() / len(df)
             if unique_ratio > request.cardinality_threshold:
                 # Additional checks: is it string-like or numeric sequential?
-                if df[col].dtype == 'object' or (pd.api.types.is_numeric_dtype(df[col]) and
-                    df[col].is_monotonic_increasing):
+                if df[col].dtype == "object" or (
+                    pd.api.types.is_numeric_dtype(df[col]) and df[col].is_monotonic_increasing
+                ):
                     df = df.drop(columns=[col])
                     changes["columns_dropped_high_cardinality"].append(col)
 
@@ -699,13 +702,14 @@ async def auto_clean_dataset(request: AutoCleanRequest):
         rows_after=len(df),
         columns_before=cols_before,
         columns_after=len(df.columns),
-        changes=changes
+        changes=changes,
     )
 
 
 # =============================================================================
 # Health Check
 # =============================================================================
+
 
 @router.get("/health")
 async def cleaning_health():

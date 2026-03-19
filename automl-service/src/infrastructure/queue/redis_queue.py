@@ -4,6 +4,7 @@ Redis Job Queue Client
 Handles job submission to Redis queue for AutoGluon workers.
 Uses shared RedisManager for connection pooling.
 """
+
 import json
 import logging
 
@@ -74,7 +75,7 @@ class RedisJobQueue:
             dataset_id=config.dataset_id,
             session_id=session_id,
             status=JobStatus.PENDING,
-            config=config.__dict__ if hasattr(config, '__dict__') else {},
+            config=config.__dict__ if hasattr(config, "__dict__") else {},
             created_at=now,
         )
 
@@ -89,16 +90,18 @@ class RedisJobQueue:
             "status_message": "Queued for processing",
             "created_at": now.isoformat(),
             "updated_at": now.isoformat(),
-            "config": json.dumps({
-                "dataset_id": config.dataset_id,
-                "dataset_minio_path": dataset_minio_path,
-                "target_column": config.target_column,
-                "problem_type": config.problem_type.value,
-                "time_limit": config.time_limit,
-                "presets": config.presets,
-                "metric": config.metric,
-                "algorithms": config.algorithms,
-            }),
+            "config": json.dumps(
+                {
+                    "dataset_id": config.dataset_id,
+                    "dataset_minio_path": dataset_minio_path,
+                    "target_column": config.target_column,
+                    "problem_type": config.problem_type.value,
+                    "time_limit": config.time_limit,
+                    "presets": config.presets,
+                    "metric": config.metric,
+                    "algorithms": config.algorithms,
+                }
+            ),
         }
 
         # Store job in Redis hash
@@ -151,11 +154,7 @@ class RedisJobQueue:
         cursor = 0
 
         while True:
-            cursor, keys = redis_client.scan(
-                cursor=cursor,
-                match=f"{self._job_prefix}*",
-                count=100
-            )
+            cursor, keys = redis_client.scan(cursor=cursor, match=f"{self._job_prefix}*", count=100)
 
             for key in keys:
                 data = redis_client.hgetall(key)
@@ -198,7 +197,7 @@ class RedisJobQueue:
                 "status": JobStatus.CANCELLED.value,
                 "status_message": "Cancelled by user",
                 "updated_at": datetime.utcnow().isoformat(),
-            }
+            },
         )
 
         logger.info(f"Cancelled job {job_id}")

@@ -5,6 +5,7 @@ Provides endpoints for storing and retrieving analysis results:
 - Redis: Fast temporary storage with TTL
 - MinIO: Persistent file storage
 """
+
 import json
 import logging
 from typing import Any, Dict, Optional
@@ -24,8 +25,10 @@ router = APIRouter(prefix="/storage", tags=["Storage"])
 # Redis Storage Models
 # =============================================================================
 
+
 class RedisSetRequest(BaseModel):
     """Request to set a value in Redis"""
+
     key: str
     value: Dict[str, Any]
     ttl: int = 604800  # 7 days default
@@ -33,6 +36,7 @@ class RedisSetRequest(BaseModel):
 
 class RedisGetResponse(BaseModel):
     """Response from Redis get"""
+
     key: str
     value: Optional[Dict[str, Any]]
     exists: bool
@@ -42,8 +46,10 @@ class RedisGetResponse(BaseModel):
 # MinIO Storage Models
 # =============================================================================
 
+
 class MinIOUploadRequest(BaseModel):
     """Request to upload to MinIO"""
+
     bucket: str
     path: str
     content: str
@@ -52,6 +58,7 @@ class MinIOUploadRequest(BaseModel):
 
 class MinIOUploadResponse(BaseModel):
     """Response from MinIO upload"""
+
     bucket: str
     path: str
     full_path: str
@@ -61,6 +68,7 @@ class MinIOUploadResponse(BaseModel):
 # =============================================================================
 # Redis Endpoints
 # =============================================================================
+
 
 @router.post("/redis/set", tags=["Redis"])
 async def redis_set(request: RedisSetRequest) -> Dict[str, Any]:
@@ -171,6 +179,7 @@ async def redis_keys(pattern: str = "stats:result:*", limit: int = 100) -> Dict[
 # MinIO Endpoints
 # =============================================================================
 
+
 @router.post("/minio/upload", response_model=MinIOUploadResponse, tags=["MinIO"])
 async def minio_upload(request: MinIOUploadRequest) -> MinIOUploadResponse:
     """
@@ -180,7 +189,7 @@ async def minio_upload(request: MinIOUploadRequest) -> MinIOUploadResponse:
     """
     try:
         # Upload content
-        content_bytes = request.content.encode('utf-8')
+        content_bytes = request.content.encode("utf-8")
         storage = get_storage()
 
         # Write to storage backend
@@ -220,7 +229,7 @@ async def minio_download(bucket: str, path: str) -> Dict[str, Any]:
 
         # Try to parse as JSON
         try:
-            data = json.loads(content.decode('utf-8'))
+            data = json.loads(content.decode("utf-8"))
             return {
                 "status": "success",
                 "bucket": bucket,
@@ -235,7 +244,7 @@ async def minio_download(bucket: str, path: str) -> Dict[str, Any]:
                 "bucket": bucket,
                 "path": path,
                 "content_type": "text/plain",
-                "content": content.decode('utf-8'),
+                "content": content.decode("utf-8"),
             }
 
     except Exception as e:

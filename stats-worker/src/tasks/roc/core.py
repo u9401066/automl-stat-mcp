@@ -7,6 +7,7 @@ Contains:
     - ROCAnalyzer: Comprehensive ROC curve analysis
     - DeLongTest: DeLong test for comparing two correlated AUCs
 """
+
 from typing import Dict
 
 import numpy as np
@@ -107,8 +108,8 @@ class ROCAnalyzer:
             pred_pos = np.sum(y_scores >= thresholds[i])
             pred_neg = len(y_scores) - pred_pos
 
-            tp = tps[i-1] if i > 0 else 0
-            fp = fps[i-1] if i > 0 else 0
+            tp = tps[i - 1] if i > 0 else 0
+            fp = fps[i - 1] if i > 0 else 0
             n_pos - tp
             tn = n_neg - fp
 
@@ -127,9 +128,7 @@ class ROCAnalyzer:
             curve_points.append(point)
 
         # Find optimal threshold
-        optimal_threshold = self._find_optimal_threshold(
-            thresholds, tpr, fpr, threshold_method
-        )
+        optimal_threshold = self._find_optimal_threshold(thresholds, tpr, fpr, threshold_method)
 
         return ROCCurveResult(
             auc=float(auc),
@@ -193,7 +192,7 @@ class ROCAnalyzer:
             optimal_idx = np.argmax(j_scores)
 
         elif method == "closest_to_01":
-            distances = np.sqrt(fpr ** 2 + (1 - tpr) ** 2)
+            distances = np.sqrt(fpr**2 + (1 - tpr) ** 2)
             optimal_idx = np.argmin(distances)
 
         elif method == "sensitivity_specificity":

@@ -20,9 +20,10 @@ Usage:
     # Plot SHAP summary (requires SHAP values)
     fig = plot_shap_summary(shap_values, feature_names)
 """
+
 import matplotlib
 
-matplotlib.use('Agg')
+matplotlib.use("Agg")
 import logging
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -46,6 +47,7 @@ logger = logging.getLogger(__name__)
 # Try to import SHAP
 try:
     import shap
+
     HAS_SHAP = True
 except ImportError:
     HAS_SHAP = False
@@ -57,28 +59,28 @@ except ImportError:
 # =============================================================================
 
 AUTOML_COLORS = {
-    'primary': '#1f77b4',       # Blue
-    'secondary': '#ff7f0e',     # Orange
-    'positive': '#2ca02c',      # Green
-    'negative': '#d62728',      # Red
-    'neutral': '#7f7f7f',       # Gray
-    'highlight': '#e377c2',     # Pink
-    'ensemble': '#17becf',      # Cyan for ensemble models
-    'neural': '#bcbd22',        # Yellow-green for neural nets
-    'tree': '#8c564b',          # Brown for tree models
+    "primary": "#1f77b4",  # Blue
+    "secondary": "#ff7f0e",  # Orange
+    "positive": "#2ca02c",  # Green
+    "negative": "#d62728",  # Red
+    "neutral": "#7f7f7f",  # Gray
+    "highlight": "#e377c2",  # Pink
+    "ensemble": "#17becf",  # Cyan for ensemble models
+    "neural": "#bcbd22",  # Yellow-green for neural nets
+    "tree": "#8c564b",  # Brown for tree models
 }
 
 MODEL_TYPE_COLORS = {
-    'WeightedEnsemble': AUTOML_COLORS['ensemble'],
-    'LightGBM': AUTOML_COLORS['primary'],
-    'XGBoost': AUTOML_COLORS['secondary'],
-    'CatBoost': '#9467bd',      # Purple
-    'RandomForest': AUTOML_COLORS['tree'],
-    'ExtraTrees': '#8c564b',
-    'NeuralNet': AUTOML_COLORS['neural'],
-    'KNeighbors': '#17becf',
-    'LinearModel': '#7f7f7f',
-    'default': AUTOML_COLORS['neutral'],
+    "WeightedEnsemble": AUTOML_COLORS["ensemble"],
+    "LightGBM": AUTOML_COLORS["primary"],
+    "XGBoost": AUTOML_COLORS["secondary"],
+    "CatBoost": "#9467bd",  # Purple
+    "RandomForest": AUTOML_COLORS["tree"],
+    "ExtraTrees": "#8c564b",
+    "NeuralNet": AUTOML_COLORS["neural"],
+    "KNeighbors": "#17becf",
+    "LinearModel": "#7f7f7f",
+    "default": AUTOML_COLORS["neutral"],
 }
 
 
@@ -87,12 +89,13 @@ def _get_model_color(model_name: str) -> str:
     for key, color in MODEL_TYPE_COLORS.items():
         if key.lower() in model_name.lower():
             return color
-    return MODEL_TYPE_COLORS['default']
+    return MODEL_TYPE_COLORS["default"]
 
 
 # =============================================================================
 # Feature Importance Plot
 # =============================================================================
+
 
 def plot_feature_importance(
     importance: Union[Dict[str, float], pd.DataFrame, pd.Series],
@@ -102,7 +105,7 @@ def plot_feature_importance(
     horizontal: bool = True,
     show_values: bool = True,
     figsize: Optional[Tuple[float, float]] = None,
-    color: str = AUTOML_COLORS['primary'],
+    color: str = AUTOML_COLORS["primary"],
     error_bars: Optional[Dict[str, float]] = None,
 ) -> plt.Figure:
     """
@@ -131,20 +134,20 @@ def plot_feature_importance(
 
     # Convert to DataFrame
     if isinstance(importance, dict):
-        df = pd.DataFrame(list(importance.items()), columns=['feature', 'importance'])
+        df = pd.DataFrame(list(importance.items()), columns=["feature", "importance"])
     elif isinstance(importance, pd.Series):
-        df = pd.DataFrame({'feature': importance.index, 'importance': importance.values})
+        df = pd.DataFrame({"feature": importance.index, "importance": importance.values})
     elif isinstance(importance, pd.DataFrame):
-        if 'feature' not in importance.columns:
+        if "feature" not in importance.columns:
             # Assume index is features
-            df = pd.DataFrame({'feature': importance.index, 'importance': importance.iloc[:, 0].values})
+            df = pd.DataFrame({"feature": importance.index, "importance": importance.iloc[:, 0].values})
         else:
             df = importance.copy()
     else:
         raise ValueError(f"Unsupported importance type: {type(importance)}")
 
     # Sort and take top N
-    df = df.sort_values('importance', ascending=False).head(top_n)
+    df = df.sort_values("importance", ascending=False).head(top_n)
 
     # Determine figure size
     if figsize is None:
@@ -157,45 +160,55 @@ def plot_feature_importance(
 
     if horizontal:
         # Horizontal bar chart (features on y-axis)
-        df = df.sort_values('importance', ascending=True)  # Reverse for horizontal
+        df = df.sort_values("importance", ascending=True)  # Reverse for horizontal
 
         y_pos = np.arange(len(df))
 
         # Error bars if provided
         xerr = None
         if error_bars:
-            xerr = [error_bars.get(f, 0) for f in df['feature']]
+            xerr = [error_bars.get(f, 0) for f in df["feature"]]
 
-        bars = ax.barh(y_pos, df['importance'], xerr=xerr, color=color,
-                       edgecolor='black', linewidth=0.5, capsize=3)
+        bars = ax.barh(y_pos, df["importance"], xerr=xerr, color=color, edgecolor="black", linewidth=0.5, capsize=3)
 
         ax.set_yticks(y_pos)
-        ax.set_yticklabels(df['feature'])
+        ax.set_yticklabels(df["feature"])
         ax.set_xlabel(xlabel)
 
         if show_values:
-            for _i, (bar, val) in enumerate(zip(bars, df['importance'], strict=False)):
-                ax.text(bar.get_width() + 0.01 * ax.get_xlim()[1], bar.get_y() + bar.get_height()/2,
-                        f'{val:.3f}', va='center', fontsize=9)
+            for _i, (bar, val) in enumerate(zip(bars, df["importance"], strict=False)):
+                ax.text(
+                    bar.get_width() + 0.01 * ax.get_xlim()[1],
+                    bar.get_y() + bar.get_height() / 2,
+                    f"{val:.3f}",
+                    va="center",
+                    fontsize=9,
+                )
     else:
         # Vertical bar chart
         x_pos = np.arange(len(df))
 
         yerr = None
         if error_bars:
-            yerr = [error_bars.get(f, 0) for f in df['feature']]
+            yerr = [error_bars.get(f, 0) for f in df["feature"]]
 
-        bars = ax.bar(x_pos, df['importance'], yerr=yerr, color=color,
-                      edgecolor='black', linewidth=0.5, capsize=3)
+        bars = ax.bar(x_pos, df["importance"], yerr=yerr, color=color, edgecolor="black", linewidth=0.5, capsize=3)
 
         ax.set_xticks(x_pos)
-        ax.set_xticklabels(df['feature'], rotation=45, ha='right')
+        ax.set_xticklabels(df["feature"], rotation=45, ha="right")
         ax.set_ylabel(xlabel)
 
         if show_values:
-            for bar, val in zip(bars, df['importance'], strict=False):
-                ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.01 * ax.get_ylim()[1],
-                        f'{val:.3f}', ha='center', va='bottom', fontsize=8, rotation=90)
+            for bar, val in zip(bars, df["importance"], strict=False):
+                ax.text(
+                    bar.get_x() + bar.get_width() / 2,
+                    bar.get_height() + 0.01 * ax.get_ylim()[1],
+                    f"{val:.3f}",
+                    ha="center",
+                    va="bottom",
+                    fontsize=8,
+                    rotation=90,
+                )
 
     ax.set_title(title)
 
@@ -207,6 +220,7 @@ def plot_feature_importance(
 # =============================================================================
 # SHAP Summary Plot
 # =============================================================================
+
 
 def plot_shap_summary(
     shap_values: np.ndarray,
@@ -261,7 +275,7 @@ def plot_shap_summary(
                     feature_names=feature_names,
                     max_display=max_display,
                     show=False,
-                    plot_type="dot"
+                    plot_type="dot",
                 )
             elif plot_type == "bar":
                 shap.summary_plot(
@@ -270,7 +284,7 @@ def plot_shap_summary(
                     feature_names=feature_names,
                     max_display=max_display,
                     show=False,
-                    plot_type="bar"
+                    plot_type="bar",
                 )
             elif plot_type == "violin":
                 shap.summary_plot(
@@ -279,7 +293,7 @@ def plot_shap_summary(
                     feature_names=feature_names,
                     max_display=max_display,
                     show=False,
-                    plot_type="violin"
+                    plot_type="violin",
                 )
 
             # Get the current figure (SHAP creates its own)
@@ -303,10 +317,10 @@ def plot_shap_summary(
 
     y_pos = np.arange(len(sorted_idx))
 
-    ax.barh(y_pos, mean_shap[sorted_idx][::-1], color=AUTOML_COLORS['primary'])
+    ax.barh(y_pos, mean_shap[sorted_idx][::-1], color=AUTOML_COLORS["primary"])
     ax.set_yticks(y_pos)
     ax.set_yticklabels([feature_names[i] for i in sorted_idx[::-1]])
-    ax.set_xlabel('Mean |SHAP value|')
+    ax.set_xlabel("Mean |SHAP value|")
     ax.set_title(title)
 
     plt.tight_layout()
@@ -398,38 +412,41 @@ def plot_shap_waterfall(
             logger.warning(f"SHAP waterfall failed, falling back to bar plot: {e}")
 
     # Fallback: simple contribution bar plot
-    contributions = pd.DataFrame({
-        'feature': feature_names,
-        'shap': sample_shap,
-        'value': sample_features,
-    })
+    contributions = pd.DataFrame(
+        {
+            "feature": feature_names,
+            "shap": sample_shap,
+            "value": sample_features,
+        }
+    )
 
     # Sort by absolute SHAP value
-    contributions['abs_shap'] = np.abs(contributions['shap'])
-    contributions = contributions.sort_values('abs_shap', ascending=True).tail(max_display)
+    contributions["abs_shap"] = np.abs(contributions["shap"])
+    contributions = contributions.sort_values("abs_shap", ascending=True).tail(max_display)
 
     # Colors based on sign
-    colors = [AUTOML_COLORS['positive'] if s > 0 else AUTOML_COLORS['negative']
-              for s in contributions['shap']]
+    colors = [AUTOML_COLORS["positive"] if s > 0 else AUTOML_COLORS["negative"] for s in contributions["shap"]]
 
     y_pos = np.arange(len(contributions))
 
-    ax.barh(y_pos, contributions['shap'], color=colors, edgecolor='black', linewidth=0.5)
+    ax.barh(y_pos, contributions["shap"], color=colors, edgecolor="black", linewidth=0.5)
     ax.set_yticks(y_pos)
 
     # Show feature name and value
-    labels = [f"{f} = {v:.2f}" if isinstance(v, (int, float)) else f"{f} = {v}"
-              for f, v in zip(contributions['feature'], contributions['value'], strict=False)]
+    labels = [
+        f"{f} = {v:.2f}" if isinstance(v, (int, float)) else f"{f} = {v}"
+        for f, v in zip(contributions["feature"], contributions["value"], strict=False)
+    ]
     ax.set_yticklabels(labels)
 
-    ax.axvline(x=0, color='black', linewidth=0.5)
-    ax.set_xlabel('SHAP Value (contribution to prediction)')
-    ax.set_title(title or 'Feature Contributions to Prediction')
+    ax.axvline(x=0, color="black", linewidth=0.5)
+    ax.set_xlabel("SHAP Value (contribution to prediction)")
+    ax.set_title(title or "Feature Contributions to Prediction")
 
     # Add legend
-    pos_patch = mpatches.Patch(color=AUTOML_COLORS['positive'], label='Increases prediction')
-    neg_patch = mpatches.Patch(color=AUTOML_COLORS['negative'], label='Decreases prediction')
-    ax.legend(handles=[pos_patch, neg_patch], loc='lower right')
+    pos_patch = mpatches.Patch(color=AUTOML_COLORS["positive"], label="Increases prediction")
+    neg_patch = mpatches.Patch(color=AUTOML_COLORS["negative"], label="Decreases prediction")
+    ax.legend(handles=[pos_patch, neg_patch], loc="lower right")
 
     plt.tight_layout()
 
@@ -439,6 +456,7 @@ def plot_shap_waterfall(
 # =============================================================================
 # Learning Curve Plot
 # =============================================================================
+
 
 def plot_learning_curve(
     train_sizes: np.ndarray,
@@ -478,29 +496,41 @@ def plot_learning_curve(
     fig, ax = plt.subplots(figsize=figsize)
 
     # Plot training scores
-    ax.plot(train_sizes, train_scores, 'o-', color=AUTOML_COLORS['primary'],
-            label='Training Score', linewidth=2, markersize=6)
+    ax.plot(
+        train_sizes,
+        train_scores,
+        "o-",
+        color=AUTOML_COLORS["primary"],
+        label="Training Score",
+        linewidth=2,
+        markersize=6,
+    )
 
     if train_std is not None:
-        ax.fill_between(train_sizes,
-                        train_scores - train_std,
-                        train_scores + train_std,
-                        alpha=0.2, color=AUTOML_COLORS['primary'])
+        ax.fill_between(
+            train_sizes, train_scores - train_std, train_scores + train_std, alpha=0.2, color=AUTOML_COLORS["primary"]
+        )
 
     # Plot validation scores
-    ax.plot(train_sizes, val_scores, 'o-', color=AUTOML_COLORS['secondary'],
-            label='Validation Score', linewidth=2, markersize=6)
+    ax.plot(
+        train_sizes,
+        val_scores,
+        "o-",
+        color=AUTOML_COLORS["secondary"],
+        label="Validation Score",
+        linewidth=2,
+        markersize=6,
+    )
 
     if val_std is not None:
-        ax.fill_between(train_sizes,
-                        val_scores - val_std,
-                        val_scores + val_std,
-                        alpha=0.2, color=AUTOML_COLORS['secondary'])
+        ax.fill_between(
+            train_sizes, val_scores - val_std, val_scores + val_std, alpha=0.2, color=AUTOML_COLORS["secondary"]
+        )
 
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     ax.set_title(title)
-    ax.legend(loc='lower right')
+    ax.legend(loc="lower right")
     ax.grid(True, alpha=0.3)
 
     # Add diagnosis annotation
@@ -512,9 +542,15 @@ def plot_learning_curve(
     else:
         diagnosis = "✓ Model appears well-fitted"
 
-    ax.text(0.02, 0.02, diagnosis, transform=ax.transAxes,
-            fontsize=10, verticalalignment='bottom',
-            bbox={'boxstyle': 'round', 'facecolor': 'white', 'alpha': 0.8})
+    ax.text(
+        0.02,
+        0.02,
+        diagnosis,
+        transform=ax.transAxes,
+        fontsize=10,
+        verticalalignment="bottom",
+        bbox={"boxstyle": "round", "facecolor": "white", "alpha": 0.8},
+    )
 
     plt.tight_layout()
 
@@ -524,6 +560,7 @@ def plot_learning_curve(
 # =============================================================================
 # Model Comparison / Leaderboard Plot
 # =============================================================================
+
 
 def plot_model_comparison(
     leaderboard: Union[List[Dict], pd.DataFrame],
@@ -563,8 +600,8 @@ def plot_model_comparison(
         df = leaderboard.copy()
 
     # Handle different column naming conventions
-    name_col = 'model_name' if 'model_name' in df.columns else 'model'
-    score_col = metric if metric in df.columns else 'score'
+    name_col = "model_name" if "model_name" in df.columns else "model"
+    score_col = metric if metric in df.columns else "score"
 
     # Sort and take top N
     df = df.sort_values(score_col, ascending=False).head(top_n)
@@ -582,29 +619,29 @@ def plot_model_comparison(
     colors = [_get_model_color(name) for name in df[name_col]]
 
     # Plot performance bars
-    bars = ax1.barh(y_pos, df[score_col], color=colors, edgecolor='black', linewidth=0.5)
+    bars = ax1.barh(y_pos, df[score_col], color=colors, edgecolor="black", linewidth=0.5)
 
     ax1.set_yticks(y_pos)
     ax1.set_yticklabels(df[name_col])
-    ax1.set_xlabel(metric_name or metric.replace('_', ' ').title())
+    ax1.set_xlabel(metric_name or metric.replace("_", " ").title())
     ax1.set_title(title)
 
     # Show values on bars
     for bar, val in zip(bars, df[score_col], strict=False):
-        ax1.text(bar.get_width() + 0.005, bar.get_y() + bar.get_height()/2,
-                f'{val:.4f}', va='center', fontsize=9)
+        ax1.text(bar.get_width() + 0.005, bar.get_y() + bar.get_height() / 2, f"{val:.4f}", va="center", fontsize=9)
 
     # Add training time as secondary axis
-    if show_time and 'fit_time' in df.columns:
+    if show_time and "fit_time" in df.columns:
         ax2 = ax1.twiny()
-        ax2.plot(df['fit_time'], y_pos, 'D--', color=AUTOML_COLORS['neutral'],
-                markersize=6, alpha=0.7, label='Fit Time')
-        ax2.set_xlabel('Training Time (s)', color=AUTOML_COLORS['neutral'])
-        ax2.tick_params(axis='x', colors=AUTOML_COLORS['neutral'])
+        ax2.plot(
+            df["fit_time"], y_pos, "D--", color=AUTOML_COLORS["neutral"], markersize=6, alpha=0.7, label="Fit Time"
+        )
+        ax2.set_xlabel("Training Time (s)", color=AUTOML_COLORS["neutral"])
+        ax2.tick_params(axis="x", colors=AUTOML_COLORS["neutral"])
 
     # Highlight best model
     best_idx = len(df) - 1  # Last one is best (after sorting)
-    bars[best_idx].set_edgecolor(AUTOML_COLORS['positive'])
+    bars[best_idx].set_edgecolor(AUTOML_COLORS["positive"])
     bars[best_idx].set_linewidth(3)
 
     plt.tight_layout()
@@ -631,7 +668,7 @@ def plot_algorithm_performance(
         matplotlib Figure object
     """
     if metrics is None:
-        metrics = ['accuracy', 'f1', 'auc']
+        metrics = ["accuracy", "f1", "auc"]
     apply_publication_style()
 
     fig, ax = plt.subplots(figsize=figsize)
@@ -647,16 +684,15 @@ def plot_algorithm_performance(
 
     for i, metric in enumerate(metrics):
         values = [results[alg].get(metric, 0) for alg in algorithms]
-        offset = (i - n_metrics/2 + 0.5) * width
-        ax.bar(x + offset, values, width, label=metric.upper(),
-                     color=colors[i], edgecolor='black', linewidth=0.5)
+        offset = (i - n_metrics / 2 + 0.5) * width
+        ax.bar(x + offset, values, width, label=metric.upper(), color=colors[i], edgecolor="black", linewidth=0.5)
 
-    ax.set_xlabel('Algorithm')
-    ax.set_ylabel('Score')
+    ax.set_xlabel("Algorithm")
+    ax.set_ylabel("Score")
     ax.set_title(title)
     ax.set_xticks(x)
-    ax.set_xticklabels(algorithms, rotation=45, ha='right')
-    ax.legend(loc='upper right')
+    ax.set_xticklabels(algorithms, rotation=45, ha="right")
+    ax.legend(loc="upper right")
     ax.set_ylim(0, 1.1)
 
     plt.tight_layout()
@@ -667,6 +703,7 @@ def plot_algorithm_performance(
 # =============================================================================
 # Prediction vs Actual Plot (for Regression)
 # =============================================================================
+
 
 def plot_prediction_vs_actual(
     y_true: np.ndarray,
@@ -702,18 +739,19 @@ def plot_prediction_vs_actual(
     fig, ax = plt.subplots(figsize=figsize)
 
     # Scatter plot
-    ax.scatter(y_true, y_pred, alpha=0.5, color=AUTOML_COLORS['primary'], s=20)
+    ax.scatter(y_true, y_pred, alpha=0.5, color=AUTOML_COLORS["primary"], s=20)
 
     # Perfect prediction line
     min_val = min(y_true.min(), y_pred.min())
     max_val = max(y_true.max(), y_pred.max())
-    ax.plot([min_val, max_val], [min_val, max_val], 'r--', linewidth=2, label='Perfect Prediction')
+    ax.plot([min_val, max_val], [min_val, max_val], "r--", linewidth=2, label="Perfect Prediction")
 
     # Fit line
     z = np.polyfit(y_true, y_pred, 1)
     p = np.poly1d(z)
-    ax.plot([min_val, max_val], [p(min_val), p(max_val)],
-            color=AUTOML_COLORS['secondary'], linewidth=2, label='Fit Line')
+    ax.plot(
+        [min_val, max_val], [p(min_val), p(max_val)], color=AUTOML_COLORS["secondary"], linewidth=2, label="Fit Line"
+    )
 
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
@@ -730,9 +768,15 @@ def plot_prediction_vs_actual(
         mae = np.mean(np.abs(y_true - y_pred))
 
         metrics_text = f"R² = {r2:.4f}\nRMSE = {rmse:.4f}\nMAE = {mae:.4f}"
-        ax.text(0.05, 0.95, metrics_text, transform=ax.transAxes,
-                verticalalignment='top', fontsize=10,
-                bbox={'boxstyle': 'round', 'facecolor': 'white', 'alpha': 0.8})
+        ax.text(
+            0.05,
+            0.95,
+            metrics_text,
+            transform=ax.transAxes,
+            verticalalignment="top",
+            fontsize=10,
+            bbox={"boxstyle": "round", "facecolor": "white", "alpha": 0.8},
+        )
 
     plt.tight_layout()
 
@@ -742,6 +786,7 @@ def plot_prediction_vs_actual(
 # =============================================================================
 # Residual Plot (for Regression)
 # =============================================================================
+
 
 def plot_residuals(
     y_true: np.ndarray,
@@ -772,26 +817,31 @@ def plot_residuals(
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=figsize)
 
     # Residuals vs Predicted
-    ax1.scatter(y_pred, residuals, alpha=0.5, color=AUTOML_COLORS['primary'], s=20)
-    ax1.axhline(y=0, color='red', linestyle='--', linewidth=2)
-    ax1.set_xlabel('Predicted')
-    ax1.set_ylabel('Residual')
-    ax1.set_title('Residuals vs Predicted')
+    ax1.scatter(y_pred, residuals, alpha=0.5, color=AUTOML_COLORS["primary"], s=20)
+    ax1.axhline(y=0, color="red", linestyle="--", linewidth=2)
+    ax1.set_xlabel("Predicted")
+    ax1.set_ylabel("Residual")
+    ax1.set_title("Residuals vs Predicted")
 
     # Histogram of residuals
-    ax2.hist(residuals, bins=30, color=AUTOML_COLORS['primary'],
-             edgecolor='black', alpha=0.7)
-    ax2.axvline(x=0, color='red', linestyle='--', linewidth=2)
-    ax2.set_xlabel('Residual')
-    ax2.set_ylabel('Frequency')
-    ax2.set_title('Residual Distribution')
+    ax2.hist(residuals, bins=30, color=AUTOML_COLORS["primary"], edgecolor="black", alpha=0.7)
+    ax2.axvline(x=0, color="red", linestyle="--", linewidth=2)
+    ax2.set_xlabel("Residual")
+    ax2.set_ylabel("Frequency")
+    ax2.set_title("Residual Distribution")
 
     # Add normality info
     mean_res = np.mean(residuals)
     std_res = np.std(residuals)
-    ax2.text(0.95, 0.95, f'Mean: {mean_res:.4f}\nStd: {std_res:.4f}',
-             transform=ax2.transAxes, ha='right', va='top',
-             bbox={'boxstyle': 'round', 'facecolor': 'white', 'alpha': 0.8})
+    ax2.text(
+        0.95,
+        0.95,
+        f"Mean: {mean_res:.4f}\nStd: {std_res:.4f}",
+        transform=ax2.transAxes,
+        ha="right",
+        va="top",
+        bbox={"boxstyle": "round", "facecolor": "white", "alpha": 0.8},
+    )
 
     fig.suptitle(title)
     plt.tight_layout()
@@ -802,6 +852,7 @@ def plot_residuals(
 # =============================================================================
 # High-Level Visualization Creator
 # =============================================================================
+
 
 def create_automl_visualizations(
     model_result: Dict[str, Any],
@@ -842,12 +893,9 @@ def create_automl_visualizations(
 
     try:
         # 1. Feature Importance Plot
-        feature_importance = model_result.get('feature_importance', {})
+        feature_importance = model_result.get("feature_importance", {})
         if feature_importance:
-            fig = plot_feature_importance(
-                feature_importance,
-                title="Feature Importance"
-            )
+            fig = plot_feature_importance(feature_importance, title="Feature Importance")
 
             viz_result = VisualizationResult(
                 type=VisualizationType.FEATURE_IMPORTANCE,
@@ -864,15 +912,12 @@ def create_automl_visualizations(
             plt.close(fig)
 
         # 2. Model Leaderboard Plot
-        leaderboard = model_result.get('leaderboard', [])
+        leaderboard = model_result.get("leaderboard", [])
         if leaderboard:
-            metric = model_result.get('metric', 'score')
+            metric = model_result.get("metric", "score")
 
             fig = plot_model_comparison(
-                leaderboard,
-                metric='score',
-                metric_name=metric,
-                title=f"Model Comparison ({metric})"
+                leaderboard, metric="score", metric_name=metric, title=f"Model Comparison ({metric})"
             )
 
             viz_result = VisualizationResult(
@@ -891,11 +936,7 @@ def create_automl_visualizations(
 
         # 3. SHAP Summary Plot
         if shap_values is not None and X is not None:
-            fig = plot_shap_summary(
-                shap_values,
-                X,
-                title="SHAP Feature Importance"
-            )
+            fig = plot_shap_summary(shap_values, X, title="SHAP Feature Importance")
 
             viz_result = VisualizationResult(
                 type=VisualizationType.SHAP_SUMMARY,
@@ -912,8 +953,8 @@ def create_automl_visualizations(
             plt.close(fig)
 
         # 4. Prediction vs Actual (for regression)
-        problem_type = model_result.get('problem_type', '')
-        if y_true is not None and y_pred is not None and 'regression' in problem_type.lower():
+        problem_type = model_result.get("problem_type", "")
+        if y_true is not None and y_pred is not None and "regression" in problem_type.lower():
             fig = plot_prediction_vs_actual(y_true, y_pred)
 
             viz_result = VisualizationResult(

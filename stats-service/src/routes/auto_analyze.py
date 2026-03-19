@@ -4,6 +4,7 @@ Stats Service - Auto Analyze Routes
 Routes for intelligent automatic statistical analysis.
 Refactored to use DDD Use Cases.
 """
+
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException
@@ -22,17 +23,19 @@ router = APIRouter(prefix="/auto-analyze", tags=["Auto Analyze"])
 
 class AutoAnalyzeRequest(BaseModel):
     """Request model for auto-analyze job submission"""
+
     dataset_id: str = Field(..., description="Dataset ID in MinIO")
     user_id: str = Field(..., description="User ID for isolation")
     session_id: Optional[str] = Field(None, description="Optional session ID")
     target_column: Optional[str] = Field(
         None,
-        description="Target column for association analysis (optional). If provided, will analyze relationships between features and target."
+        description="Target column for association analysis (optional). If provided, will analyze relationships between features and target.",
     )
 
 
 class AutoAnalyzeResponse(BaseModel):
     """Response model for auto-analyze job submission"""
+
     job_id: str
     job_type: str
     status: str

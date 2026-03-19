@@ -1,14 +1,17 @@
 """
 Data Transfer Objects for Stats Service
 """
+
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
 # ============== Request DTOs ==============
 
+
 @dataclass
 class SubmitAutoAnalyzeRequest:
     """Request for auto-analyze job submission"""
+
     dataset_id: str
     user_id: str
     session_id: Optional[str] = None
@@ -18,6 +21,7 @@ class SubmitAutoAnalyzeRequest:
 @dataclass
 class SubmitDirectAnalyzeRequest:
     """Request for direct CSV analysis (no MinIO)"""
+
     csv_content: str
     user_id: str
     is_base64: bool = False
@@ -28,6 +32,7 @@ class SubmitDirectAnalyzeRequest:
 @dataclass
 class SubmitEDARequest:
     """Request for EDA job submission"""
+
     dataset_id: str
     user_id: str
     session_id: Optional[str] = None
@@ -38,6 +43,7 @@ class SubmitEDARequest:
 @dataclass
 class SubmitTableOneRequest:
     """Request for TableOne job submission"""
+
     dataset_id: str
     user_id: str
     session_id: Optional[str] = None
@@ -51,9 +57,11 @@ class SubmitTableOneRequest:
 
 # ============== Response DTOs ==============
 
+
 @dataclass
 class StatsJobResponse:
     """Response for stats job"""
+
     job_id: str
     job_type: str
     status: str
@@ -70,6 +78,7 @@ class StatsJobResponse:
 @dataclass
 class DataPreviewResponse:
     """Response for data preview"""
+
     rows: int
     columns: int
     column_names: List[str]

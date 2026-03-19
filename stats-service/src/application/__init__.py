@@ -3,6 +3,7 @@ Stats Service Application Layer
 
 Use cases and DTOs for statistics service.
 """
+
 from .dto import (
     StatsJobResponse,
     SubmitAutoAnalyzeRequest,

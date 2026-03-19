@@ -9,6 +9,7 @@ Contains:
     - Helper functions for effect size conversion
     - Convenience wrapper functions for MCP tools
 """
+
 import logging
 import math
 from dataclasses import dataclass, field
@@ -28,6 +29,7 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 # Helper Functions for ANOVA
 # =============================================================================
+
 
 def cohens_f_from_means(
     group_means: List[float],
@@ -54,7 +56,7 @@ def cohens_f_from_means(
     k = len(group_means)
 
     # Calculate between-group variance
-    between_var = np.sum([(m - grand_mean)**2 for m in group_means]) / k
+    between_var = np.sum([(m - grand_mean) ** 2 for m in group_means]) / k
 
     # Estimate pooled SD if not provided
     if pooled_sd is None:
@@ -99,13 +101,14 @@ def eta_squared_from_cohens_f(cohens_f: float) -> float:
     Returns:
         Eta-squared effect size
     """
-    f_squared = cohens_f ** 2
+    f_squared = cohens_f**2
     return f_squared / (1 + f_squared)
 
 
 # =============================================================================
 # Result Dataclass
 # =============================================================================
+
 
 @dataclass
 class ANOVAPowerResult:
@@ -170,6 +173,7 @@ class ANOVAPowerResult:
 # ANOVA Power Analysis Class
 # =============================================================================
 
+
 class ANOVAPowerAnalysis:
     """
     Power analysis for one-way ANOVA (F-test).
@@ -227,9 +231,7 @@ class ANOVAPowerAnalysis:
                 effect_size = cohens_f_from_means(group_means, pooled_sd=pooled_sd)
                 k_groups = len(group_means)
             else:
-                raise ValueError(
-                    "Provide effect_size (Cohen's f), eta_squared, or (group_means + pooled_sd)"
-                )
+                raise ValueError("Provide effect_size (Cohen's f), eta_squared, or (group_means + pooled_sd)")
 
         # Calculate sample size using statsmodels
         anova_power = FTestAnovaPower()
@@ -262,7 +264,7 @@ class ANOVAPowerAnalysis:
         # Generate interpretation
         interp_text = (
             f"To detect an effect (Cohen's f = {effect_size:.3f}, η² = {eta_sq:.3f}) "
-            f"with {power*100:.0f}% power at α = {alpha} across {k_groups} groups, "
+            f"with {power * 100:.0f}% power at α = {alpha} across {k_groups} groups, "
             f"you need {n_per_group} per group (total N = {total_n})."
         )
 
@@ -274,7 +276,7 @@ class ANOVAPowerAnalysis:
             recs.append("Sample size is small. Consider if ANOVA assumptions will hold.")
         if k_groups > 5:
             recs.append(f"With {k_groups} groups, consider planned contrasts for specific comparisons.")
-        recs.append(f"Eta-squared ({eta_sq:.3f}) indicates {eta_sq*100:.1f}% of variance explained by group.")
+        recs.append(f"Eta-squared ({eta_sq:.3f}) indicates {eta_sq * 100:.1f}% of variance explained by group.")
 
         return ANOVAPowerResult(
             test_type="one-way ANOVA",
@@ -327,9 +329,7 @@ class ANOVAPowerAnalysis:
                 effect_size = cohens_f_from_means(group_means, pooled_sd=pooled_sd)
                 k_groups = len(group_means)
             else:
-                raise ValueError(
-                    "Provide effect_size (Cohen's f), eta_squared, or (group_means + pooled_sd)"
-                )
+                raise ValueError("Provide effect_size (Cohen's f), eta_squared, or (group_means + pooled_sd)")
 
         # Calculate power
         anova_power = FTestAnovaPower()
@@ -348,7 +348,7 @@ class ANOVAPowerAnalysis:
         interp_text = (
             f"With n = {n_per_group} per group ({k_groups} groups, total N = {n_per_group * k_groups}), "
             f"effect size f = {effect_size:.3f} (η² = {eta_sq:.3f}), "
-            f"the study has {power*100:.1f}% power at α = {alpha}."
+            f"the study has {power * 100:.1f}% power at α = {alpha}."
         )
 
         recs = []
@@ -359,7 +359,9 @@ class ANOVAPowerAnalysis:
                 alpha=alpha,
                 power=0.80,
             ).n_per_group
-            recs.append(f"Power is {power*100:.1f}%, below recommended 80%. Need n = {needed_n} per group for 80% power.")
+            recs.append(
+                f"Power is {power * 100:.1f}%, below recommended 80%. Need n = {needed_n} per group for 80% power."
+            )
 
         return ANOVAPowerResult(
             test_type="one-way ANOVA",
@@ -400,11 +402,13 @@ class ANOVAPowerAnalysis:
                 power=pwr,
                 k_groups=k_groups,
             )
-            by_power.append({
-                "power": pwr,
-                "n_per_group": int(math.ceil(n)),
-                "total_n": int(math.ceil(n)) * k_groups,
-            })
+            by_power.append(
+                {
+                    "power": pwr,
+                    "n_per_group": int(math.ceil(n)),
+                    "total_n": int(math.ceil(n)) * k_groups,
+                }
+            )
 
         # Power by number of groups
         by_groups = []
@@ -415,11 +419,13 @@ class ANOVAPowerAnalysis:
                 power=0.80,
                 k_groups=k,
             )
-            by_groups.append({
-                "k_groups": k,
-                "n_per_group": int(math.ceil(n)),
-                "total_n": int(math.ceil(n)) * k,
-            })
+            by_groups.append(
+                {
+                    "k_groups": k,
+                    "n_per_group": int(math.ceil(n)),
+                    "total_n": int(math.ceil(n)) * k,
+                }
+            )
 
         return {
             "by_power_level": by_power,
@@ -430,6 +436,7 @@ class ANOVAPowerAnalysis:
 # =============================================================================
 # Convenience Functions for MCP
 # =============================================================================
+
 
 def calculate_anova_sample_size(
     effect_size: Optional[float] = None,

@@ -17,26 +17,26 @@ class ProblemType(str, Enum):
 class TrainingConfig:
     """
     Training Configuration Value Object
-    
+
     Immutable configuration for a training job.
     """
     dataset_id: str
     target_column: str
     problem_type: ProblemType
-    
+
     # Algorithm selection
     algorithms: Optional[List[str]] = None  # None = use all (AutoML)
     hyperparameters: Optional[Dict[str, Any]] = None  # Custom hyperparams
-    
+
     # Training settings
     time_limit: int = 300  # seconds
     presets: str = "medium_quality"  # AutoGluon presets
     metric: Optional[str] = None  # Auto-select if None
-    
+
     # Validation
     num_folds: int = 5
     holdout_frac: Optional[float] = None
-    
+
     # Resource limits
     num_cpus: Optional[int] = None
     num_gpus: Optional[int] = None
@@ -45,7 +45,7 @@ class TrainingConfig:
         """Get the evaluation metric based on problem type"""
         if self.metric:
             return self.metric
-        
+
         # Default metrics by problem type
         defaults = {
             ProblemType.BINARY: "roc_auc",
@@ -58,11 +58,11 @@ class TrainingConfig:
         """Get hyperparameters dict for AutoGluon"""
         if self.hyperparameters:
             return self.hyperparameters
-        
+
         if self.algorithms:
             # Use specified algorithms with default hyperparams
             return {algo: {} for algo in self.algorithms}
-        
+
         # Return None for full AutoML
         return None
 

@@ -10,6 +10,7 @@ Contains:
     - CalibrationResult: Calibration analysis result
     - PrecisionRecallResult: Precision-Recall curve result
 """
+
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
@@ -17,6 +18,7 @@ from typing import Any, Dict, List, Optional
 @dataclass
 class ROCPoint:
     """A single point on the ROC curve."""
+
     threshold: float
     fpr: float  # False Positive Rate (1 - Specificity)
     tpr: float  # True Positive Rate (Sensitivity)
@@ -40,6 +42,7 @@ class ROCPoint:
 @dataclass
 class ROCCurveResult:
     """Complete ROC curve analysis result."""
+
     auc: float
     auc_ci_lower: float
     auc_ci_upper: float
@@ -70,6 +73,7 @@ class ROCCurveResult:
 @dataclass
 class AUCComparisonResult:
     """Result of comparing two AUCs using DeLong test."""
+
     auc1: float
     auc2: float
     difference: float
@@ -99,6 +103,7 @@ class AUCComparisonResult:
 @dataclass
 class CalibrationResult:
     """Calibration analysis result."""
+
     hosmer_lemeshow_statistic: float
     hosmer_lemeshow_pvalue: float
     brier_score: float
@@ -126,6 +131,7 @@ class CalibrationResult:
 @dataclass
 class PrecisionRecallResult:
     """Precision-Recall curve result."""
+
     auc_pr: float
     curve_points: List[Dict[str, float]]
     average_precision: float

@@ -9,6 +9,7 @@ Contains:
     - Helper functions for effect size calculation
     - Convenience wrapper functions for MCP tools
 """
+
 import logging
 import math
 from dataclasses import dataclass, field
@@ -26,6 +27,7 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 # Helper Functions for Chi-Square
 # =============================================================================
+
 
 def cramers_v_from_table(observed: np.ndarray) -> float:
     """
@@ -81,13 +83,14 @@ def effect_size_w_from_proportions(
     # Avoid division by zero
     p_exp = np.maximum(p_exp, 1e-10)
 
-    w = math.sqrt(np.sum((p_obs - p_exp)**2 / p_exp))
+    w = math.sqrt(np.sum((p_obs - p_exp) ** 2 / p_exp))
     return w
 
 
 # =============================================================================
 # Result Dataclass
 # =============================================================================
+
 
 @dataclass
 class ChiSquarePowerResult:
@@ -149,6 +152,7 @@ class ChiSquarePowerResult:
 # =============================================================================
 # Chi-Square Power Analysis Class
 # =============================================================================
+
 
 class ChiSquarePowerAnalysis:
     """
@@ -218,9 +222,7 @@ class ChiSquarePowerAnalysis:
                 if df is None:
                     df = n_bins - 1
             else:
-                raise ValueError(
-                    "Provide effect_size (Cohen's w) or p_observed proportions"
-                )
+                raise ValueError("Provide effect_size (Cohen's w) or p_observed proportions")
 
         # Calculate sample size
         chi2_power = GofChisquarePower()
@@ -260,7 +262,7 @@ class ChiSquarePowerAnalysis:
         # Interpretation
         interp_text = (
             f"To detect an effect (Cohen's w = {effect_size:.3f}) with "
-            f"{power*100:.0f}% power at α = {alpha} (df = {df}), "
+            f"{power * 100:.0f}% power at α = {alpha} (df = {df}), "
             f"you need N = {n}."
         )
 
@@ -371,7 +373,7 @@ class ChiSquarePowerAnalysis:
 
         interp_text = (
             f"With N = {n}, effect size w = {effect_size:.3f}, df = {df}, "
-            f"the study has {power*100:.1f}% power at α = {alpha}."
+            f"the study has {power * 100:.1f}% power at α = {alpha}."
         )
 
         recs = []
@@ -382,7 +384,7 @@ class ChiSquarePowerAnalysis:
                 power=0.80,
                 df=df,
             ).n
-            recs.append(f"Power is {power*100:.1f}%. Need N = {needed_n} for 80% power.")
+            recs.append(f"Power is {power * 100:.1f}%. Need N = {needed_n} for 80% power.")
 
         return ChiSquarePowerResult(
             test_type=test_type,
@@ -422,10 +424,12 @@ class ChiSquarePowerAnalysis:
                 power=pwr,
                 n_bins=df + 1,
             )
-            by_power.append({
-                "power": pwr,
-                "n": int(math.ceil(n)),
-            })
+            by_power.append(
+                {
+                    "power": pwr,
+                    "n": int(math.ceil(n)),
+                }
+            )
 
         # By df
         by_df = []
@@ -436,10 +440,12 @@ class ChiSquarePowerAnalysis:
                 power=0.80,
                 n_bins=d + 1,
             )
-            by_df.append({
-                "df": d,
-                "n": int(math.ceil(n)),
-            })
+            by_df.append(
+                {
+                    "df": d,
+                    "n": int(math.ceil(n)),
+                }
+            )
 
         return {
             "by_power_level": by_power,
@@ -450,6 +456,7 @@ class ChiSquarePowerAnalysis:
 # =============================================================================
 # Convenience Functions for MCP
 # =============================================================================
+
 
 def calculate_chisquare_sample_size(
     effect_size: Optional[float] = None,

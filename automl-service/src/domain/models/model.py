@@ -47,31 +47,31 @@ class LeaderboardEntry:
 class MLModel:
     """
     MLModel Aggregate Root
-    
+
     Represents a trained AutoGluon model (which may include ensemble).
     """
     id: ModelId
     name: str
     user_id: str
     dataset_id: str  # Reference to the training dataset
-    
+
     # Model info
     problem_type: str  # "binary", "multiclass", "regression"
     target_column: str
     model_path: str  # Local path to saved model
-    
+
     # Training results
     best_model_name: str = ""
     best_score: float = 0.0
     metric: str = "accuracy"
     leaderboard: List[LeaderboardEntry] = field(default_factory=list)
     feature_importance: Dict[str, float] = field(default_factory=dict)
-    
+
     # Configuration used
     algorithms_used: List[str] = field(default_factory=list)
     time_limit: int = 300
     presets: str = "medium_quality"
-    
+
     # Metadata
     session_id: Optional[str] = None
     description: Optional[str] = None

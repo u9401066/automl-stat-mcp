@@ -4,6 +4,7 @@ Configuration settings for AutoML Service
 Note: All storage is on MinIO, no local file storage.
       Metadata persistence uses PERSIST_DIR environment variable (see repositories.py)
 """
+
 import os
 
 # MinIO Configuration

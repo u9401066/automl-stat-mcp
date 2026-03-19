@@ -8,6 +8,7 @@ Contains:
     - MulticollinearityAnalysis: Complete analysis result
     - compute_vif: Main VIF computation function
 """
+
 import logging
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
@@ -23,6 +24,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class VIFResult:
     """VIF analysis result for a single column."""
+
     column: str
     vif: float
     tolerance: float  # 1/VIF
@@ -40,6 +42,7 @@ class VIFResult:
 @dataclass
 class MulticollinearityAnalysis:
     """Complete multicollinearity analysis."""
+
     columns: List[str]
     vif_results: List[VIFResult] = field(default_factory=list)
     condition_number: Optional[float] = None
@@ -132,9 +135,7 @@ def compute_vif(
 
     # Generate recommendations
     if result.problematic_columns:
-        result.recommendations.append(
-            f"⚠ High multicollinearity detected in: {', '.join(result.problematic_columns)}"
-        )
+        result.recommendations.append(f"⚠ High multicollinearity detected in: {', '.join(result.problematic_columns)}")
         result.recommendations.append(
             "Consider: (1) Remove highly correlated variables, (2) Use PCA, (3) Use regularization (Ridge/Lasso)"
         )
@@ -187,4 +188,4 @@ def _compute_single_vif(X: np.ndarray, col_idx: int) -> float:
 
     except Exception as e:
         logger.warning(f"VIF calculation failed for column {col_idx}: {e}")
-        return float('inf')
+        return float("inf")

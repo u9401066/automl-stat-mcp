@@ -8,6 +8,7 @@ Routes for sample size and power calculations:
 - Chi-square power analysis
 - Survival analysis power
 """
+
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter
@@ -20,8 +21,10 @@ router = APIRouter(prefix="/power", tags=["Power Analysis"])
 # Request/Response Models
 # =============================================================================
 
+
 class TTestPowerRequest(BaseModel):
     """Request for t-test power analysis"""
+
     effect_size: Optional[float] = Field(None, description="Cohen's d effect size")
     mean1: Optional[float] = Field(None, description="Mean of group 1 (alternative to effect_size)")
     mean2: Optional[float] = Field(None, description="Mean of group 2")
@@ -32,44 +35,45 @@ class TTestPowerRequest(BaseModel):
     ratio: float = Field(default=1.0, description="n2/n1 ratio")
     alternative: str = Field(default="two-sided", description="Alternative: two-sided, larger, smaller")
 
-    @field_validator('effect_size')
+    @field_validator("effect_size")
     @classmethod
     def validate_effect_size(cls, v):
         if v is not None and v == 0:
-            raise ValueError('effect_size cannot be zero (no effect to detect)')
+            raise ValueError("effect_size cannot be zero (no effect to detect)")
         return v
 
-    @field_validator('alpha')
+    @field_validator("alpha")
     @classmethod
     def validate_alpha(cls, v):
         if not 0 < v < 1:
-            raise ValueError('alpha must be between 0 and 1 (exclusive)')
+            raise ValueError("alpha must be between 0 and 1 (exclusive)")
         return v
 
-    @field_validator('power')
+    @field_validator("power")
     @classmethod
     def validate_power(cls, v):
         if v is not None and not 0 < v < 1:
-            raise ValueError('power must be between 0 and 1 (exclusive)')
+            raise ValueError("power must be between 0 and 1 (exclusive)")
         return v
 
-    @field_validator('n')
+    @field_validator("n")
     @classmethod
     def validate_n(cls, v):
         if v is not None and v <= 0:
-            raise ValueError('n must be a positive integer')
+            raise ValueError("n must be a positive integer")
         return v
 
-    @field_validator('ratio')
+    @field_validator("ratio")
     @classmethod
     def validate_ratio(cls, v):
         if v <= 0:
-            raise ValueError('ratio must be positive')
+            raise ValueError("ratio must be positive")
         return v
 
 
 class ProportionPowerRequest(BaseModel):
     """Request for proportion test power analysis"""
+
     p1: float = Field(..., description="Proportion in group 1")
     p2: float = Field(..., description="Proportion in group 2")
     alpha: float = Field(default=0.05, description="Significance level")
@@ -78,37 +82,38 @@ class ProportionPowerRequest(BaseModel):
     ratio: float = Field(default=1.0, description="n2/n1 ratio")
     alternative: str = Field(default="two-sided", description="Alternative hypothesis")
 
-    @field_validator('p1', 'p2')
+    @field_validator("p1", "p2")
     @classmethod
     def validate_proportion(cls, v):
         if not 0 <= v <= 1:
-            raise ValueError('proportions must be between 0 and 1')
+            raise ValueError("proportions must be between 0 and 1")
         return v
 
-    @field_validator('alpha')
+    @field_validator("alpha")
     @classmethod
     def validate_alpha(cls, v):
         if not 0 < v < 1:
-            raise ValueError('alpha must be between 0 and 1 (exclusive)')
+            raise ValueError("alpha must be between 0 and 1 (exclusive)")
         return v
 
-    @field_validator('power')
+    @field_validator("power")
     @classmethod
     def validate_power(cls, v):
         if v is not None and not 0 < v < 1:
-            raise ValueError('power must be between 0 and 1 (exclusive)')
+            raise ValueError("power must be between 0 and 1 (exclusive)")
         return v
 
-    @field_validator('n')
+    @field_validator("n")
     @classmethod
     def validate_n(cls, v):
         if v is not None and v <= 0:
-            raise ValueError('n must be a positive integer')
+            raise ValueError("n must be a positive integer")
         return v
 
 
 class ANOVAPowerRequest(BaseModel):
     """Request for ANOVA power analysis"""
+
     effect_size: Optional[float] = Field(None, description="Cohen's f effect size")
     means: Optional[List[float]] = Field(None, description="Group means (alternative to effect_size)")
     std: Optional[float] = Field(None, description="Common standard deviation")
@@ -117,37 +122,38 @@ class ANOVAPowerRequest(BaseModel):
     power: Optional[float] = Field(default=0.8, description="Desired power")
     n: Optional[int] = Field(None, description="Sample size per group")
 
-    @field_validator('effect_size')
+    @field_validator("effect_size")
     @classmethod
     def validate_effect_size(cls, v):
         if v is not None and v == 0:
-            raise ValueError('effect_size cannot be zero')
+            raise ValueError("effect_size cannot be zero")
         return v
 
-    @field_validator('alpha')
+    @field_validator("alpha")
     @classmethod
     def validate_alpha(cls, v):
         if not 0 < v < 1:
-            raise ValueError('alpha must be between 0 and 1 (exclusive)')
+            raise ValueError("alpha must be between 0 and 1 (exclusive)")
         return v
 
-    @field_validator('k')
+    @field_validator("k")
     @classmethod
     def validate_k(cls, v):
         if v < 2:
-            raise ValueError('k (number of groups) must be at least 2')
+            raise ValueError("k (number of groups) must be at least 2")
         return v
 
-    @field_validator('n')
+    @field_validator("n")
     @classmethod
     def validate_n(cls, v):
         if v is not None and v <= 0:
-            raise ValueError('n must be a positive integer')
+            raise ValueError("n must be a positive integer")
         return v
 
 
 class ChiSquarePowerRequest(BaseModel):
     """Request for chi-square power analysis"""
+
     effect_size: Optional[float] = Field(None, description="Cohen's w effect size")
     contingency_table: Optional[List[List[float]]] = Field(None, description="Expected proportions (alternative)")
     df: Optional[int] = Field(None, description="Degrees of freedom")
@@ -155,30 +161,31 @@ class ChiSquarePowerRequest(BaseModel):
     power: Optional[float] = Field(default=0.8, description="Desired power")
     n: Optional[int] = Field(None, description="Total sample size")
 
-    @field_validator('effect_size')
+    @field_validator("effect_size")
     @classmethod
     def validate_effect_size(cls, v):
         if v is not None and v <= 0:
-            raise ValueError('effect_size must be positive')
+            raise ValueError("effect_size must be positive")
         return v
 
-    @field_validator('alpha')
+    @field_validator("alpha")
     @classmethod
     def validate_alpha(cls, v):
         if not 0 < v < 1:
-            raise ValueError('alpha must be between 0 and 1 (exclusive)')
+            raise ValueError("alpha must be between 0 and 1 (exclusive)")
         return v
 
-    @field_validator('df')
+    @field_validator("df")
     @classmethod
     def validate_df(cls, v):
         if v is not None and v < 1:
-            raise ValueError('degrees of freedom must be at least 1')
+            raise ValueError("degrees of freedom must be at least 1")
         return v
 
 
 class SurvivalPowerRequest(BaseModel):
     """Request for survival analysis power"""
+
     hazard_ratio: float = Field(..., description="Expected hazard ratio")
     p1: float = Field(..., description="Event probability in control group")
     alpha: float = Field(default=0.05, description="Significance level")
@@ -189,39 +196,40 @@ class SurvivalPowerRequest(BaseModel):
     accrual_time: Optional[float] = Field(None, description="Accrual period")
     followup_time: Optional[float] = Field(None, description="Follow-up period")
 
-    @field_validator('hazard_ratio')
+    @field_validator("hazard_ratio")
     @classmethod
     def validate_hr(cls, v):
         if v <= 0:
-            raise ValueError('hazard_ratio must be positive')
+            raise ValueError("hazard_ratio must be positive")
         if v == 1:
-            raise ValueError('hazard_ratio cannot be 1 (no effect to detect)')
+            raise ValueError("hazard_ratio cannot be 1 (no effect to detect)")
         return v
 
-    @field_validator('p1')
+    @field_validator("p1")
     @classmethod
     def validate_p1(cls, v):
         if not 0 < v < 1:
-            raise ValueError('p1 (event probability) must be between 0 and 1 (exclusive)')
+            raise ValueError("p1 (event probability) must be between 0 and 1 (exclusive)")
         return v
 
-    @field_validator('alpha')
+    @field_validator("alpha")
     @classmethod
     def validate_alpha(cls, v):
         if not 0 < v < 1:
-            raise ValueError('alpha must be between 0 and 1 (exclusive)')
+            raise ValueError("alpha must be between 0 and 1 (exclusive)")
         return v
 
-    @field_validator('dropout_rate')
+    @field_validator("dropout_rate")
     @classmethod
     def validate_dropout(cls, v):
         if not 0 <= v < 1:
-            raise ValueError('dropout_rate must be between 0 and 1')
+            raise ValueError("dropout_rate must be between 0 and 1")
         return v
 
 
 class PowerResponse(BaseModel):
     """Response for power analysis"""
+
     calculation_type: str = Field(..., description="sample_size or power")
     result: float = Field(..., description="Calculated sample size or power")
     parameters: dict = Field(..., description="Input parameters used")
@@ -231,6 +239,7 @@ class PowerResponse(BaseModel):
 
 class EffectSizeRequest(BaseModel):
     """Request for effect size calculation"""
+
     test_type: str = Field(..., description="ttest, proportion, anova, chi-square")
     # For t-test
     mean1: Optional[float] = Field(None, description="Mean of group 1")
@@ -248,6 +257,7 @@ class EffectSizeRequest(BaseModel):
 # =============================================================================
 # Endpoints
 # =============================================================================
+
 
 @router.post("/ttest", response_model=PowerResponse)
 async def calculate_ttest_power(request: TTestPowerRequest):
@@ -319,10 +329,10 @@ async def calculate_ttest_power(request: TTestPowerRequest):
             "alternative": request.alternative,
         },
         interpretation=f"With effect size d={effect_size:.2f} and α={request.alpha}, "
-                       f"you need approximately {int(result)} subjects per group for {power_val*100:.0f}% power."
-                       if calc_type == "sample_size" else
-                       f"With n={request.n} per group and effect size d={effect_size:.2f}, "
-                       f"you have {result*100:.1f}% power to detect a significant difference.",
+        f"you need approximately {int(result)} subjects per group for {power_val * 100:.0f}% power."
+        if calc_type == "sample_size"
+        else f"With n={request.n} per group and effect size d={effect_size:.2f}, "
+        f"you have {result * 100:.1f}% power to detect a significant difference.",
         assumptions=[
             "Independent samples",
             "Normally distributed outcomes",
@@ -389,11 +399,11 @@ async def calculate_proportion_power(request: ProportionPowerRequest):
             "power": request.power,
             "n": request.n,
         },
-        interpretation=f"To detect a difference from {request.p1*100:.1f}% to {request.p2*100:.1f}% "
-                       f"(absolute diff: {abs(request.p1-request.p2)*100:.1f}%), "
-                       f"you need {int(result)} subjects per group."
-                       if calc_type == "sample_size" else
-                       f"With n={request.n}, power to detect difference is {result*100:.1f}%.",
+        interpretation=f"To detect a difference from {request.p1 * 100:.1f}% to {request.p2 * 100:.1f}% "
+        f"(absolute diff: {abs(request.p1 - request.p2) * 100:.1f}%), "
+        f"you need {int(result)} subjects per group."
+        if calc_type == "sample_size"
+        else f"With n={request.n}, power to detect difference is {result * 100:.1f}%.",
         assumptions=[
             "Independent samples",
             "Large sample approximation (np > 5)",
@@ -458,9 +468,9 @@ async def calculate_anova_power(request: ANOVAPowerRequest):
             "n": request.n,
         },
         interpretation=f"For {request.k}-group ANOVA with f={effect_size:.2f}, "
-                       f"you need {int(result)} subjects per group."
-                       if calc_type == "sample_size" else
-                       f"Power is {result*100:.1f}%.",
+        f"you need {int(result)} subjects per group."
+        if calc_type == "sample_size"
+        else f"Power is {result * 100:.1f}%.",
         assumptions=[
             "Independent observations",
             "Normally distributed residuals",
@@ -518,9 +528,9 @@ async def calculate_chisquare_power(request: ChiSquarePowerRequest):
             "n": request.n,
         },
         interpretation=f"For chi-square test with w={effect_size:.2f} and df={request.df}, "
-                       f"total N={int(result)} needed."
-                       if calc_type == "sample_size" else
-                       f"Power is {result*100:.1f}%.",
+        f"total N={int(result)} needed."
+        if calc_type == "sample_size"
+        else f"Power is {result * 100:.1f}%.",
         assumptions=[
             "Expected cell counts ≥ 5",
             "Independent observations",
@@ -560,13 +570,13 @@ async def calculate_survival_power(request: SurvivalPowerRequest):
         calc_type = "power"
         # Solve for z_beta from: events = (z_alpha + z_beta)^2 * (1+r)^2 / (r * log_hr^2)
         # z_beta = sqrt(events * r * log_hr^2 / (1+r)^2) - z_alpha
-        z_beta = math.sqrt(request.n_events * r * log_hr**2 / (1 + r)**2) - z_alpha
+        z_beta = math.sqrt(request.n_events * r * log_hr**2 / (1 + r) ** 2) - z_alpha
         result = stats.norm.cdf(z_beta)  # Convert z to power
         result = max(0, min(1, result))  # Clamp to [0, 1]
 
         interpretation = (
             f"With {request.n_events} events and HR={request.hazard_ratio:.2f}, "
-            f"you have {result*100:.1f}% power to detect a significant difference."
+            f"you have {result * 100:.1f}% power to detect a significant difference."
         )
     else:
         # Calculate sample size given power
@@ -575,16 +585,16 @@ async def calculate_survival_power(request: SurvivalPowerRequest):
         z_beta = stats.norm.ppf(power)
 
         # Schoenfeld formula for events
-        events_needed = (z_alpha + z_beta)**2 * (1 + r)**2 / (r * log_hr**2)
+        events_needed = (z_alpha + z_beta) ** 2 * (1 + r) ** 2 / (r * log_hr**2)
 
         # Convert to sample size
         sample_size = events_needed / request.p1
         result = sample_size
 
         interpretation = (
-            f"To detect HR={request.hazard_ratio:.2f} with {power*100:.0f}% power, "
+            f"To detect HR={request.hazard_ratio:.2f} with {power * 100:.0f}% power, "
             f"you need {int(events_needed)} events "
-            f"({int(sample_size)} total subjects assuming {request.p1*100:.0f}% event rate)."
+            f"({int(sample_size)} total subjects assuming {request.p1 * 100:.0f}% event rate)."
         )
 
     return PowerResponse(

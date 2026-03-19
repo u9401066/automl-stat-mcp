@@ -1,6 +1,7 @@
 """
 FastAPI Router - Model endpoints
 """
+
 from typing import List, Optional
 
 from fastapi import APIRouter, Header, HTTPException
@@ -127,10 +128,7 @@ async def predict(
     # Options:
     # 1. Download model from MinIO, load with AutoGluon, predict
     # 2. Create a prediction worker that handles this async
-    raise HTTPException(
-        status_code=501,
-        detail="Prediction not yet implemented. Coming soon!"
-    )
+    raise HTTPException(status_code=501, detail="Prediction not yet implemented. Coming soon!")
 
 
 @router.delete(

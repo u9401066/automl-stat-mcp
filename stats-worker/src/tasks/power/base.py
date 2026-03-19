@@ -9,6 +9,7 @@ Contains:
     - PowerAnalysisResult: Result dataclass for power calculations
     - Helper functions for effect size calculations
 """
+
 import logging
 import math
 from dataclasses import dataclass, field
@@ -24,8 +25,10 @@ logger = logging.getLogger(__name__)
 # Enums and Constants
 # =============================================================================
 
+
 class EffectSizeType(str, Enum):
     """Effect size types"""
+
     COHENS_D = "Cohen's d"
     COHENS_H = "Cohen's h"
     COHENS_F = "Cohen's f"
@@ -37,6 +40,7 @@ class EffectSizeType(str, Enum):
 
 class TestType(str, Enum):
     """Statistical test types"""
+
     TTEST_IND = "two-sample t-test"
     TTEST_PAIRED = "paired t-test"
     TTEST_ONE = "one-sample t-test"
@@ -56,6 +60,7 @@ EFFECT_SIZE_THRESHOLDS = {
 # =============================================================================
 # Helper Functions
 # =============================================================================
+
 
 def safe_round(value: Optional[float], decimals: int = 4) -> Optional[float]:
     """
@@ -78,10 +83,7 @@ def safe_round(value: Optional[float], decimals: int = 4) -> Optional[float]:
         return None
 
 
-def interpret_effect_size(
-    effect_size: float,
-    effect_type: str = "cohens_d"
-) -> str:
+def interpret_effect_size(effect_size: float, effect_type: str = "cohens_d") -> str:
     """
     Interpret effect size magnitude based on Cohen's conventions.
 
@@ -106,11 +108,7 @@ def interpret_effect_size(
 
 
 def cohens_d_from_means(
-    mean1: float,
-    mean2: float,
-    sd1: float,
-    sd2: Optional[float] = None,
-    pooled: bool = True
+    mean1: float, mean2: float, sd1: float, sd2: Optional[float] = None, pooled: bool = True
 ) -> float:
     """
     Calculate Cohen's d from means and standard deviations.
@@ -159,6 +157,7 @@ def cohens_h_from_proportions(p1: float, p2: float) -> float:
 # =============================================================================
 # Result Dataclasses
 # =============================================================================
+
 
 @dataclass
 class PowerAnalysisResult:

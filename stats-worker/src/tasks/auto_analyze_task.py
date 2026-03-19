@@ -4,6 +4,7 @@ Auto Analyze Task - Intelligent Statistical Analysis Engine
 Automatically performs comprehensive statistical analysis based on data characteristics.
 No manual method selection required - the engine decides what's appropriate.
 """
+
 import logging
 import math
 import warnings
@@ -17,8 +18,8 @@ from scipy import stats
 logger = logging.getLogger(__name__)
 
 # Suppress warnings for cleaner output
-warnings.filterwarnings('ignore', category=RuntimeWarning)
-warnings.filterwarnings('ignore', category=FutureWarning)
+warnings.filterwarnings("ignore", category=RuntimeWarning)
+warnings.filterwarnings("ignore", category=FutureWarning)
 
 
 def safe_round(value: Optional[float], decimals: int = 4) -> Optional[float]:
@@ -36,6 +37,7 @@ def safe_round(value: Optional[float], decimals: int = 4) -> Optional[float]:
 @dataclass
 class ColumnProfile:
     """Profile for a single column"""
+
     name: str
     dtype: str
     inferred_type: str  # numeric, categorical, datetime, id, constant
@@ -68,6 +70,7 @@ class ColumnProfile:
 @dataclass
 class AssociationResult:
     """Result of association analysis between two variables"""
+
     var1: str
     var2: str
     test_name: str
@@ -81,6 +84,7 @@ class AssociationResult:
 @dataclass
 class AutoAnalyzeResult:
     """Complete auto-analysis result"""
+
     # Metadata
     n_rows: int
     n_cols: int
@@ -127,10 +131,7 @@ class AutoAnalyzeResult:
                 "id_columns": self.id_columns,
                 "constant": self.constant_columns,
             },
-            "columns": {
-                name: self._profile_to_dict(profile)
-                for name, profile in self.columns.items()
-            },
+            "columns": {name: self._profile_to_dict(profile) for name, profile in self.columns.items()},
             "data_quality": {
                 "score": safe_round(self.quality_score, 2),
                 "issues": self.quality_issues,
@@ -149,7 +150,9 @@ class AutoAnalyzeResult:
                     }
                     for a in self.associations
                 ],
-            } if self.target_column else None,
+            }
+            if self.target_column
+            else None,
             "correlation_matrix": self.correlation_matrix,
             "recommendations": self.recommendations,
         }
@@ -165,27 +168,31 @@ class AutoAnalyzeResult:
         }
 
         if p.inferred_type == "numeric":
-            base.update({
-                "mean": safe_round(p.mean, 4),
-                "std": safe_round(p.std, 4),
-                "median": safe_round(p.median, 4),
-                "min": safe_round(p.min_val, 4),
-                "max": safe_round(p.max_val, 4),
-                "q25": safe_round(p.q25, 4),
-                "q75": safe_round(p.q75, 4),
-                "skewness": safe_round(p.skewness, 4),
-                "kurtosis": safe_round(p.kurtosis, 4),
-                "is_normal": p.is_normal,
-                "normality_pvalue": safe_round(p.normality_pvalue, 4),
-                "n_outliers_iqr": p.n_outliers_iqr,
-                "n_outliers_zscore": p.n_outliers_zscore,
-            })
+            base.update(
+                {
+                    "mean": safe_round(p.mean, 4),
+                    "std": safe_round(p.std, 4),
+                    "median": safe_round(p.median, 4),
+                    "min": safe_round(p.min_val, 4),
+                    "max": safe_round(p.max_val, 4),
+                    "q25": safe_round(p.q25, 4),
+                    "q75": safe_round(p.q75, 4),
+                    "skewness": safe_round(p.skewness, 4),
+                    "kurtosis": safe_round(p.kurtosis, 4),
+                    "is_normal": p.is_normal,
+                    "normality_pvalue": safe_round(p.normality_pvalue, 4),
+                    "n_outliers_iqr": p.n_outliers_iqr,
+                    "n_outliers_zscore": p.n_outliers_zscore,
+                }
+            )
         elif p.inferred_type == "categorical":
-            base.update({
-                "mode": p.mode,
-                "mode_freq": p.mode_freq,
-                "top_values": p.top_values,
-            })
+            base.update(
+                {
+                    "mode": p.mode,
+                    "mode_freq": p.mode_freq,
+                    "top_values": p.top_values,
+                }
+            )
 
         return base
 
@@ -290,7 +297,7 @@ class AutoAnalyzeEngine:
 
         # Check for ID-like columns
         col_lower = col_name.lower()
-        if any(id_hint in col_lower for id_hint in ['id', 'index', 'key', 'code', 'uuid']):
+        if any(id_hint in col_lower for id_hint in ["id", "index", "key", "code", "uuid"]):
             if n_unique == len(self.df) or n_unique > len(self.df) * 0.95:
                 return "id"
 
@@ -299,7 +306,7 @@ class AutoAnalyzeEngine:
             return "datetime"
 
         # Try to infer datetime from string
-        if series.dtype == 'object':
+        if series.dtype == "object":
             try:
                 sample = series.dropna().head(100)
                 pd.to_datetime(sample, infer_datetime_format=True)
@@ -413,16 +420,14 @@ class AutoAnalyzeEngine:
             issues.append(f"Constant columns (no variance): {', '.join(self.result.constant_columns)}")
 
         # Check for columns with high missing
-        high_missing_cols = [
-            name for name, p in self.result.columns.items()
-            if p.missing_pct > 50
-        ]
+        high_missing_cols = [name for name, p in self.result.columns.items() if p.missing_pct > 50]
         if high_missing_cols:
             issues.append(f"Columns with >50% missing: {', '.join(high_missing_cols)}")
 
         # Check for outliers
         high_outlier_cols = [
-            name for name, p in self.result.columns.items()
+            name
+            for name, p in self.result.columns.items()
             if p.inferred_type == "numeric" and p.n_outliers_iqr and p.n_outliers_iqr > self.result.n_rows * 0.1
         ]
         if high_outlier_cols:
@@ -445,14 +450,12 @@ class AutoAnalyzeEngine:
         # Clean NaN/Inf values in correlation matrix
         corr_dict = {}
         for col in corr_matrix.columns:
-            corr_dict[col] = {
-                k: safe_round(v, 4) for k, v in corr_matrix[col].to_dict().items()
-            }
+            corr_dict[col] = {k: safe_round(v, 4) for k, v in corr_matrix[col].to_dict().items()}
 
         self.result.correlation_matrix = {
             "columns": self.result.numeric_columns,
             "values": corr_dict,
-            "high_correlations": self._find_high_correlations(corr_matrix)
+            "high_correlations": self._find_high_correlations(corr_matrix),
         }
 
     def _find_high_correlations(self, corr_matrix: pd.DataFrame, threshold: float = 0.7) -> List[Dict]:
@@ -461,15 +464,17 @@ class AutoAnalyzeEngine:
         cols = corr_matrix.columns.tolist()
 
         for i, col1 in enumerate(cols):
-            for col2 in cols[i+1:]:
+            for col2 in cols[i + 1 :]:
                 corr = corr_matrix.loc[col1, col2]
                 if pd.notna(corr) and abs(corr) >= threshold:
-                    high_corr.append({
-                        "var1": col1,
-                        "var2": col2,
-                        "correlation": safe_round(corr, 4),
-                        "strength": "strong" if abs(corr) >= 0.8 else "moderate"
-                    })
+                    high_corr.append(
+                        {
+                            "var1": col1,
+                            "var2": col2,
+                            "correlation": safe_round(corr, 4),
+                            "strength": "strong" if abs(corr) >= 0.8 else "moderate",
+                        }
+                    )
 
         return sorted(high_corr, key=lambda x: abs(x["correlation"] or 0), reverse=True)
 
@@ -501,9 +506,7 @@ class AutoAnalyzeEngine:
 
             # Choose appropriate test
             association = self._compute_association(
-                col, target_col,
-                col_is_numeric, target_is_numeric,
-                col_profile, target_profile
+                col, target_col, col_is_numeric, target_is_numeric, col_profile, target_profile
             )
 
             if association:
@@ -519,7 +522,7 @@ class AutoAnalyzeEngine:
         col1_numeric: bool,
         col2_numeric: bool,
         profile1: ColumnProfile,
-        profile2: ColumnProfile
+        profile2: ColumnProfile,
     ) -> Optional[AssociationResult]:
         """Compute appropriate association test"""
         try:
@@ -542,13 +545,14 @@ class AutoAnalyzeEngine:
                     test_name = "Pearson correlation"
 
                 return AssociationResult(
-                    var1=col1, var2=col2,
+                    var1=col1,
+                    var2=col2,
                     test_name=test_name,
                     statistic=corr,
                     pvalue=pval,
                     effect_size=abs(corr),
                     effect_size_name="r",
-                    interpretation=self._interpret_correlation(corr, pval)
+                    interpretation=self._interpret_correlation(corr, pval),
                 )
 
             # Categorical vs Categorical: Chi-square
@@ -562,13 +566,14 @@ class AutoAnalyzeEngine:
                 cramers_v = np.sqrt(chi2 / (n * min_dim)) if min_dim > 0 else 0
 
                 return AssociationResult(
-                    var1=col1, var2=col2,
+                    var1=col1,
+                    var2=col2,
                     test_name="Chi-square test",
                     statistic=chi2,
                     pvalue=pval,
                     effect_size=cramers_v,
                     effect_size_name="Cramér's V",
-                    interpretation=self._interpret_cramers_v(cramers_v, pval)
+                    interpretation=self._interpret_cramers_v(cramers_v, pval),
                 )
 
             # Numeric vs Categorical (or vice versa)
@@ -594,15 +599,17 @@ class AutoAnalyzeEngine:
                         stat, pval = stats.ttest_ind(g1, g2)
                         test_name = "Independent t-test"
                         # Cohen's d
-                        pooled_std = np.sqrt(((len(g1)-1)*np.var(g1) + (len(g2)-1)*np.var(g2)) / (len(g1)+len(g2)-2))
+                        pooled_std = np.sqrt(
+                            ((len(g1) - 1) * np.var(g1) + (len(g2) - 1) * np.var(g2)) / (len(g1) + len(g2) - 2)
+                        )
                         effect = abs(np.mean(g1) - np.mean(g2)) / pooled_std if pooled_std > 0 else 0
                         effect_name = "Cohen's d"
                     else:
-                        stat, pval = stats.mannwhitneyu(g1, g2, alternative='two-sided')
+                        stat, pval = stats.mannwhitneyu(g1, g2, alternative="two-sided")
                         test_name = "Mann-Whitney U"
                         # Rank-biserial correlation
                         n1, n2 = len(g1), len(g2)
-                        effect = 1 - (2*stat)/(n1*n2)
+                        effect = 1 - (2 * stat) / (n1 * n2)
                         effect_name = "rank-biserial r"
 
                 # More than two groups: ANOVA or Kruskal-Wallis
@@ -612,8 +619,8 @@ class AutoAnalyzeEngine:
                         test_name = "One-way ANOVA"
                         # Eta-squared (approximate)
                         total_mean = np.mean([x for g in group_data for x in g])
-                        ss_between = sum(len(g) * (np.mean(g) - total_mean)**2 for g in group_data)
-                        ss_total = sum((x - total_mean)**2 for g in group_data for x in g)
+                        ss_between = sum(len(g) * (np.mean(g) - total_mean) ** 2 for g in group_data)
+                        ss_total = sum((x - total_mean) ** 2 for g in group_data for x in g)
                         effect = ss_between / ss_total if ss_total > 0 else 0
                         effect_name = "η²"
                     else:
@@ -625,13 +632,14 @@ class AutoAnalyzeEngine:
                         effect_name = "ε²"
 
                 return AssociationResult(
-                    var1=col1, var2=col2,
+                    var1=col1,
+                    var2=col2,
                     test_name=test_name,
                     statistic=stat,
                     pvalue=pval,
                     effect_size=effect,
                     effect_size_name=effect_name,
-                    interpretation=self._interpret_effect_size(effect, effect_name, pval)
+                    interpretation=self._interpret_effect_size(effect, effect_name, pval),
                 )
 
         except Exception as e:
@@ -709,117 +717,134 @@ class AutoAnalyzeEngine:
         recs = []
 
         # Missing value recommendations
-        high_missing = [
-            (name, p.missing_pct) for name, p in self.result.columns.items()
-            if p.missing_pct > 20
-        ]
+        high_missing = [(name, p.missing_pct) for name, p in self.result.columns.items() if p.missing_pct > 20]
         if high_missing:
             cols_str = ", ".join([f"{n} ({p:.1f}%)" for n, p in high_missing[:5]])
-            recs.append({
-                "category": "data_cleaning",
-                "priority": "high",
-                "issue": "High missing values",
-                "columns": [n for n, _ in high_missing],
-                "suggestion": f"Consider imputation or removal for columns with high missing: {cols_str}"
-            })
+            recs.append(
+                {
+                    "category": "data_cleaning",
+                    "priority": "high",
+                    "issue": "High missing values",
+                    "columns": [n for n, _ in high_missing],
+                    "suggestion": f"Consider imputation or removal for columns with high missing: {cols_str}",
+                }
+            )
 
         # Outlier recommendations
         high_outliers = [
-            (name, p.n_outliers_iqr) for name, p in self.result.columns.items()
+            (name, p.n_outliers_iqr)
+            for name, p in self.result.columns.items()
             if p.n_outliers_iqr and p.n_outliers_iqr > self.result.n_rows * 0.05
         ]
         if high_outliers:
-            recs.append({
-                "category": "data_cleaning",
-                "priority": "medium",
-                "issue": "Significant outliers detected",
-                "columns": [n for n, _ in high_outliers],
-                "suggestion": "Review outliers - consider winsorization, transformation, or removal if appropriate"
-            })
+            recs.append(
+                {
+                    "category": "data_cleaning",
+                    "priority": "medium",
+                    "issue": "Significant outliers detected",
+                    "columns": [n for n, _ in high_outliers],
+                    "suggestion": "Review outliers - consider winsorization, transformation, or removal if appropriate",
+                }
+            )
 
         # Skewed distributions
         skewed_cols = [
-            (name, p.skewness) for name, p in self.result.columns.items()
-            if p.skewness and abs(p.skewness) > 1.5
+            (name, p.skewness) for name, p in self.result.columns.items() if p.skewness and abs(p.skewness) > 1.5
         ]
         if skewed_cols:
-            recs.append({
-                "category": "feature_engineering",
-                "priority": "medium",
-                "issue": "Highly skewed distributions",
-                "columns": [n for n, _ in skewed_cols],
-                "suggestion": "Consider log or Box-Cox transformation for skewed numeric features"
-            })
+            recs.append(
+                {
+                    "category": "feature_engineering",
+                    "priority": "medium",
+                    "issue": "Highly skewed distributions",
+                    "columns": [n for n, _ in skewed_cols],
+                    "suggestion": "Consider log or Box-Cox transformation for skewed numeric features",
+                }
+            )
 
         # High correlation (potential multicollinearity)
         if self.result.correlation_matrix and self.result.correlation_matrix.get("high_correlations"):
             high_corr = self.result.correlation_matrix["high_correlations"]
             if high_corr:
                 pairs = [f"{h['var1']}-{h['var2']}" for h in high_corr[:3]]
-                recs.append({
-                    "category": "feature_engineering",
-                    "priority": "medium",
-                    "issue": "High correlations between features",
-                    "details": high_corr[:5],
-                    "suggestion": f"Consider removing or combining highly correlated features: {', '.join(pairs)}"
-                })
+                recs.append(
+                    {
+                        "category": "feature_engineering",
+                        "priority": "medium",
+                        "issue": "High correlations between features",
+                        "details": high_corr[:5],
+                        "suggestion": f"Consider removing or combining highly correlated features: {', '.join(pairs)}",
+                    }
+                )
 
         # Constant columns
         if self.result.constant_columns:
-            recs.append({
-                "category": "data_cleaning",
-                "priority": "high",
-                "issue": "Constant columns (no variance)",
-                "columns": self.result.constant_columns,
-                "suggestion": f"Remove constant columns: {', '.join(self.result.constant_columns)}"
-            })
+            recs.append(
+                {
+                    "category": "data_cleaning",
+                    "priority": "high",
+                    "issue": "Constant columns (no variance)",
+                    "columns": self.result.constant_columns,
+                    "suggestion": f"Remove constant columns: {', '.join(self.result.constant_columns)}",
+                }
+            )
 
         # ID columns
         if self.result.id_columns:
-            recs.append({
-                "category": "data_cleaning",
-                "priority": "high",
-                "issue": "ID-like columns detected",
-                "columns": self.result.id_columns,
-                "suggestion": f"Exclude ID columns from modeling: {', '.join(self.result.id_columns)}"
-            })
+            recs.append(
+                {
+                    "category": "data_cleaning",
+                    "priority": "high",
+                    "issue": "ID-like columns detected",
+                    "columns": self.result.id_columns,
+                    "suggestion": f"Exclude ID columns from modeling: {', '.join(self.result.id_columns)}",
+                }
+            )
 
         # ML model recommendations based on target
         if self.target_column:
             target_profile = self.result.columns.get(self.target_column)
             if target_profile:
                 if target_profile.inferred_type == "numeric":
-                    recs.append({
-                        "category": "modeling",
-                        "priority": "info",
-                        "issue": "Target is continuous",
-                        "suggestion": "This is a regression problem. Recommended: LightGBM, XGBoost, or Neural Network"
-                    })
+                    recs.append(
+                        {
+                            "category": "modeling",
+                            "priority": "info",
+                            "issue": "Target is continuous",
+                            "suggestion": "This is a regression problem. Recommended: LightGBM, XGBoost, or Neural Network",
+                        }
+                    )
                 elif target_profile.inferred_type == "categorical":
                     n_classes = target_profile.n_unique
                     if n_classes == 2:
-                        recs.append({
-                            "category": "modeling",
-                            "priority": "info",
-                            "issue": "Binary classification target",
-                            "suggestion": "This is a binary classification problem. Recommended: LightGBM, XGBoost, or Logistic Regression"
-                        })
+                        recs.append(
+                            {
+                                "category": "modeling",
+                                "priority": "info",
+                                "issue": "Binary classification target",
+                                "suggestion": "This is a binary classification problem. Recommended: LightGBM, XGBoost, or Logistic Regression",
+                            }
+                        )
                     else:
-                        recs.append({
-                            "category": "modeling",
-                            "priority": "info",
-                            "issue": f"Multi-class classification target ({n_classes} classes)",
-                            "suggestion": "This is a multi-class classification problem. Recommended: LightGBM, XGBoost, or Neural Network"
-                        })
+                        recs.append(
+                            {
+                                "category": "modeling",
+                                "priority": "info",
+                                "issue": f"Multi-class classification target ({n_classes} classes)",
+                                "suggestion": "This is a multi-class classification problem. Recommended: LightGBM, XGBoost, or Neural Network",
+                            }
+                        )
 
         # Sample size warning
         if self.result.n_rows < 100:
-            recs.append({
-                "category": "data_quality",
-                "priority": "high",
-                "issue": "Small sample size",
-                "suggestion": f"Only {self.result.n_rows} rows. Results may not be reliable. Consider collecting more data."
-            })
+            recs.append(
+                {
+                    "category": "data_quality",
+                    "priority": "high",
+                    "issue": "Small sample size",
+                    "suggestion": f"Only {self.result.n_rows} rows. Results may not be reliable. Consider collecting more data.",
+                }
+            )
 
         self.result.recommendations = recs
 
@@ -848,6 +873,7 @@ def run_auto_analyze(
     if include_advanced:
         try:
             from .advanced_analysis import run_enhanced_analysis
+
             advanced = run_enhanced_analysis(
                 df,
                 target_column=target_column,

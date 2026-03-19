@@ -4,6 +4,7 @@ Repository Interfaces - Domain Layer
 These are abstract interfaces that define how domain objects are persisted.
 Actual implementations are in the Infrastructure layer.
 """
+
 from abc import ABC, abstractmethod
 from typing import List, Optional
 
@@ -24,11 +25,7 @@ class DatasetRepository(ABC):
         pass
 
     @abstractmethod
-    async def find_by_user(
-        self,
-        user_id: str,
-        session_id: Optional[str] = None
-    ) -> List[Dataset]:
+    async def find_by_user(self, user_id: str, session_id: Optional[str] = None) -> List[Dataset]:
         """Find all datasets for a user/session"""
         pass
 
@@ -57,11 +54,7 @@ class ModelRepository(ABC):
         pass
 
     @abstractmethod
-    async def find_by_user(
-        self,
-        user_id: str,
-        session_id: Optional[str] = None
-    ) -> List[MLModel]:
+    async def find_by_user(self, user_id: str, session_id: Optional[str] = None) -> List[MLModel]:
         """Find all models for a user/session"""
         pass
 
@@ -85,11 +78,7 @@ class JobRepository(ABC):
         pass
 
     @abstractmethod
-    async def find_by_user(
-        self,
-        user_id: str,
-        session_id: Optional[str] = None
-    ) -> List[Job]:
+    async def find_by_user(self, user_id: str, session_id: Optional[str] = None) -> List[Job]:
         """Find all jobs for a user/session"""
         pass
 

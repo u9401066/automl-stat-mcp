@@ -4,6 +4,7 @@ Stats Service - Jobs Routes (DDD)
 Common routes for job management.
 Refactored to use Domain-Driven Design with Use Cases.
 """
+
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException
@@ -40,10 +41,7 @@ async def get_job_status(job_id: str):
     result = await use_case.execute(job_id)
 
     if not result:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Job {job_id} not found"
-        )
+        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
 
     return {
         "job_id": result.job_id,
@@ -71,24 +69,14 @@ async def get_job_result(job_id: str):
     result = await use_case.execute(job_id)
 
     if not result:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Job {job_id} not found"
-        )
+        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
 
     if result.status != "completed":
-        raise HTTPException(
-            status_code=400,
-            detail=f"Job is not completed. Current status: {result.status}"
-        )
+        raise HTTPException(status_code=400, detail=f"Job is not completed. Current status: {result.status}")
 
     # Try to get result from job itself first
     if result.result:
-        return {
-            "job_id": job_id,
-            "job_type": result.job_type,
-            "result": result.result
-        }
+        return {"job_id": job_id, "job_type": result.job_type, "result": result.result}
 
     # Otherwise load from storage
     storage = get_storage()
@@ -96,19 +84,13 @@ async def get_job_result(job_id: str):
     report_bytes = await storage.read_bytes(report_path)
 
     if report_bytes is None:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Result for job {job_id} not found in storage"
-        )
+        raise HTTPException(status_code=404, detail=f"Result for job {job_id} not found in storage")
 
     import json
-    report = json.loads(report_bytes.decode('utf-8'))
 
-    return {
-        "job_id": job_id,
-        "job_type": result.job_type,
-        "result": report
-    }
+    report = json.loads(report_bytes.decode("utf-8"))
+
+    return {"job_id": job_id, "job_type": result.job_type, "result": report}
 
 
 @router.get("/{job_id}/html", response_class=HTMLResponse)
@@ -122,22 +104,13 @@ async def get_job_html_report(job_id: str):
     result = await use_case.execute(job_id)
 
     if not result:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Job {job_id} not found"
-        )
+        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
 
     if result.job_type != "eda":
-        raise HTTPException(
-            status_code=400,
-            detail="HTML reports are only available for EDA jobs"
-        )
+        raise HTTPException(status_code=400, detail="HTML reports are only available for EDA jobs")
 
     if result.status != "completed":
-        raise HTTPException(
-            status_code=400,
-            detail=f"Job is not completed. Current status: {result.status}"
-        )
+        raise HTTPException(status_code=400, detail=f"Job is not completed. Current status: {result.status}")
 
     # Get HTML from storage
     storage = get_storage()
@@ -145,22 +118,15 @@ async def get_job_html_report(job_id: str):
     html_bytes = await storage.read_bytes(html_path)
 
     if html_bytes is None:
-        raise HTTPException(
-            status_code=404,
-            detail="HTML report not found in storage"
-        )
+        raise HTTPException(status_code=404, detail="HTML report not found in storage")
 
-    html = html_bytes.decode('utf-8')
+    html = html_bytes.decode("utf-8")
 
     return html
 
 
 @router.get("/")
-async def list_jobs(
-    user_id: str,
-    job_type: Optional[str] = None,
-    limit: int = 50
-):
+async def list_jobs(user_id: str, job_type: Optional[str] = None, limit: int = 50):
     """
     List jobs for a user.
 
@@ -193,7 +159,7 @@ async def list_jobs(
             for r in results
         ],
         "count": len(results),
-        "user_id": user_id
+        "user_id": user_id,
     }
 
 
@@ -211,32 +177,20 @@ async def delete_job(job_id: str, user_id: str):
     try:
         job_id_obj = StatsJobId.from_string(job_id)
     except ValueError:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid job ID format"
-        ) from None
+        raise HTTPException(status_code=400, detail="Invalid job ID format") from None
 
     # Get job to verify ownership
     job = await job_repo.get_by_id(job_id_obj)
 
     if not job:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Job {job_id} not found"
-        )
+        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
 
     if not job.belongs_to(user_id):
-        raise HTTPException(
-            status_code=403,
-            detail="Access denied"
-        )
+        raise HTTPException(status_code=403, detail="Access denied")
 
     success = await job_repo.delete(job_id_obj)
 
     if not success:
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to delete job"
-        )
+        raise HTTPException(status_code=500, detail="Failed to delete job")
 
     return {"message": f"Job {job_id} deleted successfully"}

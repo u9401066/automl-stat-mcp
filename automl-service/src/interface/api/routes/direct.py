@@ -4,6 +4,7 @@ FastAPI Router - Direct Analysis endpoints
 Routes for analyzing data directly without storing in MinIO.
 Useful for pre-training dataset analysis, one-time analysis, or testing.
 """
+
 import base64
 import io
 from typing import Any, Dict, List, Optional
@@ -18,24 +19,18 @@ router = APIRouter(prefix="/direct", tags=["Direct Analysis"])
 
 # ============== Request/Response Models ==============
 
+
 class DirectAnalyzeRequest(BaseModel):
     """Request model for direct analysis (no MinIO storage)"""
-    csv_content: str = Field(
-        ...,
-        description="CSV content as string (can be base64 encoded for binary safety)"
-    )
-    is_base64: bool = Field(
-        default=False,
-        description="Whether csv_content is base64 encoded"
-    )
-    target_column: Optional[str] = Field(
-        None,
-        description="Target column for ML analysis"
-    )
+
+    csv_content: str = Field(..., description="CSV content as string (can be base64 encoded for binary safety)")
+    is_base64: bool = Field(default=False, description="Whether csv_content is base64 encoded")
+    target_column: Optional[str] = Field(None, description="Target column for ML analysis")
 
 
 class DirectAnalyzeResponse(BaseModel):
     """Response for direct analysis"""
+
     rows: int
     columns: int
     column_names: List[str]
@@ -48,12 +43,14 @@ class DirectAnalyzeResponse(BaseModel):
 
 class QuickStatsRequest(BaseModel):
     """Request for quick statistics (synchronous)"""
+
     csv_content: str = Field(..., description="CSV content as string")
     is_base64: bool = Field(default=False)
 
 
 class QuickStatsResponse(BaseModel):
     """Quick statistics response"""
+
     rows: int
     columns: int
     column_info: List[Dict[str, Any]]
@@ -63,6 +60,7 @@ class QuickStatsResponse(BaseModel):
 
 class DatasetPreviewRequest(BaseModel):
     """Request for dataset preview"""
+
     csv_content: str = Field(..., description="CSV content as string")
     is_base64: bool = Field(default=False)
     n_rows: int = Field(default=10, le=100)
@@ -70,6 +68,7 @@ class DatasetPreviewRequest(BaseModel):
 
 class DatasetPreviewResponse(BaseModel):
     """Dataset preview response"""
+
     rows: int
     columns: int
     column_names: List[str]
@@ -79,6 +78,7 @@ class DatasetPreviewResponse(BaseModel):
 
 
 # ============== Helper Functions ==============
+
 
 def safe_value(val):
     """Convert value to JSON-safe format"""
@@ -100,7 +100,7 @@ def decode_csv(csv_content: str, is_base64: bool) -> pd.DataFrame:
     try:
         if is_base64:
             csv_bytes = base64.b64decode(csv_content)
-            csv_str = csv_bytes.decode('utf-8')
+            csv_str = csv_bytes.decode("utf-8")
         else:
             csv_str = csv_content
 
@@ -130,7 +130,7 @@ def analyze_target(df: pd.DataFrame, target_column: str) -> Dict[str, Any]:
     }
 
     # Determine problem type
-    if target.dtype in ['object', 'bool', 'category']:
+    if target.dtype in ["object", "bool", "category"]:
         # Classification
         unique = target.nunique()
         if unique == 2:
@@ -140,9 +140,7 @@ def analyze_target(df: pd.DataFrame, target_column: str) -> Dict[str, Any]:
 
         # Class distribution
         value_counts = target.value_counts()
-        analysis["class_distribution"] = {
-            str(k): int(v) for k, v in value_counts.items()
-        }
+        analysis["class_distribution"] = {str(k): int(v) for k, v in value_counts.items()}
 
         # Check for imbalance
         if len(value_counts) >= 2:
@@ -187,8 +185,8 @@ def get_ml_recommendations(df: pd.DataFrame, target_column: Optional[str]) -> Di
         recommendations["recommended_time_limit"] = 1200  # 20 min
 
     # Feature analysis
-    numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
-    categorical_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
+    numeric_cols = df.select_dtypes(include=["number"]).columns.tolist()
+    categorical_cols = df.select_dtypes(include=["object", "category"]).columns.tolist()
 
     if target_column:
         if target_column in numeric_cols:
@@ -239,13 +237,14 @@ def get_data_warnings(df: pd.DataFrame) -> List[str]:
     # ID-like columns
     for col in df.columns:
         if df[col].nunique() == len(df):
-            if df[col].dtype == 'object' or 'id' in col.lower():
+            if df[col].dtype == "object" or "id" in col.lower():
                 warnings.append(f"Possible ID column (all unique): {col}")
 
     return warnings
 
 
 # ============== Endpoints ==============
+
 
 @router.post("/analyze", response_model=DirectAnalyzeResponse)
 async def direct_analyze(
@@ -362,16 +361,14 @@ async def quick_stats(
         }
 
         # Numeric summary
-        numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+        numeric_cols = df.select_dtypes(include=["number"]).columns.tolist()
         numeric_summary = None
         if numeric_cols:
             desc = df[numeric_cols].describe()
             # Convert to safe values
             numeric_summary = {}
             for col in desc.columns:
-                numeric_summary[col] = {
-                    stat: safe_value(val) for stat, val in desc[col].items()
-                }
+                numeric_summary[col] = {stat: safe_value(val) for stat, val in desc[col].items()}
 
         return QuickStatsResponse(
             rows=len(df),

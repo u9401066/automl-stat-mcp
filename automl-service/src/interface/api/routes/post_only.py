@@ -20,38 +20,46 @@ router = APIRouter(prefix="/v1", tags=["POST-Only API"])
 # Request Models (for POST body)
 # =============================================================================
 
+
 class ListDatasetsRequest(BaseModel):
     """Request body for listing datasets"""
+
     pass  # No parameters needed, user_id comes from header
 
 
 class GetDatasetRequest(BaseModel):
     """Request body for getting a specific dataset"""
+
     dataset_id: str
 
 
 class ListJobsRequest(BaseModel):
     """Request body for listing jobs"""
+
     pass
 
 
 class GetJobRequest(BaseModel):
     """Request body for getting job status"""
+
     job_id: str
 
 
 class ListModelsRequest(BaseModel):
     """Request body for listing models"""
+
     pass
 
 
 class GetModelRequest(BaseModel):
     """Request body for getting model info"""
+
     model_id: str
 
 
 class GetLeaderboardRequest(BaseModel):
     """Request body for getting model leaderboard"""
+
     model_id: str
 
 
@@ -93,6 +101,7 @@ async def list_datasets_post(
     """
     # Import here to avoid circular imports
     from src.interface.api.routes.datasets import list_datasets
+
     return await list_datasets(request)
 
 
@@ -105,6 +114,7 @@ async def get_dataset_post(
     Get a specific dataset (POST wrapper for GET /datasets/{id})
     """
     from src.interface.api.routes.datasets import get_dataset
+
     return await get_dataset(body.dataset_id, request)
 
 
@@ -117,6 +127,7 @@ async def list_jobs_post(
     List all jobs (POST wrapper for GET /jobs)
     """
     from src.interface.api.routes.jobs import list_jobs
+
     return await list_jobs(request)
 
 
@@ -129,6 +140,7 @@ async def get_job_post(
     Get job status (POST wrapper for GET /jobs/{id})
     """
     from src.interface.api.routes.jobs import get_job
+
     return await get_job(body.job_id, request)
 
 
@@ -141,6 +153,7 @@ async def list_models_post(
     List all models (POST wrapper for GET /models)
     """
     from src.interface.api.routes.models import list_models
+
     return await list_models(request)
 
 
@@ -153,6 +166,7 @@ async def get_model_post(
     Get model info (POST wrapper for GET /models/{id})
     """
     from src.interface.api.routes.models import get_model
+
     return await get_model(body.model_id, request)
 
 
@@ -165,4 +179,5 @@ async def get_leaderboard_post(
     Get model leaderboard (POST wrapper for GET /models/{id}/leaderboard)
     """
     from src.interface.api.routes.models import get_leaderboard
+
     return await get_leaderboard(body.model_id, request)

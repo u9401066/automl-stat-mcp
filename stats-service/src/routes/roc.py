@@ -12,6 +12,7 @@ Supports two modes:
 1. Dataset mode: Provide dataset_id (pre-uploaded to MinIO)
 2. Direct mode: Provide csv_content inline (no storage)
 """
+
 import base64
 import json
 import uuid
@@ -32,6 +33,7 @@ router = APIRouter(prefix="/roc", tags=["ROC/AUC Analysis"])
 # Request/Response Models
 # =============================================================================
 
+
 class ROCComputeRequest(BaseModel):
     """Request for ROC curve computation
 
@@ -39,6 +41,7 @@ class ROCComputeRequest(BaseModel):
     - Dataset mode: Provide dataset_id (pre-uploaded data)
     - Direct mode: Provide csv_content (inline data)
     """
+
     dataset_id: Optional[str] = Field(None, description="Dataset ID (for dataset mode)")
     csv_content: Optional[str] = Field(None, description="CSV data content (for direct mode)")
     is_base64: bool = Field(default=False, description="Whether csv_content is base64 encoded")
@@ -58,6 +61,7 @@ class ROCCompareRequest(BaseModel):
     - Dataset mode: Provide dataset_id (pre-uploaded data)
     - Direct mode: Provide csv_content (inline data)
     """
+
     dataset_id: Optional[str] = Field(None, description="Dataset ID (for dataset mode)")
     csv_content: Optional[str] = Field(None, description="CSV data content (for direct mode)")
     is_base64: bool = Field(default=False, description="Whether csv_content is base64 encoded")
@@ -76,6 +80,7 @@ class ThresholdRequest(BaseModel):
     - Dataset mode: Provide dataset_id (pre-uploaded data)
     - Direct mode: Provide csv_content (inline data)
     """
+
     dataset_id: Optional[str] = Field(None, description="Dataset ID (for dataset mode)")
     csv_content: Optional[str] = Field(None, description="CSV data content (for direct mode)")
     is_base64: bool = Field(default=False, description="Whether csv_content is base64 encoded")
@@ -96,6 +101,7 @@ class CalibrationRequest(BaseModel):
     - Dataset mode: Provide dataset_id (pre-uploaded data)
     - Direct mode: Provide csv_content (inline data)
     """
+
     dataset_id: Optional[str] = Field(None, description="Dataset ID (for dataset mode)")
     csv_content: Optional[str] = Field(None, description="CSV data content (for direct mode)")
     is_base64: bool = Field(default=False, description="Whether csv_content is base64 encoded")
@@ -113,6 +119,7 @@ class FullEvalRequest(BaseModel):
     - Dataset mode: Provide dataset_id (pre-uploaded data)
     - Direct mode: Provide csv_content (inline data)
     """
+
     dataset_id: Optional[str] = Field(None, description="Dataset ID (for dataset mode)")
     csv_content: Optional[str] = Field(None, description="CSV data content (for direct mode)")
     is_base64: bool = Field(default=False, description="Whether csv_content is base64 encoded")
@@ -127,6 +134,7 @@ class FullEvalRequest(BaseModel):
 
 class JobResponse(BaseModel):
     """Standard job submission response"""
+
     job_id: str
     job_type: str
     status: str
@@ -140,13 +148,13 @@ class JobResponse(BaseModel):
 # Redis connection pool for async operations
 _redis_pool = None
 
+
 async def _get_redis() -> redis.Redis:
     """Get async Redis client"""
     global _redis_pool
     if _redis_pool is None:
         _redis_pool = redis.ConnectionPool.from_url(
-            f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}",
-            decode_responses=True
+            f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}", decode_responses=True
         )
     return redis.Redis(connection_pool=_redis_pool)
 
@@ -167,10 +175,7 @@ async def _submit_roc_job(
     """
     # Validate: must provide either dataset_id OR csv_content
     if not dataset_id and not csv_content:
-        raise HTTPException(
-            status_code=400,
-            detail="Must provide either dataset_id or csv_content"
-        )
+        raise HTTPException(status_code=400, detail="Must provide either dataset_id or csv_content")
 
     # Dataset mode: verify dataset exists
     minio_path = None
@@ -188,7 +193,7 @@ async def _submit_roc_job(
     if csv_content:
         # Decode base64 if needed
         if is_base64:
-            csv_content = base64.b64decode(csv_content).decode('utf-8')
+            csv_content = base64.b64decode(csv_content).decode("utf-8")
         params["csv_content"] = csv_content
 
     job_data = {
@@ -209,7 +214,7 @@ async def _submit_roc_job(
     await client.set(
         f"{STATS_JOBS_PREFIX}{job_id}",
         json.dumps(job_data),
-        ex=86400 * 7  # 7 days TTL
+        ex=86400 * 7,  # 7 days TTL
     )
 
     # Queue for processing
@@ -226,6 +231,7 @@ async def _submit_roc_job(
 # =============================================================================
 # Endpoints
 # =============================================================================
+
 
 @router.post("/compute/submit", response_model=JobResponse)
 async def submit_roc_compute_job(request: ROCComputeRequest):
@@ -283,7 +289,7 @@ async def submit_roc_compare_job(request: ROCCompareRequest):
     config = {
         "y_true_col": request.true_column,
         "model_score_cols": request.score_columns,
-        "model_names": request.model_names or [f"Model_{i+1}" for i in range(len(request.score_columns))],
+        "model_names": request.model_names or [f"Model_{i + 1}" for i in range(len(request.score_columns))],
         "method": request.method,
         "generate_visualizations": request.generate_visualizations,
     }

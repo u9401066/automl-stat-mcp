@@ -9,6 +9,7 @@ Contains:
     - Helper functions for hazard ratio and event calculations
     - Convenience wrapper functions for MCP tools
 """
+
 import logging
 import math
 from dataclasses import dataclass, field
@@ -24,6 +25,7 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 # Helper Functions for Survival Analysis
 # =============================================================================
+
 
 def hazard_ratio_to_log_hr(hazard_ratio: float) -> float:
     """Convert hazard ratio to log hazard ratio."""
@@ -78,6 +80,7 @@ def sample_size_from_events(
 # =============================================================================
 # Result Dataclass
 # =============================================================================
+
 
 @dataclass
 class SurvivalPowerResult:
@@ -158,6 +161,7 @@ class SurvivalPowerResult:
 # Survival Power Analysis Class
 # =============================================================================
 
+
 class SurvivalPowerAnalysis:
     """
     Power analysis for survival analysis (time-to-event data).
@@ -223,7 +227,7 @@ class SurvivalPowerAnalysis:
         r = allocation_ratio
 
         # Number of events needed
-        d = ((z_alpha + z_beta) ** 2) * ((1 + r) ** 2) / (r * (log_hr ** 2))
+        d = ((z_alpha + z_beta) ** 2) * ((1 + r) ** 2) / (r * (log_hr**2))
         n_events = int(math.ceil(d))
 
         # Events per group (assuming equal event rates)
@@ -255,14 +259,18 @@ class SurvivalPowerAnalysis:
         hr_pct = abs(1 - hazard_ratio) * 100
         interp_text = (
             f"To detect HR = {hazard_ratio:.2f} ({hr_direction} hazard by {hr_pct:.0f}%) "
-            f"with {power*100:.0f}% power at α = {alpha}, "
+            f"with {power * 100:.0f}% power at α = {alpha}, "
             f"you need to observe {n_events} events total."
         )
 
         recs = []
         if n_events > 500:
-            recs.append(f"Large number of events ({n_events}) required. Consider longer follow-up or higher-risk population.")
-        recs.append(f"With {int((1-power)*100)}% of events censored, total N ≈ {int(n_events/0.7)} (assuming 70% event rate).")
+            recs.append(
+                f"Large number of events ({n_events}) required. Consider longer follow-up or higher-risk population."
+            )
+        recs.append(
+            f"With {int((1 - power) * 100)}% of events censored, total N ≈ {int(n_events / 0.7)} (assuming 70% event rate)."
+        )
         if hazard_ratio > 0.9 and hazard_ratio < 1.1:
             recs.append("Small HR near 1.0 requires many events. Verify clinical significance.")
 
@@ -346,13 +354,13 @@ class SurvivalPowerAnalysis:
         hr_pct = abs(1 - hazard_ratio) * 100
         interp_text = (
             f"To detect HR = {hazard_ratio:.2f} ({hr_direction} hazard by {hr_pct:.0f}%) "
-            f"with {power*100:.0f}% power at α = {alpha}, assuming {prob_event*100:.0f}% event rate, "
+            f"with {power * 100:.0f}% power at α = {alpha}, assuming {prob_event * 100:.0f}% event rate, "
             f"you need N = {total_n} ({n_control} control + {n_treatment} treatment)."
         )
 
         recs = events_result.recommendations.copy()
         if prob_event < 0.5:
-            recs.append(f"Low event rate ({prob_event*100:.0f}%) increases sample size. Consider longer follow-up.")
+            recs.append(f"Low event rate ({prob_event * 100:.0f}%) increases sample size. Consider longer follow-up.")
 
         return SurvivalPowerResult(
             test_type="log-rank test",
@@ -424,7 +432,7 @@ class SurvivalPowerAnalysis:
 
         # From: d = ((z_α + z_β)² * (1+r)²) / (r * log_hr²)
         # Solve for z_β: z_β = sqrt(d * r * log_hr² / (1+r)²) - z_α
-        z_beta = math.sqrt(n_events * r * (log_hr ** 2) / ((1 + r) ** 2)) - z_alpha
+        z_beta = math.sqrt(n_events * r * (log_hr**2) / ((1 + r) ** 2)) - z_alpha
         power = stats.norm.cdf(z_beta)
 
         # Calculate per-group if equal allocation
@@ -443,7 +451,7 @@ class SurvivalPowerAnalysis:
         # Interpretation
         interp_text = (
             f"With {n_events} events (N = {total_n}), HR = {hazard_ratio:.2f}, "
-            f"the study has {power*100:.1f}% power at α = {alpha}."
+            f"the study has {power * 100:.1f}% power at α = {alpha}."
         )
 
         recs = []
@@ -456,7 +464,7 @@ class SurvivalPowerAnalysis:
                 alternative=alternative,
                 _include_sensitivity=False,
             )
-            recs.append(f"Power is {power*100:.1f}%. Need {needed.n_events} events for 80% power.")
+            recs.append(f"Power is {power * 100:.1f}%. Need {needed.n_events} events for 80% power.")
 
         return SurvivalPowerResult(
             test_type="log-rank test",
@@ -544,7 +552,7 @@ class SurvivalPowerAnalysis:
         result.median_survival_control = median_control
         result.median_survival_treatment = median_treatment
         result.notes.append("Based on exponential survival assumption")
-        result.notes.append(f"Estimated event rate: {prob_event*100:.0f}% over {total_time} months")
+        result.notes.append(f"Estimated event rate: {prob_event * 100:.0f}% over {total_time} months")
 
         return result
 
@@ -570,10 +578,12 @@ class SurvivalPowerAnalysis:
                 alternative=alternative,
                 _include_sensitivity=False,  # Prevent recursion
             )
-            by_power.append({
-                "power": pwr,
-                "n_events": result.n_events,
-            })
+            by_power.append(
+                {
+                    "power": pwr,
+                    "n_events": result.n_events,
+                }
+            )
 
         # By hazard ratio
         by_hr = []
@@ -587,10 +597,12 @@ class SurvivalPowerAnalysis:
                     alternative=alternative,
                     _include_sensitivity=False,  # Prevent recursion
                 )
-                by_hr.append({
-                    "hazard_ratio": hr,
-                    "n_events": result.n_events,
-                })
+                by_hr.append(
+                    {
+                        "hazard_ratio": hr,
+                        "n_events": result.n_events,
+                    }
+                )
             except ValueError:
                 pass
 
@@ -622,11 +634,13 @@ class SurvivalPowerAnalysis:
                 alternative=alternative,
                 _include_sensitivity=False,  # Prevent recursion
             )
-            by_prob.append({
-                "prob_event": prob,
-                "total_n": result.total_n,
-                "n_events": result.n_events,
-            })
+            by_prob.append(
+                {
+                    "prob_event": prob,
+                    "total_n": result.total_n,
+                    "n_events": result.n_events,
+                }
+            )
 
         return {
             "by_event_probability": by_prob,
@@ -636,6 +650,7 @@ class SurvivalPowerAnalysis:
 # =============================================================================
 # Convenience Functions for MCP
 # =============================================================================
+
 
 def calculate_survival_events(
     hazard_ratio: float,

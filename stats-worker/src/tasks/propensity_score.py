@@ -26,6 +26,7 @@ from scipy.special import expit  # logistic function
 @dataclass
 class PropensityScoreResult:
     """Result of propensity score estimation."""
+
     scores: np.ndarray
     treatment: np.ndarray
     coefficients: Dict[str, float]
@@ -55,6 +56,7 @@ class PropensityScoreResult:
 @dataclass
 class MatchingResult:
     """Result of propensity score matching."""
+
     matched_pairs: List[Tuple[int, int]]
     matched_treated_idx: np.ndarray
     matched_control_idx: np.ndarray
@@ -69,7 +71,9 @@ class MatchingResult:
             "n_matched_pairs": self.n_matched,
             "n_unmatched_treated": self.n_unmatched_treated,
             "n_unmatched_control": self.n_unmatched_control,
-            "matching_rate_treated": self.n_matched / (self.n_matched + self.n_unmatched_treated) if (self.n_matched + self.n_unmatched_treated) > 0 else 0,
+            "matching_rate_treated": self.n_matched / (self.n_matched + self.n_unmatched_treated)
+            if (self.n_matched + self.n_unmatched_treated) > 0
+            else 0,
             "caliper": self.caliper_used,
             "method": self.matching_method,
         }
@@ -78,6 +82,7 @@ class MatchingResult:
 @dataclass
 class BalanceDiagnostics:
     """Balance diagnostics after matching or weighting."""
+
     standardized_differences: Dict[str, float]
     variance_ratios: Dict[str, float]
     ks_statistics: Dict[str, Dict[str, float]]
@@ -97,6 +102,7 @@ class BalanceDiagnostics:
 @dataclass
 class TreatmentEffectResult:
     """Treatment effect estimation result."""
+
     effect_type: str  # ATE, ATT, ATU
     estimate: float
     std_error: float
@@ -253,17 +259,11 @@ class PropensityScoreEstimator:
         scores = expit(X @ self.coefficients_ + self.intercept_)
 
         # Model metrics
-        log_likelihood = np.sum(
-            treatment * np.log(scores + 1e-10) +
-            (1 - treatment) * np.log(1 - scores + 1e-10)
-        )
+        log_likelihood = np.sum(treatment * np.log(scores + 1e-10) + (1 - treatment) * np.log(1 - scores + 1e-10))
 
         # Null model (intercept only)
         p_null = np.mean(treatment)
-        ll_null = np.sum(
-            treatment * np.log(p_null + 1e-10) +
-            (1 - treatment) * np.log(1 - p_null + 1e-10)
-        )
+        ll_null = np.sum(treatment * np.log(p_null + 1e-10) + (1 - treatment) * np.log(1 - p_null + 1e-10))
 
         # McFadden's pseudo R²
         pseudo_r2 = 1 - (log_likelihood / ll_null)
@@ -307,10 +307,7 @@ class PropensityScoreEstimator:
         overlap_lower = max(np.min(treated_scores), np.min(control_scores))
         overlap_upper = min(np.max(treated_scores), np.max(control_scores))
 
-        coefficients = {
-            name: float(coef)
-            for name, coef in zip(self.feature_names_, self.coefficients_, strict=False)
-        }
+        coefficients = {name: float(coef) for name, coef in zip(self.feature_names_, self.coefficients_, strict=False)}
 
         return PropensityScoreResult(
             scores=scores,
@@ -424,16 +421,10 @@ class PropensityScoreMatcher:
         # Perform matching
         if self.method == "nearest":
             matched_pairs = self._nearest_neighbor_match(
-                treated_idx, control_idx,
-                treated_scores, control_scores,
-                caliper_abs
+                treated_idx, control_idx, treated_scores, control_scores, caliper_abs
             )
         elif self.method == "optimal":
-            matched_pairs = self._optimal_match(
-                treated_idx, control_idx,
-                treated_scores, control_scores,
-                caliper_abs
-            )
+            matched_pairs = self._optimal_match(treated_idx, control_idx, treated_scores, control_scores, caliper_abs)
         else:
             raise ValueError(f"Unknown method: {self.method}")
 
@@ -480,7 +471,7 @@ class PropensityScoreMatcher:
 
             # Find nearest available control
             best_match = None
-            best_distance = float('inf')
+            best_distance = float("inf")
 
             for j in available_controls:
                 distance = abs(t_score - control_scores[j])
@@ -513,11 +504,7 @@ class PropensityScoreMatcher:
 
         # For very large problems, use greedy
         if n_treated * n_control > 1_000_000:
-            return self._nearest_neighbor_match(
-                treated_idx, control_idx,
-                treated_scores, control_scores,
-                caliper
-            )
+            return self._nearest_neighbor_match(treated_idx, control_idx, treated_scores, control_scores, caliper)
 
         # Build distance matrix
         distances = np.abs(treated_scores[:, np.newaxis] - control_scores)
@@ -865,9 +852,9 @@ class BalanceAssessor:
 
         # Handle empty groups
         if len(x_t) == 0 or len(x_c) == 0:
-            return float('nan')
+            return float("nan")
         if np.sum(w_t) == 0 or np.sum(w_c) == 0:
-            return float('nan')
+            return float("nan")
 
         mean_t = np.average(x_t, weights=w_t)
         mean_c = np.average(x_c, weights=w_c)
@@ -897,9 +884,9 @@ class BalanceAssessor:
 
         # Handle empty groups
         if len(x_t) == 0 or len(x_c) == 0:
-            return float('nan')
+            return float("nan")
         if np.sum(w_t) == 0 or np.sum(w_c) == 0:
-            return float('nan')
+            return float("nan")
 
         # Weighted variance
         mean_t = np.average(x_t, weights=w_t)
@@ -909,7 +896,7 @@ class BalanceAssessor:
         var_c = np.average((x_c - mean_c) ** 2, weights=w_c)
 
         if var_c == 0:
-            return float('inf') if var_t > 0 else 1.0
+            return float("inf") if var_t > 0 else 1.0
 
         return float(var_t / var_c)
 
@@ -935,6 +922,7 @@ class BalanceAssessor:
 # =============================================================================
 # Convenience Functions
 # =============================================================================
+
 
 def estimate_propensity_scores(
     df: pd.DataFrame,
@@ -1208,25 +1196,21 @@ def propensity_score_analysis(
         match_result = matcher.match(scores, treatment)
 
         # Create matched sample
-        matched_idx = np.concatenate([
-            match_result.matched_treated_idx,
-            match_result.matched_control_idx
-        ]).astype(int)
+        matched_idx = np.concatenate([match_result.matched_treated_idx, match_result.matched_control_idx]).astype(int)
         X_matched = X.iloc[matched_idx]
         treatment_matched = treatment[matched_idx]
         outcome_matched = outcome[matched_idx]
 
-        balance_after = assessor.assess(
-            X_matched, treatment_matched, feature_names=covariates
-        )
+        balance_after = assessor.assess(X_matched, treatment_matched, feature_names=covariates)
 
         # Treatment effect on matched sample
         treated_outcomes = outcome_matched[treatment_matched == 1]
         control_outcomes = outcome_matched[treatment_matched == 0]
 
         effect = np.mean(treated_outcomes) - np.mean(control_outcomes)
-        se = np.sqrt(np.var(treated_outcomes)/len(treated_outcomes) +
-                     np.var(control_outcomes)/len(control_outcomes))
+        se = np.sqrt(
+            np.var(treated_outcomes) / len(treated_outcomes) + np.var(control_outcomes) / len(control_outcomes)
+        )
 
         method_details = {
             "n_matched_pairs": match_result.n_matched,

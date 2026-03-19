@@ -3,6 +3,7 @@ FastAPI Router - Training endpoints (Redis Queue based)
 
 Jobs are submitted to Redis and processed by the worker container.
 """
+
 from typing import Optional
 
 from fastapi import APIRouter, Header, HTTPException
@@ -53,9 +54,7 @@ async def submit_automl_job(
 
         # 2. Validate target column exists
         if not dataset.has_column(request.target_column):
-            raise ValueError(
-                f"Target column '{request.target_column}' not found in dataset"
-            )
+            raise ValueError(f"Target column '{request.target_column}' not found in dataset")
 
         # 3. Create training config
         config = TrainingConfig.for_automl(
@@ -122,9 +121,7 @@ async def submit_specific_train_job(
 
         # 2. Validate target column
         if not dataset.has_column(request.target_column):
-            raise ValueError(
-                f"Target column '{request.target_column}' not found in dataset"
-            )
+            raise ValueError(f"Target column '{request.target_column}' not found in dataset")
 
         # 3. Create training config
         config = TrainingConfig.for_specific_algorithms(
@@ -194,9 +191,7 @@ async def submit_compare_job(
 
         # 2. Validate target column
         if not dataset.has_column(request.target_column):
-            raise ValueError(
-                f"Target column '{request.target_column}' not found in dataset"
-            )
+            raise ValueError(f"Target column '{request.target_column}' not found in dataset")
 
         # 3. Create training config
         config = TrainingConfig.for_comparison(

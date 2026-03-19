@@ -4,6 +4,7 @@ Repository Interfaces - Domain Layer
 Abstract interfaces that define how domain objects are persisted.
 Actual implementations are in the Infrastructure layer.
 """
+
 from abc import ABC, abstractmethod
 from typing import List, Optional
 

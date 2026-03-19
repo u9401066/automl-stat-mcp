@@ -1,6 +1,7 @@
 """
 Use Cases - Application Layer Business Logic
 """
+
 from typing import List, Optional
 
 from ..domain.models import (
@@ -41,9 +42,7 @@ class RegisterDatasetUseCase:
             raise ValueError(f"File not found: {request.minio_path}")
 
         # 2. Validate CSV and get metadata
-        is_valid, columns, row_count = await self.file_storage.validate_csv(
-            request.minio_path
-        )
+        is_valid, columns, row_count = await self.file_storage.validate_csv(request.minio_path)
         if not is_valid:
             raise ValueError(f"Invalid CSV file: {request.minio_path}")
 
@@ -85,11 +84,7 @@ class ListDatasetsUseCase:
     def __init__(self, dataset_repo: DatasetRepository):
         self.dataset_repo = dataset_repo
 
-    async def execute(
-        self,
-        user_id: str,
-        session_id: Optional[str] = None
-    ) -> List[DatasetResponse]:
+    async def execute(self, user_id: str, session_id: Optional[str] = None) -> List[DatasetResponse]:
         datasets = await self.dataset_repo.find_by_user(user_id, session_id)
 
         return [
@@ -131,9 +126,7 @@ class SubmitAutoMLJobUseCase:
 
         # 2. Validate target column exists
         if not dataset.has_column(request.target_column):
-            raise ValueError(
-                f"Target column '{request.target_column}' not found in dataset"
-            )
+            raise ValueError(f"Target column '{request.target_column}' not found in dataset")
 
         # 3. Create training config
         config = TrainingConfig.for_automl(
@@ -191,9 +184,7 @@ class SubmitSpecificTrainJobUseCase:
 
         # 2. Validate target column
         if not dataset.has_column(request.target_column):
-            raise ValueError(
-                f"Target column '{request.target_column}' not found in dataset"
-            )
+            raise ValueError(f"Target column '{request.target_column}' not found in dataset")
 
         # 3. Create training config
         config = TrainingConfig.for_specific_algorithms(
@@ -250,9 +241,7 @@ class SubmitCompareJobUseCase:
 
         # 2. Validate target column
         if not dataset.has_column(request.target_column):
-            raise ValueError(
-                f"Target column '{request.target_column}' not found in dataset"
-            )
+            raise ValueError(f"Target column '{request.target_column}' not found in dataset")
 
         # 3. Validate at least 2 algorithms for comparison
         if len(request.algorithms) < 2:

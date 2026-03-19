@@ -7,6 +7,7 @@ Contains:
     - MissingValueAnalysis: Complete missing value analysis result
     - analyze_missing_values: Main analysis function
 """
+
 import logging
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
@@ -23,6 +24,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class MissingValueAnalysis:
     """Analysis of missing value patterns."""
+
     total_cells: int
     total_missing: int
     missing_pct: float
@@ -175,7 +177,7 @@ def _analyze_missing_correlations(
     cols_with_missing = missing_indicator.columns[missing_indicator.sum() > 0].tolist()
 
     for i, col1 in enumerate(cols_with_missing):
-        for col2 in cols_with_missing[i+1:]:
+        for col2 in cols_with_missing[i + 1 :]:
             try:
                 # Phi coefficient for binary variables
                 contingency = pd.crosstab(missing_indicator[col1], missing_indicator[col2])
@@ -185,13 +187,15 @@ def _analyze_missing_correlations(
                     phi = np.sqrt(chi2 / n) if n > 0 else 0
 
                     if abs(phi) > 0.1:  # Only report meaningful correlations
-                        correlations.append({
-                            "col1": col1,
-                            "col2": col2,
-                            "phi_coefficient": safe_round(phi, 4),
-                            "p_value": safe_round(p, 4),
-                            "significant": p < alpha,
-                        })
+                        correlations.append(
+                            {
+                                "col1": col1,
+                                "col2": col2,
+                                "phi_coefficient": safe_round(phi, 4),
+                                "p_value": safe_round(p, 4),
+                                "significant": p < alpha,
+                            }
+                        )
             except Exception:
                 pass
 
@@ -214,7 +218,7 @@ def _littles_mcar_test(df: pd.DataFrame, alpha: float) -> Optional[Dict]:
             return None
 
         # Create missing pattern groups
-        pattern_col = df[cols_with_missing].isna().astype(str).agg(''.join, axis=1)
+        pattern_col = df[cols_with_missing].isna().astype(str).agg("".join, axis=1)
         unique_patterns = pattern_col.unique()
 
         if len(unique_patterns) < 2:
@@ -240,7 +244,7 @@ def _littles_mcar_test(df: pd.DataFrame, alpha: float) -> Optional[Dict]:
                     var = pattern_vars.get(pattern, 1)
                     n = pattern_ns[pattern]
                     if var > 0:
-                        chi2_stats.append((diff ** 2) * n / var)
+                        chi2_stats.append((diff**2) * n / var)
 
         if not chi2_stats:
             return None
@@ -293,7 +297,7 @@ def _check_mar_pattern(
                 continue
 
             try:
-                stat, p = stats.mannwhitneyu(present, absent, alternative='two-sided')
+                stat, p = stats.mannwhitneyu(present, absent, alternative="two-sided")
                 if p < alpha:
                     mean_diff = np.mean(absent) - np.mean(present)
                     evidence.append(

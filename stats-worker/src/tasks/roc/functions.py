@@ -14,6 +14,7 @@ Contains:
     - threshold_analysis: Comprehensive threshold analysis
     - generate_publication_report: Publication-ready report
 """
+
 import logging
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
@@ -36,6 +37,7 @@ try:
         plot_threshold_analysis,
     )
     from src.visualization.storage import save_figure_to_minio
+
     HAS_VISUALIZATION = True
 except ImportError:
     HAS_VISUALIZATION = False
@@ -98,13 +100,16 @@ def compute_roc_curve(
                 job_id=job_id,
             )
 
-            output["visualizations"] = [{
-                "type": "roc_curve",
-                "url": url,
-                "title": f"ROC Curve - {model_name} (AUC={result.auc:.3f})",
-            }]
+            output["visualizations"] = [
+                {
+                    "type": "roc_curve",
+                    "url": url,
+                    "title": f"ROC Curve - {model_name} (AUC={result.auc:.3f})",
+                }
+            ]
 
             import matplotlib.pyplot as plt
+
             plt.close(fig)
 
         except Exception as e:
@@ -186,7 +191,7 @@ def compare_roc_curves(
                 comparison_result={
                     "difference": float(result.difference),
                     "p_value": float(result.p_value),
-                }
+                },
             )
 
             # Save to MinIO
@@ -197,13 +202,16 @@ def compare_roc_curves(
                 job_id=job_id,
             )
 
-            output["visualizations"] = [{
-                "type": "roc_comparison",
-                "url": url,
-                "title": f"ROC Curve Comparison: {model1_name} vs {model2_name}",
-            }]
+            output["visualizations"] = [
+                {
+                    "type": "roc_comparison",
+                    "url": url,
+                    "title": f"ROC Curve Comparison: {model1_name} vs {model2_name}",
+                }
+            ]
 
             import matplotlib.pyplot as plt
+
             plt.close(fig)
 
         except Exception as e:
@@ -460,48 +468,56 @@ def full_classifier_evaluation(
             fig_roc = plot_roc_curve(roc_result.to_dict())
             if user_id and job_id:
                 url = save_figure_to_minio(fig_roc, user_id, job_id, "roc_curve.png")
-                visualizations.append({
-                    "type": "roc_curve",
-                    "url": url,
-                    "title": "ROC Curve",
-                    "description": f"AUC = {roc_result.auc:.3f} (95% CI: {roc_result.auc_ci_lower:.3f}-{roc_result.auc_ci_upper:.3f})",
-                })
+                visualizations.append(
+                    {
+                        "type": "roc_curve",
+                        "url": url,
+                        "title": "ROC Curve",
+                        "description": f"AUC = {roc_result.auc:.3f} (95% CI: {roc_result.auc_ci_lower:.3f}-{roc_result.auc_ci_upper:.3f})",
+                    }
+                )
             plt.close(fig_roc)
 
             # PR curve
             fig_pr = plot_pr_curve(pr_result.to_dict())
             if user_id and job_id:
                 url = save_figure_to_minio(fig_pr, user_id, job_id, "pr_curve.png")
-                visualizations.append({
-                    "type": "pr_curve",
-                    "url": url,
-                    "title": "Precision-Recall Curve",
-                    "description": f"AUC-PR = {pr_result.auc_pr:.3f}",
-                })
+                visualizations.append(
+                    {
+                        "type": "pr_curve",
+                        "url": url,
+                        "title": "Precision-Recall Curve",
+                        "description": f"AUC-PR = {pr_result.auc_pr:.3f}",
+                    }
+                )
             plt.close(fig_pr)
 
             # Calibration curve
             fig_cal = plot_calibration_curve(cal_result.to_dict())
             if user_id and job_id:
                 url = save_figure_to_minio(fig_cal, user_id, job_id, "calibration_curve.png")
-                visualizations.append({
-                    "type": "calibration_curve",
-                    "url": url,
-                    "title": "Calibration Curve",
-                    "description": f"Brier score = {cal_result.brier_score:.3f}",
-                })
+                visualizations.append(
+                    {
+                        "type": "calibration_curve",
+                        "url": url,
+                        "title": "Calibration Curve",
+                        "description": f"Brier score = {cal_result.brier_score:.3f}",
+                    }
+                )
             plt.close(fig_cal)
 
             # Threshold analysis
             fig_thresh = plot_threshold_analysis(roc_result.to_dict())
             if user_id and job_id:
                 url = save_figure_to_minio(fig_thresh, user_id, job_id, "threshold_analysis.png")
-                visualizations.append({
-                    "type": "threshold_analysis",
-                    "url": url,
-                    "title": "Threshold Analysis",
-                    "description": "Sensitivity, specificity, PPV, NPV vs threshold",
-                })
+                visualizations.append(
+                    {
+                        "type": "threshold_analysis",
+                        "url": url,
+                        "title": "Threshold Analysis",
+                        "description": "Sensitivity, specificity, PPV, NPV vs threshold",
+                    }
+                )
             plt.close(fig_thresh)
 
             # Confusion matrix at optimal threshold
@@ -516,12 +532,14 @@ def full_classifier_evaluation(
             fig_cm = plot_confusion_matrix(cm_dict)
             if user_id and job_id:
                 url = save_figure_to_minio(fig_cm, user_id, job_id, "confusion_matrix.png")
-                visualizations.append({
-                    "type": "confusion_matrix",
-                    "url": url,
-                    "title": "Confusion Matrix",
-                    "description": f"At optimal threshold = {optimal_thresh_val:.2f}",
-                })
+                visualizations.append(
+                    {
+                        "type": "confusion_matrix",
+                        "url": url,
+                        "title": "Confusion Matrix",
+                        "description": f"At optimal threshold = {optimal_thresh_val:.2f}",
+                    }
+                )
             plt.close(fig_cm)
 
             result["visualizations"] = visualizations
@@ -618,17 +636,13 @@ def compare_multiple_models(
         }
 
     # Rank models by AUC
-    model_rankings_list = sorted(
-        individual_aucs.items(),
-        key=lambda x: x[1]["auc"],
-        reverse=True
-    )
+    model_rankings_list = sorted(individual_aucs.items(), key=lambda x: x[1]["auc"], reverse=True)
     model_rankings = [
         {
             "rank": i + 1,
             "model": name,
             "auc": data["auc"],
-            "auc_ci": f"[{data['auc_ci_lower']:.3f}, {data['auc_ci_upper']:.3f}]"
+            "auc_ci": f"[{data['auc_ci_lower']:.3f}, {data['auc_ci_upper']:.3f}]",
         }
         for i, (name, data) in enumerate(model_rankings_list)
     ]
@@ -647,17 +661,19 @@ def compare_multiple_models(
 
             pair_result = delong.compare(y_true_arr, scores1_arr, scores2_arr)
 
-            pairwise_comparisons.append({
-                "model1": name1,
-                "model2": name2,
-                "auc1": float(pair_result.auc1),
-                "auc2": float(pair_result.auc2),
-                "difference": float(pair_result.difference),
-                "se_difference": float(pair_result.se_difference),
-                "z_statistic": float(pair_result.z_statistic),
-                "p_value": float(pair_result.p_value),
-                "p_value_raw": float(pair_result.p_value),
-            })
+            pairwise_comparisons.append(
+                {
+                    "model1": name1,
+                    "model2": name2,
+                    "auc1": float(pair_result.auc1),
+                    "auc2": float(pair_result.auc2),
+                    "difference": float(pair_result.difference),
+                    "se_difference": float(pair_result.se_difference),
+                    "z_statistic": float(pair_result.z_statistic),
+                    "p_value": float(pair_result.p_value),
+                    "p_value_raw": float(pair_result.p_value),
+                }
+            )
             p_values.append(pair_result.p_value)
 
     # Apply multiple comparison correction
@@ -702,7 +718,9 @@ def compare_multiple_models(
         comp["significant"] = bool(adjusted_p_values[i] < adjusted_alpha)
 
     # Create comparison matrix
-    comparison_matrix: Dict[str, Dict[str, Optional[float]]] = {name: dict.fromkeys(model_names) for name in model_names}
+    comparison_matrix: Dict[str, Dict[str, Optional[float]]] = {
+        name: dict.fromkeys(model_names) for name in model_names
+    }
     for comp in pairwise_comparisons:
         comparison_matrix[str(comp["model1"])][str(comp["model2"])] = comp["p_value_adjusted"]
         comparison_matrix[str(comp["model2"])][str(comp["model1"])] = comp["p_value_adjusted"]
@@ -715,8 +733,9 @@ def compare_multiple_models(
     best_significantly_better = False
     if second_best_entry:
         for comp in pairwise_comparisons:
-            if (comp["model1"] == best_model_entry["model"] and comp["model2"] == second_best_entry["model"]) or \
-               (comp["model2"] == best_model_entry["model"] and comp["model1"] == second_best_entry["model"]):
+            if (comp["model1"] == best_model_entry["model"] and comp["model2"] == second_best_entry["model"]) or (
+                comp["model2"] == best_model_entry["model"] and comp["model1"] == second_best_entry["model"]
+            ):
                 best_significantly_better = bool(comp["significant"])
                 break
 
@@ -749,7 +768,9 @@ def compare_multiple_models(
 
     if best_significantly_better:
         interpretation_lines.append("")
-        interpretation_lines.append(f"✅ **{best_model_entry['model']}** is significantly better than the second-best model.")
+        interpretation_lines.append(
+            f"✅ **{best_model_entry['model']}** is significantly better than the second-best model."
+        )
     else:
         interpretation_lines.append("")
         interpretation_lines.append("⚠️ Top models are not significantly different - consider other factors.")
@@ -788,9 +809,7 @@ def compare_multiple_models(
 
             # Create multi-model comparison plot
             fig = plot_roc_curves_comparison(
-                roc_results,
-                labels=model_names_list,
-                title=f"Multi-Model ROC Comparison ({n_models} models)"
+                roc_results, labels=model_names_list, title=f"Multi-Model ROC Comparison ({n_models} models)"
             )
 
             # Save to MinIO
@@ -801,13 +820,16 @@ def compare_multiple_models(
                 job_id=job_id,
             )
 
-            output["visualizations"] = [{
-                "type": "multi_model_roc_comparison",
-                "url": url,
-                "title": f"ROC Comparison: {n_models} Models",
-            }]
+            output["visualizations"] = [
+                {
+                    "type": "multi_model_roc_comparison",
+                    "url": url,
+                    "title": f"ROC Comparison: {n_models} Models",
+                }
+            ]
 
             import matplotlib.pyplot as plt
+
             plt.close(fig)
 
         except Exception as e:
@@ -890,33 +912,35 @@ def threshold_analysis(
         if fp > 0 and fn > 0:
             dor = (tp * tn) / (fp * fn)
         else:
-            dor = float('inf') if tp > 0 and tn > 0 else 0
+            dor = float("inf") if tp > 0 and tn > 0 else 0
 
         # Likelihood ratios
-        lr_pos = sensitivity / (1 - specificity) if specificity < 1 else float('inf')
-        lr_neg = (1 - sensitivity) / specificity if specificity > 0 else float('inf')
+        lr_pos = sensitivity / (1 - specificity) if specificity < 1 else float("inf")
+        lr_neg = (1 - sensitivity) / specificity if specificity > 0 else float("inf")
 
         # Number needed to screen/diagnose
         if ppv > 0:
             nns = 1 / ppv  # Number needed to screen
         else:
-            nns = float('inf')
+            nns = float("inf")
 
-        threshold_table.append({
-            "threshold": float(thresh),
-            "sensitivity": float(sensitivity),
-            "specificity": float(specificity),
-            "ppv": float(ppv),
-            "npv": float(npv),
-            "accuracy": float(accuracy),
-            "f1": float(f1),
-            "youden_j": float(youden_j),
-            "lr_positive": float(lr_pos) if lr_pos != float('inf') else None,
-            "lr_negative": float(lr_neg) if lr_neg != float('inf') else None,
-            "dor": float(dor) if dor != float('inf') else None,
-            "nns": float(nns) if nns != float('inf') else None,
-            "confusion_matrix": {"tp": int(tp), "tn": int(tn), "fp": int(fp), "fn": int(fn)},
-        })
+        threshold_table.append(
+            {
+                "threshold": float(thresh),
+                "sensitivity": float(sensitivity),
+                "specificity": float(specificity),
+                "ppv": float(ppv),
+                "npv": float(npv),
+                "accuracy": float(accuracy),
+                "f1": float(f1),
+                "youden_j": float(youden_j),
+                "lr_positive": float(lr_pos) if lr_pos != float("inf") else None,
+                "lr_negative": float(lr_neg) if lr_neg != float("inf") else None,
+                "dor": float(dor) if dor != float("inf") else None,
+                "nns": float(nns) if nns != float("inf") else None,
+                "confusion_matrix": {"tp": int(tp), "tn": int(tn), "fp": int(fp), "fn": int(fn)},
+            }
+        )
 
     # Find threshold for target metric
     target_threshold = None
@@ -953,10 +977,14 @@ def threshold_analysis(
             }
         else:
             # Target not achievable
-            best_row = max(threshold_table, key=lambda x: float(cast(float, x[metric_key]) if x[metric_key] is not None else 0))
+            best_row = max(
+                threshold_table, key=lambda x: float(cast(float, x[metric_key]) if x[metric_key] is not None else 0)
+            )
             target_threshold = {
                 "threshold": float(cast(float, best_row["threshold"])),
-                "achieved_value": float(cast(float, best_row[metric_key])) if best_row[metric_key] is not None else None,
+                "achieved_value": float(cast(float, best_row[metric_key]))
+                if best_row[metric_key] is not None
+                else None,
                 "target_metric": target_metric,
                 "target_value": target_value,
                 "target_achieved": False,
@@ -972,11 +1000,15 @@ def threshold_analysis(
 
     # High sensitivity (>= 0.90) with best specificity
     high_sens_candidates = [r for r in threshold_table if float(cast(float, r["sensitivity"])) >= 0.90]
-    high_sens_optimal = max(high_sens_candidates, key=lambda x: float(cast(float, x["specificity"]))) if high_sens_candidates else None
+    high_sens_optimal = (
+        max(high_sens_candidates, key=lambda x: float(cast(float, x["specificity"]))) if high_sens_candidates else None
+    )
 
     # High specificity (>= 0.90) with best sensitivity
     high_spec_candidates = [r for r in threshold_table if float(cast(float, r["specificity"])) >= 0.90]
-    high_spec_optimal = max(high_spec_candidates, key=lambda x: float(cast(float, x["sensitivity"]))) if high_spec_candidates else None
+    high_spec_optimal = (
+        max(high_spec_candidates, key=lambda x: float(cast(float, x["sensitivity"]))) if high_spec_candidates else None
+    )
 
     recommended_thresholds = {
         "youden_optimal": {
@@ -1024,28 +1056,34 @@ def threshold_analysis(
     ]
 
     if high_sens_optimal:
-        interpretation_lines.extend([
-            f"**Screening Test** (≥90% sensitivity): threshold = {high_sens_optimal['threshold']:.2f}",
-            f"  - Sensitivity: {high_sens_optimal['sensitivity']:.1%}, Specificity: {high_sens_optimal['specificity']:.1%}",
-            f"  - NPV: {high_sens_optimal['npv']:.1%} (negative test rules out disease)",
-            "",
-        ])
+        interpretation_lines.extend(
+            [
+                f"**Screening Test** (≥90% sensitivity): threshold = {high_sens_optimal['threshold']:.2f}",
+                f"  - Sensitivity: {high_sens_optimal['sensitivity']:.1%}, Specificity: {high_sens_optimal['specificity']:.1%}",
+                f"  - NPV: {high_sens_optimal['npv']:.1%} (negative test rules out disease)",
+                "",
+            ]
+        )
 
     if high_spec_optimal:
-        interpretation_lines.extend([
-            f"**Confirmatory Test** (≥90% specificity): threshold = {high_spec_optimal['threshold']:.2f}",
-            f"  - Sensitivity: {high_spec_optimal['sensitivity']:.1%}, Specificity: {high_spec_optimal['specificity']:.1%}",
-            f"  - PPV: {high_spec_optimal['ppv']:.1%} (positive test rules in disease)",
-            "",
-        ])
+        interpretation_lines.extend(
+            [
+                f"**Confirmatory Test** (≥90% specificity): threshold = {high_spec_optimal['threshold']:.2f}",
+                f"  - Sensitivity: {high_spec_optimal['sensitivity']:.1%}, Specificity: {high_spec_optimal['specificity']:.1%}",
+                f"  - PPV: {high_spec_optimal['ppv']:.1%} (positive test rules in disease)",
+                "",
+            ]
+        )
 
     if target_threshold:
-        interpretation_lines.extend([
-            "### Your Target Analysis",
-            f"Target: {target_metric} ≥ {target_value:.1%}",
-            f"Recommended threshold: {target_threshold['threshold']:.2f}",
-            "",
-        ])
+        interpretation_lines.extend(
+            [
+                "### Your Target Analysis",
+                f"Target: {target_metric} ≥ {target_value:.1%}",
+                f"Recommended threshold: {target_threshold['threshold']:.2f}",
+                "",
+            ]
+        )
 
     return {
         "status": "success",
@@ -1141,7 +1179,9 @@ def generate_publication_report(
     f1 = float(2 * tp / (2 * tp + fp + fn)) if (2 * tp + fp + fn) > 0 else 0.0
 
     # Bootstrap CIs for sensitivity, specificity, PPV, NPV
-    def bootstrap_ci(yt_boot: np.ndarray, ys_boot: np.ndarray, metric_func: Any, n_bootstrap: int = 1000, ci: float = 0.95) -> Tuple[Optional[float], Optional[float]]:
+    def bootstrap_ci(
+        yt_boot: np.ndarray, ys_boot: np.ndarray, metric_func: Any, n_bootstrap: int = 1000, ci: float = 0.95
+    ) -> Tuple[Optional[float], Optional[float]]:
         """Compute bootstrap CI for a metric."""
         n_val = len(yt_boot)
         metrics = []
@@ -1213,7 +1253,7 @@ def generate_publication_report(
     else:
         thresh_desc = threshold_method
 
-    results_text = f"""{model_name} achieved an area under the receiver operating characteristic curve (AUC) of {auc_text} for predicting {outcome_name}. Using {thresh_desc}, the optimal probability threshold was {optimal_thresh:.{dp}f}, yielding a sensitivity of {sens_text} and specificity of {spec_text}. At this threshold, the positive predictive value was {ppv:.{dp}f} and negative predictive value was {npv:.{dp}f}. The model showed {'good' if cal_result.well_calibrated else 'suboptimal'} calibration (Hosmer-Lemeshow p{'>' if cal_result.hosmer_lemeshow_pvalue > 0.05 else '<'}0.05, Brier score={cal_result.brier_score:.3f})."""
+    results_text = f"""{model_name} achieved an area under the receiver operating characteristic curve (AUC) of {auc_text} for predicting {outcome_name}. Using {thresh_desc}, the optimal probability threshold was {optimal_thresh:.{dp}f}, yielding a sensitivity of {sens_text} and specificity of {spec_text}. At this threshold, the positive predictive value was {ppv:.{dp}f} and negative predictive value was {npv:.{dp}f}. The model showed {"good" if cal_result.well_calibrated else "suboptimal"} calibration (Hosmer-Lemeshow p{">" if cal_result.hosmer_lemeshow_pvalue > 0.05 else "<"}0.05, Brier score={cal_result.brier_score:.3f})."""
 
     methods_text = f"""We evaluated the discriminative ability of the prediction model using the area under the receiver operating characteristic curve (AUC) with 95% confidence intervals calculated using the DeLong method. Model calibration was assessed using the Hosmer-Lemeshow goodness-of-fit test and Brier score. The optimal probability threshold was determined using {thresh_desc}. Sensitivity, specificity, positive predictive value, and negative predictive value were calculated at the optimal threshold with 95% confidence intervals from 500 bootstrap resamples. Statistical analyses were performed using Python with scipy and numpy packages."""
 
@@ -1223,12 +1263,32 @@ def generate_publication_report(
         "metrics": [
             {"metric": "Sample size", "value": f"n = {n}", "ci": ""},
             {"metric": "Events", "value": f"n = {n_pos} ({prevalence:.1%})", "ci": ""},
-            {"metric": "AUC", "value": f"{roc_result.auc:.{dp}f}", "ci": f"{roc_result.auc_ci_lower:.{dp}f}-{roc_result.auc_ci_upper:.{dp}f}"},
+            {
+                "metric": "AUC",
+                "value": f"{roc_result.auc:.{dp}f}",
+                "ci": f"{roc_result.auc_ci_lower:.{dp}f}-{roc_result.auc_ci_upper:.{dp}f}",
+            },
             {"metric": "Optimal threshold", "value": f"{optimal_thresh:.{dp}f}", "ci": ""},
-            {"metric": "Sensitivity", "value": f"{sensitivity:.{dp}f}", "ci": f"{sens_ci[0]:.{dp}f}-{sens_ci[1]:.{dp}f}" if sens_ci[0] else ""},
-            {"metric": "Specificity", "value": f"{specificity:.{dp}f}", "ci": f"{spec_ci[0]:.{dp}f}-{spec_ci[1]:.{dp}f}" if spec_ci[0] else ""},
-            {"metric": "PPV", "value": f"{ppv:.{dp}f}", "ci": f"{ppv_ci[0]:.{dp}f}-{ppv_ci[1]:.{dp}f}" if ppv_ci[0] else ""},
-            {"metric": "NPV", "value": f"{npv:.{dp}f}", "ci": f"{npv_ci[0]:.{dp}f}-{npv_ci[1]:.{dp}f}" if npv_ci[0] else ""},
+            {
+                "metric": "Sensitivity",
+                "value": f"{sensitivity:.{dp}f}",
+                "ci": f"{sens_ci[0]:.{dp}f}-{sens_ci[1]:.{dp}f}" if sens_ci[0] else "",
+            },
+            {
+                "metric": "Specificity",
+                "value": f"{specificity:.{dp}f}",
+                "ci": f"{spec_ci[0]:.{dp}f}-{spec_ci[1]:.{dp}f}" if spec_ci[0] else "",
+            },
+            {
+                "metric": "PPV",
+                "value": f"{ppv:.{dp}f}",
+                "ci": f"{ppv_ci[0]:.{dp}f}-{ppv_ci[1]:.{dp}f}" if ppv_ci[0] else "",
+            },
+            {
+                "metric": "NPV",
+                "value": f"{npv:.{dp}f}",
+                "ci": f"{npv_ci[0]:.{dp}f}-{npv_ci[1]:.{dp}f}" if npv_ci[0] else "",
+            },
             {"metric": "Accuracy", "value": f"{accuracy:.{dp}f}", "ci": ""},
             {"metric": "F1 score", "value": f"{f1:.{dp}f}", "ci": ""},
             {"metric": "Brier score", "value": f"{cal_result.brier_score:.3f}", "ci": ""},
@@ -1239,11 +1299,13 @@ def generate_publication_report(
     # Figure data for ROC curve
     roc_curve_data = []
     for point in roc_result.curve_points:
-        roc_curve_data.append({
-            "fpr": point.fpr,
-            "tpr": point.tpr,
-            "threshold": point.threshold,
-        })
+        roc_curve_data.append(
+            {
+                "fpr": point.fpr,
+                "tpr": point.tpr,
+                "threshold": point.threshold,
+            }
+        )
 
     figure_data = {
         "title": f"Figure X. Receiver operating characteristic curve for {model_name}",

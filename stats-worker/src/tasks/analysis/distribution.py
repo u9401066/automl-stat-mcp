@@ -9,6 +9,7 @@ Contains:
     - compare_distributions: Main comparison function
     - ks_test_two_samples: Kolmogorov-Smirnov test
 """
+
 import logging
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
@@ -27,6 +28,7 @@ try:
         plot_group_comparison,
     )
     from src.visualization.storage import save_figure_to_minio
+
     HAS_VISUALIZATION = True
 except ImportError:
     HAS_VISUALIZATION = False
@@ -36,6 +38,7 @@ except ImportError:
 @dataclass
 class DistributionComparisonResult:
     """Result of distribution comparison test."""
+
     test_name: str
     statistic: float
     p_value: float
@@ -55,6 +58,7 @@ class DistributionComparisonResult:
 @dataclass
 class GroupComparisonResult:
     """Result of group comparison analysis."""
+
     groups: List[str]
     n_groups: int
 
@@ -189,7 +193,9 @@ def compare_distributions(
         logger.warning(f"Levene's test failed: {e}")
 
     # Main comparison test
-    use_parametric = all_normal and bool(result.variance_test and result.variance_test.details.get("equal_variance", False))
+    use_parametric = all_normal and bool(
+        result.variance_test and result.variance_test.details.get("equal_variance", False)
+    )
 
     group_arrays = list(group_data.values())
 
@@ -201,15 +207,17 @@ def compare_distributions(
             stat, p = stats.ttest_ind(g1, g2)
             test_name = "Independent t-test"
             # Cohen's d
-            pooled_std = np.sqrt(((len(g1)-1)*np.var(g1, ddof=1) + (len(g2)-1)*np.var(g2, ddof=1)) / (len(g1)+len(g2)-2))
+            pooled_std = np.sqrt(
+                ((len(g1) - 1) * np.var(g1, ddof=1) + (len(g2) - 1) * np.var(g2, ddof=1)) / (len(g1) + len(g2) - 2)
+            )
             effect_size = abs(np.mean(g1) - np.mean(g2)) / pooled_std if pooled_std > 0 else 0
             effect_name = "Cohen's d"
         else:
-            stat, p = stats.mannwhitneyu(g1, g2, alternative='two-sided')
+            stat, p = stats.mannwhitneyu(g1, g2, alternative="two-sided")
             test_name = "Mann-Whitney U"
             # Rank-biserial correlation
             n1, n2 = len(g1), len(g2)
-            effect_size = 1 - (2*stat)/(n1*n2)
+            effect_size = 1 - (2 * stat) / (n1 * n2)
             effect_name = "rank-biserial r"
 
         result.main_test = DistributionComparisonResult(
@@ -221,7 +229,7 @@ def compare_distributions(
                 "effect_size": safe_round(effect_size, 4),
                 "effect_size_name": effect_name,
                 "effect_interpretation": _interpret_effect(effect_size, effect_name),
-            }
+            },
         )
 
     else:
@@ -231,8 +239,8 @@ def compare_distributions(
             test_name = "One-way ANOVA"
             # Eta-squared
             total_mean = np.mean([x for arr in group_arrays for x in arr])
-            ss_between = sum(len(arr) * (np.mean(arr) - total_mean)**2 for arr in group_arrays)
-            ss_total = sum((x - total_mean)**2 for arr in group_arrays for x in arr)
+            ss_between = sum(len(arr) * (np.mean(arr) - total_mean) ** 2 for arr in group_arrays)
+            ss_total = sum((x - total_mean) ** 2 for arr in group_arrays for x in arr)
             effect_size = ss_between / ss_total if ss_total > 0 else 0
             effect_name = "η² (eta-squared)"
         else:
@@ -252,7 +260,7 @@ def compare_distributions(
                 "effect_size": safe_round(effect_size, 4),
                 "effect_size_name": effect_name,
                 "effect_interpretation": _interpret_effect(effect_size, effect_name),
-            }
+            },
         )
 
         # Post-hoc tests if significant
@@ -281,25 +289,34 @@ def compare_distributions(
                 test_name = result.main_test.test_name
                 p_value = result.main_test.p_value
                 stat = result.main_test.statistic
-                effect = result.main_test.details.get('effect_size', 0)
-                effect_name = result.main_test.details.get('effect_size_name', 'effect size')
+                effect = result.main_test.details.get("effect_size", 0)
+                effect_name = result.main_test.details.get("effect_size_name", "effect size")
 
                 sig = "***" if p_value < 0.001 else "**" if p_value < 0.01 else "*" if p_value < 0.05 else "ns"
                 annotation = f"{test_name}\nstat = {stat:.3f}, p = {p_value:.4f} {sig}\n{effect_name} = {effect:.3f}"
 
-                ax.text(0.95, 0.95, annotation, transform=ax.transAxes,
-                        ha='right', va='top', fontsize=10,
-                        bbox={"boxstyle": 'round', "facecolor": 'white', "alpha": 0.8})
+                ax.text(
+                    0.95,
+                    0.95,
+                    annotation,
+                    transform=ax.transAxes,
+                    ha="right",
+                    va="top",
+                    fontsize=10,
+                    bbox={"boxstyle": "round", "facecolor": "white", "alpha": 0.8},
+                )
 
             # Save to MinIO
             url = save_figure_to_minio(fig, "group_comparison.png", user_id, job_id)
 
             # Store visualization info in result
-            result.visualizations = [{
-                "type": "boxplot",
-                "url": url,
-                "title": f"{numeric_col} by {group_col}",
-            }]
+            result.visualizations = [
+                {
+                    "type": "boxplot",
+                    "url": url,
+                    "title": f"{numeric_col} by {group_col}",
+                }
+            ]
 
             plt.close(fig)
 
@@ -335,7 +352,7 @@ def ks_test_two_samples(
         details={
             "n1": len(sample1),
             "n2": len(sample2),
-        }
+        },
     )
 
 
@@ -381,7 +398,7 @@ def _compute_post_hoc(
     corrected_alpha = alpha / n_comparisons if n_comparisons > 0 else alpha
 
     for i, g1 in enumerate(groups):
-        for g2 in groups[i+1:]:
+        for g2 in groups[i + 1 :]:
             data1, data2 = group_data[g1], group_data[g2]
 
             try:
@@ -389,19 +406,21 @@ def _compute_post_hoc(
                     stat, p = stats.ttest_ind(data1, data2)
                     test = "t-test"
                 else:
-                    stat, p = stats.mannwhitneyu(data1, data2, alternative='two-sided')
+                    stat, p = stats.mannwhitneyu(data1, data2, alternative="two-sided")
                     test = "Mann-Whitney U"
 
-                post_hoc.append({
-                    "group1": g1,
-                    "group2": g2,
-                    "test": test,
-                    "statistic": safe_round(stat, 4),
-                    "p_value": safe_round(p, 4),
-                    "p_adjusted": safe_round(min(p * n_comparisons, 1.0), 4),  # Bonferroni
-                    "significant": p < corrected_alpha,
-                    "mean_diff": safe_round(np.mean(data1) - np.mean(data2), 4),
-                })
+                post_hoc.append(
+                    {
+                        "group1": g1,
+                        "group2": g2,
+                        "test": test,
+                        "statistic": safe_round(stat, 4),
+                        "p_value": safe_round(p, 4),
+                        "p_adjusted": safe_round(min(p * n_comparisons, 1.0), 4),  # Bonferroni
+                        "significant": p < corrected_alpha,
+                        "mean_diff": safe_round(np.mean(data1) - np.mean(data2), 4),
+                    }
+                )
             except Exception as e:
                 logger.warning(f"Post-hoc {g1} vs {g2} failed: {e}")
 

@@ -1,6 +1,7 @@
 """
 FastAPI Router - Dataset endpoints
 """
+
 import io
 import uuid
 from typing import List, Optional
@@ -91,7 +92,7 @@ async def upload_dataset(
 
     try:
         # Upload content to MinIO
-        csv_bytes = request.csv_content.encode('utf-8')
+        csv_bytes = request.csv_content.encode("utf-8")
         await container.file_storage.upload_content(
             path=minio_path,
             content=io.BytesIO(csv_bytes),

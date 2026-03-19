@@ -10,6 +10,7 @@ Supports:
 
 This runs in the official AutoGluon container - no need to maintain AutoGluon installation.
 """
+
 import asyncio
 import json
 import logging
@@ -26,8 +27,7 @@ from autogluon.tabular import TabularPredictor
 from minio import Minio
 
 logging.basicConfig(
-    level=os.environ.get("LOG_LEVEL", "INFO"),
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=os.environ.get("LOG_LEVEL", "INFO"), format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -41,6 +41,7 @@ def detect_gpu() -> Tuple[bool, str]:
     """
     try:
         import torch
+
         if torch.cuda.is_available():
             gpu_count = torch.cuda.device_count()
             gpu_name = torch.cuda.get_device_name(0) if gpu_count > 0 else "Unknown"
@@ -217,7 +218,7 @@ class AutoGluonWorker:
                     "model_minio_path": model_minio_path,
                     "leaderboard": leaderboard,
                     "best_model": predictor.model_best,  # Property, not method
-                }
+                },
             )
 
             logger.info(f"Job completed: {job_id}")
@@ -286,9 +287,7 @@ class AutoGluonWorker:
 
         # Handle specific algorithms
         if config.get("algorithms"):
-            fit_args["hyperparameters"] = {
-                algo: {} for algo in config["algorithms"]
-            }
+            fit_args["hyperparameters"] = {algo: {} for algo in config["algorithms"]}
 
         # GPU/CPU configuration for neural networks
         if self.gpu_available:
@@ -306,12 +305,7 @@ class AutoGluonWorker:
         predictor = TabularPredictor(**predictor_args)
 
         # Progress callback (simplified)
-        self._update_job_status(
-            job_id,
-            "running",
-            progress=0.2,
-            message=f"Training started ({self.device_info})"
-        )
+        self._update_job_status(job_id, "running", progress=0.2, message=f"Training started ({self.device_info})")
 
         predictor.fit(df, **fit_args)
 

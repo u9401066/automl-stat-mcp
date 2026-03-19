@@ -3,6 +3,7 @@ AutoML Service - FastAPI Main Application
 
 Lightweight API service. AutoGluon runs in separate worker container.
 """
+
 import logging
 import os
 from contextlib import asynccontextmanager
@@ -18,8 +19,7 @@ from .interface.api.schemas import HealthResponse
 # Configure logging
 log_level = os.environ.get("LOG_LEVEL", "INFO")
 logging.basicConfig(
-    level=getattr(logging, log_level.upper()),
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=getattr(logging, log_level.upper()), format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -60,7 +60,8 @@ AutoML Service using AutoGluon.
 
 ## Available Algorithms
 
-""" + "\n".join([f"- **{k}**: {v}" for k, v in AVAILABLE_ALGORITHMS.items()]),
+"""
+    + "\n".join([f"- **{k}**: {v}" for k, v in AVAILABLE_ALGORITHMS.items()]),
     version="1.0.0",
     lifespan=lifespan,
 )
@@ -108,4 +109,5 @@ async def list_algorithms():
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host=API_HOST, port=API_PORT)

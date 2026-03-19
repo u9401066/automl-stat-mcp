@@ -11,6 +11,7 @@ Supports two modes:
 1. Dataset mode: Provide dataset_id (pre-uploaded to MinIO)
 2. Direct mode: Provide csv_content inline (no storage)
 """
+
 import base64
 import json
 import uuid
@@ -31,11 +32,13 @@ router = APIRouter(prefix="/propensity", tags=["Propensity Score Analysis"])
 # Request/Response Models
 # =============================================================================
 
+
 class PropensityEstimateRequest(BaseModel):
     """Request for propensity score estimation
 
     Provide EITHER dataset_id OR csv_content, not both.
     """
+
     dataset_id: Optional[str] = Field(None, description="Dataset ID (if using pre-uploaded data)")
     csv_content: Optional[str] = Field(None, description="CSV data as string (if using direct mode)")
     is_base64: bool = Field(default=False, description="Whether csv_content is base64 encoded")
@@ -45,7 +48,7 @@ class PropensityEstimateRequest(BaseModel):
     method: str = Field(default="logistic", description="Estimation method: logistic, gbm, random_forest")
     regularization: float = Field(default=0.0, description="L2 regularization strength")
 
-    @field_validator('dataset_id', 'csv_content')
+    @field_validator("dataset_id", "csv_content")
     @classmethod
     def check_data_source(cls, v, info):
         return v  # Validation done in model_validator
@@ -53,12 +56,15 @@ class PropensityEstimateRequest(BaseModel):
 
 class PropensityMatchRequest(BaseModel):
     """Request for propensity score matching"""
+
     dataset_id: Optional[str] = Field(None, description="Dataset ID")
     csv_content: Optional[str] = Field(None, description="CSV data as string")
     is_base64: bool = Field(default=False, description="Whether csv_content is base64 encoded")
     user_id: str = Field(..., description="User ID")
     treatment_column: str = Field(..., description="Binary treatment column")
-    covariates: Optional[List[str]] = Field(None, description="Covariates for PS estimation (if score_column not provided)")
+    covariates: Optional[List[str]] = Field(
+        None, description="Covariates for PS estimation (if score_column not provided)"
+    )
     score_column: Optional[str] = Field(None, description="Pre-computed propensity score column")
     method: str = Field(default="nearest", description="Matching method: nearest, optimal, caliper")
     caliper: float = Field(default=0.2, description="Maximum distance for match")
@@ -69,6 +75,7 @@ class PropensityMatchRequest(BaseModel):
 
 class TreatmentEffectRequest(BaseModel):
     """Request for treatment effect estimation"""
+
     dataset_id: Optional[str] = Field(None, description="Dataset ID")
     csv_content: Optional[str] = Field(None, description="CSV data as string")
     is_base64: bool = Field(default=False, description="Whether csv_content is base64 encoded")
@@ -77,12 +84,15 @@ class TreatmentEffectRequest(BaseModel):
     outcome_column: str = Field(..., description="Outcome variable column")
     covariates: Optional[List[str]] = Field(None, description="Covariates for adjustment")
     score_column: Optional[str] = Field(None, description="Pre-computed propensity score column")
-    method: str = Field(default="ipw", description="Method: ipw (Inverse Probability Weighting), matching, doubly_robust")
+    method: str = Field(
+        default="ipw", description="Method: ipw (Inverse Probability Weighting), matching, doubly_robust"
+    )
     estimand: str = Field(default="ATE", description="Estimand: ATE, ATT, or ATU")
 
 
 class BalanceCheckRequest(BaseModel):
     """Request for covariate balance assessment"""
+
     dataset_id: Optional[str] = Field(None, description="Dataset ID")
     csv_content: Optional[str] = Field(None, description="CSV data as string")
     is_base64: bool = Field(default=False, description="Whether csv_content is base64 encoded")
@@ -96,6 +106,7 @@ class BalanceCheckRequest(BaseModel):
 
 class PropensityFullRequest(BaseModel):
     """Request for full propensity score analysis workflow"""
+
     dataset_id: Optional[str] = Field(None, description="Dataset ID")
     csv_content: Optional[str] = Field(None, description="CSV data as string")
     is_base64: bool = Field(default=False, description="Whether csv_content is base64 encoded")
@@ -109,6 +120,7 @@ class PropensityFullRequest(BaseModel):
 
 class JobResponse(BaseModel):
     """Standard job submission response"""
+
     job_id: str
     job_type: str
     status: str
@@ -122,13 +134,13 @@ class JobResponse(BaseModel):
 # Redis connection pool for async operations
 _redis_pool = None
 
+
 async def _get_redis() -> redis.Redis:
     """Get async Redis client"""
     global _redis_pool
     if _redis_pool is None:
         _redis_pool = redis.ConnectionPool.from_url(
-            f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}",
-            decode_responses=True
+            f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}", decode_responses=True
         )
     return redis.Redis(connection_pool=_redis_pool)
 
@@ -169,7 +181,7 @@ async def _submit_propensity_job(
     if csv_content:
         # Decode base64 if needed
         if is_base64:
-            csv_content = base64.b64decode(csv_content).decode('utf-8')
+            csv_content = base64.b64decode(csv_content).decode("utf-8")
         params["csv_content"] = csv_content
 
     job_data = {
@@ -190,7 +202,7 @@ async def _submit_propensity_job(
     await client.set(
         f"{STATS_JOBS_PREFIX}{job_id}",
         json.dumps(job_data),
-        ex=86400 * 7  # 7 days TTL
+        ex=86400 * 7,  # 7 days TTL
     )
 
     # Queue for processing
@@ -207,6 +219,7 @@ async def _submit_propensity_job(
 # =============================================================================
 # Endpoints
 # =============================================================================
+
 
 @router.post("/estimate/submit", response_model=JobResponse)
 async def submit_propensity_estimate_job(request: PropensityEstimateRequest):

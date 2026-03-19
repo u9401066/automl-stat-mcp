@@ -10,6 +10,7 @@ Submodules:
     - missing_data: Missing value analysis (MCAR/MAR/MNAR)
     - multicollinearity: VIF analysis
 """
+
 from .base import safe_round
 from .correlation import (
     CorrelationPair,

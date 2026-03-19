@@ -6,6 +6,7 @@ Run multiple analyses at once.
 Contains:
     - run_enhanced_analysis: Run all analyses on a DataFrame
 """
+
 import logging
 from typing import Any, Dict, Optional
 
