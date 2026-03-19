@@ -1,7 +1,7 @@
 # AutoML Stat MCP - Makefile
 # 簡化常用命令
 
-.PHONY: help start stop restart logs status clean test health
+.PHONY: help start stop restart logs status clean test test-all lint format typecheck check hooks-install hooks-run health
 
 # 預設顯示幫助
 help:
@@ -23,10 +23,17 @@ help:
 	@echo "  make health         - 健康檢查"
 	@echo ""
 	@echo "🔧 開發:"
+	@echo "  make hooks-install  - 安裝 pre-commit hooks"
+	@echo "  make hooks-run      - 執行所有 pre-commit hooks"
+	@echo "  make format         - 執行 Ruff formatter"
+	@echo "  make lint           - 執行 Ruff lint"
+	@echo "  make typecheck      - 執行 MyPy"
+	@echo "  make check          - lint + typecheck"
 	@echo "  make rebuild        - 重建並啟動"
 	@echo "  make rebuild-mcp    - 只重建 MCP 服務"
 	@echo "  make shell-mcp      - 進入 MCP 容器"
-	@echo "  make test           - 執行測試"
+	@echo "  make test           - 執行快速 smoke tests"
+	@echo "  make test-all       - 執行完整 pytest"
 	@echo ""
 	@echo "🧹 清理:"
 	@echo "  make clean          - 停止並清理容器"
@@ -112,12 +119,29 @@ shell-stats:
 	docker compose exec stats-service /bin/bash
 
 test:
-	@echo "🧪 執行測試..."
-	@if [ -d ".venv" ]; then \
-		. .venv/bin/activate && pytest tests/ -v; \
-	else \
-		echo "❌ 請先建立虛擬環境: uv venv && uv sync"; \
-	fi
+	@echo "🧪 執行快速 smoke tests..."
+	@./scripts/run_tests.sh quick
+
+test-all:
+	@echo "🧪 執行完整測試..."
+	@uv run pytest
+
+format:
+	@uv run ruff format .
+
+lint:
+	@uv run ruff check .
+
+typecheck:
+	@uv run mypy automl-mcp-server/src automl-service/src stats-service/src shared
+
+check: lint typecheck
+
+hooks-install:
+	@uv run pre-commit install --install-hooks
+
+hooks-run:
+	@uv run pre-commit run --all-files
 
 # ==================== 清理 ====================
 

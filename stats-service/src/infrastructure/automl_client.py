@@ -3,6 +3,7 @@ Stats Service - AutoML Client
 
 Handles communication with AutoML Service to get dataset information.
 """
+
 import logging
 from typing import Any, Dict, Optional
 
@@ -31,9 +32,7 @@ class AutoMLClient:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 # Query automl-service for dataset
                 response = await client.get(
-                    f"{self.base_url}/datasets",
-                    params={"user_id": user_id},
-                    headers={"x-user-id": user_id}
+                    f"{self.base_url}/datasets", params={"user_id": user_id}, headers={"x-user-id": user_id}
                 )
 
                 if response.status_code != 200:

@@ -18,22 +18,22 @@ dependencies = [
     "uvicorn[standard]>=0.24.0",
     "pydantic>=2.0.0",
     "python-multipart>=0.0.6",
-    
+
     # HTTP Client
     "httpx>=0.25.0",
-    
+
     # Data Processing
     "pandas>=2.0.0",
     "numpy>=1.24.0",
     "scipy>=1.11.0",
-    
+
     # Storage & Queue
     "redis>=5.0.0",
     "minio>=7.2.0",
-    
+
     # MCP SDK
     "mcp>=1.0.0",
-    
+
     # Utilities
     "python-dotenv>=1.0.0",
     "websockets>=12.0",
@@ -60,14 +60,34 @@ dev = [
     "pytest>=7.4.0",
     "pytest-asyncio>=0.21.0",
     "pytest-cov>=4.1.0",
+    "pytest-benchmark>=4.0.0",
+    "structlog>=24.1.0",
     "ruff>=0.1.0",
     "mypy>=1.5.0",
+    "pre-commit>=4.2.0",
+    "pip-audit>=2.9.0",
     "scikit-learn>=1.3.0",  # for test datasets
 ]
 
 # All dependencies (for full local development)
 all = [
-    "automl-platform[stats,dev]",
+    "ydata-profiling>=4.6.0",
+    "tableone>=0.9.0",
+    "statsmodels>=0.14.0",
+    "lifelines>=0.27.0",
+    "matplotlib>=3.7.0",
+    "seaborn>=0.12.0",
+    "statannotations>=0.6.0",
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-benchmark>=4.0.0",
+    "pytest-cov>=4.1.0",
+    "structlog>=24.1.0",
+    "ruff>=0.1.0",
+    "mypy>=1.5.0",
+    "pre-commit>=4.2.0",
+    "pip-audit>=2.9.0",
+    "scikit-learn>=1.3.0",
 ]
 
 # =============================================================================
@@ -92,6 +112,9 @@ packages = [
 [tool.ruff]
 line-length = 120
 target-version = "py310"
+extend-exclude = ["htmlcov", "memory-bank", "projects"]
+
+[tool.ruff.lint]
 select = [
     "E",   # pycodestyle errors
     "W",   # pycodestyle warnings
@@ -104,29 +127,28 @@ ignore = [
     "E501",  # line too long (handled by formatter)
 ]
 
-[tool.ruff.isort]
-known-first-party = ["src"]
+[tool.ruff.lint.isort]
+known-first-party = ["shared"]
 
-[tool.mypy]
-python_version = "3.10"
-warn_return_any = true
-warn_unused_configs = true
-ignore_missing_imports = true
-
-[tool.pytest.ini_options]
-testpaths = ["tests", "automl-mcp-server/tests"]
-python_files = ["test_*.py"]
-python_functions = ["test_*"]
-asyncio_mode = "auto"
-addopts = "-v --tb=short"
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
 
 # =============================================================================
 # UV Configuration
 # =============================================================================
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "pytest>=7.4.0",
     "pytest-asyncio>=0.21.0",
+    "pytest-benchmark>=4.0.0",
     "pytest-cov>=4.1.0",
+    "structlog>=24.1.0",
     "ruff>=0.1.0",
+    "mypy>=1.5.0",
+    "pre-commit>=4.2.0",
+    "pip-audit>=2.9.0",
 ]
+
+[tool.uv]
+default-groups = ["dev"]

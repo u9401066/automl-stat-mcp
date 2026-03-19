@@ -13,6 +13,7 @@ Usage:
         description="AUC = 0.85 (95% CI: 0.80-0.90)"
     )
 """
+
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional
@@ -79,6 +80,7 @@ class VisualizationResult:
         width: Image width in pixels
         height: Image height in pixels
     """
+
     type: VisualizationType
     url: str
     title: str
@@ -127,6 +129,7 @@ class VisualizationBundle:
         visualizations: List of visualization results
         created_at: ISO timestamp of creation
     """
+
     job_id: str
     user_id: str
     visualizations: List[VisualizationResult] = field(default_factory=list)
@@ -164,6 +167,7 @@ class VisualizationBundle:
 # Visualization Configuration
 # =============================================================================
 
+
 @dataclass
 class VisualizationConfig:
     """
@@ -178,6 +182,7 @@ class VisualizationConfig:
         transparent: Whether background should be transparent
         include_title: Whether to include title in the figure
     """
+
     dpi: int = 300
     format: str = "png"
     width: float = 8.0
@@ -202,6 +207,7 @@ class VisualizationConfig:
 # =============================================================================
 # Analysis-Specific Result Extensions
 # =============================================================================
+
 
 @dataclass
 class ROCVisualizationResult(VisualizationResult):

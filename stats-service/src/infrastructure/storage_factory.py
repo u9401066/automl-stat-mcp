@@ -11,6 +11,7 @@ Environment Variables:
     STORAGE_MODE: "local" (default) or "minio"
     LOCAL_DATA_ROOT: Root path for local storage (default: /data)
 """
+
 import io
 import json
 import logging
@@ -228,12 +229,14 @@ class LocalStorageService(StorageService):
         for p in glob_fn(pattern):
             if p.is_file():
                 stat = p.stat()
-                files.append({
-                    "name": str(p.relative_to(dir_path)),
-                    "path": str(p),
-                    "size": stat.st_size,
-                    "last_modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
-                })
+                files.append(
+                    {
+                        "name": str(p.relative_to(dir_path)),
+                        "path": str(p),
+                        "size": stat.st_size,
+                        "last_modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                    }
+                )
         return files
 
     async def delete_file(self, path: str) -> bool:
@@ -293,7 +296,7 @@ class MinIOStorageService(StorageService):
         # Remove protocol prefix if present
         for prefix in ["s3://", "minio://", "http://", "https://"]:
             if path.startswith(prefix):
-                path = path[len(prefix):]
+                path = path[len(prefix) :]
                 break
 
         if "/" in path:
@@ -442,14 +445,17 @@ class MinIOStorageService(StorageService):
                 # Basic pattern matching
                 if pattern != "*":
                     import fnmatch
+
                     if not fnmatch.fnmatch(obj.object_name, pattern):
                         continue
-                files.append({
-                    "name": obj.object_name,
-                    "path": f"{bucket}/{obj.object_name}",
-                    "size": obj.size,
-                    "last_modified": obj.last_modified.isoformat() if obj.last_modified else None,
-                })
+                files.append(
+                    {
+                        "name": obj.object_name,
+                        "path": f"{bucket}/{obj.object_name}",
+                        "size": obj.size,
+                        "last_modified": obj.last_modified.isoformat() if obj.last_modified else None,
+                    }
+                )
         except Exception as e:
             logger.error(f"Failed to list files {bucket}/{prefix}: {e}")
 
@@ -470,6 +476,7 @@ class MinIOStorageService(StorageService):
         bucket, object_name = self._parse_path(path)
         try:
             from datetime import timedelta
+
             url = self.client.presigned_get_object(
                 bucket,
                 object_name,

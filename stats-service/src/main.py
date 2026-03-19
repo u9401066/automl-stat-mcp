@@ -6,6 +6,7 @@ Provides statistical analysis endpoints:
 - Table 1 generation (tableone)
 - Auto-analyze: intelligent statistical analysis
 """
+
 import logging
 import os
 from contextlib import asynccontextmanager
@@ -22,8 +23,7 @@ from .routes import auto_analyze, cleaning, direct, eda, jobs, power, propensity
 # Configure logging
 log_level = os.environ.get("LOG_LEVEL", "INFO")
 logging.basicConfig(
-    level=getattr(logging, log_level.upper()),
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=getattr(logging, log_level.upper()), format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -98,6 +98,7 @@ app.add_middleware(
 # Health Endpoints
 # =============================================================================
 
+
 class HealthResponse(BaseModel):
     status: str
     version: str
@@ -125,11 +126,11 @@ app.include_router(eda.router)
 app.include_router(tableone.router)
 app.include_router(jobs.router)
 app.include_router(propensity.router)  # Propensity Score Analysis
-app.include_router(survival.router)    # Survival Analysis
-app.include_router(roc.router)         # ROC/AUC Analysis
-app.include_router(power.router)       # Power Analysis
-app.include_router(cleaning.router)    # Data Cleaning
-app.include_router(storage.router)     # Result Storage (Redis/MinIO)
+app.include_router(survival.router)  # Survival Analysis
+app.include_router(roc.router)  # ROC/AUC Analysis
+app.include_router(power.router)  # Power Analysis
+app.include_router(cleaning.router)  # Data Cleaning
+app.include_router(storage.router)  # Result Storage (Redis/MinIO)
 
 
 # =============================================================================
@@ -138,4 +139,5 @@ app.include_router(storage.router)     # Result Storage (Redis/MinIO)
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host=SERVICE_HOST, port=SERVICE_PORT)

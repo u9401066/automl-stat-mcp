@@ -8,6 +8,7 @@ Processes statistical analysis jobs from Redis queue:
 - ROC/PR analysis with visualizations
 - Survival analysis with Kaplan-Meier and Cox regression
 """
+
 import json
 import logging
 import math
@@ -22,9 +23,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import redis
-from minio import Minio
 
 from .config import (
+    LOCAL_DATA_ROOT,
     MINIO_ACCESS_KEY,
     MINIO_DATASET_BUCKET,
     MINIO_ENDPOINT,
@@ -37,15 +38,19 @@ from .config import (
     REDIS_PORT,
     STATS_JOBS_PENDING,
     STATS_JOBS_PREFIX,
+    STORAGE_MODE,
     TEMP_DIR,
     WORKER_POLL_INTERVAL,
 )
 
+# Conditionally import MinIO
+if STORAGE_MODE == "minio":
+    from minio import Minio
+
 # Configure logging
 log_level = os.environ.get("LOG_LEVEL", "INFO")
 logging.basicConfig(
-    level=getattr(logging, log_level.upper()),
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=getattr(logging, log_level.upper()), format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -81,6 +86,7 @@ def sanitize_for_json(obj):
         return None
     return obj
 
+
 # Global flag for graceful shutdown
 running = True
 
@@ -97,33 +103,33 @@ class StatsWorker:
 
     All results are stored in:
     - Redis (temp storage with TTL) for job status and quick results
-    - MinIO (permanent storage) for reports and visualizations
+    - MinIO or local filesystem (permanent storage) for reports and visualizations
     """
 
     def __init__(self):
-        self.redis_client = redis.Redis(
-            host=REDIS_HOST,
-            port=REDIS_PORT,
-            db=REDIS_DB,
-            decode_responses=True
-        )
+        self.redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, decode_responses=True)
+        self.storage_mode = STORAGE_MODE
+        self.local_data_root = Path(LOCAL_DATA_ROOT)
+        self.local_results_dir = self.local_data_root / "results"
 
-        self.minio_client = Minio(
-            MINIO_ENDPOINT,
-            access_key=MINIO_ACCESS_KEY,
-            secret_key=MINIO_SECRET_KEY,
-            secure=MINIO_SECURE
-        )
+        if self.storage_mode == "minio":
+            self.minio_client = Minio(
+                MINIO_ENDPOINT, access_key=MINIO_ACCESS_KEY, secret_key=MINIO_SECRET_KEY, secure=MINIO_SECURE
+            )
+            # Ensure reports bucket exists
+            if not self.minio_client.bucket_exists(MINIO_REPORTS_BUCKET):
+                self.minio_client.make_bucket(MINIO_REPORTS_BUCKET)
+                logger.info(f"Created bucket: {MINIO_REPORTS_BUCKET}")
+        else:
+            self.minio_client = None
+            # Ensure local results directory exists
+            self.local_results_dir.mkdir(parents=True, exist_ok=True)
+            logger.info(f"Using local storage: {self.local_results_dir}")
 
         # Ensure temp directory exists
         Path(TEMP_DIR).mkdir(parents=True, exist_ok=True)
 
-        # Ensure reports bucket exists
-        if not self.minio_client.bucket_exists(MINIO_REPORTS_BUCKET):
-            self.minio_client.make_bucket(MINIO_REPORTS_BUCKET)
-            logger.info(f"Created bucket: {MINIO_REPORTS_BUCKET}")
-
-        logger.info("Stats Worker initialized")
+        logger.info(f"Stats Worker initialized (storage_mode={self.storage_mode})")
 
     def update_job_status(self, job_id: str, status: str, **kwargs):
         """Update job status in Redis with TTL"""
@@ -139,78 +145,82 @@ class StatsWorker:
             self.redis_client.setex(key, REDIS_JOB_TTL, json.dumps(job))
 
     def load_dataset_by_path(self, minio_path: str) -> pd.DataFrame:
-        """Load dataset from MinIO by path (bucket/object format)"""
-        try:
-            # Parse path: could be 'bucket/path' or just 'path'
-            if '/' in minio_path:
-                parts = minio_path.split('/', 1)
-                # Check if first part is a bucket name
-                if self.minio_client.bucket_exists(parts[0]):
-                    bucket = parts[0]
-                    object_name = parts[1]
+        """Load dataset by path (supports both local and MinIO)"""
+        # Try local filesystem first (container paths like /data/sample_data/xxx.csv)
+        local_path = Path(minio_path)
+        if not local_path.is_absolute():
+            local_path = self.local_data_root / minio_path
+
+        if local_path.exists():
+            logger.info(f"Loading dataset from local: {local_path}")
+            return pd.read_csv(local_path)
+
+        if self.storage_mode == "minio" and self.minio_client:
+            try:
+                # Parse path: could be 'bucket/path' or just 'path'
+                if "/" in minio_path:
+                    parts = minio_path.split("/", 1)
+                    if self.minio_client.bucket_exists(parts[0]):
+                        bucket = parts[0]
+                        object_name = parts[1]
+                    else:
+                        bucket = MINIO_DATASET_BUCKET
+                        object_name = minio_path
                 else:
                     bucket = MINIO_DATASET_BUCKET
                     object_name = minio_path
-            else:
-                bucket = MINIO_DATASET_BUCKET
-                object_name = minio_path
 
-            logger.info(f"Loading dataset from {bucket}/{object_name}")
+                logger.info(f"Loading dataset from MinIO: {bucket}/{object_name}")
+                response = self.minio_client.get_object(bucket, object_name)
+                data = response.read()
+                response.close()
+                response.release_conn()
+                return pd.read_csv(BytesIO(data))
+            except Exception as e:
+                logger.error(f"Failed to load dataset from MinIO {minio_path}: {e}")
+                raise FileNotFoundError(f"Dataset not found at {minio_path}") from e
 
-            response = self.minio_client.get_object(bucket, object_name)
-            data = response.read()
-            response.close()
-            response.release_conn()
-
-            return pd.read_csv(BytesIO(data))
-
-        except Exception as e:
-            logger.error(f"Failed to load dataset from {minio_path}: {e}")
-            raise FileNotFoundError(f"Dataset not found at {minio_path}") from e
+        raise FileNotFoundError(f"Dataset not found at {minio_path}")
 
     def load_dataset(self, dataset_id: str) -> pd.DataFrame:
-        """Load dataset from MinIO"""
-        # Try to find the dataset file
-        # Convention: datasets are stored as {dataset_id}.csv or in a path stored in metadata
+        """Load dataset by ID (supports both local and MinIO)"""
+        # Try local paths first
+        for search_dir in [
+            self.local_data_root / "sample_data",
+            self.local_data_root / "projects",
+            self.local_data_root / "results",
+        ]:
+            candidate = search_dir / f"{dataset_id}.csv"
+            if candidate.exists():
+                logger.info(f"Loading dataset from local: {candidate}")
+                return pd.read_csv(candidate)
 
-        try:
-            # First try direct path
-            response = self.minio_client.get_object(
-                MINIO_DATASET_BUCKET,
-                f"{dataset_id}.csv"
-            )
-            data = response.read()
-            response.close()
-            response.release_conn()
+        if self.storage_mode == "minio" and self.minio_client:
+            try:
+                response = self.minio_client.get_object(MINIO_DATASET_BUCKET, f"{dataset_id}.csv")
+                data = response.read()
+                response.close()
+                response.release_conn()
+                return pd.read_csv(BytesIO(data))
+            except Exception as e:
+                logger.warning(f"Could not load {dataset_id}.csv from MinIO: {e}")
+                objects = list(
+                    self.minio_client.list_objects(MINIO_DATASET_BUCKET, prefix=dataset_id, recursive=True)
+                )
+                for obj in objects:
+                    if obj.object_name.endswith(".csv"):
+                        response = self.minio_client.get_object(MINIO_DATASET_BUCKET, obj.object_name)
+                        data = response.read()
+                        response.close()
+                        response.release_conn()
+                        return pd.read_csv(BytesIO(data))
+                raise FileNotFoundError(f"Dataset {dataset_id} not found in MinIO") from e
 
-            return pd.read_csv(BytesIO(data))
-        except Exception as e:
-            logger.warning(f"Could not load {dataset_id}.csv: {e}")
-
-            # Try to find by listing objects
-            objects = list(self.minio_client.list_objects(
-                MINIO_DATASET_BUCKET,
-                prefix=dataset_id,
-                recursive=True
-            ))
-
-            for obj in objects:
-                if obj.object_name.endswith('.csv'):
-                    response = self.minio_client.get_object(
-                        MINIO_DATASET_BUCKET,
-                        obj.object_name
-                    )
-                    data = response.read()
-                    response.close()
-                    response.release_conn()
-                    return pd.read_csv(BytesIO(data))
-
-            raise FileNotFoundError(f"Dataset {dataset_id} not found in MinIO") from e
+        raise FileNotFoundError(f"Dataset {dataset_id} not found")
 
     def save_report(self, job_id: str, report_data: dict, format: str = "json") -> str:
-        """Save report to MinIO"""
+        """Save report to storage (local or MinIO)"""
         if format == "json":
-            # Sanitize data to handle NaN, Infinity values
             sanitized_data = sanitize_for_json(report_data)
             content = json.dumps(sanitized_data, indent=2, default=str)
             content_type = "application/json"
@@ -225,17 +235,24 @@ class StatsWorker:
             ext = "txt"
 
         object_name = f"{job_id}.{ext}"
-        content_bytes = content.encode('utf-8')
 
-        self.minio_client.put_object(
-            MINIO_REPORTS_BUCKET,
-            object_name,
-            BytesIO(content_bytes),
-            length=len(content_bytes),
-            content_type=content_type
-        )
-
-        return f"{MINIO_REPORTS_BUCKET}/{object_name}"
+        if self.storage_mode == "minio" and self.minio_client:
+            content_bytes = content.encode("utf-8")
+            self.minio_client.put_object(
+                MINIO_REPORTS_BUCKET,
+                object_name,
+                BytesIO(content_bytes),
+                length=len(content_bytes),
+                content_type=content_type,
+            )
+            return f"{MINIO_REPORTS_BUCKET}/{object_name}"
+        else:
+            # Save to local filesystem
+            report_path = self.local_results_dir / "reports" / object_name
+            report_path.parent.mkdir(parents=True, exist_ok=True)
+            report_path.write_text(content, encoding="utf-8")
+            logger.info(f"Saved report to local: {report_path}")
+            return str(report_path)
 
     def process_eda_job(self, job: dict):
         """Process EDA job using ydata-profiling"""
@@ -283,7 +300,8 @@ class StatsWorker:
         html_path = self.save_report(f"{job_id}_html", {"html": html_report}, format="html")
 
         self.update_job_status(
-            job_id, "completed",
+            job_id,
+            "completed",
             progress=1.0,
             message="EDA report generated successfully",
             result_path=json_path,
@@ -346,10 +364,7 @@ class StatsWorker:
         tableone_serializable = {}
         for col_key, col_data in tableone_dict.items():
             col_key_str = str(col_key) if isinstance(col_key, tuple) else col_key
-            tableone_serializable[col_key_str] = {
-                str(k) if isinstance(k, tuple) else k: v
-                for k, v in col_data.items()
-            }
+            tableone_serializable[col_key_str] = {str(k) if isinstance(k, tuple) else k: v for k, v in col_data.items()}
 
         report = {
             "tableone": tableone_serializable,
@@ -365,7 +380,8 @@ class StatsWorker:
         result_path = self.save_report(job_id, report, format="json")
 
         self.update_job_status(
-            job_id, "completed",
+            job_id,
+            "completed",
             progress=1.0,
             message="Table 1 generated successfully",
             result_path=result_path,
@@ -414,7 +430,8 @@ class StatsWorker:
         result_path = self.save_report(job_id, result, format="json")
 
         self.update_job_status(
-            job_id, "completed",
+            job_id,
+            "completed",
             progress=1.0,
             message="Auto-analysis completed successfully",
             result_path=result_path,
@@ -457,8 +474,7 @@ class StatsWorker:
         recs = result.get("recommendations", [])
         if recs:
             summary["key_recommendations"] = [
-                {"category": r["category"], "suggestion": r["suggestion"]}
-                for r in recs[:3]
+                {"category": r["category"], "suggestion": r["suggestion"]} for r in recs[:3]
             ]
 
         return summary
@@ -479,7 +495,7 @@ class StatsWorker:
         if not csv_content:
             raise ValueError("No CSV content provided")
 
-        df = pd.read_csv(BytesIO(csv_content.encode('utf-8')))
+        df = pd.read_csv(BytesIO(csv_content.encode("utf-8")))
         logger.info(f"Loaded direct CSV with shape {df.shape}")
 
         self.update_job_status(job_id, "running", progress=0.2, message="Analyzing data quality...")
@@ -501,7 +517,8 @@ class StatsWorker:
         result_path = self.save_report(job_id, result, format="json")
 
         self.update_job_status(
-            job_id, "completed",
+            job_id,
+            "completed",
             progress=1.0,
             message="Direct auto-analysis completed successfully",
             result_path=result_path,
@@ -536,9 +553,13 @@ class StatsWorker:
 
         self.update_job_status(job_id, "running", progress=0.8, message="Saving results...")
 
-        result_path = self.save_report(job_id, result.to_dict() if hasattr(result, 'to_dict') else result, format="json")
+        result_path = self.save_report(
+            job_id, result.to_dict() if hasattr(result, "to_dict") else result, format="json"
+        )
 
-        self.update_job_status(job_id, "completed", progress=1.0, message="Propensity score estimation completed", result_path=result_path)
+        self.update_job_status(
+            job_id, "completed", progress=1.0, message="Propensity score estimation completed", result_path=result_path
+        )
         logger.info(f"Propensity estimate job {job_id} completed")
 
     def process_propensity_match_job(self, job: dict):
@@ -568,9 +589,13 @@ class StatsWorker:
 
         self.update_job_status(job_id, "running", progress=0.8, message="Saving results...")
 
-        result_path = self.save_report(job_id, result.to_dict() if hasattr(result, 'to_dict') else result, format="json")
+        result_path = self.save_report(
+            job_id, result.to_dict() if hasattr(result, "to_dict") else result, format="json"
+        )
 
-        self.update_job_status(job_id, "completed", progress=1.0, message="Propensity score matching completed", result_path=result_path)
+        self.update_job_status(
+            job_id, "completed", progress=1.0, message="Propensity score matching completed", result_path=result_path
+        )
         logger.info(f"Propensity match job {job_id} completed")
 
     def process_propensity_effect_job(self, job: dict):
@@ -600,9 +625,13 @@ class StatsWorker:
 
         self.update_job_status(job_id, "running", progress=0.8, message="Saving results...")
 
-        result_path = self.save_report(job_id, result.to_dict() if hasattr(result, 'to_dict') else result, format="json")
+        result_path = self.save_report(
+            job_id, result.to_dict() if hasattr(result, "to_dict") else result, format="json"
+        )
 
-        self.update_job_status(job_id, "completed", progress=1.0, message="Treatment effect estimation completed", result_path=result_path)
+        self.update_job_status(
+            job_id, "completed", progress=1.0, message="Treatment effect estimation completed", result_path=result_path
+        )
         logger.info(f"Propensity effect job {job_id} completed")
 
     def process_propensity_balance_job(self, job: dict):
@@ -631,9 +660,13 @@ class StatsWorker:
 
         self.update_job_status(job_id, "running", progress=0.8, message="Saving results...")
 
-        result_path = self.save_report(job_id, result.to_dict() if hasattr(result, 'to_dict') else result, format="json")
+        result_path = self.save_report(
+            job_id, result.to_dict() if hasattr(result, "to_dict") else result, format="json"
+        )
 
-        self.update_job_status(job_id, "completed", progress=1.0, message="Balance assessment completed", result_path=result_path)
+        self.update_job_status(
+            job_id, "completed", progress=1.0, message="Balance assessment completed", result_path=result_path
+        )
         logger.info(f"Propensity balance job {job_id} completed")
 
     def process_propensity_full_job(self, job: dict):
@@ -664,7 +697,9 @@ class StatsWorker:
 
         result_path = self.save_report(job_id, result if isinstance(result, dict) else result.to_dict(), format="json")
 
-        self.update_job_status(job_id, "completed", progress=1.0, message="Propensity score analysis completed", result_path=result_path)
+        self.update_job_status(
+            job_id, "completed", progress=1.0, message="Propensity score analysis completed", result_path=result_path
+        )
         logger.info(f"Propensity full job {job_id} completed")
 
     # =========================================================================
@@ -718,7 +753,9 @@ class StatsWorker:
 
         result_path = self.save_report(job_id, result, format="json")
 
-        self.update_job_status(job_id, "completed", progress=1.0, message="Kaplan-Meier analysis completed", result_path=result_path)
+        self.update_job_status(
+            job_id, "completed", progress=1.0, message="Kaplan-Meier analysis completed", result_path=result_path
+        )
         logger.info(f"Kaplan-Meier job {job_id} completed")
 
     def process_cox_regression_job(self, job: dict):
@@ -754,7 +791,9 @@ class StatsWorker:
 
         result_path = self.save_report(job_id, {"status": "success", **result}, format="json")
 
-        self.update_job_status(job_id, "completed", progress=1.0, message="Cox regression completed", result_path=result_path)
+        self.update_job_status(
+            job_id, "completed", progress=1.0, message="Cox regression completed", result_path=result_path
+        )
         logger.info(f"Cox regression job {job_id} completed")
 
     def process_survival_compare_job(self, job: dict):
@@ -789,7 +828,9 @@ class StatsWorker:
 
         result_path = self.save_report(job_id, {"status": "success", **result}, format="json")
 
-        self.update_job_status(job_id, "completed", progress=1.0, message="Survival comparison completed", result_path=result_path)
+        self.update_job_status(
+            job_id, "completed", progress=1.0, message="Survival comparison completed", result_path=result_path
+        )
         logger.info(f"Survival compare job {job_id} completed")
 
     def process_survival_summary_job(self, job: dict):
@@ -818,7 +859,9 @@ class StatsWorker:
 
         result_path = self.save_report(job_id, {"status": "success", **result}, format="json")
 
-        self.update_job_status(job_id, "completed", progress=1.0, message="Survival summary completed", result_path=result_path)
+        self.update_job_status(
+            job_id, "completed", progress=1.0, message="Survival summary completed", result_path=result_path
+        )
         logger.info(f"Survival summary job {job_id} completed")
 
     # =========================================================================
@@ -913,7 +956,9 @@ class StatsWorker:
 
         result_path = self.save_report(job_id, result, format="json")
 
-        self.update_job_status(job_id, "completed", progress=1.0, message="ROC comparison completed", result_path=result_path)
+        self.update_job_status(
+            job_id, "completed", progress=1.0, message="ROC comparison completed", result_path=result_path
+        )
         logger.info(f"ROC compare job {job_id} completed")
 
     def process_roc_threshold_job(self, job: dict):
@@ -959,7 +1004,9 @@ class StatsWorker:
 
         result_path = self.save_report(job_id, result, format="json")
 
-        self.update_job_status(job_id, "completed", progress=1.0, message="Threshold analysis completed", result_path=result_path)
+        self.update_job_status(
+            job_id, "completed", progress=1.0, message="Threshold analysis completed", result_path=result_path
+        )
         logger.info(f"ROC threshold job {job_id} completed")
 
     def process_roc_calibration_job(self, job: dict):
@@ -989,7 +1036,9 @@ class StatsWorker:
 
         result_path = self.save_report(job_id, result, format="json")
 
-        self.update_job_status(job_id, "completed", progress=1.0, message="Calibration analysis completed", result_path=result_path)
+        self.update_job_status(
+            job_id, "completed", progress=1.0, message="Calibration analysis completed", result_path=result_path
+        )
         logger.info(f"ROC calibration job {job_id} completed")
 
     def process_roc_full_eval_job(self, job: dict):
@@ -1026,7 +1075,8 @@ class StatsWorker:
         result_path = self.save_report(job_id, result, format="json")
 
         self.update_job_status(
-            job_id, "completed",
+            job_id,
+            "completed",
             progress=1.0,
             message="Full evaluation completed",
             result_path=result_path,
@@ -1062,7 +1112,9 @@ class StatsWorker:
 
         result_path = self.save_report(job_id, result, format="json")
 
-        self.update_job_status(job_id, "completed", progress=1.0, message="Multi-model comparison completed", result_path=result_path)
+        self.update_job_status(
+            job_id, "completed", progress=1.0, message="Multi-model comparison completed", result_path=result_path
+        )
         logger.info(f"ROC compare multiple job {job_id} completed")
 
     def process_roc_threshold_analysis_job(self, job: dict):
@@ -1094,7 +1146,9 @@ class StatsWorker:
 
         result_path = self.save_report(job_id, result, format="json")
 
-        self.update_job_status(job_id, "completed", progress=1.0, message="Threshold analysis completed", result_path=result_path)
+        self.update_job_status(
+            job_id, "completed", progress=1.0, message="Threshold analysis completed", result_path=result_path
+        )
         logger.info(f"ROC threshold analysis job {job_id} completed")
 
     def process_roc_publication_report_job(self, job: dict):
@@ -1127,7 +1181,9 @@ class StatsWorker:
 
         result_path = self.save_report(job_id, result, format="json")
 
-        self.update_job_status(job_id, "completed", progress=1.0, message="Publication report generated", result_path=result_path)
+        self.update_job_status(
+            job_id, "completed", progress=1.0, message="Publication report generated", result_path=result_path
+        )
         logger.info(f"ROC publication report job {job_id} completed")
 
     # =========================================================================
@@ -1141,7 +1197,7 @@ class StatsWorker:
         # Check for direct CSV content first
         csv_content = params.get("csv_content")
         if csv_content:
-            return pd.read_csv(BytesIO(csv_content.encode('utf-8')))
+            return pd.read_csv(BytesIO(csv_content.encode("utf-8")))
 
         # Then check for MinIO path
         minio_path = job.get("minio_path") or params.get("minio_path")
@@ -1218,11 +1274,7 @@ class StatsWorker:
             logger.error(f"Job {job_id} failed: {e}")
             logger.error(traceback.format_exc())
 
-            self.update_job_status(
-                job_id, "failed",
-                error=str(e),
-                message=f"Job failed: {str(e)[:200]}"
-            )
+            self.update_job_status(job_id, "failed", error=str(e), message=f"Job failed: {str(e)[:200]}")
 
     def run(self):
         """Main worker loop"""

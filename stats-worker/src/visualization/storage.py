@@ -1,7 +1,7 @@
 """
 Visualization Storage Module
 
-Handles saving matplotlib figures to MinIO and generating accessible URLs.
+Handles saving matplotlib figures to storage (local filesystem or MinIO).
 
 Usage:
     from visualization.storage import save_figure_to_minio
@@ -15,27 +15,35 @@ Usage:
         job_id="job456",
         filename="roc_curve.png"
     )
-    # Returns: "http://minio:9000/stats-reports/user123/job456/roc_curve.png"
 """
+
 import io
 import logging
 from datetime import timedelta
+from pathlib import Path
 from typing import Optional
 
 import matplotlib
 
-matplotlib.use('Agg')  # Non-interactive backend for server
+matplotlib.use("Agg")  # Non-interactive backend for server
 import matplotlib.pyplot as plt
-from minio import Minio
-from minio.error import S3Error
 
 from ..config import (
+    LOCAL_DATA_ROOT,
     MINIO_ACCESS_KEY,
     MINIO_ENDPOINT,
     MINIO_REPORTS_BUCKET,
     MINIO_SECRET_KEY,
     MINIO_SECURE,
+    STORAGE_MODE,
 )
+
+logger = logging.getLogger(__name__)
+
+# Conditionally import MinIO
+if STORAGE_MODE == "minio":
+    from minio import Minio
+    from minio.error import S3Error
 
 logger = logging.getLogger(__name__)
 
@@ -54,8 +62,10 @@ CONTENT_TYPES = {
 }
 
 
-def get_minio_client() -> Minio:
-    """Get MinIO client instance."""
+def get_minio_client():
+    """Get MinIO client instance (only when STORAGE_MODE=minio)."""
+    if STORAGE_MODE != "minio":
+        return None
     return Minio(
         MINIO_ENDPOINT,
         access_key=MINIO_ACCESS_KEY,
@@ -64,13 +74,15 @@ def get_minio_client() -> Minio:
     )
 
 
-def ensure_bucket_exists(client: Minio, bucket_name: str) -> None:
+def ensure_bucket_exists(client, bucket_name: str) -> None:
     """Ensure the bucket exists, create if not."""
+    if client is None:
+        return
     try:
         if not client.bucket_exists(bucket_name):
             client.make_bucket(bucket_name)
             logger.info(f"Created bucket: {bucket_name}")
-    except S3Error as e:
+    except Exception as e:
         logger.error(f"Failed to create bucket {bucket_name}: {e}")
         raise
 
@@ -132,9 +144,9 @@ def save_figure_to_minio(
         buffer,
         format=format,
         dpi=dpi,
-        bbox_inches='tight',
-        facecolor='white' if not transparent else 'none',
-        edgecolor='none',
+        bbox_inches="tight",
+        facecolor="white" if not transparent else "none",
+        edgecolor="none",
         transparent=transparent,
     )
     buffer.seek(0)
@@ -142,28 +154,43 @@ def save_figure_to_minio(
     # Get content type
     content_type = CONTENT_TYPES.get(format.lower(), "application/octet-stream")
 
-    # Upload to MinIO
-    client = get_minio_client()
-    ensure_bucket_exists(client, bucket)
+    if STORAGE_MODE == "minio":
+        # Upload to MinIO
+        client = get_minio_client()
+        ensure_bucket_exists(client, bucket)
 
-    try:
-        client.put_object(
-            bucket_name=bucket,
-            object_name=object_path,
-            data=buffer,
-            length=buffer.getbuffer().nbytes,
-            content_type=content_type,
-        )
-        logger.info(f"Saved figure to MinIO: {bucket}/{object_path}")
-    except S3Error as e:
-        logger.error(f"Failed to upload figure: {e}")
-        raise
-    finally:
+        try:
+            client.put_object(
+                bucket_name=bucket,
+                object_name=object_path,
+                data=buffer,
+                length=buffer.getbuffer().nbytes,
+                content_type=content_type,
+            )
+            logger.info(f"Saved figure to MinIO: {bucket}/{object_path}")
+        except Exception as e:
+            logger.error(f"Failed to upload figure: {e}")
+            raise
+        finally:
+            buffer.close()
+            plt.close(fig)
+
+        url = get_figure_url(bucket, object_path)
+    else:
+        # Save to local filesystem
+        local_dir = Path(LOCAL_DATA_ROOT) / "results" / "figures" / user_id / job_id
+        local_dir.mkdir(parents=True, exist_ok=True)
+        local_path = local_dir / filename
+
+        with open(local_path, "wb") as f:
+            f.write(buffer.getvalue())
+        logger.info(f"Saved figure to local: {local_path}")
+
         buffer.close()
-        plt.close(fig)  # Clean up figure memory
+        plt.close(fig)
 
-    # Build URL
-    url = get_figure_url(bucket, object_path)
+        url = str(local_path)
+
     return url
 
 
@@ -174,7 +201,7 @@ def get_figure_url(
     expires: timedelta = timedelta(hours=24),
 ) -> str:
     """
-    Get URL for a figure stored in MinIO.
+    Get URL for a figure stored in MinIO or local path.
 
     Args:
         bucket: MinIO bucket name
@@ -183,18 +210,20 @@ def get_figure_url(
         expires: Expiration time for presigned URL
 
     Returns:
-        URL string
+        URL string or local file path
     """
+    if STORAGE_MODE != "minio":
+        return str(Path(LOCAL_DATA_ROOT) / "results" / "figures" / object_path)
+
     if presigned:
         client = get_minio_client()
         try:
             url = client.presigned_get_object(bucket, object_path, expires=expires)
             return url
-        except S3Error as e:
+        except Exception as e:
             logger.error(f"Failed to generate presigned URL: {e}")
             raise
     else:
-        # Direct URL (requires bucket to be public or accessed via proxy)
         protocol = "https" if MINIO_SECURE else "http"
         return f"{protocol}://{MINIO_ENDPOINT}/{bucket}/{object_path}"
 

@@ -4,7 +4,7 @@ Results Management Module
 ⚠️ DEPRECATED: This module is deprecated as of the project-oriented architecture refactoring.
 
 All results are now stored in:
-- Redis (temp storage with TTL) for job status and quick results  
+- Redis (temp storage with TTL) for job status and quick results
 - MinIO (permanent storage) for reports and visualizations
 
 No local file storage is used anymore.

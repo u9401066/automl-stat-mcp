@@ -1,6 +1,7 @@
 """
 Stats Service Configuration
 """
+
 import os
 
 # Service settings

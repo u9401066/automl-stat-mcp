@@ -8,6 +8,7 @@ Uses shared RedisManager for connection pooling.
 Key format: datasets:{dataset_id}
 Value: JSON with dataset metadata
 """
+
 import json
 import logging
 
@@ -20,6 +21,7 @@ import redis
 from redis.exceptions import ConnectionError, RedisError, TimeoutError
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))  # Docker: /app
 from shared.infrastructure.redis_manager import get_sync_client
 
 logger = logging.getLogger(__name__)
@@ -135,11 +137,7 @@ class RedisDatasetStore:
             logger.error(f"Redis error while getting dataset {dataset_id}: {e}")
             raise
 
-    def get_datasets_by_user(
-        self,
-        user_id: str,
-        session_id: Optional[str] = None
-    ) -> List[Dict[str, Any]]:
+    def get_datasets_by_user(self, user_id: str, session_id: Optional[str] = None) -> List[Dict[str, Any]]:
         """
         Get all datasets for a user.
 

@@ -4,6 +4,7 @@ Stats Service - Redis Client
 Manages job queue operations for statistical analysis.
 Uses shared RedisManager for connection pooling.
 """
+
 import json
 import logging
 
@@ -15,6 +16,7 @@ from typing import Optional
 from uuid import uuid4
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))  # Docker: /app
 from shared.infrastructure.redis_manager import RedisManager
 
 from ..config import (
@@ -57,13 +59,7 @@ class RedisClient:
         # No need to close here
         pass
 
-    async def create_job(
-        self,
-        job_type: str,
-        params: dict,
-        user_id: str,
-        session_id: Optional[str] = None
-    ) -> dict:
+    async def create_job(self, job_type: str, params: dict, user_id: str, session_id: Optional[str] = None) -> dict:
         """
         Create a new stats job and add to queue.
 
@@ -103,7 +99,7 @@ class RedisClient:
             await client.set(
                 f"{STATS_JOBS_PREFIX}{job_id}",
                 json.dumps(job),
-                ex=86400 * 7  # 7 days TTL
+                ex=86400 * 7,  # 7 days TTL
             )
 
             # Add to pending queue
@@ -143,12 +139,7 @@ class RedisClient:
             logger.error(f"Failed to get job {job_id}: {e}")
             raise
 
-    async def list_jobs(
-        self,
-        user_id: str,
-        job_type: Optional[str] = None,
-        limit: int = 50
-    ) -> list:
+    async def list_jobs(self, user_id: str, job_type: Optional[str] = None, limit: int = 50) -> list:
         """List jobs for a user"""
         client = await self.connect()
 
@@ -159,11 +150,7 @@ class RedisClient:
         cursor = 0
 
         while True:
-            cursor, keys = await client.scan(
-                cursor,
-                match=f"{STATS_JOBS_PREFIX}*",
-                count=100
-            )
+            cursor, keys = await client.scan(cursor, match=f"{STATS_JOBS_PREFIX}*", count=100)
 
             for key in keys:
                 data = await client.get(key)

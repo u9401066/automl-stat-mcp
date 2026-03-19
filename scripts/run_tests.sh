@@ -28,9 +28,10 @@ NC='\033[0m' # No Color
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$PROJECT_ROOT"
 
-# Activate virtual environment
-if [ -d ".venv" ]; then
-    source .venv/bin/activate
+# Ensure uv is available
+if ! command -v uv > /dev/null 2>&1; then
+    echo -e "${RED}❌ uv is required. Install uv and run 'uv sync --all-extras'.${NC}"
+    exit 1
 fi
 
 # Function to print colored output
@@ -52,12 +53,16 @@ print_success() {
     echo -e "${GREEN}✅ $1${NC}"
 }
 
+run_pytest() {
+    uv run pytest "$@"
+}
+
 # Check if services are running
 check_services() {
     print_header "Checking Services..."
-    
+
     local services_ok=true
-    
+
     # Check stats service
     if curl -s http://localhost:8003/health > /dev/null 2>&1; then
         print_success "Stats Service (8003)"
@@ -65,7 +70,7 @@ check_services() {
         print_warning "Stats Service (8003) - not available"
         services_ok=false
     fi
-    
+
     # Check automl service
     if curl -s http://localhost:8001/health > /dev/null 2>&1; then
         print_success "AutoML Service (8001)"
@@ -73,61 +78,61 @@ check_services() {
         print_warning "AutoML Service (8001) - not available"
         services_ok=false
     fi
-    
+
     if [ "$services_ok" = false ]; then
         echo ""
         print_warning "Some services are not available."
         print_warning "Run 'docker compose up -d' to start services."
         echo ""
     fi
-    
+
     return 0
 }
 
 # Run unit tests (no services required)
 run_unit_tests() {
     print_header "Running Unit Tests..."
-    python -m pytest tests/test_tool_logic.py -v --tb=short "$@"
+    run_pytest tests/test_tool_logic.py tests/unit/test_redis_manager.py -v --tb=short "$@"
 }
 
 # Run data flow tests
 run_dataflow_tests() {
     print_header "Running Data Flow Tests..."
     check_services
-    python -m pytest tests/test_dataflow_integrity.py -v --tb=short "$@"
+    run_pytest tests/test_dataflow_integrity.py -v --tb=short "$@"
 }
 
 # Run service communication tests
 run_service_tests() {
     print_header "Running Service Communication Tests..."
     check_services
-    python -m pytest tests/test_service_communication.py -v --tb=short "$@"
+    run_pytest tests/test_service_communication.py -v --tb=short "$@"
 }
 
 # Run E2E tests
 run_e2e_tests() {
     print_header "Running E2E Tests..."
     check_services
-    python -m pytest tests/test_e2e_*.py -v --tb=short -m "e2e" "$@"
+    run_pytest tests/test_e2e_*.py -v --tb=short -m "e2e" "$@"
 }
 
 # Run all tests
 run_all_tests() {
     print_header "Running All Tests..."
     check_services
-    python -m pytest tests/ -v --tb=short "$@"
+    run_pytest -v --tb=short "$@"
 }
 
 # Quick smoke test
 run_quick_tests() {
     print_header "Running Quick Smoke Tests..."
-    python -m pytest tests/test_tool_logic.py tests/test_service_communication.py::TestServiceHealth -v --tb=short "$@"
+    run_pytest tests/test_tool_logic.py tests/unit/test_redis_manager.py -v --tb=short "$@"
 }
 
 # Run with coverage
 run_with_coverage() {
     print_header "Running Tests with Coverage..."
-    python -m pytest tests/test_tool_logic.py tests/test_dataflow_integrity.py tests/test_service_communication.py \
+    run_pytest tests/test_tool_logic.py tests/test_dataflow_integrity.py tests/test_service_communication.py \
         --cov=. --cov-report=html --cov-report=term-missing \
         -v --tb=short "$@"
     echo ""

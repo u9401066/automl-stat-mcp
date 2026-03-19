@@ -3,6 +3,7 @@ Stats Job Repository - Redis Implementation
 
 Infrastructure layer implementation of StatsJobRepository interface.
 """
+
 import json
 import logging
 from typing import List, Optional
@@ -31,10 +32,7 @@ class RedisStatsJobRepository(StatsJobRepository):
     async def _get_client(self) -> redis.Redis:
         """Get Redis client"""
         if self._client is None:
-            self._client = redis.Redis.from_url(
-                f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}",
-                decode_responses=True
-            )
+            self._client = redis.Redis.from_url(f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}", decode_responses=True)
         return self._client
 
     async def save(self, job: StatsJob) -> None:
@@ -47,7 +45,7 @@ class RedisStatsJobRepository(StatsJobRepository):
         await client.set(
             f"{STATS_JOBS_PREFIX}{job.id}",
             json.dumps(job_data),
-            ex=86400 * 7  # 7 days TTL
+            ex=86400 * 7,  # 7 days TTL
         )
 
         logger.info(f"Saved job {job.id} (type: {job.job_type.value})")
@@ -77,11 +75,7 @@ class RedisStatsJobRepository(StatsJobRepository):
         cursor = 0
 
         while True:
-            cursor, keys = await client.scan(
-                cursor,
-                match=f"{STATS_JOBS_PREFIX}*",
-                count=100
-            )
+            cursor, keys = await client.scan(cursor, match=f"{STATS_JOBS_PREFIX}*", count=100)
 
             for key in keys:
                 data = await client.get(key)
@@ -121,11 +115,7 @@ class RedisStatsJobRepository(StatsJobRepository):
         cursor = 0
 
         while True:
-            cursor, keys = await client.scan(
-                cursor,
-                match=f"{STATS_JOBS_PREFIX}*",
-                count=100
-            )
+            cursor, keys = await client.scan(cursor, match=f"{STATS_JOBS_PREFIX}*", count=100)
 
             for key in keys:
                 data = await client.get(key)
@@ -165,8 +155,7 @@ class RedisJobQueue:
         """Get Redis client"""
         if self._pool is None:
             self._pool = redis.ConnectionPool.from_url(
-                f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}",
-                decode_responses=True
+                f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}", decode_responses=True
             )
         return redis.Redis(connection_pool=self._pool)
 

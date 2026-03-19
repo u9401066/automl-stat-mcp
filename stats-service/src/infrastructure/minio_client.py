@@ -3,6 +3,7 @@ Stats Service - MinIO Client
 
 Handles object storage operations for datasets and reports.
 """
+
 import io
 import logging
 from typing import Optional
@@ -33,10 +34,7 @@ class MinioClient:
         """Get or create MinIO client"""
         if self._client is None:
             self._client = Minio(
-                MINIO_ENDPOINT,
-                access_key=MINIO_ACCESS_KEY,
-                secret_key=MINIO_SECRET_KEY,
-                secure=MINIO_SECURE
+                MINIO_ENDPOINT, access_key=MINIO_ACCESS_KEY, secret_key=MINIO_SECRET_KEY, secure=MINIO_SECURE
             )
         return self._client
 
@@ -64,14 +62,10 @@ class MinioClient:
             }
         except S3Error:
             # Try finding by prefix
-            objects = list(client.list_objects(
-                MINIO_DATASET_BUCKET,
-                prefix=dataset_id,
-                recursive=True
-            ))
+            objects = list(client.list_objects(MINIO_DATASET_BUCKET, prefix=dataset_id, recursive=True))
 
             for obj in objects:
-                if obj.object_name.endswith('.csv'):
+                if obj.object_name.endswith(".csv"):
                     return {
                         "object_name": obj.object_name,
                         "size": obj.size,
@@ -80,11 +74,7 @@ class MinioClient:
 
         return None
 
-    def load_dataset_by_path(
-        self,
-        minio_path: str,
-        n_rows: Optional[int] = None
-    ) -> Optional[pd.DataFrame]:
+    def load_dataset_by_path(self, minio_path: str, n_rows: Optional[int] = None) -> Optional[pd.DataFrame]:
         """
         Load dataset from MinIO by path.
 
@@ -96,8 +86,8 @@ class MinioClient:
 
         try:
             # Parse path: could be 'bucket/path' or just 'path' (use default bucket)
-            if '/' in minio_path:
-                parts = minio_path.split('/', 1)
+            if "/" in minio_path:
+                parts = minio_path.split("/", 1)
                 # Check if first part is a bucket name
                 if client.bucket_exists(parts[0]):
                     bucket = parts[0]
@@ -127,11 +117,7 @@ class MinioClient:
             logger.error(f"Failed to load dataset from {minio_path}: {e}")
             return None
 
-    def load_dataset_preview(
-        self,
-        dataset_id: str,
-        n_rows: int = 100
-    ) -> Optional[pd.DataFrame]:
+    def load_dataset_preview(self, dataset_id: str, n_rows: int = 100) -> Optional[pd.DataFrame]:
         """Load a preview of the dataset"""
         client = self._get_client()
 
@@ -141,10 +127,7 @@ class MinioClient:
             if not info:
                 return None
 
-            response = client.get_object(
-                MINIO_DATASET_BUCKET,
-                info["object_name"]
-            )
+            response = client.get_object(MINIO_DATASET_BUCKET, info["object_name"])
 
             data = response.read()
             response.close()
@@ -162,13 +145,11 @@ class MinioClient:
         client = self._get_client()
 
         try:
-            response = client.get_object(
-                MINIO_REPORTS_BUCKET,
-                f"{job_id}.json"
-            )
+            response = client.get_object(MINIO_REPORTS_BUCKET, f"{job_id}.json")
 
             import json
-            data = json.loads(response.read().decode('utf-8'))
+
+            data = json.loads(response.read().decode("utf-8"))
             response.close()
             response.release_conn()
 
@@ -184,12 +165,9 @@ class MinioClient:
         client = self._get_client()
 
         try:
-            response = client.get_object(
-                MINIO_REPORTS_BUCKET,
-                f"{job_id}.html"
-            )
+            response = client.get_object(MINIO_REPORTS_BUCKET, f"{job_id}.html")
 
-            html = response.read().decode('utf-8')
+            html = response.read().decode("utf-8")
             response.close()
             response.release_conn()
 
@@ -205,19 +183,17 @@ class MinioClient:
         client = self._get_client()
 
         datasets = []
-        objects = client.list_objects(
-            MINIO_DATASET_BUCKET,
-            prefix=prefix,
-            recursive=True
-        )
+        objects = client.list_objects(MINIO_DATASET_BUCKET, prefix=prefix, recursive=True)
 
         for obj in objects:
-            if obj.object_name.endswith('.csv'):
-                datasets.append({
-                    "object_name": obj.object_name,
-                    "size": obj.size,
-                    "last_modified": obj.last_modified.isoformat() if obj.last_modified else None,
-                })
+            if obj.object_name.endswith(".csv"):
+                datasets.append(
+                    {
+                        "object_name": obj.object_name,
+                        "size": obj.size,
+                        "last_modified": obj.last_modified.isoformat() if obj.last_modified else None,
+                    }
+                )
 
         return datasets
 
@@ -273,11 +249,13 @@ class MinioClient:
 
         objects = []
         for obj in client.list_objects(bucket, prefix=prefix, recursive=True):
-            objects.append({
-                "name": obj.object_name,
-                "size": obj.size,
-                "last_modified": obj.last_modified.isoformat() if obj.last_modified else None,
-            })
+            objects.append(
+                {
+                    "name": obj.object_name,
+                    "size": obj.size,
+                    "last_modified": obj.last_modified.isoformat() if obj.last_modified else None,
+                }
+            )
             if len(objects) >= limit:
                 break
 

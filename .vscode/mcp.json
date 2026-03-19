@@ -1,7 +1,7 @@
 {
 	"servers": {
-		"automl": {
-			"url": "http://192.168.1.203:8002/sse",
+		"automl-stat-mcp": {
+			"url": "http://localhost:8002/sse",
 			"type": "sse"
 		}
 	},

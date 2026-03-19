@@ -1,7 +1,12 @@
 """
 Stats Worker Configuration
 """
+
 import os
+
+# Storage mode: "local" or "minio"
+STORAGE_MODE = os.getenv("STORAGE_MODE", "local").lower()
+LOCAL_DATA_ROOT = os.getenv("LOCAL_DATA_ROOT", "/data")
 
 # Redis settings
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")

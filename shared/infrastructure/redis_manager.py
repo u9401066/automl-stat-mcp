@@ -17,11 +17,14 @@ Usage:
     await client.set("key", "value")
     result = await client.get("key")
 """
+
 import asyncio
 import logging
 import os
-from typing import Optional
+from inspect import isawaitable
+from typing import Optional, cast
 
+import redis as sync_redis
 import redis.asyncio as redis
 from redis.exceptions import ConnectionError
 
@@ -66,9 +69,7 @@ class RedisManager:
         Private constructor. Use get_instance() instead.
         """
         if RedisManager._instance is not None:
-            raise RuntimeError(
-                "RedisManager is a singleton. Use RedisManager.get_instance() instead."
-            )
+            raise RuntimeError("RedisManager is a singleton. Use RedisManager.get_instance() instead.")
 
         self._pool: Optional[redis.ConnectionPool] = None
         self._initialized = False
@@ -141,7 +142,9 @@ class RedisManager:
 
                 # Test connection
                 test_client = redis.Redis(connection_pool=self._pool)
-                await test_client.ping()
+                ping_result = test_client.ping()
+                if isawaitable(ping_result):
+                    await ping_result
 
                 self._initialized = True
                 logger.info(
@@ -152,9 +155,7 @@ class RedisManager:
                 return
 
             except ConnectionError as e:
-                logger.warning(
-                    f"Redis connection attempt {attempt + 1}/{max_retries} failed: {e}"
-                )
+                logger.warning(f"Redis connection attempt {attempt + 1}/{max_retries} failed: {e}")
                 if attempt == max_retries - 1:
                     logger.error("Failed to initialize Redis connection pool after all retries")
                     raise
@@ -198,8 +199,10 @@ class RedisManager:
         """
         try:
             client = await self.get_client()
-            result = await client.ping()
-            return result
+            result = client.ping()
+            if isawaitable(result):
+                return bool(await result)
+            return bool(result)
         except Exception as e:
             logger.error(f"Redis ping failed: {e}")
             return False
@@ -216,7 +219,9 @@ class RedisManager:
         """
         if self._pool is not None:
             try:
-                await self._pool.aclose()
+                close_result = self._pool.aclose()
+                if isawaitable(close_result):
+                    await close_result
                 logger.info("Redis connection pool closed")
             except Exception as e:
                 logger.error(f"Error closing Redis connection pool: {e}")
@@ -232,11 +237,7 @@ class RedisManager:
             dict: Pool statistics including max_connections and current usage
         """
         if self._pool is None:
-            return {
-                "initialized": False,
-                "max_connections": 0,
-                "connection_kwargs": {}
-            }
+            return {"initialized": False, "max_connections": 0, "connection_kwargs": {}}
 
         return {
             "initialized": self._initialized,
@@ -247,7 +248,7 @@ class RedisManager:
                 "db": REDIS_DB,
                 "socket_timeout": SOCKET_TIMEOUT,
                 "socket_connect_timeout": SOCKET_CONNECT_TIMEOUT,
-            }
+            },
         }
 
 
@@ -270,7 +271,7 @@ async def get_redis_client() -> redis.Redis:
 
 
 # Convenience function for sync clients (e.g., stats-service/automl-service)
-def get_sync_client() -> redis.Redis:
+def get_sync_client() -> sync_redis.Redis:
     """
     Get synchronous Redis client from shared connection pool.
 
@@ -292,13 +293,16 @@ def get_sync_client() -> redis.Redis:
     """
     redis_url = f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
 
-    return redis.from_url(
-        redis_url,
-        decode_responses=True,
-        max_connections=MAX_CONNECTIONS,
-        socket_keepalive=True,
-        socket_connect_timeout=SOCKET_CONNECT_TIMEOUT,
-        socket_timeout=SOCKET_TIMEOUT,
-        retry_on_timeout=True,
-        health_check_interval=30,
+    return cast(
+        sync_redis.Redis,
+        sync_redis.from_url(
+            redis_url,
+            decode_responses=True,
+            max_connections=MAX_CONNECTIONS,
+            socket_keepalive=True,
+            socket_connect_timeout=SOCKET_CONNECT_TIMEOUT,
+            socket_timeout=SOCKET_TIMEOUT,
+            retry_on_timeout=True,
+            health_check_interval=30,
+        ),
     )

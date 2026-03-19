@@ -51,10 +51,10 @@ echo_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 # =============================================================================
 check_existing_containers() {
     echo_info "Checking existing containers..."
-    
+
     # Container names we use
     CONTAINERS=("automl-redis" "automl-api" "automl-mcp" "stats-service")
-    
+
     for container in "${CONTAINERS[@]}"; do
         if $DOCKER_CMD ps -a --format '{{.Names}}' | grep -q "^${container}$"; then
             STATUS=$($DOCKER_CMD inspect -f '{{.State.Status}}' "$container" 2>/dev/null || echo "unknown")
@@ -72,28 +72,28 @@ check_existing_containers() {
 # =============================================================================
 check_services_health() {
     echo_info "Checking services health..."
-    
+
     # Check stats-service
     if curl -s http://localhost:8003/health > /dev/null 2>&1; then
         echo_success "stats-service (8003) is healthy"
     else
         echo_warn "stats-service (8003) not responding"
     fi
-    
+
     # Check automl-api
     if curl -s http://localhost:8001/health > /dev/null 2>&1; then
         echo_success "automl-api (8001) is healthy"
     else
         echo_warn "automl-api (8001) not responding"
     fi
-    
+
     # Check MCP server
     if curl -s http://localhost:8002/health > /dev/null 2>&1; then
         echo_success "automl-mcp (8002) is healthy"
     else
         echo_warn "automl-mcp (8002) not responding"
     fi
-    
+
     # Check Redis
     if $DOCKER_CMD exec automl-redis redis-cli ping > /dev/null 2>&1; then
         echo_success "Redis is healthy"
@@ -107,11 +107,11 @@ check_services_health() {
 # =============================================================================
 smart_start() {
     echo_info "Smart starting services..."
-    
+
     # Check if Redis is already running (from another project)
     if $DOCKER_CMD ps --format '{{.Names}}' | grep -q "automl-redis"; then
         echo_success "Redis already running, will reuse"
-        
+
         # Start other services without redis
         $COMPOSE_CMD -f "$COMPOSE_FILE" up -d --no-deps automl-api automl-worker automl-mcp stats-service stats-worker 2>&1 || {
             echo_warn "Some services may have conflicts, checking..."
@@ -131,14 +131,14 @@ smart_start() {
 # =============================================================================
 resolve_conflicts() {
     echo_info "Resolving container conflicts..."
-    
+
     # Find conflicting containers
     CONTAINERS=("automl-redis" "automl-api" "automl-mcp" "stats-service")
-    
+
     for container in "${CONTAINERS[@]}"; do
         if $DOCKER_CMD ps -a --format '{{.Names}}' | grep -q "^${container}$"; then
             STATUS=$($DOCKER_CMD inspect -f '{{.State.Status}}' "$container" 2>/dev/null || echo "unknown")
-            
+
             if [ "$STATUS" == "running" ]; then
                 echo_success "$container is running, keeping it"
             elif [ "$STATUS" == "exited" ] || [ "$STATUS" == "created" ]; then
@@ -147,7 +147,7 @@ resolve_conflicts() {
             fi
         fi
     done
-    
+
     echo_info "Retrying docker compose up..."
     $COMPOSE_CMD -f "$COMPOSE_FILE" up -d
 }
@@ -157,14 +157,14 @@ resolve_conflicts() {
 # =============================================================================
 clean_start() {
     echo_warn "Clean start - removing all project containers..."
-    
+
     $COMPOSE_CMD -f "$COMPOSE_FILE" down -v 2>/dev/null || true
-    
+
     # Also remove any orphaned containers with our names
     for container in automl-redis automl-api automl-mcp stats-service; do
         $DOCKER_CMD rm -f "$container" 2>/dev/null || true
     done
-    
+
     echo_info "Starting fresh..."
     $COMPOSE_CMD -f "$COMPOSE_FILE" up -d
 }
@@ -178,11 +178,11 @@ show_status() {
     echo "         Service Status Summary"
     echo "=============================================="
     echo ""
-    
+
     check_existing_containers
     echo ""
     check_services_health
-    
+
     echo ""
     echo "=============================================="
     echo "         Container Details"
@@ -196,7 +196,7 @@ show_status() {
 # =============================================================================
 main() {
     cd "$PROJECT_DIR"
-    
+
     case "${1:-}" in
         --clean)
             clean_start
