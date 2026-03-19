@@ -11,6 +11,7 @@ Tools:
     - generate_tableone_directly: Direct CSV to TableOne
     - get_tableone_preview: Preview configuration suggestions
 """
+
 import base64
 import time
 from io import StringIO
@@ -244,11 +245,12 @@ def register_tableone_tools(mcp, stats_client):
         try:
             # Parse CSV
             if is_base64:
-                csv_content = base64.b64decode(csv_content).decode('utf-8')
+                csv_content = base64.b64decode(csv_content).decode("utf-8")
             df = pd.read_csv(StringIO(csv_content))
 
             # Import and run TableOne generation
             from .stats_worker_tasks import generate_tableone
+
             result = generate_tableone(
                 df=df,
                 groupby=groupby,
@@ -286,9 +288,7 @@ def register_tableone_tools(mcp, stats_client):
             return response
 
         except ImportError:
-            return await _generate_tableone_fallback(
-                csv_content, groupby, categorical, nonnormal, pval, is_base64
-            )
+            return await _generate_tableone_fallback(csv_content, groupby, categorical, nonnormal, pval, is_base64)
         except Exception as e:
             logger.error(f"generate_tableone_directly error: {e}")
             return {"status": "error", "error": str(e)}
@@ -324,7 +324,7 @@ def register_tableone_tools(mcp, stats_client):
         """
         try:
             if is_base64:
-                csv_content = base64.b64decode(csv_content).decode('utf-8')
+                csv_content = base64.b64decode(csv_content).decode("utf-8")
             df = pd.read_csv(StringIO(csv_content))
 
             # Detect column types
@@ -338,7 +338,7 @@ def register_tableone_tools(mcp, stats_client):
                 dtype = df[col].dtype
 
                 # Categorical detection
-                if dtype == 'object' or dtype.name == 'category':
+                if dtype == "object" or dtype.name == "category":
                     categorical.append(col)
                     if 2 <= n_unique <= 5:
                         groupby_candidates.append(col)
@@ -393,15 +393,14 @@ def register_tableone_tools(mcp, stats_client):
     ) -> dict:
         """Fallback TableOne generation without advanced module"""
         if is_base64:
-            csv_content = base64.b64decode(csv_content).decode('utf-8')
+            csv_content = base64.b64decode(csv_content).decode("utf-8")
         df = pd.read_csv(StringIO(csv_content))
 
         table_data = {}
 
         # Auto-detect categorical if not specified
         if categorical is None:
-            categorical = [c for c in df.columns
-                          if df[c].dtype == 'object' or df[c].nunique() <= 10]
+            categorical = [c for c in df.columns if df[c].dtype == "object" or df[c].nunique() <= 10]
 
         # Simple summary for each column
         for col in df.columns:
@@ -411,10 +410,7 @@ def register_tableone_tools(mcp, stats_client):
             if col in categorical:
                 # Categorical: count (%)
                 counts = df[col].value_counts()
-                table_data[col] = {
-                    str(k): f"{v} ({100*v/len(df):.1f}%)"
-                    for k, v in counts.items()
-                }
+                table_data[col] = {str(k): f"{v} ({100 * v / len(df):.1f}%)" for k, v in counts.items()}
             else:
                 # Continuous: mean±SD or median[IQR]
                 if nonnormal and col in nonnormal:
@@ -431,7 +427,7 @@ def register_tableone_tools(mcp, stats_client):
             "table_data": table_data,
             "n_total": len(df),
             "format": "dict",
-            "note": "Basic table (advanced module not available)"
+            "note": "Basic table (advanced module not available)",
         }
 
     logger.info("TableOne tools registered: 5 tools")

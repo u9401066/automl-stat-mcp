@@ -20,6 +20,7 @@ Architecture Decision:
 - MCP Server reads files directly via volume mount
 - Supports both local files and MinIO paths
 """
+
 import logging
 from pathlib import Path
 from typing import Annotated, Any, Dict, List, Optional
@@ -36,8 +37,8 @@ logger = logging.getLogger(__name__)
 # Only sample_data (public test data) and projects (user research projects)
 # All temp data goes to Redis, permanent results go to MinIO
 DATA_MOUNT_PATHS = [
-    "/data/sample_data",    # ./sample_data:/data/sample_data (read-only)
-    "/data/projects",       # ./projects:/data/projects (read-write)
+    "/data/sample_data",  # ./sample_data:/data/sample_data (read-only)
+    "/data/projects",  # ./projects:/data/projects (read-write)
 ]
 
 # Token limit for data preview (prevent response bloat)
@@ -71,13 +72,13 @@ def _sanitize_column_name(name: str) -> str:
 
     # Replace special characters with underscore (keep Chinese, alphanumeric)
     # Pattern: keep Chinese (\u4e00-\u9fff), letters, numbers, underscore
-    sanitized = re.sub(r'[^\w\u4e00-\u9fff]', '_', original)
+    sanitized = re.sub(r"[^\w\u4e00-\u9fff]", "_", original)
 
     # Replace multiple underscores with single
-    sanitized = re.sub(r'_+', '_', sanitized)
+    sanitized = re.sub(r"_+", "_", sanitized)
 
     # Remove leading/trailing underscores
-    sanitized = sanitized.strip('_')
+    sanitized = sanitized.strip("_")
 
     # If empty after sanitization, use hash of original
     if not sanitized:
@@ -212,9 +213,7 @@ def _create_data_preview(data_preview: Dict[str, Any]) -> Dict[str, Any]:
     column_names = data_preview.get("column_names", [])
 
     # Truncate sample rows (max 2 rows, max 10 columns, truncated values)
-    truncated_samples = [
-        _truncate_row(row) for row in sample_rows[:MAX_PREVIEW_ROWS]
-    ]
+    truncated_samples = [_truncate_row(row) for row in sample_rows[:MAX_PREVIEW_ROWS]]
 
     return {
         "rows": data_preview.get("rows"),
@@ -231,12 +230,10 @@ def register_upload_tools(mcp: FastMCP, client: AutoMLClient) -> None:
 
     @mcp.tool()
     async def list_available_files(
-        directory: Annotated[Optional[str], Field(
-            description="Directory to list. If not provided, lists all mounted data directories."
-        )] = None,
-        pattern: Annotated[str, Field(
-            description="File pattern to match (e.g., '*.csv')"
-        )] = "*.csv",
+        directory: Annotated[
+            Optional[str], Field(description="Directory to list. If not provided, lists all mounted data directories.")
+        ] = None,
+        pattern: Annotated[str, Field(description="File pattern to match (e.g., '*.csv')")] = "*.csv",
     ) -> Dict[str, Any]:
         """
         📂 List available files in mounted data directories.
@@ -277,12 +274,14 @@ def register_upload_tools(mcp: FastMCP, client: AutoMLClient) -> None:
                 for file_path in path.glob(pattern):
                     if file_path.is_file():
                         stat = file_path.stat()
-                        result["files"].append({
-                            "path": str(file_path),
-                            "name": file_path.name,
-                            "size_bytes": stat.st_size,
-                            "size_human": _format_size(stat.st_size),
-                        })
+                        result["files"].append(
+                            {
+                                "path": str(file_path),
+                                "name": file_path.name,
+                                "size_bytes": stat.st_size,
+                                "size_human": _format_size(stat.st_size),
+                            }
+                        )
 
         result["total_count"] = len(result["files"])
         result["files"].sort(key=lambda x: x["name"])
@@ -293,16 +292,20 @@ def register_upload_tools(mcp: FastMCP, client: AutoMLClient) -> None:
     async def upload_dataset(
         name: Annotated[str, Field(description="Dataset name for identification")],
         user_id: Annotated[str, Field(description="User ID for resource isolation")],
-        source_type: Annotated[str, Field(
-            description="Upload source: 'local' (file in mounted directory) or 'minio' (existing MinIO path)"
-        )],
-        source_path: Annotated[str, Field(
-            description="For 'local': file path (e.g., '/data/sample_data/iris.csv'). "
-                       "For 'minio': MinIO path (e.g., 'bucket/path/file.csv')"
-        )],
-        storage_mode: Annotated[str, Field(
-            description="Storage mode: 'temporary' (Redis, one-time use) or 'permanent' (MinIO, reusable)"
-        )] = "permanent",
+        source_type: Annotated[
+            str,
+            Field(description="Upload source: 'local' (file in mounted directory) or 'minio' (existing MinIO path)"),
+        ],
+        source_path: Annotated[
+            str,
+            Field(
+                description="For 'local': file path (e.g., '/data/sample_data/iris.csv'). "
+                "For 'minio': MinIO path (e.g., 'bucket/path/file.csv')"
+            ),
+        ],
+        storage_mode: Annotated[
+            str, Field(description="Storage mode: 'temporary' (Redis, one-time use) or 'permanent' (MinIO, reusable)")
+        ] = "permanent",
         session_id: Annotated[Optional[str], Field(description="Optional session ID")] = None,
         description: Annotated[Optional[str], Field(description="Optional dataset description")] = None,
     ) -> Dict[str, Any]:
@@ -381,9 +384,7 @@ def register_upload_tools(mcp: FastMCP, client: AutoMLClient) -> None:
             elif source_type == "minio":
                 # For MinIO source with permanent storage, just register
                 if storage_mode == "permanent":
-                    return await _register_minio_dataset(
-                        client, name, source_path, user_id, session_id, description
-                    )
+                    return await _register_minio_dataset(client, name, source_path, user_id, session_id, description)
                 else:
                     # For temporary, need to read from MinIO first
                     # This is less common, user should use permanent for MinIO
@@ -391,7 +392,7 @@ def register_upload_tools(mcp: FastMCP, client: AutoMLClient) -> None:
                         "success": False,
                         "error": "MinIO source with temporary storage is not recommended",
                         "hint": "For MinIO files, use storage_mode='permanent'. "
-                               "For temporary analysis, use local files.",
+                        "For temporary analysis, use local files.",
                     }
             else:
                 return {
@@ -402,13 +403,9 @@ def register_upload_tools(mcp: FastMCP, client: AutoMLClient) -> None:
 
             # Route to appropriate storage
             if storage_mode == "temporary":
-                return await _upload_temporary(
-                    stats_client, name, csv_content, user_id, session_id, source_path
-                )
+                return await _upload_temporary(stats_client, name, csv_content, user_id, session_id, source_path)
             else:  # permanent
-                return await _upload_permanent(
-                    client, name, csv_content, user_id, session_id, description, source_path
-                )
+                return await _upload_permanent(client, name, csv_content, user_id, session_id, description, source_path)
 
         except Exception as e:
             logger.exception(f"Upload failed: {e}")
@@ -487,8 +484,7 @@ def _read_local_file(file_path: str) -> Dict[str, Any]:
         return {
             "success": False,
             "error": f"File not found: {file_path}",
-            "hint": f"Use list_available_files() to see available files. "
-                   f"Mounted directories: {DATA_MOUNT_PATHS}",
+            "hint": f"Use list_available_files() to see available files. Mounted directories: {DATA_MOUNT_PATHS}",
         }
 
     if not path.is_file():
@@ -508,12 +504,12 @@ def _read_local_file(file_path: str) -> Dict[str, Any]:
 
     # Read file content
     try:
-        content = path.read_text(encoding='utf-8')
+        content = path.read_text(encoding="utf-8")
     except UnicodeDecodeError:
-        content = path.read_text(encoding='latin-1')
+        content = path.read_text(encoding="latin-1")
 
     # Validate CSV
-    lines = content.split('\n')
+    lines = content.split("\n")
     if len(lines) < 2:
         return {
             "success": False,
@@ -718,7 +714,7 @@ async def _register_minio_dataset(
 
 def _format_size(size_bytes: int) -> str:
     """Format file size in human-readable format"""
-    for unit in ['B', 'KB', 'MB', 'GB']:
+    for unit in ["B", "KB", "MB", "GB"]:
         if size_bytes < 1024:
             return f"{size_bytes:.1f} {unit}"
         size_bytes /= 1024

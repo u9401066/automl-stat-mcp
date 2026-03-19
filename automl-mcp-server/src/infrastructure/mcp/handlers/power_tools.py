@@ -8,6 +8,7 @@ Combines multiple power analysis tools into unified interfaces:
 - power_chisquare: Chi-square power/sample size (replaces 3 tools)
 - power_survival: Survival power/sample size (replaces 5 tools)
 """
+
 import logging
 from typing import List, Optional
 
@@ -89,7 +90,7 @@ def register_power_tools(mcp: FastMCP, stats_client) -> None:
                         "effect_type": "Cohen's d",
                         "interpretation": interpretation,
                         "formula": f"|{mean1} - {mean2}| / {pooled_sd}",
-                        "recommendation": f"Use effect_size={round(d, 2)} for power analysis"
+                        "recommendation": f"Use effect_size={round(d, 2)} for power analysis",
                     }
                 else:
                     return {"status": "error", "error": "Provide mean1, mean2, and pooled_sd for effect_size mode"}
@@ -144,10 +145,13 @@ def register_power_tools(mcp: FastMCP, stats_client) -> None:
                     "status": "success",
                     "sensitivity_table": results,
                     "parameters": {"effect_size": effect_size, "alpha": alpha},
-                    "recommendation": "Choose n where power >= 0.80"
+                    "recommendation": "Choose n where power >= 0.80",
                 }
 
-            return {"status": "error", "error": f"Unknown mode: {mode}. Use: sample_size, power, sensitivity, effect_size"}
+            return {
+                "status": "error",
+                "error": f"Unknown mode: {mode}. Use: sample_size, power, sensitivity, effect_size",
+            }
 
         except Exception as e:
             return {"status": "error", "error": str(e)}
@@ -196,6 +200,7 @@ def register_power_tools(mcp: FastMCP, stats_client) -> None:
         """
         try:
             import math
+
             # Calculate Cohen's h
             h = 2 * (math.asin(math.sqrt(p2)) - math.asin(math.sqrt(p1)))
 
@@ -211,15 +216,24 @@ def register_power_tools(mcp: FastMCP, stats_client) -> None:
                 if n1 is None:
                     return {"status": "error", "error": "Provide n1 for power calculation"}
                 result = await stats_client.calculate_proportion_power(
-                    p1=p1, p2=p2, alpha=alpha, power=None, n=n1,
-                    ratio=1.0 if n2 is None else n2 / n1, alternative=alternative
+                    p1=p1,
+                    p2=p2,
+                    alpha=alpha,
+                    power=None,
+                    n=n1,
+                    ratio=1.0 if n2 is None else n2 / n1,
+                    alternative=alternative,
                 )
                 if isinstance(result, dict):
                     result["effect_size_h"] = round(abs(h), 4)
                 return result
 
             if mode == "sensitivity":
-                n_range = [50, 100, 150, 200, 300, 500] if n1 is None else [int(n1 * m) for m in [0.5, 0.75, 1.0, 1.25, 1.5, 2.0]]
+                n_range = (
+                    [50, 100, 150, 200, 300, 500]
+                    if n1 is None
+                    else [int(n1 * m) for m in [0.5, 0.75, 1.0, 1.25, 1.5, 2.0]]
+                )
                 results = []
                 for n in n_range:
                     r = await stats_client.calculate_proportion_power(
@@ -231,7 +245,7 @@ def register_power_tools(mcp: FastMCP, stats_client) -> None:
                     "status": "success",
                     "sensitivity_table": results,
                     "effect_size_h": round(abs(h), 4),
-                    "parameters": {"p1": p1, "p2": p2, "alpha": alpha}
+                    "parameters": {"p1": p1, "p2": p2, "alpha": alpha},
                 }
 
             return {"status": "error", "error": f"Unknown mode: {mode}"}
@@ -290,14 +304,14 @@ def register_power_tools(mcp: FastMCP, stats_client) -> None:
             if mode == "effect_size":
                 if group_means and pooled_sd:
                     grand_mean = sum(group_means) / len(group_means)
-                    var_between = sum((m - grand_mean)**2 for m in group_means) / len(group_means)
+                    var_between = sum((m - grand_mean) ** 2 for m in group_means) / len(group_means)
                     f = math.sqrt(var_between) / pooled_sd
                     interpretation = "small" if f < 0.25 else "medium" if f < 0.40 else "large"
                     return {
                         "status": "success",
                         "effect_size_f": round(f, 4),
                         "interpretation": interpretation,
-                        "parameters": {"group_means": group_means, "pooled_sd": pooled_sd}
+                        "parameters": {"group_means": group_means, "pooled_sd": pooled_sd},
                     }
                 return {"status": "error", "error": "Provide group_means and pooled_sd for effect_size mode"}
 
@@ -379,7 +393,7 @@ def register_power_tools(mcp: FastMCP, stats_client) -> None:
                     for r in range(rows):
                         for c in range(cols):
                             expected = row_totals[r] * col_totals[c] / n_total
-                            chi2 += (observed[r][c] - expected)**2 / expected
+                            chi2 += (observed[r][c] - expected) ** 2 / expected
 
                     w = math.sqrt(chi2 / n_total)
                     interpretation = "small" if w < 0.30 else "medium" if w < 0.50 else "large"
@@ -388,7 +402,7 @@ def register_power_tools(mcp: FastMCP, stats_client) -> None:
                         "effect_size_w": round(w, 4),
                         "chi_square": round(chi2, 4),
                         "interpretation": interpretation,
-                        "n": n_total
+                        "n": n_total,
                     }
                 return {"status": "error", "error": "Provide observed contingency table for effect_size mode"}
 
@@ -485,7 +499,7 @@ def register_power_tools(mcp: FastMCP, stats_client) -> None:
                         "median1": median1,
                         "median2": median2,
                         "interpretation": f"HR={round(hr, 2)} means {'treatment beneficial' if hr < 1 else 'treatment harmful' if hr > 1 else 'no effect'}",
-                        "recommendation": f"Use hazard_ratio={round(hr, 2)} for power analysis"
+                        "recommendation": f"Use hazard_ratio={round(hr, 2)} for power analysis",
                     }
                 return {"status": "error", "error": "Provide median1 and median2 for from_medians mode"}
 
@@ -499,9 +513,13 @@ def register_power_tools(mcp: FastMCP, stats_client) -> None:
             # Mode: sample_size
             if mode == "sample_size":
                 result = await stats_client.calculate_survival_sample_size(
-                    hazard_ratio=hazard_ratio, alpha=alpha, power=power,
-                    ratio=ratio, dropout_rate=dropout_rate,
-                    accrual_time=accrual_time, followup_time=followup_time
+                    hazard_ratio=hazard_ratio,
+                    alpha=alpha,
+                    power=power,
+                    ratio=ratio,
+                    dropout_rate=dropout_rate,
+                    accrual_time=accrual_time,
+                    followup_time=followup_time,
                 )
                 return result
 
@@ -510,8 +528,7 @@ def register_power_tools(mcp: FastMCP, stats_client) -> None:
                 if total_events is None:
                     return {"status": "error", "error": "Provide total_events for power calculation"}
                 result = await stats_client.calculate_survival_power(
-                    hazard_ratio=hazard_ratio, total_events=total_events,
-                    alpha=alpha, ratio=ratio
+                    hazard_ratio=hazard_ratio, total_events=total_events, alpha=alpha, ratio=ratio
                 )
                 return result
 
@@ -520,4 +537,6 @@ def register_power_tools(mcp: FastMCP, stats_client) -> None:
         except Exception as e:
             return {"status": "error", "error": str(e)}
 
-    logger.info("Power analysis tools registered: power_ttest, power_proportion, power_anova, power_chisquare, power_survival")
+    logger.info(
+        "Power analysis tools registered: power_ttest, power_proportion, power_anova, power_chisquare, power_survival"
+    )

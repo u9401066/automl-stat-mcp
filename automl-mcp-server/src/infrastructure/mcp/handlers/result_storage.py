@@ -8,6 +8,7 @@ Provides persistent storage for analysis results:
 This module enables all statistics tools to automatically save results
 for reproducibility, tracking, and report generation.
 """
+
 import json
 import logging
 import os
@@ -36,7 +37,7 @@ class NumpyJSONEncoder(json.JSONEncoder):
         elif isinstance(obj, np.bool_):
             return bool(obj)
         # Handle pandas types if present
-        elif hasattr(obj, 'item'):  # pandas scalars
+        elif hasattr(obj, "item"):  # pandas scalars
             return obj.item()
         # Handle datetime
         elif isinstance(obj, datetime):
@@ -46,7 +47,7 @@ class NumpyJSONEncoder(json.JSONEncoder):
             return obj
         # Handle bytes
         elif isinstance(obj, bytes):
-            return obj.decode('utf-8', errors='replace')
+            return obj.decode("utf-8", errors="replace")
         # Handle sets
         elif isinstance(obj, set):
             return list(obj)
@@ -56,6 +57,7 @@ class NumpyJSONEncoder(json.JSONEncoder):
 def safe_json_dumps(data: Any, **kwargs) -> str:
     """Safely serialize data to JSON string, handling numpy and other special types."""
     return json.dumps(data, cls=NumpyJSONEncoder, ensure_ascii=False, **kwargs)
+
 
 # Configuration from environment
 STATS_SERVICE_URL = os.getenv("STATS_SERVICE_URL", "http://localhost:8003")
@@ -69,6 +71,7 @@ DEFAULT_REDIS_TTL = 7 * 24 * 60 * 60
 @dataclass
 class ResultMetadata:
     """Metadata for a stored analysis result"""
+
     result_id: str
     analysis_type: str
     user_id: str

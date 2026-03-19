@@ -4,6 +4,7 @@ Direct Analysis Tools for MCP
 Tools for analyzing data directly without MinIO storage.
 Useful for pre-training analysis, testing, and quick exploration.
 """
+
 from typing import Annotated, Any, Dict, Optional
 
 from mcp.server.fastmcp import FastMCP

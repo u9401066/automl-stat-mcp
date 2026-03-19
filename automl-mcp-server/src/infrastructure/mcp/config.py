@@ -1,6 +1,7 @@
 """
 AutoML MCP Server Configuration
 """
+
 import os
 from dataclasses import dataclass
 

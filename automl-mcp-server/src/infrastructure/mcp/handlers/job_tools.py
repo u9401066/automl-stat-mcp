@@ -3,6 +3,7 @@ Job Management Tools for MCP
 
 Tools for managing training jobs (status, list, cancel).
 """
+
 from typing import Annotated, Any, Dict, List, Optional
 
 from mcp.server.fastmcp import FastMCP

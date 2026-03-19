@@ -1,14 +1,17 @@
+# mypy: ignore-errors
+
 """
 Stats Worker Tasks Bridge
 
 This module provides access to stats-worker analysis functions
 for use in the MCP server.
 """
+
 import os
 import sys
 
 # Add stats-worker path for imports
-stats_worker_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', '..', 'stats-worker', 'src')
+stats_worker_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "stats-worker", "src")
 if stats_worker_path not in sys.path:
     sys.path.insert(0, os.path.abspath(stats_worker_path))
 
@@ -206,6 +209,7 @@ try:
 
 except ImportError as e:
     import logging
+
     logging.warning(f"Could not import stats-worker tasks: {e}")
 
     # Provide stub functions that raise helpful errors

@@ -4,10 +4,11 @@ Smart Orchestration Tools for MCP
 High-level convenience tools that combine multiple operations.
 These provide better UX for AI Agents by reducing the number of calls needed.
 """
+
 import time
 from typing import Annotated, Any, Dict, Literal, Optional
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp import Context, FastMCP
 from pydantic import Field
 
 from ..client import AutoMLClient
@@ -23,6 +24,7 @@ def register_orchestration_tools(mcp: FastMCP, client: AutoMLClient) -> None:
         user_id: Annotated[str, Field(description="User ID")],
         poll_interval: Annotated[int, Field(description="Seconds between status checks")] = 10,
         timeout: Annotated[int, Field(description="Maximum seconds to wait (0 = no timeout)")] = 3600,
+        ctx: Context = None,
     ) -> Dict[str, Any]:
         """
         Wait for a training job to complete.
@@ -41,6 +43,7 @@ def register_orchestration_tools(mcp: FastMCP, client: AutoMLClient) -> None:
             error_message: (if failed) Error description
             elapsed_seconds: Time waited
         """
+
         async def check_status():
             return await client.get_job_status(job_id, user_id)
 
@@ -48,6 +51,7 @@ def register_orchestration_tools(mcp: FastMCP, client: AutoMLClient) -> None:
             check_status=check_status,
             poll_interval=poll_interval,
             timeout=timeout,
+            ctx=ctx,
         )
         result["job_id"] = job_id
         return result
@@ -56,18 +60,16 @@ def register_orchestration_tools(mcp: FastMCP, client: AutoMLClient) -> None:
     async def train_and_wait(
         dataset_id: Annotated[str, Field(description="Dataset ID to train on")],
         target_column: Annotated[str, Field(description="Name of the target/label column")],
-        problem_type: Annotated[
-            Literal["binary", "multiclass", "regression"],
-            Field(description="Type of ML problem")
-        ],
+        problem_type: Annotated[Literal["binary", "multiclass", "regression"], Field(description="Type of ML problem")],
         user_id: Annotated[str, Field(description="User ID")],
         session_id: Annotated[Optional[str], Field(description="Optional session ID")] = None,
         time_limit: Annotated[int, Field(description="Training time limit in seconds")] = 300,
         presets: Annotated[
             Literal["best_quality", "high_quality", "good_quality", "medium_quality", "optimize_for_deployment"],
-            Field(description="AutoGluon quality preset")
+            Field(description="AutoGluon quality preset"),
         ] = "medium_quality",
         wait_timeout: Annotated[int, Field(description="Max seconds to wait for completion")] = 3600,
+        ctx: Context = None,
     ) -> Dict[str, Any]:
         """
         🚀 One-shot AutoML: Submit training and wait for results.
@@ -111,10 +113,17 @@ def register_orchestration_tools(mcp: FastMCP, client: AutoMLClient) -> None:
         async def check_status():
             return await client.get_job_status(job_id, user_id)
 
+        if ctx:
+            try:
+                await ctx.report_progress(progress=0, total=100, message="Training job submitted, waiting...")
+            except Exception:
+                pass
+
         result = await wait_for_completion(
             check_status=check_status,
             poll_interval=10,
             timeout=wait_timeout,
+            ctx=ctx,
         )
 
         # 3. Enrich result
@@ -129,11 +138,15 @@ def register_orchestration_tools(mcp: FastMCP, client: AutoMLClient) -> None:
                     result["leaderboard"] = leaderboard
                 except Exception:
                     pass
-            result["summary"] = f"✅ Training completed in {round(elapsed/60, 1)} minutes. Best model: {result.get('result', {}).get('best_model', 'N/A')}"
+            result["summary"] = (
+                f"✅ Training completed in {round(elapsed / 60, 1)} minutes. Best model: {result.get('result', {}).get('best_model', 'N/A')}"
+            )
         elif result["status"] == "failed":
             result["summary"] = f"❌ Training failed: {result.get('error_message', 'Unknown error')}"
         elif result["status"] == "timeout":
-            result["summary"] = f"⏱️ Timeout after {round(elapsed/60, 1)} minutes. Use get_job_status('{job_id}') to check later."
+            result["summary"] = (
+                f"⏱️ Timeout after {round(elapsed / 60, 1)} minutes. Use get_job_status('{job_id}') to check later."
+            )
 
         return result
 
@@ -141,12 +154,11 @@ def register_orchestration_tools(mcp: FastMCP, client: AutoMLClient) -> None:
     async def quick_train(
         minio_path: Annotated[str, Field(description="Path to CSV file in MinIO (e.g., 'bucket/data.csv')")],
         target_column: Annotated[str, Field(description="Name of the target/label column")],
-        problem_type: Annotated[
-            Literal["binary", "multiclass", "regression"],
-            Field(description="Type of ML problem")
-        ],
+        problem_type: Annotated[Literal["binary", "multiclass", "regression"], Field(description="Type of ML problem")],
         user_id: Annotated[str, Field(description="User ID")],
-        dataset_name: Annotated[Optional[str], Field(description="Name for the dataset (auto-generated if not provided)")] = None,
+        dataset_name: Annotated[
+            Optional[str], Field(description="Name for the dataset (auto-generated if not provided)")
+        ] = None,
         time_limit: Annotated[int, Field(description="Training time limit in seconds")] = 300,
         wait_timeout: Annotated[int, Field(description="Max seconds to wait for completion")] = 3600,
     ) -> Dict[str, Any]:
@@ -232,7 +244,9 @@ def register_orchestration_tools(mcp: FastMCP, client: AutoMLClient) -> None:
                 except Exception:
                     pass
 
-            response["summary"] = f"✅ Model ready! Dataset '{dataset_name}' → Model '{model_id}' in {round(elapsed/60, 1)} min"
+            response["summary"] = (
+                f"✅ Model ready! Dataset '{dataset_name}' → Model '{model_id}' in {round(elapsed / 60, 1)} min"
+            )
         elif result["status"] == "failed":
             response["error_message"] = result.get("error_message")
             response["summary"] = f"❌ Training failed: {result.get('error_message')}"
@@ -318,16 +332,18 @@ def register_orchestration_tools(mcp: FastMCP, client: AutoMLClient) -> None:
                 "jobs_completed": len(completed_jobs),
                 "jobs_failed": len(failed_jobs),
             },
-            "datasets": [
-                {"id": d["dataset_id"], "name": d["name"], "rows": d.get("row_count")}
-                for d in datasets
-            ],
+            "datasets": [{"id": d["dataset_id"], "name": d["name"], "rows": d.get("row_count")} for d in datasets],
             "active_jobs": [
                 {"id": j["job_id"], "type": j["job_type"], "status": j["status"], "progress": j.get("progress")}
                 for j in (pending_jobs + running_jobs)
             ],
             "recent_models": [
-                {"id": m["model_id"], "name": m.get("name"), "best_model": m.get("best_model_name"), "score": m.get("best_score")}
+                {
+                    "id": m["model_id"],
+                    "name": m.get("name"),
+                    "best_model": m.get("best_model_name"),
+                    "score": m.get("best_score"),
+                }
                 for m in models[:5]
             ],
             "tips": [
@@ -378,6 +394,8 @@ def _get_recommendations(row_count: int, columns: list, target_column: str, data
     # Estimate
     time_limit = recommendations["recommendations"]["time_limit"]
     recommendations["estimated_training_time"] = f"{time_limit // 60}-{time_limit * 2 // 60} minutes"
-    recommendations["next_step"] = f"Run: train_and_wait(dataset_id='{dataset.get('dataset_id')}', target_column='{target_column}', problem_type='<your_type>', ...)"
+    recommendations["next_step"] = (
+        f"Run: train_and_wait(dataset_id='{dataset.get('dataset_id')}', target_column='{target_column}', problem_type='<your_type>', ...)"
+    )
 
     return recommendations

@@ -3,6 +3,7 @@ Stats Client Singleton
 
 Provides a singleton instance of StatsClient for use across statistics tools.
 """
+
 from typing import Optional
 
 # Re-export StatsClient from the original module

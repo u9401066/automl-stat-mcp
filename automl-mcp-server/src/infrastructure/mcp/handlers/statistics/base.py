@@ -6,6 +6,7 @@ Provides:
 - StatsClient initialization
 - Tool registration orchestration
 """
+
 import logging
 from typing import Any, Dict
 
@@ -16,16 +17,19 @@ logger = logging.getLogger(__name__)
 
 class StatsToolError(Exception):
     """Base exception for statistics tools"""
+
     pass
 
 
 class StatsClientNotAvailable(StatsToolError):
     """Raised when stats client is not available"""
+
     pass
 
 
 class DataNotFound(StatsToolError):
     """Raised when requested data is not found"""
+
     pass
 
 
@@ -55,6 +59,7 @@ def register_all_statistics_tools(mcp: FastMCP, automl_client) -> None:
     organized by domain.
     """
     from .stats_client import get_stats_client
+
     stats_client = get_stats_client()
 
     # Import and register each domain's tools

@@ -7,6 +7,7 @@ Provides MCP tools for:
 - Quick statistics
 - Advanced analysis (correlation, missing values, VIF, group comparisons)
 """
+
 import logging
 import time
 from typing import List, Optional
@@ -380,13 +381,12 @@ def register_eda_tools(mcp: FastMCP, stats_client) -> None:
 
         try:
             if is_base64:
-                csv_content = base64.b64decode(csv_content).decode('utf-8')
+                csv_content = base64.b64decode(csv_content).decode("utf-8")
             df = pd.read_csv(StringIO(csv_content))
 
             from ..stats_worker_tasks import compute_enhanced_correlation
-            result = compute_enhanced_correlation(
-                df, columns=columns, method=method, min_correlation=min_correlation
-            )
+
+            result = compute_enhanced_correlation(df, columns=columns, method=method, min_correlation=min_correlation)
             return {"status": "success", **result.to_dict()}
 
         except ImportError:
@@ -428,10 +428,11 @@ def register_eda_tools(mcp: FastMCP, stats_client) -> None:
 
         try:
             if is_base64:
-                csv_content = base64.b64decode(csv_content).decode('utf-8')
+                csv_content = base64.b64decode(csv_content).decode("utf-8")
             df = pd.read_csv(StringIO(csv_content))
 
             from ..stats_worker_tasks import compare_distributions
+
             result = compare_distributions(df, numeric_column, group_column)
             return {"status": "success", **result.to_dict()}
 
@@ -468,10 +469,11 @@ def register_eda_tools(mcp: FastMCP, stats_client) -> None:
 
         try:
             if is_base64:
-                csv_content = base64.b64decode(csv_content).decode('utf-8')
+                csv_content = base64.b64decode(csv_content).decode("utf-8")
             df = pd.read_csv(StringIO(csv_content))
 
             from ..stats_worker_tasks import analyze_missing_values as analyze_mv
+
             result = analyze_mv(df)
             return {"status": "success", **result.to_dict()}
 
@@ -512,10 +514,11 @@ def register_eda_tools(mcp: FastMCP, stats_client) -> None:
 
         try:
             if is_base64:
-                csv_content = base64.b64decode(csv_content).decode('utf-8')
+                csv_content = base64.b64decode(csv_content).decode("utf-8")
             df = pd.read_csv(StringIO(csv_content))
 
             from ..stats_worker_tasks import compute_vif
+
             result = compute_vif(df, columns=columns, vif_threshold=vif_threshold)
             return {"status": "success", **result.to_dict()}
 
@@ -551,13 +554,13 @@ def register_eda_tools(mcp: FastMCP, stats_client) -> None:
 
         try:
             if is_base64:
-                csv_content = base64.b64decode(csv_content).decode('utf-8')
+                csv_content = base64.b64decode(csv_content).decode("utf-8")
             df = pd.read_csv(StringIO(csv_content))
 
             from ..stats_worker_tasks import run_enhanced_analysis
+
             result = run_enhanced_analysis(
-                df, target_column=target_column,
-                include_vif=True, include_missing_analysis=True
+                df, target_column=target_column, include_vif=True, include_missing_analysis=True
             )
             return {"status": "success", **result}
 
@@ -567,11 +570,7 @@ def register_eda_tools(mcp: FastMCP, stats_client) -> None:
     logger.info("Registered 14 EDA tools")
 
 
-async def _compute_correlation_fallback(
-    csv_content: str,
-    columns: Optional[List[str]],
-    is_base64: bool
-) -> dict:
+async def _compute_correlation_fallback(csv_content: str, columns: Optional[List[str]], is_base64: bool) -> dict:
     """Fallback correlation computation without advanced module"""
     import base64
     from io import StringIO
@@ -579,13 +578,13 @@ async def _compute_correlation_fallback(
     import pandas as pd
 
     if is_base64:
-        csv_content = base64.b64decode(csv_content).decode('utf-8')
+        csv_content = base64.b64decode(csv_content).decode("utf-8")
     df = pd.read_csv(StringIO(csv_content))
 
     if columns:
         numeric_cols = [c for c in columns if c in df.columns]
     else:
-        numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+        numeric_cols = df.select_dtypes(include=["number"]).columns.tolist()
 
     if len(numeric_cols) < 2:
         return {"status": "error", "error": "Need at least 2 numeric columns"}
@@ -596,5 +595,5 @@ async def _compute_correlation_fallback(
         "status": "success",
         "columns": numeric_cols,
         "pearson_matrix": corr.to_dict(),
-        "note": "Basic correlation (advanced module not available)"
+        "note": "Basic correlation (advanced module not available)",
     }

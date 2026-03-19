@@ -4,6 +4,7 @@ Data Cleaning Tools Module
 MCP tools for data preprocessing and cleaning operations.
 Enables AI agents to transform and prepare data for analysis.
 """
+
 import logging
 from typing import Any, Dict, List, Optional
 
@@ -127,12 +128,14 @@ def register_cleaning_tools(mcp: FastMCP, automl_client) -> None:
             # Return CSV content in memory (no local file storage)
             if save_result:
                 result["csv_content"] = _get_csv_content(df)
-                result["message"] = f"Binary column '{new_column_name}' created. Use csv_content for further analysis or upload to MinIO."
+                result["message"] = (
+                    f"Binary column '{new_column_name}' created. Use csv_content for further analysis or upload to MinIO."
+                )
             else:
                 result["message"] = f"Binary column '{new_column_name}' created (preview only)"
 
             # Preview
-            result["preview"] = df[[column, new_column_name]].head(5).to_dict('records')
+            result["preview"] = df[[column, new_column_name]].head(5).to_dict("records")
 
             return result
 
@@ -373,7 +376,7 @@ def register_cleaning_tools(mcp: FastMCP, automl_client) -> None:
             existing = [c for c in columns if c in df.columns]
             not_found = [c for c in columns if c not in df.columns]
 
-            df = df.drop(columns=existing, errors='ignore')
+            df = df.drop(columns=existing, errors="ignore")
 
             result = {
                 "status": "success",
@@ -634,10 +637,7 @@ def register_cleaning_tools(mcp: FastMCP, automl_client) -> None:
                     )
 
             if info["missing_pct"] > 50:
-                recs.append(
-                    f"Column '{col}' has {info['missing_pct']}% missing. "
-                    "Consider dropping this column."
-                )
+                recs.append(f"Column '{col}' has {info['missing_pct']}% missing. Consider dropping this column.")
             elif info["missing_pct"] > 20:
                 recs.append(
                     f"Column '{col}' has {info['missing_pct']}% missing. "
@@ -645,11 +645,11 @@ def register_cleaning_tools(mcp: FastMCP, automl_client) -> None:
                 )
 
             if info["unique_count"] <= 1:
-                recs.append(
-                    f"Column '{col}' is constant. Consider removing with remove_columns()."
-                )
+                recs.append(f"Column '{col}' is constant. Consider removing with remove_columns().")
 
         return recs[:10]  # Limit recommendations
 
-    logger.info("Registered data cleaning tools: convert_to_binary, encode_categorical, "
-                "handle_missing_values, remove_columns, rename_columns, filter_rows, get_column_info")
+    logger.info(
+        "Registered data cleaning tools: convert_to_binary, encode_categorical, "
+        "handle_missing_values, remove_columns, rename_columns, filter_rows, get_column_info"
+    )

@@ -7,6 +7,7 @@ Provides statistical analysis capabilities through the Stats Service:
 - Table 1 generation using tableone package
 - Advanced Analysis: Correlation, VIF, Missing patterns, Group comparisons
 """
+
 import logging
 import os
 import time
@@ -25,8 +26,8 @@ STATS_SERVICE_URL = os.getenv("STATS_SERVICE_URL", "http://localhost:8003")
 # Only sample_data (public test data) and projects (user research projects)
 # All temp data goes to Redis, permanent results go to MinIO
 DATA_MOUNT_PATHS = [
-    "/data/sample_data",    # ./sample_data:/data/sample_data (read-only)
-    "/data/projects",       # ./projects:/data/projects (read-write)
+    "/data/sample_data",  # ./sample_data:/data/sample_data (read-only)
+    "/data/projects",  # ./projects:/data/projects (read-write)
 ]
 
 
@@ -48,18 +49,16 @@ def _read_csv_from_path_or_reject(csv_path_or_content: str) -> Tuple[bool, Union
     """
     # Check if it looks like a file path
     looks_like_path = (
-        csv_path_or_content.startswith("/data/") or
-        csv_path_or_content.startswith("/home/") or
-        csv_path_or_content.startswith("./") or
-        (csv_path_or_content.endswith(".csv") and "/" in csv_path_or_content) or
-        any(csv_path_or_content.startswith(p) for p in DATA_MOUNT_PATHS)
+        csv_path_or_content.startswith("/data/")
+        or csv_path_or_content.startswith("/home/")
+        or csv_path_or_content.startswith("./")
+        or (csv_path_or_content.endswith(".csv") and "/" in csv_path_or_content)
+        or any(csv_path_or_content.startswith(p) for p in DATA_MOUNT_PATHS)
     )
 
     # Check if it looks like raw CSV content (has newlines, commas, typical CSV patterns)
     looks_like_csv_content = (
-        "\n" in csv_path_or_content and
-        "," in csv_path_or_content and
-        not csv_path_or_content.startswith("/")
+        "\n" in csv_path_or_content and "," in csv_path_or_content and not csv_path_or_content.startswith("/")
     )
 
     # If it looks like raw CSV content, reject it
@@ -74,13 +73,13 @@ def _read_csv_from_path_or_reject(csv_path_or_content: str) -> Tuple[bool, Union
                     "1. Call upload_dataset(source_path='/data/sample_data/your_file.csv', ...)",
                     "2. Get job_id or dataset_id from the response",
                     "3. Use that ID with analysis tools, OR",
-                    "4. Pass the file PATH directly: csv_path='/data/sample_data/your_file.csv'"
+                    "4. Pass the file PATH directly: csv_path='/data/sample_data/your_file.csv'",
                 ],
                 "example": {
                     "wrong": "csv_content='name,age\\nAlice,30\\nBob,25'",
-                    "correct": "csv_path='/data/sample_data/iris.csv'"
-                }
-            }
+                    "correct": "csv_path='/data/sample_data/iris.csv'",
+                },
+            },
         }
 
     # Try to read the file
@@ -104,33 +103,31 @@ def _read_csv_from_path_or_reject(csv_path_or_content: str) -> Tuple[bool, Union
                 "example_paths": [
                     "/data/sample_data/iris.csv",
                     "/data/sample_data/titanic.csv",
-                    "/data/projects/my_project/data/my_file.csv"
-                ]
-            }
+                    "/data/projects/my_project/data/my_file.csv",
+                ],
+            },
         }
 
     if not file_path.is_file():
         return False, {
             "status": "error",
-            "error": f"NOT_A_FILE: '{csv_path_or_content}' is not a file (might be a directory)."
+            "error": f"NOT_A_FILE: '{csv_path_or_content}' is not a file (might be a directory).",
         }
 
     # Read the file
     try:
-        csv_content = file_path.read_text(encoding='utf-8')
+        csv_content = file_path.read_text(encoding="utf-8")
         logger.info(f"Successfully read CSV from path: {file_path}")
         return True, csv_content
     except Exception as e:
-        return False, {
-            "status": "error",
-            "error": f"READ_ERROR: Failed to read file '{file_path}': {str(e)}"
-        }
+        return False, {"status": "error", "error": f"READ_ERROR: Failed to read file '{file_path}': {str(e)}"}
 
 
 def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
     """Register statistics tools with MCP server"""
 
     from .stats_client import StatsClient
+
     stats_client = StatsClient()
 
     # ==================== RESULT MANAGEMENT ====================
@@ -161,12 +158,14 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         """
         try:
             from .result_storage import get_result_storage
+
             storage = get_result_storage()
 
             # Query Redis for user's results
             pattern = f"stats:result:stat_{analysis_type or '*'}_*"
 
             import httpx
+
             async with httpx.AsyncClient(timeout=30) as client:
                 response = await client.get(
                     f"{storage.stats_service_url}/storage/redis/keys",
@@ -203,6 +202,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         """
         try:
             from .result_storage import get_result_storage
+
             storage = get_result_storage()
 
             result = await storage.get_result(result_id)
@@ -282,12 +282,14 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             for obj in data.get("objects", []):
                 path = obj.get("name", obj.get("key", ""))
                 if any(path.lower().endswith(ext) for ext in image_extensions):
-                    visualizations.append({
-                        "path": path,
-                        "url": f"http://localhost:9000/stats-reports/{path}",
-                        "size": obj.get("size"),
-                        "modified": obj.get("last_modified"),
-                    })
+                    visualizations.append(
+                        {
+                            "path": path,
+                            "url": f"http://localhost:9000/stats-reports/{path}",
+                            "size": obj.get("size"),
+                            "modified": obj.get("last_modified"),
+                        }
+                    )
 
             return {
                 "status": "success",
@@ -334,7 +336,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         import re
 
         # Validate project name
-        if not re.match(r'^[a-zA-Z0-9_-]+$', project_name):
+        if not re.match(r"^[a-zA-Z0-9_-]+$", project_name):
             return {
                 "status": "error",
                 "error": "Project name must contain only alphanumeric characters, underscores, and hyphens",
@@ -388,7 +390,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             # Create PROJECT_INFO.md
             # Build directory tree (avoid f-string backslash issue)
             dir_tree = "\n".join(f"├── {d}/" for d in dirs_to_create)
-            created_date = datetime.now().strftime('%Y-%m-%d')
+            created_date = datetime.now().strftime("%Y-%m-%d")
 
             info_content = f"""# {project_name}
 
@@ -415,7 +417,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
 
 | Date | Analysis | Status | Notes |
 |------|----------|--------|-------|
-| {datetime.now().strftime('%Y-%m-%d')} | Project created | ✅ | - |
+| {datetime.now().strftime("%Y-%m-%d")} | Project created | ✅ | - |
 
 """
             info_path = project_path / "PROJECT_INFO.md"
@@ -466,7 +468,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
 
             projects = []
             for item in projects_path.iterdir():
-                if item.is_dir() and not item.name.startswith('.'):
+                if item.is_dir() and not item.name.startswith("."):
                     info_file = item / "PROJECT_INFO.md"
                     project_info = {
                         "name": item.name,
@@ -1159,9 +1161,9 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
 
             # Get numeric columns
             if columns:
-                numeric_cols = [c for c in columns if c in df.columns and df[c].dtype in ['int64', 'float64']]
+                numeric_cols = [c for c in columns if c in df.columns and df[c].dtype in ["int64", "float64"]]
             else:
-                numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+                numeric_cols = df.select_dtypes(include=["number"]).columns.tolist()
 
             if len(numeric_cols) < 2:
                 return {"status": "error", "error": "Need at least 2 numeric columns"}
@@ -1174,12 +1176,12 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
 
             # Pearson correlation
             if method in ["pearson", "all"]:
-                pearson_corr = df[numeric_cols].corr(method='pearson')
+                pearson_corr = df[numeric_cols].corr(method="pearson")
                 result["pearson_matrix"] = pearson_corr.to_dict()
 
             # Spearman correlation
             if method in ["spearman", "all"]:
-                spearman_corr = df[numeric_cols].corr(method='spearman')
+                spearman_corr = df[numeric_cols].corr(method="spearman")
                 result["spearman_matrix"] = spearman_corr.to_dict()
 
             # Find significant pairs
@@ -1190,11 +1192,13 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
                     if i < j:  # Upper triangle only
                         r = corr_matrix.loc[col1, col2]
                         if abs(r) >= min_correlation:
-                            significant_pairs.append({
-                                "var1": col1,
-                                "var2": col2,
-                                "correlation": round(r, 4),
-                            })
+                            significant_pairs.append(
+                                {
+                                    "var1": col1,
+                                    "var2": col2,
+                                    "correlation": round(r, 4),
+                                }
+                            )
 
             result["significant_pairs"] = significant_pairs
             result["summary"] = {
@@ -1207,6 +1211,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             if save_result:
                 try:
                     from .result_storage import get_result_storage
+
                     storage = get_result_storage()
                     metadata = await storage.save_result(
                         result=result,
@@ -1321,6 +1326,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             if save_result:
                 try:
                     from .result_storage import get_result_storage
+
                     storage = get_result_storage()
                     metadata = await storage.save_result(
                         result=result,
@@ -1461,9 +1467,9 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
 
             # Get numeric columns
             if columns:
-                numeric_cols = [c for c in columns if c in df.columns and df[c].dtype in ['int64', 'float64']]
+                numeric_cols = [c for c in columns if c in df.columns and df[c].dtype in ["int64", "float64"]]
             else:
-                numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+                numeric_cols = df.select_dtypes(include=["number"]).columns.tolist()
 
             if len(numeric_cols) < 2:
                 return {"status": "error", "error": "Need at least 2 numeric columns"}
@@ -1483,7 +1489,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
                     if r_squared < 1:
                         vif = 1 / (1 - r_squared)
                     else:
-                        vif = float('inf')
+                        vif = float("inf")
                     vif_results[col] = round(float(vif), 2)
                     if vif >= vif_threshold:
                         problematic.append(col)
@@ -1569,13 +1575,13 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         import pandas as pd
 
         if is_base64:
-            csv_content = base64.b64decode(csv_content).decode('utf-8')
+            csv_content = base64.b64decode(csv_content).decode("utf-8")
         df = pd.read_csv(StringIO(csv_content))
 
         if columns:
             numeric_cols = [c for c in columns if c in df.columns]
         else:
-            numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+            numeric_cols = df.select_dtypes(include=["number"]).columns.tolist()
 
         if len(numeric_cols) < 2:
             return {"status": "error", "error": "Need at least 2 numeric columns"}
@@ -1586,7 +1592,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             "status": "success",
             "columns": numeric_cols,
             "pearson_matrix": corr.to_dict(),
-            "note": "Basic correlation (advanced module not available)"
+            "note": "Basic correlation (advanced module not available)",
         }
 
     # ==================== TABLE ONE (PUBLICATION TABLES) ====================
@@ -1654,12 +1660,13 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             if categorical is None:
                 categorical = []
                 for col in df.columns:
-                    if df[col].dtype == 'object' or df[col].nunique() <= 10:
+                    if df[col].dtype == "object" or df[col].nunique() <= 10:
                         categorical.append(col)
 
             if continuous is None:
-                continuous = [c for c in df.select_dtypes(include=['number']).columns
-                              if c not in categorical and c != groupby]
+                continuous = [
+                    c for c in df.select_dtypes(include=["number"]).columns if c not in categorical and c != groupby
+                ]
 
             # Generate table data
             table_data = {}
@@ -1685,13 +1692,17 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
                     for g in groups:
                         data = df[df[groupby] == g][col].dropna()
                         if col in (nonnormal or []):
-                            col_data[str(g)] = f"{data.median():.2f} [{data.quantile(0.25):.2f}-{data.quantile(0.75):.2f}]"
+                            col_data[str(g)] = (
+                                f"{data.median():.2f} [{data.quantile(0.25):.2f}-{data.quantile(0.75):.2f}]"
+                            )
                         else:
                             col_data[str(g)] = f"{data.mean():.2f} ± {data.std():.2f}"
                 else:
                     data = df[col].dropna()
                     if col in (nonnormal or []):
-                        col_data["Overall"] = f"{data.median():.2f} [{data.quantile(0.25):.2f}-{data.quantile(0.75):.2f}]"
+                        col_data["Overall"] = (
+                            f"{data.median():.2f} [{data.quantile(0.25):.2f}-{data.quantile(0.75):.2f}]"
+                        )
                     else:
                         col_data["Overall"] = f"{data.mean():.2f} ± {data.std():.2f}"
 
@@ -1738,6 +1749,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             if save_result:
                 try:
                     from .result_storage import get_result_storage
+
                     storage = get_result_storage()
                     metadata = await storage.save_result(
                         result=response,
@@ -1805,7 +1817,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
                 dtype = df[col].dtype
 
                 # Categorical detection
-                if dtype == 'object' or dtype.name == 'category':
+                if dtype == "object" or dtype.name == "category":
                     categorical.append(col)
                     if 2 <= n_unique <= 5:
                         groupby_candidates.append(col)
@@ -1863,15 +1875,14 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         import pandas as pd
 
         if is_base64:
-            csv_content = base64.b64decode(csv_content).decode('utf-8')
+            csv_content = base64.b64decode(csv_content).decode("utf-8")
         df = pd.read_csv(StringIO(csv_content))
 
         table_data = {}
 
         # Auto-detect categorical if not specified
         if categorical is None:
-            categorical = [c for c in df.columns
-                          if df[c].dtype == 'object' or df[c].nunique() <= 10]
+            categorical = [c for c in df.columns if df[c].dtype == "object" or df[c].nunique() <= 10]
 
         # Simple summary for each column
         for col in df.columns:
@@ -1881,10 +1892,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             if col in categorical:
                 # Categorical: count (%)
                 counts = df[col].value_counts()
-                table_data[col] = {
-                    str(k): f"{v} ({100*v/len(df):.1f}%)"
-                    for k, v in counts.items()
-                }
+                table_data[col] = {str(k): f"{v} ({100 * v / len(df):.1f}%)" for k, v in counts.items()}
             else:
                 # Continuous: mean±SD or median[IQR]
                 if nonnormal and col in nonnormal:
@@ -1901,7 +1909,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             "table_data": table_data,
             "n_total": len(df),
             "format": "dict",
-            "note": "Basic table (advanced module not available)"
+            "note": "Basic table (advanced module not available)",
         }
 
     # ==================== SURVIVAL ANALYSIS TOOLS ====================
@@ -1967,6 +1975,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
 
             # Poll for job completion
             import asyncio
+
             for _ in range(60):  # 2 min timeout
                 status = await stats_client.get_job_status(job_id)
                 if status.get("status") == "completed":
@@ -2036,6 +2045,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
 
             # Poll for job completion
             import asyncio
+
             for _ in range(60):  # 2 min timeout
                 status = await stats_client.get_job_status(job_id)
                 if status.get("status") == "completed":
@@ -2104,6 +2114,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
 
             # Poll for job completion
             import asyncio
+
             for _ in range(60):  # 2 min timeout
                 status = await stats_client.get_job_status(job_id)
                 if status.get("status") == "completed":
@@ -2168,6 +2179,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
 
             # Poll for job completion
             import asyncio
+
             for _ in range(60):  # 2 min timeout
                 status = await stats_client.get_job_status(job_id)
                 if status.get("status") == "completed":
@@ -2240,7 +2252,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
                 "status": "success",
                 "job_id": job_result.get("job_id"),
                 "message": "Job submitted. Use get_stats_job_status to check progress.",
-                **job_result
+                **job_result,
             }
 
         except Exception as e:
@@ -2309,7 +2321,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
                 "status": "success",
                 "job_id": job_result.get("job_id"),
                 "message": "Job submitted. Use get_stats_job_status to check progress.",
-                **job_result
+                **job_result,
             }
 
         except Exception as e:
@@ -2378,7 +2390,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
                 "status": "success",
                 "job_id": job_result.get("job_id"),
                 "message": "Job submitted. Use get_stats_job_status to check progress.",
-                **job_result
+                **job_result,
             }
 
         except Exception as e:
@@ -2437,7 +2449,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
                 "status": "success",
                 "job_id": job_result.get("job_id"),
                 "message": "Job submitted. Use get_stats_job_status to check progress.",
-                **job_result
+                **job_result,
             }
 
         except Exception as e:
@@ -2508,6 +2520,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
 
             # Poll for job completion
             import asyncio
+
             for _ in range(90):  # 3 min timeout for full analysis
                 status = await stats_client.get_job_status(job_id)
                 if status.get("status") == "completed":
@@ -2595,6 +2608,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
 
             # Poll for job completion
             import asyncio
+
             for _ in range(60):  # 2 min timeout
                 status = await stats_client.get_job_status(job_id)
                 if status.get("status") == "completed":
@@ -2676,6 +2690,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
 
             # Poll for job completion
             import asyncio
+
             for _ in range(60):  # 2 min timeout
                 status = await stats_client.get_job_status(job_id)
                 if status.get("status") == "completed":
@@ -2764,6 +2779,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
 
             # Poll for job completion
             import asyncio
+
             for _ in range(60):  # 2 min timeout
                 status = await stats_client.get_job_status(job_id)
                 if status.get("status") == "completed":
@@ -2846,6 +2862,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
 
             # Poll for job completion
             import asyncio
+
             for _ in range(60):  # 2 min timeout
                 status = await stats_client.get_job_status(job_id)
                 if status.get("status") == "completed":
@@ -2931,6 +2948,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
 
             # Poll for job completion
             import asyncio
+
             for _ in range(90):  # 3 min timeout for full eval
                 status = await stats_client.get_job_status(job_id)
                 if status.get("status") == "completed":
@@ -3033,6 +3051,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
 
             # Poll for job completion
             import asyncio
+
             for _ in range(60):  # 2 min timeout
                 status = await stats_client.get_job_status(job_id)
                 if status.get("status") == "completed":
@@ -3133,6 +3152,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
 
             # Poll for job completion
             import asyncio
+
             for _ in range(60):  # 2 min timeout
                 status = await stats_client.get_job_status(job_id)
                 if status.get("status") == "completed":
@@ -3239,6 +3259,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
 
             # Poll for job completion
             import asyncio
+
             for _ in range(90):  # 3 min timeout for publication report
                 status = await stats_client.get_job_status(job_id)
                 if status.get("status") == "completed":
@@ -3496,10 +3517,12 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
                     ratio=ratio,
                     alternative="two-sided",
                 )
-                sensitivity_table.append({
-                    "power": pwr,
-                    "sample_size": result.get("result", 0),
-                })
+                sensitivity_table.append(
+                    {
+                        "power": pwr,
+                        "sample_size": result.get("result", 0),
+                    }
+                )
 
             return {
                 "effect_size": effect_size,
@@ -3536,6 +3559,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         """
         try:
             import math
+
             # Calculate Cohen's h
             h = abs(2 * (math.asin(math.sqrt(p1)) - math.asin(math.sqrt(p2))))
 
@@ -3552,10 +3576,12 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
                     ratio=ratio,
                     alternative="two-sided",
                 )
-                sensitivity_table.append({
-                    "power": pwr,
-                    "sample_size": result.get("result", 0),
-                })
+                sensitivity_table.append(
+                    {
+                        "power": pwr,
+                        "sample_size": result.get("result", 0),
+                    }
+                )
 
             return {
                 "p1": p1,
@@ -3621,7 +3647,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
                     test_type="ttest",
                     mean1=mean1,
                     mean2=mean2,
-                    std=pooled_sd or (((sd1 or 1)**2 + (sd2 or 1)**2) / 2)**0.5 if sd1 and sd2 else pooled_sd,
+                    std=pooled_sd or (((sd1 or 1) ** 2 + (sd2 or 1) ** 2) / 2) ** 0.5 if sd1 and sd2 else pooled_sd,
                 )
                 if "effect_size" in result:
                     d = result["effect_size"].get("cohens_d", 0)
@@ -3637,7 +3663,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
                             "sd1": sd1,
                             "sd2": sd2,
                             "pooled_sd": pooled_sd,
-                        }
+                        },
                     }
                 return result
 
@@ -3659,14 +3685,14 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
                         "parameters": {
                             "p1": p1,
                             "p2": p2,
-                        }
+                        },
                     }
                 return result
 
             else:
                 return {
                     "status": "error",
-                    "error": "Provide (mean1, mean2, sd) for Cohen's d or (p1, p2) for Cohen's h"
+                    "error": "Provide (mean1, mean2, sd) for Cohen's d or (p1, p2) for Cohen's h",
                 }
 
         except Exception as e:
@@ -3844,12 +3870,12 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
                 "cohens_f": round(float(f), 4),
                 "eta_squared": round(float(eta_sq), 4),
                 "interpretation": interp,
-                "variance_explained": f"{eta_sq*100:.1f}%",
+                "variance_explained": f"{eta_sq * 100:.1f}%",
                 "parameters": {
                     "group_means": group_means,
                     "pooled_sd": pooled_sd,
                     "k_groups": len(group_means) if group_means else None,
-                }
+                },
             }
         except Exception as e:
             return {"status": "error", "error": str(e)}
@@ -4006,7 +4032,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
                 exp = np.array(expected_proportions)
 
             # Cohen's w = sqrt(sum((observed - expected)^2 / expected))
-            w = np.sqrt(np.sum((obs - exp)**2 / exp))
+            w = np.sqrt(np.sum((obs - exp) ** 2 / exp))
 
             # Interpretation
             if w < 0.1:
@@ -4293,6 +4319,7 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
         """
         try:
             import math
+
             log_hr = math.log(hazard_ratio)
 
             if hazard_ratio < 1:
@@ -4313,7 +4340,3 @@ def register_statistics_tools(mcp: FastMCP, automl_client) -> None:
             return {"status": "error", "error": str(e)}
 
     logger.info("Registered 57 statistics tools (including Phase 6.3 Survival Power)")
-
-
-
-

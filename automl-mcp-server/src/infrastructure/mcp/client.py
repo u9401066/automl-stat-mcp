@@ -3,6 +3,7 @@ HTTP Client for AutoML Service
 
 Handles communication with the AutoML REST API.
 """
+
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 

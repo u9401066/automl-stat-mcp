@@ -8,6 +8,7 @@ Tools:
     - calculate_survival_from_medians
     - convert_hazard_ratio_to_log
 """
+
 import math
 from typing import Any, Dict, Optional
 

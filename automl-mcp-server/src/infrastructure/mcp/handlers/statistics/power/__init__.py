@@ -6,6 +6,7 @@ Submodules:
     - anova: ANOVA and Chi-square power analysis
     - survival: Survival analysis power
 """
+
 from .anova import register_anova_power_tools
 from .survival import register_survival_power_tools
 from .ttest import register_ttest_power_tools

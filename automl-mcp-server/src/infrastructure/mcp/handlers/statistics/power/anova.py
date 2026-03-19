@@ -9,6 +9,7 @@ Tools:
     - calculate_chisquare_power
     - calculate_chisquare_effect_size
 """
+
 from typing import List, Optional
 
 from ..base import logger

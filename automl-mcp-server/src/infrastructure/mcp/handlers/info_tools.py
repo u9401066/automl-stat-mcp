@@ -3,6 +3,7 @@ Info/Discovery Tools for MCP
 
 Tools for discovering available algorithms and health checking.
 """
+
 from typing import Any, Dict
 
 from mcp.server.fastmcp import FastMCP

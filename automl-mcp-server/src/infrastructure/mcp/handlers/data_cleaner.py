@@ -4,6 +4,7 @@ Data Cleaner Module
 Applies cleaning actions to a DataFrame based on user decisions or defaults.
 Works with the DataValidator to fix detected issues.
 """
+
 import logging
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -18,6 +19,9 @@ from .data_validator import (
 )
 
 logger = logging.getLogger(__name__)
+
+DecisionValue = CleaningAction | str
+DecisionMap = Dict[str, DecisionValue]
 
 
 class CleaningResult:
@@ -83,7 +87,7 @@ class DataCleaner:
         self,
         df: pd.DataFrame,
         validation_report: ValidationReport,
-        user_decisions: Optional[Dict[str, CleaningAction]] = None,
+        user_decisions: Optional[DecisionMap] = None,
     ) -> CleaningResult:
         """
         Clean the DataFrame based on issues and decisions.
@@ -103,7 +107,7 @@ class DataCleaner:
         columns_before = len(df.columns)
 
         # First pass: Check for PII_EMBEDDED issues that need PHI MCP
-        phi_columns = []
+        phi_columns: List[str] = []
         for issue in validation_report.issues:
             if issue.issue_type == IssueType.PII_EMBEDDED:
                 # Check if user provided a decision for this column
@@ -111,7 +115,8 @@ class DataCleaner:
 
                 # If no decision or decision is REQUIRE_PHI_MCP, we need to stop
                 if action is None or action == CleaningAction.REQUIRE_PHI_MCP:
-                    phi_columns.append(issue.column)
+                    if issue.column is not None:
+                        phi_columns.append(issue.column)
                 elif action == CleaningAction.REJECT_DATA:
                     # User explicitly rejected
                     return CleaningResult(
@@ -147,9 +152,9 @@ class DataCleaner:
         # Work on a copy
         df_clean = df.copy()
 
-        actions_applied = []
-        warnings = []
-        columns_to_exclude = set()
+        actions_applied: List[Dict[str, Any]] = []
+        warnings: List[str] = []
+        columns_to_exclude: set[str] = set()
 
         # Process each issue
         for issue in validation_report.issues:
@@ -164,17 +169,17 @@ class DataCleaner:
 
             # Apply the action
             try:
-                df_clean, applied, warning = self._apply_action(
-                    df_clean, issue, action, columns_to_exclude
-                )
+                df_clean, applied, warning = self._apply_action(df_clean, issue, action, columns_to_exclude)
 
                 if applied:
-                    actions_applied.append({
-                        "issue_type": issue.issue_type.value,
-                        "column": issue.column,
-                        "action": action.value,
-                        "description": issue.description,
-                    })
+                    actions_applied.append(
+                        {
+                            "issue_type": issue.issue_type.value,
+                            "column": issue.column,
+                            "action": action.value,
+                            "description": issue.description,
+                        }
+                    )
 
                 if warning:
                     warnings.append(warning)
@@ -200,14 +205,16 @@ class DataCleaner:
 
         # Remove excluded columns
         if columns_to_exclude:
-            df_clean = df_clean.drop(columns=list(columns_to_exclude), errors='ignore')
+            df_clean = df_clean.drop(columns=list(columns_to_exclude), errors="ignore")
             for col in columns_to_exclude:
-                actions_applied.append({
-                    "issue_type": "column_excluded",
-                    "column": col,
-                    "action": "exclude_column",
-                    "description": f"Column '{col}' excluded from analysis",
-                })
+                actions_applied.append(
+                    {
+                        "issue_type": "column_excluded",
+                        "column": col,
+                        "action": "exclude_column",
+                        "description": f"Column '{col}' excluded from analysis",
+                    }
+                )
 
         return CleaningResult(
             success=True,
@@ -223,7 +230,7 @@ class DataCleaner:
     def _get_action(
         self,
         issue: DataIssue,
-        user_decisions: Dict[str, CleaningAction],
+        user_decisions: DecisionMap,
     ) -> Optional[CleaningAction]:
         """Determine which action to take for an issue"""
 
@@ -284,8 +291,7 @@ class DataCleaner:
         # Reject data entirely - raise exception to abort
         if action == CleaningAction.REJECT_DATA:
             raise ValueError(
-                f"❌ 資料被拒絕: 欄位 '{col}' 含有複雜的 PII/PHI 資料無法處理。"
-                f"請先使用 PHI MCP 處理後再重試。"
+                f"❌ 資料被拒絕: 欄位 '{col}' 含有複雜的 PII/PHI 資料無法處理。請先使用 PHI MCP 處理後再重試。"
             )
 
         # Require PHI MCP - this is a blocking action
@@ -358,7 +364,7 @@ class DataCleaner:
         if action == CleaningAction.CONVERT_TYPE:
             if col and col in df.columns:
                 try:
-                    df[col] = pd.to_numeric(df[col], errors='coerce')
+                    df[col] = pd.to_numeric(df[col], errors="coerce")
                     return df, True, None
                 except Exception as e:
                     warning = f"Could not convert {col} to numeric: {e}"
@@ -414,12 +420,16 @@ class DataCleaner:
             "issues_addressed": len(decisions),
             "actions_applied": decisions,
             "summary": {
-                "critical_addressed": sum(1 for i in validation_report.issues
-                                         if i.severity.value == "critical" and
-                                         (i.column in decisions or i.issue_type.value in decisions)),
-                "high_addressed": sum(1 for i in validation_report.issues
-                                     if i.severity.value == "high" and
-                                     (i.column in decisions or i.issue_type.value in decisions)),
+                "critical_addressed": sum(
+                    1
+                    for i in validation_report.issues
+                    if i.severity.value == "critical" and (i.column in decisions or i.issue_type.value in decisions)
+                ),
+                "high_addressed": sum(
+                    1
+                    for i in validation_report.issues
+                    if i.severity.value == "high" and (i.column in decisions or i.issue_type.value in decisions)
+                ),
             },
         }
         return report
@@ -461,7 +471,7 @@ def get_cleaner() -> DataCleaner:
 def clean_dataframe(
     df: pd.DataFrame,
     validation_report: ValidationReport,
-    user_decisions: Optional[Dict[str, str]] = None,
+    user_decisions: Optional[DecisionMap] = None,
 ) -> CleaningResult:
     """Convenience function to clean a DataFrame"""
     return get_cleaner().clean(df, validation_report, user_decisions)

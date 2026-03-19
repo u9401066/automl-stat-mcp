@@ -9,6 +9,7 @@ Tools:
     - get_stats_job_result: Get completed job result
     - list_stats_jobs: List user's jobs
 """
+
 from typing import Optional
 
 from .base import logger

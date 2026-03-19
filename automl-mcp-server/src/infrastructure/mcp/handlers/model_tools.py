@@ -3,6 +3,7 @@ Model Management Tools for MCP
 
 Tools for managing trained models (list, leaderboard, predict, delete).
 """
+
 from typing import Annotated, Any, Dict, List, Optional
 
 from mcp.server.fastmcp import FastMCP

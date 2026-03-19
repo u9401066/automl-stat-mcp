@@ -10,6 +10,7 @@ Tools:
     - calculate_proportion_power
     - proportion_sensitivity_analysis
 """
+
 from typing import Any, Dict, List, Optional
 
 from ..base import logger

@@ -3,6 +3,7 @@ HTTP Client for Stats Service
 
 Handles communication with the Stats Service REST API.
 """
+
 import os
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional

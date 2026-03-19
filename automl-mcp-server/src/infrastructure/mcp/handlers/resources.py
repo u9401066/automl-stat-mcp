@@ -17,6 +17,7 @@ Available Resources:
 
 Created: 2025-12-16
 """
+
 import json
 import logging
 import os
@@ -47,7 +48,7 @@ ALGORITHMS_INFO = {
         "best_quality": ["XGB", "CAT", "GBM", "NN_TORCH"],
         "interpretable": ["LR", "RF"],
     },
-    "usage": "Use algorithm codes in submit_specific_job(algorithms=['XGB', 'RF'])"
+    "usage": "Use algorithm codes in submit_specific_job(algorithms=['XGB', 'RF'])",
 }
 
 PATH_RESOLUTION_GUIDE = """
@@ -172,16 +173,16 @@ def register_resources(mcp: FastMCP, automl_client) -> None:
         """
         try:
             health = await automl_client.health_check()
-            return json.dumps({
-                "status": "healthy",
-                "automl_api": health,
-                "timestamp": __import__("datetime").datetime.utcnow().isoformat()
-            }, indent=2)
+            return json.dumps(
+                {
+                    "status": "healthy",
+                    "automl_api": health,
+                    "timestamp": __import__("datetime").datetime.utcnow().isoformat(),
+                },
+                indent=2,
+            )
         except Exception as e:
-            return json.dumps({
-                "status": "unhealthy",
-                "error": str(e)
-            }, indent=2)
+            return json.dumps({"status": "unhealthy", "error": str(e)}, indent=2)
 
     # ==========================================================================
     # HELP RESOURCES
@@ -212,17 +213,18 @@ def register_resources(mcp: FastMCP, automl_client) -> None:
             files = []
             for f in path.glob("*.csv"):
                 stat = f.stat()
-                files.append({
-                    "name": f.name,
-                    "size_kb": round(stat.st_size / 1024, 1),
-                    "path": str(f),
-                })
+                files.append(
+                    {
+                        "name": f.name,
+                        "size_kb": round(stat.st_size / 1024, 1),
+                        "path": str(f),
+                    }
+                )
 
-            return json.dumps({
-                "directory": str(path),
-                "file_count": len(files),
-                "files": sorted(files, key=lambda x: x["name"])
-            }, indent=2)
+            return json.dumps(
+                {"directory": str(path), "file_count": len(files), "files": sorted(files, key=lambda x: x["name"])},
+                indent=2,
+            )
         except Exception as e:
             return json.dumps({"error": str(e)})
 
@@ -238,17 +240,15 @@ def register_resources(mcp: FastMCP, automl_client) -> None:
             for p in path.iterdir():
                 if p.is_dir():
                     csv_files = list(p.rglob("*.csv"))
-                    projects.append({
-                        "name": p.name,
-                        "csv_count": len(csv_files),
-                        "files": [str(f.relative_to(path)) for f in csv_files[:5]],
-                    })
+                    projects.append(
+                        {
+                            "name": p.name,
+                            "csv_count": len(csv_files),
+                            "files": [str(f.relative_to(path)) for f in csv_files[:5]],
+                        }
+                    )
 
-            return json.dumps({
-                "directory": str(path),
-                "project_count": len(projects),
-                "projects": projects
-            }, indent=2)
+            return json.dumps({"directory": str(path), "project_count": len(projects), "projects": projects}, indent=2)
         except Exception as e:
             return json.dumps({"error": str(e)})
 
@@ -259,12 +259,15 @@ def register_resources(mcp: FastMCP, automl_client) -> None:
     @mcp.resource("automl://config/defaults")
     async def get_defaults_resource() -> str:
         """Default configuration values"""
-        return json.dumps({
-            "user_id": os.getenv("DEFAULT_USER_ID", "eric"),
-            "storage_mode": "temporary",
-            "pval": True,
-            "n_rows_preview": 10,
-            "correlation_method": "auto",
-        }, indent=2)
+        return json.dumps(
+            {
+                "user_id": os.getenv("DEFAULT_USER_ID", "eric"),
+                "storage_mode": "temporary",
+                "pval": True,
+                "n_rows_preview": 10,
+                "correlation_method": "auto",
+            },
+            indent=2,
+        )
 
     logger.info("MCP Resources registered: algorithms, health, help/upload, help/paths, files/*, config/defaults")

@@ -11,6 +11,7 @@ Enhanced with Data Validation Layer for:
 - Outlier detection
 - Data type issues
 """
+
 import base64
 import io
 import logging
@@ -32,6 +33,7 @@ def register_smart_tools(mcp: FastMCP, automl_client) -> None:
     """Register smart workflow tools with MCP server"""
 
     from .stats_client import StatsClient
+
     stats_client = StatsClient()
 
     # Initialize validation and cleaning tools
@@ -87,9 +89,7 @@ def register_smart_tools(mcp: FastMCP, automl_client) -> None:
             )
 
         # Always add storage question
-        questions.append(
-            "Do you want to save this dataset for future use, or is this a one-time analysis?"
-        )
+        questions.append("Do you want to save this dataset for future use, or is this a one-time analysis?")
 
         return questions
 
@@ -174,7 +174,9 @@ def register_smart_tools(mcp: FastMCP, automl_client) -> None:
             suggested_questions = _generate_questions_from_issues(validation_report)
 
             # Get default cleaning actions
-            default_actions = data_cleaner.get_default_actions(validation_report) if validation_report.total_issues > 0 else {}
+            default_actions = (
+                data_cleaner.get_default_actions(validation_report) if validation_report.total_issues > 0 else {}
+            )
 
             ticket = {
                 "ticket_id": ticket_id,
@@ -182,7 +184,6 @@ def register_smart_tools(mcp: FastMCP, automl_client) -> None:
                 "status": "pending_user_decision",
                 "created_at": datetime.utcnow().isoformat(),
                 "user_id": user_id,
-
                 # Data preview
                 "data_preview": {
                     "rows": quick_stats.get("rows", 0),
@@ -191,7 +192,6 @@ def register_smart_tools(mcp: FastMCP, automl_client) -> None:
                     "column_types": {c["name"]: c["dtype"] for c in quick_stats.get("column_info", [])},
                     "missing_summary": quick_stats.get("missing_summary", {}),
                 },
-
                 # Data validation results (NEW)
                 "data_issues": {
                     "total_issues": validation_report.total_issues,
@@ -206,14 +206,12 @@ def register_smart_tools(mcp: FastMCP, automl_client) -> None:
                     "issues": _format_issues_for_response(validation_report),
                     "default_cleaning_actions": default_actions,
                 },
-
                 # Analysis context
                 "analysis_context": {
                     "purpose": analysis_purpose,
                     "target_column": target_column,
                     "data_size": f"{quick_stats.get('rows', 0)} rows × {quick_stats.get('columns', 0)} columns",
                 },
-
                 # Options for user
                 "options": {
                     "quick_analysis": {
@@ -232,10 +230,8 @@ def register_smart_tools(mcp: FastMCP, automl_client) -> None:
                         "action": "execute_analysis_ticket(ticket_id, cleaning_decisions={...})",
                     },
                 },
-
                 # Suggested questions for AI to ask user
                 "suggested_questions": suggested_questions,
-
                 # Raw data preserved for execution
                 "_internal": {
                     "csv_content": csv_content,
@@ -424,7 +420,6 @@ def register_smart_tools(mcp: FastMCP, automl_client) -> None:
                 "target_column": target_column,
                 "cleaning_applied": cleaning_report is not None,
                 "cleaning_report": cleaning_report,
-
                 # Tracking info
                 "tracking": {
                     "check_status": f"get_stats_job_status('{job_id}')",
@@ -458,7 +453,9 @@ def register_smart_tools(mcp: FastMCP, automl_client) -> None:
                     time.sleep(poll_interval)
                 else:
                     job_ticket["status"] = "timeout"
-                    job_ticket["message"] = f"Analysis still running after {wait_timeout}s. Use tracking info to check later."
+                    job_ticket["message"] = (
+                        f"Analysis still running after {wait_timeout}s. Use tracking info to check later."
+                    )
 
             logger.info(f"Executed ticket {ticket_id} → job {job_id}")
             return job_ticket

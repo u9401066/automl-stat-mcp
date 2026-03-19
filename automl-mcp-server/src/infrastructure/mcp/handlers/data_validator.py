@@ -10,6 +10,7 @@ Issue Categories:
 - MEDIUM: Recommended to address (outliers, moderate missing)
 - LOW: Auto-handled (ID columns, constant columns)
 """
+
 import logging
 import re
 from dataclasses import dataclass, field
@@ -24,17 +25,19 @@ logger = logging.getLogger(__name__)
 
 class IssueSeverity(str, Enum):
     """Issue severity levels"""
+
     CRITICAL = "critical"  # Must address - blocks processing
-    HIGH = "high"          # Should address - may affect results
-    MEDIUM = "medium"      # Recommended - quality improvement
-    LOW = "low"            # Auto-handled - informational
+    HIGH = "high"  # Should address - may affect results
+    MEDIUM = "medium"  # Recommended - quality improvement
+    LOW = "low"  # Auto-handled - informational
 
 
 class IssueType(str, Enum):
     """Types of data quality issues"""
+
     # Critical
-    PII_DETECTED = "pii_detected"              # Entire column is PII (can be deleted/masked)
-    PII_EMBEDDED = "pii_embedded"              # PII mixed in other data (needs PHI MCP)
+    PII_DETECTED = "pii_detected"  # Entire column is PII (can be deleted/masked)
+    PII_EMBEDDED = "pii_embedded"  # PII mixed in other data (needs PHI MCP)
 
     # High
     HIGH_MISSING_RATIO = "high_missing_ratio"
@@ -56,6 +59,7 @@ class IssueType(str, Enum):
 
 class CleaningAction(str, Enum):
     """Available cleaning actions"""
+
     # Missing value handling
     DROP_ROWS = "drop_rows"
     DROP_COLUMN = "drop_column"
@@ -77,8 +81,8 @@ class CleaningAction(str, Enum):
     REMOVE_PII_COLUMN = "remove_pii_column"
 
     # Complex PII - requires external processing
-    REQUIRE_PHI_MCP = "require_phi_mcp"        # Needs dedicated PHI MCP to handle
-    REJECT_DATA = "reject_data"                # Data too complex, reject entirely
+    REQUIRE_PHI_MCP = "require_phi_mcp"  # Needs dedicated PHI MCP to handle
+    REJECT_DATA = "reject_data"  # Data too complex, reject entirely
 
     # No action
     IGNORE = "ignore"
@@ -88,6 +92,7 @@ class CleaningAction(str, Enum):
 @dataclass
 class DataIssue:
     """Represents a single data quality issue"""
+
     issue_type: IssueType
     severity: IssueSeverity
     column: Optional[str]
@@ -113,6 +118,7 @@ class DataIssue:
 @dataclass
 class ValidationReport:
     """Complete validation report for a dataset"""
+
     is_valid: bool
     total_issues: int
     critical_count: int
@@ -152,36 +158,60 @@ class DataValidator:
 
     # PII patterns (basic detection)
     PII_PATTERNS = {
-        "email": r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',
-        "phone": r'\b(?:\+?1[-.\s]?)?\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}\b',
-        "ssn": r'\b\d{3}[-\s]?\d{2}[-\s]?\d{4}\b',
-        "credit_card": r'\b(?:\d{4}[-\s]?){3}\d{4}\b',
-        "tw_id": r'\b[A-Z][12]\d{8}\b',  # Taiwan ID
-        "ip_address": r'\b(?:\d{1,3}\.){3}\d{1,3}\b',
+        "email": r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b",
+        "phone": r"\b(?:\+?1[-.\s]?)?\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}\b",
+        "ssn": r"\b\d{3}[-\s]?\d{2}[-\s]?\d{4}\b",
+        "credit_card": r"\b(?:\d{4}[-\s]?){3}\d{4}\b",
+        "tw_id": r"\b[A-Z][12]\d{8}\b",  # Taiwan ID
+        "ip_address": r"\b(?:\d{1,3}\.){3}\d{1,3}\b",
     }
 
     # Column name patterns suggesting PII
     PII_COLUMN_PATTERNS = [
-        r'(?i)^name$', r'(?i).*_name$', r'(?i)^.*name_.*',  # Name fields
-        r'(?i).*fullname.*', r'(?i).*first.*name.*', r'(?i).*last.*name.*',
-        r'(?i)^姓名$', r'(?i).*姓名.*',  # Chinese name
-        r'(?i).*email.*', r'(?i).*e-mail.*',  # Email
-        r'(?i).*phone.*', r'(?i).*mobile.*', r'(?i).*cell.*',  # Phone
-        r'(?i).*ssn.*', r'(?i).*social.*security.*',  # SSN
-        r'(?i).*credit.*card.*', r'(?i).*card.*number.*',  # Credit card
-        r'(?i).*address.*', r'(?i).*addr.*',  # Address
-        r'(?i).*passport.*', r'(?i).*license.*',  # ID documents
-        r'(?i).*身分證.*', r'(?i).*電話.*', r'(?i).*地址.*',  # Chinese PII
-        r'(?i).*password.*', r'(?i).*secret.*', r'(?i).*token.*',  # Secrets
-        r'(?i).*birthday.*', r'(?i).*birth.*date.*', r'(?i).*dob.*',  # DOB
-        r'(?i).*生日.*', r'(?i).*出生.*',  # Chinese DOB
+        r"(?i)^name$",
+        r"(?i).*_name$",
+        r"(?i)^.*name_.*",  # Name fields
+        r"(?i).*fullname.*",
+        r"(?i).*first.*name.*",
+        r"(?i).*last.*name.*",
+        r"(?i)^姓名$",
+        r"(?i).*姓名.*",  # Chinese name
+        r"(?i).*email.*",
+        r"(?i).*e-mail.*",  # Email
+        r"(?i).*phone.*",
+        r"(?i).*mobile.*",
+        r"(?i).*cell.*",  # Phone
+        r"(?i).*ssn.*",
+        r"(?i).*social.*security.*",  # SSN
+        r"(?i).*credit.*card.*",
+        r"(?i).*card.*number.*",  # Credit card
+        r"(?i).*address.*",
+        r"(?i).*addr.*",  # Address
+        r"(?i).*passport.*",
+        r"(?i).*license.*",  # ID documents
+        r"(?i).*身分證.*",
+        r"(?i).*電話.*",
+        r"(?i).*地址.*",  # Chinese PII
+        r"(?i).*password.*",
+        r"(?i).*secret.*",
+        r"(?i).*token.*",  # Secrets
+        r"(?i).*birthday.*",
+        r"(?i).*birth.*date.*",
+        r"(?i).*dob.*",  # DOB
+        r"(?i).*生日.*",
+        r"(?i).*出生.*",  # Chinese DOB
     ]
 
     # ID column patterns
     ID_PATTERNS = [
-        r'(?i)^id$', r'(?i).*_id$', r'(?i)^.*id_.*',
-        r'(?i)^index$', r'(?i)^row.*', r'(?i)^record.*',
-        r'(?i)^key$', r'(?i).*_key$',
+        r"(?i)^id$",
+        r"(?i).*_id$",
+        r"(?i)^.*id_.*",
+        r"(?i)^index$",
+        r"(?i)^row.*",
+        r"(?i)^record.*",
+        r"(?i)^key$",
+        r"(?i).*_key$",
     ]
 
     def __init__(
@@ -200,11 +230,7 @@ class DataValidator:
         self.correlation_threshold = correlation_threshold
         self.imbalance_threshold = imbalance_threshold
 
-    def validate(
-        self,
-        df: pd.DataFrame,
-        target_column: Optional[str] = None
-    ) -> ValidationReport:
+    def validate(self, df: pd.DataFrame, target_column: Optional[str] = None) -> ValidationReport:
         """
         Validate a DataFrame and return a comprehensive report.
 
@@ -292,23 +318,25 @@ class DataValidator:
                 if re.match(pattern, col):
                     name_suggests_pii = True
                     pii_columns_detected.add(col)
-                    issues.append(DataIssue(
-                        issue_type=IssueType.PII_DETECTED,
-                        severity=IssueSeverity.CRITICAL,
-                        column=col,
-                        description=f"欄位 '{col}' 名稱明顯為個資欄位，可刪除或遮罩整欄",
-                        details={
-                            "detection_method": "column_name_pattern",
-                            "handling": "simple",  # Can be handled by delete/mask
-                        },
-                        suggested_actions=[
-                            CleaningAction.REMOVE_PII_COLUMN,
-                            CleaningAction.MASK_PII,
-                            CleaningAction.KEEP_AS_IS,
-                        ],
-                        default_action=None,  # User must decide
-                        requires_user_decision=True,
-                    ))
+                    issues.append(
+                        DataIssue(
+                            issue_type=IssueType.PII_DETECTED,
+                            severity=IssueSeverity.CRITICAL,
+                            column=col,
+                            description=f"欄位 '{col}' 名稱明顯為個資欄位，可刪除或遮罩整欄",
+                            details={
+                                "detection_method": "column_name_pattern",
+                                "handling": "simple",  # Can be handled by delete/mask
+                            },
+                            suggested_actions=[
+                                CleaningAction.REMOVE_PII_COLUMN,
+                                CleaningAction.MASK_PII,
+                                CleaningAction.KEEP_AS_IS,
+                            ],
+                            default_action=None,  # User must decide
+                            requires_user_decision=True,
+                        )
+                    )
                     break
 
             # Skip content check if already flagged by name
@@ -316,7 +344,7 @@ class DataValidator:
                 continue
 
             # Check content for string columns
-            if df[col].dtype == 'object':
+            if df[col].dtype == "object":
                 non_null = df[col].dropna()
                 if len(non_null) == 0:
                     continue
@@ -336,59 +364,59 @@ class DataValidator:
                     if match_ratio >= self.PII_COLUMN_THRESHOLD:
                         # High ratio: Entire column is PII - can delete/mask column
                         pii_columns_detected.add(col)
-                        issues.append(DataIssue(
-                            issue_type=IssueType.PII_DETECTED,
-                            severity=IssueSeverity.CRITICAL,
-                            column=col,
-                            description=f"欄位 '{col}' 內容為 {pii_type} ({match_ratio:.0%} 匹配)，可刪除或遮罩整欄",
-                            details={
-                                "pii_type": pii_type,
-                                "match_count": int(match_count),
-                                "match_ratio": float(match_ratio),
-                                "detection_method": "content_pattern",
-                                "handling": "simple",  # Can be handled by delete/mask
-                            },
-                            suggested_actions=[
-                                CleaningAction.REMOVE_PII_COLUMN,
-                                CleaningAction.MASK_PII,
-                                CleaningAction.KEEP_AS_IS,
-                            ],
-                            default_action=None,
-                            requires_user_decision=True,
-                        ))
+                        issues.append(
+                            DataIssue(
+                                issue_type=IssueType.PII_DETECTED,
+                                severity=IssueSeverity.CRITICAL,
+                                column=col,
+                                description=f"欄位 '{col}' 內容為 {pii_type} ({match_ratio:.0%} 匹配)，可刪除或遮罩整欄",
+                                details={
+                                    "pii_type": pii_type,
+                                    "match_count": int(match_count),
+                                    "match_ratio": float(match_ratio),
+                                    "detection_method": "content_pattern",
+                                    "handling": "simple",  # Can be handled by delete/mask
+                                },
+                                suggested_actions=[
+                                    CleaningAction.REMOVE_PII_COLUMN,
+                                    CleaningAction.MASK_PII,
+                                    CleaningAction.KEEP_AS_IS,
+                                ],
+                                default_action=None,
+                                requires_user_decision=True,
+                            )
+                        )
                         break  # One PII type per column is enough
 
                     elif match_ratio >= self.PII_EMBEDDED_THRESHOLD:
                         # Low ratio: PII embedded in other data - needs PHI MCP
-                        issues.append(DataIssue(
-                            issue_type=IssueType.PII_EMBEDDED,
-                            severity=IssueSeverity.CRITICAL,
-                            column=col,
-                            description=f"⚠️ 欄位 '{col}' 含有散佈的 {pii_type} ({match_count} 筆)，無法簡單處理，請先使用 PHI MCP 處理",
-                            details={
-                                "pii_type": pii_type,
-                                "match_count": int(match_count),
-                                "match_ratio": float(match_ratio),
-                                "detection_method": "content_pattern",
-                                "handling": "complex",  # Needs PHI MCP
-                                "reason": "PII散佈在普通資料中，無法用刪除/遮罩整欄解決",
-                            },
-                            suggested_actions=[
-                                CleaningAction.REQUIRE_PHI_MCP,
-                                CleaningAction.REJECT_DATA,
-                            ],
-                            default_action=CleaningAction.REQUIRE_PHI_MCP,
-                            requires_user_decision=True,
-                        ))
+                        issues.append(
+                            DataIssue(
+                                issue_type=IssueType.PII_EMBEDDED,
+                                severity=IssueSeverity.CRITICAL,
+                                column=col,
+                                description=f"⚠️ 欄位 '{col}' 含有散佈的 {pii_type} ({match_count} 筆)，無法簡單處理，請先使用 PHI MCP 處理",
+                                details={
+                                    "pii_type": pii_type,
+                                    "match_count": int(match_count),
+                                    "match_ratio": float(match_ratio),
+                                    "detection_method": "content_pattern",
+                                    "handling": "complex",  # Needs PHI MCP
+                                    "reason": "PII散佈在普通資料中，無法用刪除/遮罩整欄解決",
+                                },
+                                suggested_actions=[
+                                    CleaningAction.REQUIRE_PHI_MCP,
+                                    CleaningAction.REJECT_DATA,
+                                ],
+                                default_action=CleaningAction.REQUIRE_PHI_MCP,
+                                requires_user_decision=True,
+                            )
+                        )
                         break
 
         return issues
 
-    def _check_missing_values(
-        self,
-        df: pd.DataFrame,
-        target_column: Optional[str]
-    ) -> List[DataIssue]:
+    def _check_missing_values(self, df: pd.DataFrame, target_column: Optional[str]) -> List[DataIssue]:
         """Check for missing values"""
         issues = []
 
@@ -426,26 +454,24 @@ class DataValidator:
                 ]
                 default = CleaningAction.FILL_MODE
 
-            issue_type = (
-                IssueType.HIGH_MISSING_RATIO
-                if severity == IssueSeverity.HIGH
-                else IssueType.MODERATE_MISSING
-            )
+            issue_type = IssueType.HIGH_MISSING_RATIO if severity == IssueSeverity.HIGH else IssueType.MODERATE_MISSING
 
-            issues.append(DataIssue(
-                issue_type=issue_type,
-                severity=severity,
-                column=col,
-                description=f"Column '{col}' has {missing_ratio:.1%} missing values ({missing_count} rows)",
-                details={
-                    "missing_count": int(missing_count),
-                    "missing_ratio": float(missing_ratio),
-                    "total_rows": len(df),
-                },
-                suggested_actions=suggested,
-                default_action=default if not requires_decision else None,
-                requires_user_decision=requires_decision,
-            ))
+            issues.append(
+                DataIssue(
+                    issue_type=issue_type,
+                    severity=severity,
+                    column=col,
+                    description=f"Column '{col}' has {missing_ratio:.1%} missing values ({missing_count} rows)",
+                    details={
+                        "missing_count": int(missing_count),
+                        "missing_ratio": float(missing_ratio),
+                        "total_rows": len(df),
+                    },
+                    suggested_actions=suggested,
+                    default_action=default if not requires_decision else None,
+                    requires_user_decision=requires_decision,
+                )
+            )
 
         return issues
 
@@ -478,22 +504,24 @@ class DataValidator:
                             detection_reason = "sequential_integer"
 
             if is_id:
-                issues.append(DataIssue(
-                    issue_type=IssueType.ID_COLUMN,
-                    severity=IssueSeverity.LOW,
-                    column=col,
-                    description=f"Column '{col}' appears to be an ID column (will be excluded from modeling)",
-                    details={
-                        "unique_values": int(df[col].nunique()),
-                        "detection_reason": detection_reason,
-                    },
-                    suggested_actions=[
-                        CleaningAction.EXCLUDE_COLUMN,
-                        CleaningAction.KEEP_AS_IS,
-                    ],
-                    default_action=CleaningAction.EXCLUDE_COLUMN,
-                    requires_user_decision=False,
-                ))
+                issues.append(
+                    DataIssue(
+                        issue_type=IssueType.ID_COLUMN,
+                        severity=IssueSeverity.LOW,
+                        column=col,
+                        description=f"Column '{col}' appears to be an ID column (will be excluded from modeling)",
+                        details={
+                            "unique_values": int(df[col].nunique()),
+                            "detection_reason": detection_reason,
+                        },
+                        suggested_actions=[
+                            CleaningAction.EXCLUDE_COLUMN,
+                            CleaningAction.KEEP_AS_IS,
+                        ],
+                        default_action=CleaningAction.EXCLUDE_COLUMN,
+                        requires_user_decision=False,
+                    )
+                )
 
         return issues
 
@@ -503,19 +531,21 @@ class DataValidator:
 
         for col in df.columns:
             if df[col].nunique(dropna=True) <= 1:
-                issues.append(DataIssue(
-                    issue_type=IssueType.CONSTANT_COLUMN,
-                    severity=IssueSeverity.LOW,
-                    column=col,
-                    description=f"Column '{col}' has only one unique value (will be excluded)",
-                    details={"unique_value": str(df[col].dropna().iloc[0]) if len(df[col].dropna()) > 0 else None},
-                    suggested_actions=[
-                        CleaningAction.EXCLUDE_COLUMN,
-                        CleaningAction.KEEP_AS_IS,
-                    ],
-                    default_action=CleaningAction.EXCLUDE_COLUMN,
-                    requires_user_decision=False,
-                ))
+                issues.append(
+                    DataIssue(
+                        issue_type=IssueType.CONSTANT_COLUMN,
+                        severity=IssueSeverity.LOW,
+                        column=col,
+                        description=f"Column '{col}' has only one unique value (will be excluded)",
+                        details={"unique_value": str(df[col].dropna().iloc[0]) if len(df[col].dropna()) > 0 else None},
+                        suggested_actions=[
+                            CleaningAction.EXCLUDE_COLUMN,
+                            CleaningAction.KEEP_AS_IS,
+                        ],
+                        default_action=CleaningAction.EXCLUDE_COLUMN,
+                        requires_user_decision=False,
+                    )
+                )
 
         return issues
 
@@ -524,32 +554,34 @@ class DataValidator:
         issues = []
 
         for col in df.columns:
-            if df[col].dtype == 'object':
+            if df[col].dtype == "object":
                 # Try to detect if it should be numeric
                 non_null = df[col].dropna()
                 if len(non_null) > 0:
                     # Check if values look numeric
-                    numeric_pattern = r'^-?\d+\.?\d*$'
+                    numeric_pattern = r"^-?\d+\.?\d*$"
                     is_numeric_like = non_null.astype(str).str.match(numeric_pattern).mean()
 
                     if is_numeric_like > 0.8:  # 80% look numeric
-                        issues.append(DataIssue(
-                            issue_type=IssueType.INVALID_DATA_TYPE,
-                            severity=IssueSeverity.HIGH,
-                            column=col,
-                            description=f"Column '{col}' appears to contain numeric data but is stored as text",
-                            details={
-                                "current_type": "object",
-                                "suggested_type": "numeric",
-                                "numeric_like_ratio": float(is_numeric_like),
-                            },
-                            suggested_actions=[
-                                CleaningAction.CONVERT_TYPE,
-                                CleaningAction.KEEP_AS_IS,
-                            ],
-                            default_action=CleaningAction.CONVERT_TYPE,
-                            requires_user_decision=False,
-                        ))
+                        issues.append(
+                            DataIssue(
+                                issue_type=IssueType.INVALID_DATA_TYPE,
+                                severity=IssueSeverity.HIGH,
+                                column=col,
+                                description=f"Column '{col}' appears to contain numeric data but is stored as text",
+                                details={
+                                    "current_type": "object",
+                                    "suggested_type": "numeric",
+                                    "numeric_like_ratio": float(is_numeric_like),
+                                },
+                                suggested_actions=[
+                                    CleaningAction.CONVERT_TYPE,
+                                    CleaningAction.KEEP_AS_IS,
+                                ],
+                                default_action=CleaningAction.CONVERT_TYPE,
+                                requires_user_decision=False,
+                            )
+                        )
 
         return issues
 
@@ -580,28 +612,30 @@ class DataValidator:
             outlier_ratio = outlier_count / len(values)
 
             if outlier_count > 0 and outlier_ratio > 0.01:  # More than 1% outliers
-                issues.append(DataIssue(
-                    issue_type=IssueType.OUTLIERS_DETECTED,
-                    severity=IssueSeverity.MEDIUM,
-                    column=col,
-                    description=f"Column '{col}' has {outlier_count} potential outliers ({outlier_ratio:.1%})",
-                    details={
-                        "outlier_count": int(outlier_count),
-                        "outlier_ratio": float(outlier_ratio),
-                        "method": "IQR",
-                        "q1": float(q1),
-                        "q3": float(q3),
-                        "iqr": float(iqr),
-                        "lower_bound": float(lower_bound),
-                        "upper_bound": float(upper_bound),
-                    },
-                    suggested_actions=[
-                        CleaningAction.KEEP_AS_IS,
-                        CleaningAction.REMOVE_OUTLIERS,
-                    ],
-                    default_action=CleaningAction.KEEP_AS_IS,
-                    requires_user_decision=False,
-                ))
+                issues.append(
+                    DataIssue(
+                        issue_type=IssueType.OUTLIERS_DETECTED,
+                        severity=IssueSeverity.MEDIUM,
+                        column=col,
+                        description=f"Column '{col}' has {outlier_count} potential outliers ({outlier_ratio:.1%})",
+                        details={
+                            "outlier_count": int(outlier_count),
+                            "outlier_ratio": float(outlier_ratio),
+                            "method": "IQR",
+                            "q1": float(q1),
+                            "q3": float(q3),
+                            "iqr": float(iqr),
+                            "lower_bound": float(lower_bound),
+                            "upper_bound": float(upper_bound),
+                        },
+                        suggested_actions=[
+                            CleaningAction.KEEP_AS_IS,
+                            CleaningAction.REMOVE_OUTLIERS,
+                        ],
+                        default_action=CleaningAction.KEEP_AS_IS,
+                        requires_user_decision=False,
+                    )
+                )
 
         return issues
 
@@ -610,22 +644,24 @@ class DataValidator:
         dup_count = df.duplicated().sum()
 
         if dup_count > 0:
-            return [DataIssue(
-                issue_type=IssueType.DUPLICATE_ROWS,
-                severity=IssueSeverity.MEDIUM,
-                column=None,
-                description=f"Dataset has {dup_count} duplicate rows ({dup_count/len(df):.1%})",
-                details={
-                    "duplicate_count": int(dup_count),
-                    "duplicate_ratio": float(dup_count / len(df)),
-                },
-                suggested_actions=[
-                    CleaningAction.REMOVE_DUPLICATES,
-                    CleaningAction.KEEP_AS_IS,
-                ],
-                default_action=CleaningAction.REMOVE_DUPLICATES,
-                requires_user_decision=False,
-            )]
+            return [
+                DataIssue(
+                    issue_type=IssueType.DUPLICATE_ROWS,
+                    severity=IssueSeverity.MEDIUM,
+                    column=None,
+                    description=f"Dataset has {dup_count} duplicate rows ({dup_count / len(df):.1%})",
+                    details={
+                        "duplicate_count": int(dup_count),
+                        "duplicate_ratio": float(dup_count / len(df)),
+                    },
+                    suggested_actions=[
+                        CleaningAction.REMOVE_DUPLICATES,
+                        CleaningAction.KEEP_AS_IS,
+                    ],
+                    default_action=CleaningAction.REMOVE_DUPLICATES,
+                    requires_user_decision=False,
+                )
+            ]
 
         return []
 
@@ -633,32 +669,34 @@ class DataValidator:
         """Check for high cardinality categorical columns"""
         issues = []
 
-        for col in df.select_dtypes(include=['object']).columns:
+        for col in df.select_dtypes(include=["object"]).columns:
             cardinality_ratio = df[col].nunique() / len(df)
 
             if cardinality_ratio > self.cardinality_threshold:
-                issues.append(DataIssue(
-                    issue_type=IssueType.HIGH_CARDINALITY,
-                    severity=IssueSeverity.MEDIUM,
-                    column=col,
-                    description=f"Column '{col}' has very high cardinality ({df[col].nunique()} unique values)",
-                    details={
-                        "unique_count": int(df[col].nunique()),
-                        "cardinality_ratio": float(cardinality_ratio),
-                    },
-                    suggested_actions=[
-                        CleaningAction.EXCLUDE_COLUMN,
-                        CleaningAction.KEEP_AS_IS,
-                    ],
-                    default_action=CleaningAction.KEEP_AS_IS,
-                    requires_user_decision=False,
-                ))
+                issues.append(
+                    DataIssue(
+                        issue_type=IssueType.HIGH_CARDINALITY,
+                        severity=IssueSeverity.MEDIUM,
+                        column=col,
+                        description=f"Column '{col}' has very high cardinality ({df[col].nunique()} unique values)",
+                        details={
+                            "unique_count": int(df[col].nunique()),
+                            "cardinality_ratio": float(cardinality_ratio),
+                        },
+                        suggested_actions=[
+                            CleaningAction.EXCLUDE_COLUMN,
+                            CleaningAction.KEEP_AS_IS,
+                        ],
+                        default_action=CleaningAction.KEEP_AS_IS,
+                        requires_user_decision=False,
+                    )
+                )
 
         return issues
 
     def _check_correlations(self, df: pd.DataFrame) -> List[DataIssue]:
         """Check for highly correlated features"""
-        issues = []
+        issues: List[DataIssue] = []
 
         numeric_cols = df.select_dtypes(include=[np.number]).columns
         if len(numeric_cols) < 2:
@@ -672,38 +710,38 @@ class DataValidator:
             for i in range(len(corr_matrix.columns)):
                 for j in range(i + 1, len(corr_matrix.columns)):
                     if corr_matrix.iloc[i, j] > self.correlation_threshold:
-                        high_corr_pairs.append({
-                            "col1": corr_matrix.columns[i],
-                            "col2": corr_matrix.columns[j],
-                            "correlation": float(corr_matrix.iloc[i, j]),
-                        })
+                        high_corr_pairs.append(
+                            {
+                                "col1": corr_matrix.columns[i],
+                                "col2": corr_matrix.columns[j],
+                                "correlation": float(corr_matrix.iloc[i, j]),
+                            }
+                        )
 
             if high_corr_pairs:
-                issues.append(DataIssue(
-                    issue_type=IssueType.HIGH_CORRELATION,
-                    severity=IssueSeverity.LOW,
-                    column=None,
-                    description=f"Found {len(high_corr_pairs)} pairs of highly correlated features (r > {self.correlation_threshold})",
-                    details={"correlated_pairs": high_corr_pairs},
-                    suggested_actions=[
-                        CleaningAction.KEEP_AS_IS,
-                        CleaningAction.EXCLUDE_COLUMN,
-                    ],
-                    default_action=CleaningAction.KEEP_AS_IS,
-                    requires_user_decision=False,
-                ))
+                issues.append(
+                    DataIssue(
+                        issue_type=IssueType.HIGH_CORRELATION,
+                        severity=IssueSeverity.LOW,
+                        column=None,
+                        description=f"Found {len(high_corr_pairs)} pairs of highly correlated features (r > {self.correlation_threshold})",
+                        details={"correlated_pairs": high_corr_pairs},
+                        suggested_actions=[
+                            CleaningAction.KEEP_AS_IS,
+                            CleaningAction.EXCLUDE_COLUMN,
+                        ],
+                        default_action=CleaningAction.KEEP_AS_IS,
+                        requires_user_decision=False,
+                    )
+                )
         except Exception as e:
             logger.warning(f"Could not compute correlations: {e}")
 
         return issues
 
-    def _check_target_column(
-        self,
-        df: pd.DataFrame,
-        target_column: str
-    ) -> List[DataIssue]:
+    def _check_target_column(self, df: pd.DataFrame, target_column: str) -> List[DataIssue]:
         """Check target column specific issues"""
-        issues = []
+        issues: List[DataIssue] = []
 
         if target_column not in df.columns:
             return issues
@@ -713,43 +751,47 @@ class DataValidator:
         # Check for missing values in target
         missing = target.isna().sum()
         if missing > 0:
-            issues.append(DataIssue(
-                issue_type=IssueType.TARGET_HAS_MISSING,
-                severity=IssueSeverity.HIGH,
-                column=target_column,
-                description=f"Target column '{target_column}' has {missing} missing values",
-                details={
-                    "missing_count": int(missing),
-                    "missing_ratio": float(missing / len(df)),
-                },
-                suggested_actions=[
-                    CleaningAction.DROP_ROWS,
-                ],
-                default_action=None,
-                requires_user_decision=True,
-            ))
+            issues.append(
+                DataIssue(
+                    issue_type=IssueType.TARGET_HAS_MISSING,
+                    severity=IssueSeverity.HIGH,
+                    column=target_column,
+                    description=f"Target column '{target_column}' has {missing} missing values",
+                    details={
+                        "missing_count": int(missing),
+                        "missing_ratio": float(missing / len(df)),
+                    },
+                    suggested_actions=[
+                        CleaningAction.DROP_ROWS,
+                    ],
+                    default_action=None,
+                    requires_user_decision=True,
+                )
+            )
 
         # Check for class imbalance (classification)
-        if target.dtype == 'object' or target.nunique() < 20:
+        if target.dtype == "object" or target.nunique() < 20:
             value_counts = target.value_counts(normalize=True)
             min_class_ratio = value_counts.min()
 
             if min_class_ratio < self.imbalance_threshold:
-                issues.append(DataIssue(
-                    issue_type=IssueType.CLASS_IMBALANCE,
-                    severity=IssueSeverity.MEDIUM,
-                    column=target_column,
-                    description=f"Target column has class imbalance (minority class: {min_class_ratio:.1%})",
-                    details={
-                        "class_distribution": value_counts.to_dict(),
-                        "minority_class_ratio": float(min_class_ratio),
-                    },
-                    suggested_actions=[
-                        CleaningAction.KEEP_AS_IS,
-                    ],
-                    default_action=CleaningAction.KEEP_AS_IS,
-                    requires_user_decision=False,
-                ))
+                issues.append(
+                    DataIssue(
+                        issue_type=IssueType.CLASS_IMBALANCE,
+                        severity=IssueSeverity.MEDIUM,
+                        column=target_column,
+                        description=f"Target column has class imbalance (minority class: {min_class_ratio:.1%})",
+                        details={
+                            "class_distribution": value_counts.to_dict(),
+                            "minority_class_ratio": float(min_class_ratio),
+                        },
+                        suggested_actions=[
+                            CleaningAction.KEEP_AS_IS,
+                        ],
+                        default_action=CleaningAction.KEEP_AS_IS,
+                        requires_user_decision=False,
+                    )
+                )
 
         return issues
 

@@ -26,15 +26,15 @@ if str(project_root) not in sys.path:
 
 # Configure logging
 logging.basicConfig(
-    level=os.environ.get("LOG_LEVEL", "INFO"),
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=os.environ.get("LOG_LEVEL", "INFO"), format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
 
 def create_app():
     """Create and configure the MCP server application"""
-    from src.infrastructure.mcp.server import AutoMLMcpServer
+    from src.infrastructure.mcp.server import AutoMLMcpServer  # type: ignore[import-untyped]
+
     return AutoMLMcpServer()
 
 
@@ -81,25 +81,23 @@ Examples:
 
   # Development with MCP Inspector
   mcp dev src/infrastructure/mcp/server.py
-        """
+        """,
     )
 
     parser.add_argument(
         "--mode",
         choices=["stdio", "sse", "http"],
         default=os.environ.get("MCP_MODE", "stdio"),
-        help="Transport mode: stdio (local), sse (remote), http (enterprise POST-only)"
+        help="Transport mode: stdio (local), sse (remote), http (enterprise POST-only)",
     )
     parser.add_argument(
-        "--host",
-        default=os.environ.get("MCP_HOST", "0.0.0.0"),
-        help="Host for SSE/HTTP mode (default: 0.0.0.0)"
+        "--host", default=os.environ.get("MCP_HOST", "0.0.0.0"), help="Host for SSE/HTTP mode (default: 0.0.0.0)"
     )
     parser.add_argument(
         "--port",
         type=int,
         default=int(os.environ.get("MCP_PORT", "8002")),
-        help="Port for SSE/HTTP mode (default: 8002)"
+        help="Port for SSE/HTTP mode (default: 8002)",
     )
 
     args = parser.parse_args()

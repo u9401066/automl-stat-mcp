@@ -3,6 +3,7 @@ Training Tools for MCP
 
 Tools for submitting training jobs.
 """
+
 from typing import Annotated, Any, Dict, List, Literal, Optional
 
 from mcp.server.fastmcp import FastMCP
@@ -18,18 +19,17 @@ def register_training_tools(mcp: FastMCP, client: AutoMLClient) -> None:
     async def submit_automl_job(
         dataset_id: Annotated[str, Field(description="Dataset ID to train on")],
         target_column: Annotated[str, Field(description="Name of the target/label column")],
-        problem_type: Annotated[
-            Literal["binary", "multiclass", "regression"],
-            Field(description="Type of ML problem")
-        ],
+        problem_type: Annotated[Literal["binary", "multiclass", "regression"], Field(description="Type of ML problem")],
         user_id: Annotated[str, Field(description="User ID")],
         session_id: Annotated[Optional[str], Field(description="Optional session ID")] = None,
         time_limit: Annotated[int, Field(description="Training time limit in seconds")] = 300,
         presets: Annotated[
             Literal["best_quality", "high_quality", "good_quality", "medium_quality", "optimize_for_deployment"],
-            Field(description="AutoGluon quality preset")
+            Field(description="AutoGluon quality preset"),
         ] = "medium_quality",
-        metric: Annotated[Optional[str], Field(description="Evaluation metric (auto-selected if not specified)")] = None,
+        metric: Annotated[
+            Optional[str], Field(description="Evaluation metric (auto-selected if not specified)")
+        ] = None,
     ) -> Dict[str, Any]:
         """
         Submit an AutoML training job.
@@ -65,13 +65,12 @@ def register_training_tools(mcp: FastMCP, client: AutoMLClient) -> None:
     async def submit_specific_job(
         dataset_id: Annotated[str, Field(description="Dataset ID to train on")],
         target_column: Annotated[str, Field(description="Name of the target/label column")],
-        problem_type: Annotated[
-            Literal["binary", "multiclass", "regression"],
-            Field(description="Type of ML problem")
-        ],
+        problem_type: Annotated[Literal["binary", "multiclass", "regression"], Field(description="Type of ML problem")],
         algorithms: Annotated[
             List[str],
-            Field(description="List of algorithm codes (e.g., ['XGB', 'GBM', 'RF']). Use list_algorithms() to see options.")
+            Field(
+                description="List of algorithm codes (e.g., ['XGB', 'GBM', 'RF']). Use list_algorithms() to see options."
+            ),
         ],
         user_id: Annotated[str, Field(description="User ID")],
         session_id: Annotated[Optional[str], Field(description="Optional session ID")] = None,
@@ -107,13 +106,10 @@ def register_training_tools(mcp: FastMCP, client: AutoMLClient) -> None:
     async def submit_compare_job(
         dataset_id: Annotated[str, Field(description="Dataset ID to train on")],
         target_column: Annotated[str, Field(description="Name of the target/label column")],
-        problem_type: Annotated[
-            Literal["binary", "multiclass", "regression"],
-            Field(description="Type of ML problem")
-        ],
+        problem_type: Annotated[Literal["binary", "multiclass", "regression"], Field(description="Type of ML problem")],
         algorithms: Annotated[
             List[str],
-            Field(description="List of algorithms to compare (minimum 2). E.g., ['XGB', 'GBM', 'RF', 'NN_TORCH']")
+            Field(description="List of algorithms to compare (minimum 2). E.g., ['XGB', 'GBM', 'RF', 'NN_TORCH']"),
         ],
         user_id: Annotated[str, Field(description="User ID")],
         session_id: Annotated[Optional[str], Field(description="Optional session ID")] = None,

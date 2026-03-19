@@ -27,6 +27,7 @@ Workflow:
     5. Agent calls get_model_leaderboard(model_id) to show results
     6. Agent can now use predict(model_id, new_dataset_id) for inference
 """
+
 import logging
 import os
 
@@ -37,8 +38,7 @@ from .handlers import AutoMLHandler
 
 # Configure logging
 logging.basicConfig(
-    level=os.environ.get("LOG_LEVEL", "INFO"),
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=os.environ.get("LOG_LEVEL", "INFO"), format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -129,28 +129,15 @@ mcp = _McpProxy()
 # Entry Point
 # =============================================================================
 
+
 def main():
     """Run the MCP server"""
     import argparse
 
     parser = argparse.ArgumentParser(description="AutoML MCP Server")
-    parser.add_argument(
-        "--transport",
-        choices=["stdio", "sse", "http"],
-        default="stdio",
-        help="Transport type"
-    )
-    parser.add_argument(
-        "--port",
-        type=int,
-        default=8002,
-        help="Port for SSE/HTTP transport"
-    )
-    parser.add_argument(
-        "--host",
-        default="0.0.0.0",
-        help="Host for SSE/HTTP transport"
-    )
+    parser.add_argument("--transport", choices=["stdio", "sse", "http"], default="stdio", help="Transport type")
+    parser.add_argument("--port", type=int, default=8002, help="Port for SSE/HTTP transport")
+    parser.add_argument("--host", default="0.0.0.0", help="Host for SSE/HTTP transport")
 
     args = parser.parse_args()
 

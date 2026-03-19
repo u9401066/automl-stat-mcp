@@ -4,6 +4,7 @@ AutoML MCP Handler
 Unified handler that registers all MCP tools and resources.
 Modular design - each tool category in its own file.
 """
+
 import logging
 
 from mcp.server.fastmcp import FastMCP

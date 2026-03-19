@@ -12,6 +12,7 @@ Features:
 
 Created: 2025-12-16
 """
+
 import logging
 import os
 from datetime import datetime
@@ -19,7 +20,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
-from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp import Context, FastMCP
 from scipy import stats as scipy_stats
 
 logger = logging.getLogger(__name__)
@@ -120,6 +121,7 @@ def validate_file_exists(csv_path: str) -> tuple[bool, str]:
 # ANALYSIS HELPERS
 # =============================================================================
 
+
 def compute_quick_stats(df: pd.DataFrame) -> Dict[str, Any]:
     """Compute quick statistics for a DataFrame"""
     column_info = []
@@ -130,7 +132,7 @@ def compute_quick_stats(df: pd.DataFrame) -> Dict[str, Any]:
             "missing": int(df[col].isna().sum()),
             "unique": int(df[col].nunique()),
         }
-        if df[col].dtype in ['int64', 'float64']:
+        if df[col].dtype in ["int64", "float64"]:
             info["mean"] = round(float(df[col].mean()), 4) if not df[col].isna().all() else None
             info["std"] = round(float(df[col].std()), 4) if not df[col].isna().all() else None
         column_info.append(info)
@@ -154,9 +156,9 @@ def compute_tableone(df: pd.DataFrame, group_column: str, pval: bool = True) -> 
         for col in df.columns:
             if col == group_column:
                 continue
-            if df[col].dtype == 'object' or df[col].nunique() < 10:
+            if df[col].dtype == "object" or df[col].nunique() < 10:
                 categorical.append(col)
-            elif df[col].dtype in ['int64', 'float64']:
+            elif df[col].dtype in ["int64", "float64"]:
                 continuous.append(col)
 
         # Create TableOne
@@ -188,13 +190,13 @@ def compute_tableone(df: pd.DataFrame, group_column: str, pval: bool = True) -> 
 
 def compute_correlations(df: pd.DataFrame, min_correlation: float = 0.3) -> Dict[str, Any]:
     """Compute correlation analysis"""
-    numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+    numeric_cols = df.select_dtypes(include=["number"]).columns.tolist()
 
     if len(numeric_cols) < 2:
         return {"status": "error", "error": "Need at least 2 numeric columns"}
 
     # Compute correlation matrix
-    corr_matrix = df[numeric_cols].corr(method='pearson')
+    corr_matrix = df[numeric_cols].corr(method="pearson")
 
     # Find significant pairs
     significant_pairs = []
@@ -203,11 +205,13 @@ def compute_correlations(df: pd.DataFrame, min_correlation: float = 0.3) -> Dict
             if i < j:
                 r = corr_matrix.loc[col1, col2]
                 if abs(r) >= min_correlation and not pd.isna(r):
-                    significant_pairs.append({
-                        "var1": col1,
-                        "var2": col2,
-                        "correlation": round(float(r), 4),
-                    })
+                    significant_pairs.append(
+                        {
+                            "var1": col1,
+                            "var2": col2,
+                            "correlation": round(float(r), 4),
+                        }
+                    )
 
     return {
         "status": "success",
@@ -262,8 +266,18 @@ def compute_group_comparison(df: pd.DataFrame, numeric_column: str, group_column
 # INTEGRATED TOOLS REGISTRATION
 # =============================================================================
 
+
 def register_integrated_tools(mcp: FastMCP, automl_client) -> None:
     """Register integrated analysis tools with MCP server"""
+
+    async def _report(ctx, progress: float, total: float, message: str) -> None:
+        """Safely report progress to MCP client."""
+        if ctx is None:
+            return
+        try:
+            await ctx.report_progress(progress=progress, total=total, message=message)
+        except Exception:
+            pass
 
     # ==========================================================================
     # SMART ANALYZE - The All-in-One Tool
@@ -277,6 +291,7 @@ def register_integrated_tools(mcp: FastMCP, automl_client) -> None:
         user_id: Optional[str] = None,
         include_correlations: bool = True,
         generate_report: bool = True,
+        ctx: Context = None,
     ) -> Dict[str, Any]:
         """
         🎯 Smart Analyze - Complete data analysis in one call.
@@ -331,7 +346,7 @@ def register_integrated_tools(mcp: FastMCP, automl_client) -> None:
                 "error": msg,
                 "original_path": csv_path,
                 "resolved_path": resolved_path,
-                "suggestion": "Use list_available_files() to see available files."
+                "suggestion": "Use list_available_files() to see available files.",
             }
 
         resolved_path = msg  # msg contains the valid path
@@ -349,9 +364,11 @@ def register_integrated_tools(mcp: FastMCP, automl_client) -> None:
 
         try:
             # Read data
+            await _report(ctx, 10, 100, "Loading CSV data...")
             df = pd.read_csv(resolved_path)
 
             # 1. Quick Stats (always)
+            await _report(ctx, 25, 100, "Computing quick statistics...")
             quick_stats = compute_quick_stats(df)
             results["quick_stats"] = quick_stats
             results["analyses_performed"].append("quick_stats")
@@ -364,17 +381,20 @@ def register_integrated_tools(mcp: FastMCP, automl_client) -> None:
 
             # 2. Table One (if group_column provided)
             if group_column and group_column in df.columns:
+                await _report(ctx, 50, 100, "Generating Table One...")
                 tableone_result = compute_tableone(df, group_column, pval=True)
                 results["tableone"] = tableone_result
                 results["analyses_performed"].append("tableone")
 
             # 3. Correlations (if requested)
             if include_correlations:
+                await _report(ctx, 75, 100, "Analyzing correlations...")
                 corr_result = compute_correlations(df)
                 results["correlations"] = corr_result
                 results["analyses_performed"].append("correlations")
 
             # 4. Generate Summary
+            await _report(ctx, 90, 100, "Generating summary...")
             summary_lines = [
                 f"## Analysis Summary for {Path(resolved_path).name}",
                 f"- **Rows**: {results['data_overview']['rows']}",
@@ -393,6 +413,7 @@ def register_integrated_tools(mcp: FastMCP, automl_client) -> None:
                 summary_lines.append(f"- **Significant Correlations**: {n_sig} pairs (|r| ≥ 0.3)")
 
             results["summary"] = "\n".join(summary_lines)
+            await _report(ctx, 100, 100, "Analysis complete")
 
         except Exception as e:
             results["status"] = "partial_error"
@@ -413,6 +434,7 @@ def register_integrated_tools(mcp: FastMCP, automl_client) -> None:
         covariates: Optional[List[str]] = None,
         user_id: Optional[str] = None,
         run_propensity: bool = False,
+        ctx: Context = None,
     ) -> Dict[str, Any]:
         """
         🏥 Complete Medical Study Analysis Pipeline.
@@ -468,13 +490,16 @@ def register_integrated_tools(mcp: FastMCP, automl_client) -> None:
         }
 
         try:
+            await _report(ctx, 10, 100, "Loading study data...")
             df = pd.read_csv(resolved_path)
 
             # 1. Table One (Baseline Characteristics)
+            await _report(ctx, 25, 100, "Generating baseline characteristics (Table One)...")
             tableone = compute_tableone(df, treatment_column, pval=True)
             results["baseline"] = tableone
 
             # 2. Treatment Effects (for each outcome)
+            await _report(ctx, 50, 100, "Analyzing treatment effects...")
             results["treatment_effects"] = {}
             for outcome in outcome_columns:
                 if outcome in df.columns:
@@ -482,10 +507,12 @@ def register_integrated_tools(mcp: FastMCP, automl_client) -> None:
                     results["treatment_effects"][outcome] = effect
 
             # 3. Correlations
+            await _report(ctx, 75, 100, "Computing correlations...")
             corr = compute_correlations(df)
             results["correlations"] = corr
 
             # 4. Generate Report Summary
+            await _report(ctx, 90, 100, "Generating report...")
             report_lines = [
                 "# Medical Study Analysis Report",
                 "",
@@ -510,6 +537,7 @@ def register_integrated_tools(mcp: FastMCP, automl_client) -> None:
                         report_lines.append(f"- **{outcome}**: {p_val}")
 
             results["report"] = "\n".join(report_lines)
+            await _report(ctx, 100, 100, "Medical study analysis complete")
 
         except Exception as e:
             results["status"] = "error"
@@ -583,7 +611,7 @@ def register_integrated_tools(mcp: FastMCP, automl_client) -> None:
             }
 
             # Numeric summary
-            numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+            numeric_cols = df.select_dtypes(include=["number"]).columns.tolist()
             if numeric_cols:
                 result["numeric_summary"] = df[numeric_cols].describe().to_dict()
 
@@ -667,4 +695,6 @@ def register_integrated_tools(mcp: FastMCP, automl_client) -> None:
         except Exception as e:
             return {"status": "error", "error": str(e)}
 
-    logger.info("Integrated tools registered: smart_analyze, analyze_medical_study, quick_preview, compare_treatment_groups")
+    logger.info(
+        "Integrated tools registered: smart_analyze, analyze_medical_study, quick_preview, compare_treatment_groups"
+    )
