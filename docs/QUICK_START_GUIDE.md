@@ -59,10 +59,14 @@ make status         # 服務狀態
 make health         # 健康檢查
 
 # 開發
+make hooks-install  # 安裝 pre-commit hooks
+make hooks-run      # 執行所有 hooks
+make check          # lint + mypy
 make rebuild        # 重建並啟動
 make rebuild-mcp    # 只重建 MCP
 make shell-mcp      # 進入 MCP 容器
-make test           # 執行測試
+make test           # 執行快速 smoke tests
+make test-all       # 執行完整 pytest
 
 # 擴展
 make scale-stats    # 擴展統計 worker
@@ -154,19 +158,31 @@ make tail
    make start
    ```
 
-3. **查看日誌**
+3. **開發環境同步**
+   ```bash
+   uv sync --all-extras
+   make hooks-install
+   ```
+
+4. **查看日誌**
    ```bash
    make logs-mcp
    ```
 
-4. **健康檢查**
+5. **健康檢查**
    ```bash
    make health
    ```
 
-5. **重啟服務**
+6. **重啟服務**
    ```bash
    make restart-mcp
+   ```
+
+7. **提交前檢查**
+   ```bash
+   make check
+   make test
    ```
 
 6. **停止服務**

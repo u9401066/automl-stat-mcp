@@ -1,6 +1,6 @@
 # Redis 使用審查報告
 
-**審查日期**: 2026-01-23  
+**審查日期**: 2026-01-23
 **審查範圍**: 整個專案的 Redis 使用情況
 
 ---
@@ -39,10 +39,10 @@ Redis 在專案中被廣泛且正確使用，CRUD 操作完整，錯誤處理基
 ```python
 class RedisClient:
     """Async Redis client for stats job management"""
-    
+
     def __init__(self):
         self._pool = None
-    
+
     async def connect(self):
         """Create connection pool"""
         if self._pool is None:
@@ -51,7 +51,7 @@ class RedisClient:
                 decode_responses=True
             )
         return redis.Redis(connection_pool=self._pool)
-    
+
     async def close(self):
         """Close connection pool"""
         if self._pool:
@@ -95,7 +95,7 @@ async def connect(self):
 
 #### 1.2 Redis Dataset Store
 
-**檔案**: 
+**檔案**:
 - `stats-service/src/infrastructure/redis_dataset_store.py`
 - `automl-service/src/infrastructure/redis_dataset_store.py`
 
@@ -107,7 +107,7 @@ async def connect(self):
 class RedisDatasetStore:
     def __init__(self):
         self._redis = redis.Redis(...)  # 同步客戶端
-    
+
     def get_dataset(self, dataset_id: str):  # 同步方法
         data = self._redis.get(key)
         ...
@@ -131,13 +131,13 @@ class RedisClient:
 class RedisDatasetStore:
     def get_dataset(self, dataset_id: str):  # ✅ Read
         ...
-    
+
     def get_datasets_by_user(self, user_id: str):  # ✅ Read (List)
         ...
-    
+
     def dataset_exists(self, dataset_id: str):  # ✅ Read (Exists)
         ...
-    
+
     # ❌ 缺少 Create, Update, Delete!
 ```
 
@@ -177,13 +177,13 @@ def submit_job(self, ...):
     try:
         # Store job in Redis hash
         self._redis.hset(f"{self._job_prefix}{job_id}", mapping=job_data)
-        
+
         # Set expiry on job (30 days)
         self._redis.expire(f"{self._job_prefix}{job_id}", 2592000)
-        
+
         # Add to queue
         self._redis.lpush(self._queue_key, job_id)
-        
+
         return job
     except redis.ConnectionError as e:
         logger.error(f"Redis connection failed: {e}")
@@ -241,10 +241,10 @@ async def update_job(self, job_id: str, updates: dict) -> bool:
     job = await self.get_job(job_id)
     if not job:
         return False
-    
+
     job.update(updates)
     job["updated_at"] = datetime.utcnow().isoformat()
-    
+
     await client.set(
         f"{STATS_JOBS_PREFIX}{job_id}",
         json.dumps(job),
@@ -318,7 +318,7 @@ def get_dataset(self, dataset_id: str):
         return json.loads(data)
     return None
 ```
-⚠️ **問題**: 
+⚠️ **問題**:
 1. Redis 連線失敗沒有處理
 2. `json.loads()` 可能拋出 JSONDecodeError
 
@@ -344,7 +344,7 @@ async def operation_with_retry(self, ...):
             client = await self.connect()
             result = await client.operation(...)
             return result
-        
+
         except redis.ConnectionError as e:
             logger.warning(f"Redis connection error (attempt {attempt + 1}/3): {e}")
             if attempt == 2:
@@ -353,15 +353,15 @@ async def operation_with_retry(self, ...):
                     detail="Redis service unavailable"
                 )
             await asyncio.sleep(1)
-        
+
         except redis.TimeoutError as e:
             logger.error(f"Redis timeout: {e}")
             raise HTTPException(status_code=504, detail="Redis timeout")
-        
+
         except json.JSONDecodeError as e:
             logger.error(f"Invalid JSON in Redis: {e}")
             raise HTTPException(status_code=500, detail="Data corruption")
-        
+
         except Exception as e:
             logger.error(f"Unexpected Redis error: {e}")
             raise HTTPException(status_code=500, detail="Internal error")
@@ -407,16 +407,16 @@ automl-worker/
 # shared/redis_manager.py
 class RedisManager:
     """Singleton Redis connection manager"""
-    
+
     _instance = None
     _pool = None
-    
+
     @classmethod
     def get_instance(cls):
         if cls._instance is None:
             cls._instance = cls()
         return cls._instance
-    
+
     async def get_client(self) -> redis.Redis:
         if self._pool is None:
             self._pool = redis.ConnectionPool.from_url(
@@ -428,7 +428,7 @@ class RedisManager:
                 retry_on_timeout=True
             )
         return redis.Redis(connection_pool=self._pool)
-    
+
     async def close(self):
         if self._pool:
             await self._pool.disconnect()
@@ -516,7 +516,7 @@ async def list_jobs(self, user_id: str, ...):
 def save_dataset(self, dataset_info):
     # 原有操作
     self._redis.set(key, json.dumps(dataset_info))
-    
+
     # 建立用戶索引 (Sorted Set, score = timestamp)
     self._redis.zadd(
         f"datasets:user:{user_id}:index",
@@ -530,13 +530,13 @@ def get_datasets_by_user(self, user_id):
         f"datasets:user:{user_id}:index",
         0, 99  # 前 100 筆
     )
-    
+
     # 批次取得資料 (Pipeline)
     pipe = self._redis.pipeline()
     for dataset_id in dataset_ids:
         pipe.get(f"{DATASETS_KEY_PREFIX}{dataset_id}")
     results = pipe.execute()
-    
+
     return [json.loads(r) for r in results if r]
 ```
 

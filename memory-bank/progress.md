@@ -9,10 +9,13 @@
 - 新增 pytest.ini 配置檔案（測試 markers, 覆蓋率設定）
 - 創建 run_tests.sh 互動式測試執行腳本
 - 測試增強計畫文檔 (TESTING_ENHANCEMENT_PLAN.md)
+- 更新 README.md 測試說明
+- 創建 TEST_SUITE_SUMMARY.md 測試摘要文檔
+- 提交所有測試檔案到 GitHub (3 commits)
 
 ## Doing
 
-- 提交測試檔案到 Git
+
 
 ## Next
 

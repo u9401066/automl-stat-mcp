@@ -1,6 +1,6 @@
 # Redis Priority 2 修復計畫
 
-**日期**: 2026-01-23  
+**日期**: 2026-01-23
 **目標**: 完成 Redis 架構重構，提升效能和可維護性
 
 ---
@@ -49,11 +49,11 @@
 # 新檔案: shared/infrastructure/redis_manager.py
 class RedisManager:
     """Singleton Redis connection manager for all services"""
-    
+
     _instance = None
     _pool = None
     _lock = asyncio.Lock()
-    
+
     @classmethod
     async def get_instance(cls):
         if cls._instance is None:
@@ -62,7 +62,7 @@ class RedisManager:
                     cls._instance = cls()
                     await cls._instance._initialize_pool()
         return cls._instance
-    
+
     async def _initialize_pool(self):
         """Create connection pool with retry"""
         for attempt in range(3):
@@ -81,13 +81,13 @@ class RedisManager:
                 if attempt == 2:
                     raise
                 await asyncio.sleep(1)
-    
+
     async def get_client(self) -> redis.Redis:
         """Get Redis client from pool"""
         if self._pool is None:
             await self._initialize_pool()
         return redis.Redis(connection_pool=self._pool)
-    
+
     async def close(self):
         """Close connection pool"""
         if self._pool:
@@ -123,7 +123,7 @@ class TestRedisManager:
 class RedisDatasetStore:
     def __init__(self):
         self._redis = redis.Redis(...)  # 同步客戶端
-    
+
     def get_dataset(self, dataset_id):  # 同步方法
         data = self._redis.get(key)  # 同步調用
 ```
@@ -134,12 +134,12 @@ class RedisDatasetStore:
 class RedisDatasetStore:
     def __init__(self):
         self._manager = None
-    
+
     async def _get_client(self):
         if self._manager is None:
             self._manager = await RedisManager.get_instance()
         return await self._manager.get_client()
-    
+
     async def get_dataset(self, dataset_id):  # 非同步方法
         client = await self._get_client()
         data = await client.get(key)  # 非同步調用
@@ -202,7 +202,7 @@ async def list_jobs(self, user_id):
 async def save_job(self, job):
     # 儲存 Job
     await client.set(f"job:{job_id}", json.dumps(job), ex=TTL)
-    
+
     # 建立用戶索引（Sorted Set，score = timestamp）
     timestamp = datetime.utcnow().timestamp()
     await client.zadd(f"user:{user_id}:jobs", {job_id: timestamp})
@@ -211,13 +211,13 @@ async def save_job(self, job):
 async def list_jobs(self, user_id, limit=50):
     # 從索引取得 Job ID（已排序）
     job_ids = await client.zrevrange(f"user:{user_id}:jobs", 0, limit - 1)
-    
+
     # 批次取得資料（Pipeline）
     pipe = client.pipeline()
     for job_id in job_ids:
         pipe.get(f"job:{job_id}")
     results = await pipe.execute()
-    
+
     # 解析
     jobs = [json.loads(r) for r in results if r]
     return jobs
@@ -259,7 +259,7 @@ class TestRedisPerformance:
     async def test_index_created_on_save()
     async def test_index_deleted_on_delete()
     async def test_large_dataset_performance()
-    
+
 # tests/benchmark/test_list_jobs_benchmark.py
 def test_list_jobs_old_vs_new(benchmark):
     # 比較 SCAN vs Sorted Set
@@ -276,7 +276,7 @@ def test_list_jobs_old_vs_new(benchmark):
 
 ### 方案 A：逐步實施（推薦）
 
-**優點**: 風險低，可逐步驗證  
+**優點**: 風險低，可逐步驗證
 **缺點**: 時間較長
 
 ```
@@ -301,7 +301,7 @@ Week 3: 效能優化
 
 ### 方案 B：集中實施（不推薦）
 
-**優點**: 快速完成  
+**優點**: 快速完成
 **缺點**: 風險高，難以除錯
 
 ```
@@ -370,7 +370,7 @@ Week 2: 測試和修復
 
 ### 建議：**分階段執行**
 
-**立即執行**: 
+**立即執行**:
 - ✅ RedisManager Singleton（影響小，收益大）
 
 **近期執行** (本月內):
@@ -392,6 +392,6 @@ Week 2: 測試和修復
 5. 執行完整測試
 6. 監控效能和連線數
 
-**預估時間**: 4 小時  
-**風險等級**: 🟡 Medium  
+**預估時間**: 4 小時
+**風險等級**: 🟡 Medium
 **價值**: ⭐⭐⭐⭐☆ (4/5)

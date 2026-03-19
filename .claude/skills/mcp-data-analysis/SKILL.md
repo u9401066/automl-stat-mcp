@@ -36,29 +36,29 @@ def convert_to_container_path(user_path: str) -> str:
     # 1. 已經是正確格式
     if user_path.startswith("/data/"):
         return user_path
-    
+
     # 2. 只有檔名 → 預設 sample_data
     if "/" not in user_path:
         return f"/data/sample_data/{user_path}"
-    
+
     # 3. 包含 projects → 保持專案結構
     if "projects" in user_path:
         return f"/data/projects/{user_path.split('projects/')[-1]}"
-    
+
     # 4. 包含 sample_data
     if "sample_data" in user_path:
         return f"/data/sample_data/{user_path.split('sample_data/')[-1]}"
-    
+
     # 5. 包含 uploads
     if "uploads" in user_path:
         return f"/data/uploads/{user_path.split('uploads/')[-1]}"
-    
+
     # 6. Host 絕對路徑（無法判斷歸屬）→ 提示用戶確認
     if "/home/" in user_path:
         filename = os.path.basename(user_path)
         # 預設放 sample_data，但應提示用戶確認
         return f"/data/sample_data/{filename}"
-    
+
     # 7. 預設
     return f"/data/sample_data/{user_path}"
 ```

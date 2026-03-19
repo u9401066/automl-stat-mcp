@@ -117,47 +117,47 @@ import numpy as np
 
 class TestCompareGroups:
     """Test compare_groups tool"""
-    
+
     @pytest.fixture
     def sample_df(self):
         return pd.DataFrame({
             'group': [0, 0, 0, 1, 1, 1],
             'value': [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]
         })
-    
+
     @pytest.fixture
     def csv_path(self, tmp_path, sample_df):
         path = tmp_path / "test.csv"
         sample_df.to_csv(path, index=False)
         return str(path)
-    
+
     @pytest.mark.asyncio
     async def test_compare_groups_ttest(self, csv_path):
         """Test t-test for 2 groups"""
         from src.infrastructure.mcp.handlers.statistics_tools import register_statistics_tools
-        
+
         # Create mock MCP server
         mcp = Mock()
         tools = {}
         mcp.tool = lambda: lambda f: tools.__setitem__(f.__name__, f) or f
-        
+
         register_statistics_tools(mcp)
         result = await tools['compare_groups'](
             csv_path=csv_path,
             numeric_column='value',
             group_column='group'
         )
-        
+
         assert result['status'] == 'success'
         assert result['n_groups'] == 2
         assert 'main_test' in result
         assert result['main_test']['test'] == 'Independent t-test'
-    
+
     @pytest.mark.asyncio
     async def test_compare_groups_invalid_column(self, csv_path):
         """Test error handling for invalid column"""
         # ... test error case
-    
+
     @pytest.mark.asyncio
     async def test_compare_groups_with_save(self, csv_path):
         """Test result persistence"""
@@ -171,12 +171,12 @@ class TestCompareGroups:
 
 class TestAnalyzeCorrelations:
     """Test analyze_correlations tool"""
-    
+
     @pytest.mark.asyncio
     async def test_pearson_correlation(self, csv_path):
         """Test Pearson correlation"""
         pass
-    
+
     @pytest.mark.asyncio
     async def test_spearman_correlation(self, csv_path):
         """Test Spearman correlation"""
@@ -185,12 +185,12 @@ class TestAnalyzeCorrelations:
 
 class TestGenerateTableone:
     """Test generate_tableone_directly tool"""
-    
+
     @pytest.mark.asyncio
     async def test_basic_tableone(self, csv_path):
         """Test basic Table 1 generation"""
         pass
-    
+
     @pytest.mark.asyncio
     async def test_grouped_tableone(self, csv_path):
         """Test grouped Table 1"""
@@ -207,7 +207,7 @@ import json
 
 class TestResultStorage:
     """Test ResultStorage class"""
-    
+
     @pytest.fixture
     def storage(self):
         from src.infrastructure.mcp.handlers.result_storage import ResultStorage
@@ -215,19 +215,19 @@ class TestResultStorage:
             stats_service_url="http://mock:8003",
             minio_bucket="test-bucket"
         )
-    
+
     def test_generate_result_id(self, storage):
         """Test result ID generation"""
         result_id = storage._generate_result_id("tableone")
         assert result_id.startswith("stat_tableone_")
         assert len(result_id) == len("stat_tableone_") + 8
-    
+
     def test_get_minio_path(self, storage):
         """Test MinIO path generation"""
         path = storage._get_minio_path("user1", "roc", "stat_roc_abc123")
         assert path.startswith("user1/roc/")
         assert "stat_roc_abc123" in path
-    
+
     @pytest.mark.asyncio
     async def test_save_result_success(self, storage):
         """Test successful result save"""
@@ -238,42 +238,42 @@ class TestResultStorage:
                     user_id='test_user',
                     analysis_type='correlation'
                 )
-                
+
                 assert metadata.result_id.startswith('stat_correlation_')
                 assert metadata.user_id == 'test_user'
 
 
 class TestNumpyJSONEncoder:
     """Test custom JSON encoder"""
-    
+
     def test_numpy_int64(self):
         from src.infrastructure.mcp.handlers.result_storage import safe_json_dumps
         import numpy as np
-        
+
         data = {'value': np.int64(42)}
         result = safe_json_dumps(data)
         assert json.loads(result)['value'] == 42
-    
+
     def test_numpy_float64(self):
         from src.infrastructure.mcp.handlers.result_storage import safe_json_dumps
         import numpy as np
-        
+
         data = {'value': np.float64(3.14)}
         result = safe_json_dumps(data)
         assert abs(json.loads(result)['value'] - 3.14) < 0.001
-    
+
     def test_numpy_array(self):
         from src.infrastructure.mcp.handlers.result_storage import safe_json_dumps
         import numpy as np
-        
+
         data = {'values': np.array([1, 2, 3])}
         result = safe_json_dumps(data)
         assert json.loads(result)['values'] == [1, 2, 3]
-    
+
     def test_numpy_bool(self):
         from src.infrastructure.mcp.handlers.result_storage import safe_json_dumps
         import numpy as np
-        
+
         data = {'flag': np.bool_(True)}
         result = safe_json_dumps(data)
         assert json.loads(result)['flag'] == True
@@ -294,58 +294,58 @@ def client():
 
 class TestRedisRoutes:
     """Test Redis storage routes"""
-    
+
     def test_redis_set(self, client):
         """Test POST /storage/redis/set"""
         with patch('src.routes.storage.redis_client') as mock_redis:
             mock_redis.set = AsyncMock()
-            
+
             response = client.post('/storage/redis/set', json={
                 'key': 'test_key',
                 'value': {'data': 'test'},
                 'ttl': 3600
             })
-            
+
             assert response.status_code == 200
             assert response.json()['status'] == 'success'
-    
+
     def test_redis_get_exists(self, client):
         """Test GET /storage/redis/get - key exists"""
         with patch('src.routes.storage.redis_client') as mock_redis:
             mock_redis.get = AsyncMock(return_value='{"data": "test"}')
-            
+
             response = client.get('/storage/redis/get', params={'key': 'test_key'})
-            
+
             assert response.status_code == 200
             assert response.json()['exists'] == True
-    
+
     def test_redis_get_not_exists(self, client):
         """Test GET /storage/redis/get - key not exists"""
         with patch('src.routes.storage.redis_client') as mock_redis:
             mock_redis.get = AsyncMock(return_value=None)
-            
+
             response = client.get('/storage/redis/get', params={'key': 'missing'})
-            
+
             assert response.status_code == 200
             assert response.json()['exists'] == False
 
 
 class TestMinioRoutes:
     """Test MinIO storage routes"""
-    
+
     def test_minio_upload(self, client):
         """Test POST /storage/minio/upload"""
         with patch('src.routes.storage.minio_client') as mock_minio:
             mock_minio.ensure_bucket = lambda x: None
             mock_minio.put_object = lambda **kwargs: None
-            
+
             response = client.post('/storage/minio/upload', json={
                 'bucket': 'test-bucket',
                 'path': 'test/file.json',
                 'content': '{"data": "test"}',
                 'content_type': 'application/json'
             })
-            
+
             assert response.status_code == 200
             assert response.json()['full_path'] == 'test-bucket/test/file.json'
 ```
@@ -360,7 +360,7 @@ import numpy as np
 
 class TestHandleMissingValues:
     """Test handle_missing_values tool"""
-    
+
     @pytest.fixture
     def df_with_missing(self, tmp_path):
         df = pd.DataFrame({
@@ -371,17 +371,17 @@ class TestHandleMissingValues:
         path = tmp_path / "test.csv"
         df.to_csv(path, index=False)
         return str(path)
-    
+
     @pytest.mark.asyncio
     async def test_mean_imputation(self, df_with_missing):
         """Test mean imputation for numeric columns"""
         # ... test implementation
-    
+
     @pytest.mark.asyncio
     async def test_median_imputation(self, df_with_missing):
         """Test median imputation"""
         pass
-    
+
     @pytest.mark.asyncio
     async def test_mode_imputation(self, df_with_missing):
         """Test mode imputation for categorical"""
@@ -390,12 +390,12 @@ class TestHandleMissingValues:
 
 class TestConvertToBinary:
     """Test convert_to_binary tool"""
-    
+
     @pytest.mark.asyncio
     async def test_yes_no_mapping(self, tmp_path):
         """Test Yes/No to 1/0 conversion"""
         pass
-    
+
     @pytest.mark.asyncio
     async def test_custom_mapping(self, tmp_path):
         """Test custom value mapping"""
@@ -416,11 +416,11 @@ from unittest.mock import patch
 
 class TestMCPStatsIntegration:
     """Integration tests for MCP -> Stats Service"""
-    
+
     @pytest.fixture
     def stats_service_url(self):
         return "http://localhost:8003"
-    
+
     @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_storage_save_and_retrieve(self, stats_service_url):
@@ -436,7 +436,7 @@ class TestMCPStatsIntegration:
                 }
             )
             assert save_response.status_code == 200
-            
+
             # Retrieve
             get_response = await client.get(
                 f"{stats_service_url}/storage/redis/get",
@@ -444,7 +444,7 @@ class TestMCPStatsIntegration:
             )
             assert get_response.status_code == 200
             assert get_response.json()['value']['test'] == 'data'
-    
+
     @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_minio_upload_download(self, stats_service_url):

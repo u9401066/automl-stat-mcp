@@ -175,7 +175,7 @@ MINIO_SECRET_KEY=your-secret-key
      -e "MINIO_ROOT_PASSWORD=securepassword" \
      quay.io/minio/minio server /data --console-address ":9001"
    ```
-   
+
    將憑證放在：
    - `~/minio/certs/public.crt`
    - `~/minio/certs/private.key`
@@ -488,7 +488,7 @@ sudo ufw deny 6379/tcp # 不對外開放 Redis
 ```
 User: 列出可用的 AutoML 工具
 
-Claude: (should list 20 tools including register_dataset, 
+Claude: (should list 20 tools including register_dataset,
          submit_automl_job, predict, etc.)
 ```
 

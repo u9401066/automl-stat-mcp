@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **MCP Progress Notifications (SSE)** - 即時進度回報
+  - `wait_for_completion()` 整合 `ctx.report_progress()` 透過 SSE 串流進度
+  - `train_and_wait`, `wait_for_job` 自動轉發 worker 進度到 MCP client
+  - `smart_analyze` 分段進度：Loading→Stats→TableOne→Correlations→Summary
+  - `analyze_medical_study` 分段進度：Loading→TableOne→Treatment→Correlations→Report
+  - 安全的 `_report()` helper，graceful degradation 無 progressToken 時
+- **完整測試套件** - 720 tests passed, 0 failed
+  - automl-mcp-server: 446 passed, 1 skipped
+  - root tests: 274 passed, 33 skipped
+  - 新增 20+ isolated unit test 檔案覆蓋所有 MCP handler
+  - 新增 edge cases, e2e, performance, security 測試
 - **Redis Priority 2: RedisManager Singleton** - 統一的 Redis 連線管理
   - 共享連線池設計 (最大 50 連線，所有服務共用)
   - 懶加載初始化 + 線程安全單例模式
@@ -16,8 +27,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - 同時支援 async 和 sync 客戶端
   - 完整測試套件 (16 tests, 100% 通過率)
   - 新增檔案: `shared/infrastructure/redis_manager.py`, `tests/unit/test_redis_manager.py`
+- 開發品質護欄：新增 `.pre-commit-config.yaml` 與 `.editorconfig`
+- Makefile 新增 `hooks-install`、`hooks-run`、`format`、`lint`、`typecheck`、`check`、`test-all` 入口
 
 ### Changed
+- **Docker Infrastructure 全面修復**
+  - stats-worker 支援 `STORAGE_MODE=local`，修復 shared module 掛載
+  - `.env.example` 統一環境變數，`.vscode/mcp.json` 修正 localhost
+  - stats-service Dockerfile 正確 COPY shared module
+  - 所有 Docker 服務健康 (automl-mcp, stats-service, stats-worker x2, redis)
+- **DDD 架構重構** - automl-service 完整 Domain-Driven Design
+  - Domain models: dataset, job, model, training_config
+  - Application layer: use_cases, dto
+  - Infrastructure: repositories, storage_factory, queue
+  - Interface: API routes 按職責分離
 - **stats-service 重構為使用 RedisManager**:
   - `src/infrastructure/redis_client.py` - 改用 async RedisManager
   - `src/infrastructure/redis_dataset_store.py` - 改用 `get_sync_client()`
@@ -25,8 +48,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `src/infrastructure/redis_dataset_store.py` - 改用 `get_sync_client()`
   - `src/infrastructure/queue/redis_queue.py` - 改用 lazy initialization
 - **消除重複的 Redis 連線池**: 從 4+ 個獨立連線池減少到 1 個共享池
+- 將根目錄開發流程統一為 `uv sync --all-extras` + `uv run ...`
+- GitHub Actions 改為 `uv` + pre-commit + smoke/integration CI 流程
+- 根目錄與子專案文件改為 local-first storage 與現代化開發指令
+- pytest 收斂為單一 `pytest.ini` 測試收集設定，納入多個服務測試目錄
+
+### Fixed
+- **Flaky Test 修復**: `test_result_storage_standalone.py` httpx module binding 污染
+  - 問題: sys.modules mock 導致已 import 的模組保留 mock reference
+  - 方案: 還原 sys.modules 後同步還原 `_rs_mod.httpx = _real_httpx`
+- **MCP Handler 全面修復**: 所有 handler 防禦性錯誤處理、輸入驗證
+- 移除失效的 `.github/*.chatmode.md` 與不支援的 agent tool 宣告
+- 修正 `tests/security/test_injection_defense.py` 使用不存在的 `httpx.RequestEntityTooLarge`
 
 ### Technical Details
+- **MCP SDK 1.25.0**: `Context.report_progress(progress, total, message)` via SSE
 - **連線池優化**: 減少連線數量 50%+，降低 Redis 記憶體使用
 - **集中配置**: 所有 Redis 設定統一由 RedisManager 管理
 - **一致性錯誤處理**: 統一的重試與錯誤處理邏輯
@@ -94,7 +130,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **uv Workspace 管理**: 全面遷移至 `uv` 進行虛擬環境與多服務工作空間管理。
-- **全專案代碼品質審計**: 
+- **全專案代碼品質審計**:
   - 達成 `automl-service` 與 `stats-service` 路由層 Ruff 零報錯 (Select: E, W, F, I, B, C4)。
   - 系統性修復了所有的 `B904` (Exception chaining) 並優化異常堆疊追蹤。
 - **深層類型安全 (MyPy)**:

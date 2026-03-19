@@ -1,8 +1,8 @@
 # Design Issue #001: Data Cleaning Workflow
 
-**Status**: 🔴 Open  
-**Priority**: High  
-**Created**: 2025-12-03  
+**Status**: 🔴 Open
+**Priority**: High
+**Created**: 2025-12-03
 **Category**: UX / Data Quality / MCP Design
 
 ---
@@ -134,7 +134,7 @@ Level 4: 智慧確認 (按嚴重程度)
 async def interactive_data_cleaning(csv_content, user_id):
     """
     啟動互動式資料清理流程。
-    
+
     Returns:
         cleaning_session_id: 清理會話 ID
         issues: 偵測到的問題列表

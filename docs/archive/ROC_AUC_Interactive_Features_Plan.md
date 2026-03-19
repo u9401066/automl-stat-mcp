@@ -212,11 +212,11 @@ generate_publication_report(
 **輸出**:
 ```
 Results:
-The [model_name] achieved an AUC of 0.85 (95% CI: 0.82-0.88) for 
-predicting [outcome_name]. Using Youden's J statistic, the optimal 
-cut-off was 0.45, yielding a sensitivity of 0.82 (95% CI: 0.78-0.86) 
-and specificity of 0.75 (95% CI: 0.71-0.79). The positive predictive 
-value was 0.68 and negative predictive value was 0.86. The model 
+The [model_name] achieved an AUC of 0.85 (95% CI: 0.82-0.88) for
+predicting [outcome_name]. Using Youden's J statistic, the optimal
+cut-off was 0.45, yielding a sensitivity of 0.82 (95% CI: 0.78-0.86)
+and specificity of 0.75 (95% CI: 0.71-0.79). The positive predictive
+value was 0.68 and negative predictive value was 0.86. The model
 showed good calibration (Hosmer-Lemeshow p=0.34, Brier score=0.15).
 ```
 
@@ -227,7 +227,7 @@ showed good calibration (Hosmer-Lemeshow p=0.34, Brier score=0.15).
 **功能描述**: 分析結果對閾值選擇的穩健性
 
 ```python
-# 建議 API  
+# 建議 API
 threshold_sensitivity_analysis(
     y_true,
     y_score,

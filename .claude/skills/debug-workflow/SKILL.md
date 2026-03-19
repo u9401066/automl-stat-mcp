@@ -218,7 +218,7 @@ runTests()
 def test_{bug_scenario}():
     """
     Regression test for {bug_description}
-    
+
     Bug: {bug_id or description}
     Fixed: {date}
     """

@@ -100,8 +100,8 @@ mcp_automl_complete_medical_study(
 ```yaml
 ---
 name: mcp-workflow-agent
-description: Autonomous MCP workflow executor that handles path conversion, 
-tool selection, and result aggregation automatically. Use when running any 
+description: Autonomous MCP workflow executor that handles path conversion,
+tool selection, and result aggregation automatically. Use when running any
 MCP data analysis task. Triggers: 分析, analyze, MCP, 資料處理.
 ---
 
@@ -156,7 +156,7 @@ def auto_resolve_path(request):
 class SessionManager:
     def __init__(self):
         self.sessions = {}  # session_id -> {user_id, project, results}
-    
+
     def get_user_id(self, session_id):
         return self.sessions.get(session_id, {}).get("user_id", "default")
 
@@ -244,9 +244,9 @@ async def run_workflow(
 ```yaml
 ---
 name: mcp-quick-analysis
-description: Streamlined MCP analysis workflow with automatic path conversion 
-and tool selection. Executes complete analysis pipeline with minimal user input. 
-Use when user wants quick data analysis without specifying individual tools. 
+description: Streamlined MCP analysis workflow with automatic path conversion
+and tool selection. Executes complete analysis pipeline with minimal user input.
+Use when user wants quick data analysis without specifying individual tools.
 Triggers: 快速分析, quick analysis, 分析一下, 看資料, 幫我分析.
 ---
 
@@ -327,7 +327,7 @@ list_analysis_results(user_id="eric")
 ### 問題 4: 結果分散
 ```
 Table One → stat_tableone_68fa8190
-Compare   → stat_compare_groups_3526f788  
+Compare   → stat_compare_groups_3526f788
 Corr      → stat_correlation_68edb133
 ML        → Job 79f76242-811f-48c1-9080-172af4efd45e
 ```

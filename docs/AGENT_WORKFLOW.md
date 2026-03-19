@@ -67,7 +67,7 @@ Agent 執行:
 
 3. get_job_status(job_id="ml-abc123")
    → status: "running", progress: 45%
-   
+
 4. get_job_status(job_id="ml-abc123")  # 輪詢直到完成
    → status: "completed", model_id: "model-xyz789"
 

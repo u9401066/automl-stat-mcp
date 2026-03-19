@@ -40,11 +40,11 @@ This project follows a standard code of conduct. Please be respectful and constr
 
 ```bash
 # Fork the repository on GitHub, then clone your fork
-git clone https://github.com/YOUR_USERNAME/clinical-automl-mcp.git
-cd clinical-automl-mcp
+git clone https://github.com/YOUR_USERNAME/automl-stat-mcp.git
+cd automl-stat-mcp
 
 # Add upstream remote
-git remote add upstream https://github.com/ORIGINAL_OWNER/clinical-automl-mcp.git
+git remote add upstream https://github.com/u9401066/automl-stat-mcp.git
 ```
 
 ---
@@ -54,7 +54,7 @@ git remote add upstream https://github.com/ORIGINAL_OWNER/clinical-automl-mcp.gi
 ### 1. Create Virtual Environment
 
 ```bash
-python -m venv .venv
+uv venv
 source .venv/bin/activate  # Linux/macOS
 # or
 .venv\Scripts\activate     # Windows
@@ -63,36 +63,38 @@ source .venv/bin/activate  # Linux/macOS
 ### 2. Install Dependencies
 
 ```bash
-# Install with development dependencies
-pip install -e ".[dev]"
+# Sync the workspace environment
+uv sync --all-extras
 
-# Or install each service separately
-cd stats-service && pip install -e ".[dev]"
-cd automl-mcp-server && pip install -e ".[dev]"
+# Install local development hooks
+uv run pre-commit install --install-hooks
 ```
 
 ### 3. Start Development Services
 
 ```bash
 # Start with Docker (recommended)
-docker compose up -d redis
+docker compose up -d redis stats-service stats-worker automl-mcp
 
 # Or run services locally
 cd stats-service
-uvicorn src.main:app --reload --port 8003
+uv run uvicorn src.main:app --reload --port 8003
 ```
 
 ### 4. Run Tests
 
 ```bash
 # Run all tests
-pytest tests/
+uv run pytest
 
 # Run with coverage
-pytest --cov=src tests/
+uv run pytest --cov=. --cov-report=html tests/
 
-# Run specific test file
-pytest tests/test_statistics.py -v
+# Run focused smoke suite
+./scripts/run_tests.sh quick
+
+# Run lint/type gates
+make check
 ```
 
 ---
@@ -197,17 +199,20 @@ We use [Ruff](https://github.com/astral-sh/ruff) for linting and formatting:
 
 ```bash
 # Format code
-ruff format .
+uv run ruff format .
 
 # Check linting
-ruff check .
+uv run ruff check .
 
 # Auto-fix issues
-ruff check --fix .
+uv run ruff check --fix .
+
+# Type-check core services
+uv run mypy automl-mcp-server/src automl-service/src stats-service/src shared
 ```
 
 **Key conventions:**
-- Line length: 100 characters
+- Line length: 120 characters
 - Use type hints for all function signatures
 - Docstrings for all public functions (Google style)
 - Prefer `pathlib.Path` over `os.path`
@@ -358,7 +363,7 @@ def compute_roc_curve(
 
 ## ❓ Questions?
 
-- Open a [GitHub Discussion](https://github.com/OWNER/clinical-automl-mcp/discussions)
+- Open a repository Discussion for architecture or workflow questions
 - Check existing issues and documentation
 - Tag maintainers for urgent matters
 

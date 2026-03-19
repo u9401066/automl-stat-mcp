@@ -270,7 +270,7 @@ Agent 執行：
 
 1. 診斷資料
    mcp_automl_get_column_info(csv_path="/data/sample_data/titanic.csv")
-   
+
    發現問題：
    - age: 177 個缺失值
    - cabin: 687 個缺失值（太多，移除）

@@ -1,8 +1,8 @@
 # Design Issue #003: Visualization Service - 圖表生成功能
 
-**Status**: 🟡 Planned  
-**Priority**: High  
-**Created**: 2025-12-09  
+**Status**: 🟡 Planned
+**Priority**: High
+**Created**: 2025-12-09
 **Category**: Visualization / ML Analysis / Statistical Reporting
 
 ---
@@ -41,7 +41,7 @@
       "description": "Receiver Operating Characteristic curve with AUC and 95% CI"
     },
     {
-      "type": "pr_curve", 
+      "type": "pr_curve",
       "title": "Precision-Recall Curve",
       "url": "http://minio:9000/automl-results/user123/job456/pr_curve.png",
       "format": "png"
@@ -136,25 +136,25 @@ def plot_roc_from_result(roc_result: ROCCurveResult, ax=None):
     """用現有 ROC 計算結果畫圖 - 純 matplotlib，無 sklearn"""
     if ax is None:
         fig, ax = plt.subplots(figsize=(8, 6))
-    
+
     # 從現有結果取座標
     fpr = [p.fpr for p in roc_result.curve_points]
     tpr = [p.tpr for p in roc_result.curve_points]
-    
+
     ax.plot(fpr, tpr, lw=2, label=f'ROC (AUC = {roc_result.auc:.3f})')
     ax.plot([0, 1], [0, 1], 'k--', lw=1, label='Random')
     ax.fill_between(fpr, tpr, alpha=0.3)
-    
+
     # 標記最佳閾值點
-    ax.scatter([roc_result.optimal_threshold_fpr], 
-               [roc_result.optimal_threshold_tpr], 
+    ax.scatter([roc_result.optimal_threshold_fpr],
+               [roc_result.optimal_threshold_tpr],
                marker='o', s=100, c='red', label='Optimal')
-    
+
     ax.set_xlabel('False Positive Rate (1 - Specificity)')
     ax.set_ylabel('True Positive Rate (Sensitivity)')
     ax.set_title('Receiver Operating Characteristic')
     ax.legend(loc='lower right')
-    
+
     return ax
 ```
 
@@ -227,7 +227,7 @@ statannotations>=0.6.0   # 新增 - 自動 p-value 標註
 matplotlib>=3.7.0        # 新增 - 基礎繪圖
 seaborn>=0.12.0          # 新增 - 美觀圖表
 
-# automl-worker/requirements.txt 新增  
+# automl-worker/requirements.txt 新增
 matplotlib>=3.7.0
 shap>=0.42.0             # SHAP 解釋圖 (不依賴 sklearn)
 ```
@@ -288,7 +288,7 @@ lifelines>=0.27.0   # Survival plots (KaplanMeierFitter.plot)
 | 建立圖表返回格式標準 | `visualization/schemas.py` | 0.25d |
 | 基礎單元測試 | `tests/test_visualization.py` | 0.25d |
 
-**Deliverable**: 
+**Deliverable**:
 - `save_figure_to_minio(fig, job_id, filename)` → 返回 MinIO URL
 - 統一的 matplotlib rcParams 設定
 
@@ -309,12 +309,12 @@ lifelines>=0.27.0   # Survival plots (KaplanMeierFitter.plot)
 def kaplan_meier_analysis(..., generate_plot=True):
     kmf = KaplanMeierFitter()
     kmf.fit(...)
-    
+
     if generate_plot:
         fig, ax = plt.subplots(figsize=(8, 6))
         kmf.plot_survival_function(ax=ax)
         plot_url = save_figure_to_minio(fig, job_id, 'km_curve.png')
-    
+
     return {..., "visualizations": [{"type": "km_curve", "url": plot_url}]}
 ```
 
@@ -492,7 +492,7 @@ automl-results/
 
 1. **ROC 分析** 返回 ROC + PR 曲線圖片 URL
 2. **存活分析** 返回 KM 曲線圖片 URL
-3. **Cox 回歸** 返回森林圖圖片 URL  
+3. **Cox 回歸** 返回森林圖圖片 URL
 4. **組間比較** 返回直條圖/箱形圖 + p-value 標註
 5. **AutoML 訓練** 返回模型比較圖 + SHAP 圖
 6. 所有圖片為**出版品質** (300dpi)

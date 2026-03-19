@@ -195,7 +195,7 @@ Separated Container Architecture with 4 components: 1) AutoML API (FastAPI) - li
 │                      MinIO                          │
 │              (Object Storage)                       │
 └─────────────────────────────────────────────────────┘
-       │ 
+       │
        │ minio_url
        ▼
 ┌─────────────────────────────────────────────────────┐
@@ -245,13 +245,13 @@ Separated Container Architecture with 4 components: 1) AutoML API (FastAPI) - li
    - POST /datasets/upload - 上傳資料集
    - POST /automl/train - 訓練模型
    - POST /automl/predict - 執行預測
-   
+
 2. Core Library - 核心業務邏輯
    - dataset_store: 資料集存儲管理
    - automl_engine: AutoML 訓練邏輯（FLAML/auto-sklearn）
    - model_registry: 模型持久化和元數據管理
    - schemas: Pydantic 資料模型
-   
+
 3. MCP Server - Agent 介面層
    - 將 HTTP API 包裝為 MCP tools
    - Tools: upload_dataset, automl_train, automl_predict
@@ -478,4 +478,3 @@ Separated Container Architecture with 4 components: 1) AutoML API (FastAPI) - li
 ## Project Description
 
 AutoML MCP System - Multi-user AutoML and statistical analysis platform accessible via AI Agents through MCP protocol
-

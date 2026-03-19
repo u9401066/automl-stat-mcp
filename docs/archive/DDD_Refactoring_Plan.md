@@ -33,7 +33,7 @@ automl-mcp-server/src/infrastructure/mcp/handlers/
 │   ├── __init__.py
 │   ├── base.py                    # 共用工具、錯誤處理
 │   ├── eda_tools.py               # EDA 相關 (5 tools)
-│   ├── tableone_tools.py          # TableOne 相關 (3 tools)  
+│   ├── tableone_tools.py          # TableOne 相關 (3 tools)
 │   ├── survival_tools.py          # Survival Analysis (4 tools)
 │   ├── propensity_tools.py        # Propensity Score (5 tools)
 │   ├── roc_tools.py               # ROC/AUC Analysis (7 tools)

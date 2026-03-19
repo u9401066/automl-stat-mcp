@@ -68,7 +68,7 @@
 #### 完整醫學研究工作流 (`test_complete_workflows.py`)
 - ✅ RCT 完整流程
   - 上傳資料 → 品質檢查 → Table One → 統計檢定 → 結果儲存
-  
+
 #### 存活分析工作流
 - ✅ Kaplan-Meier → Cox 迴歸完整流程
 

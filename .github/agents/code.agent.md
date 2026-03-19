@@ -1,6 +1,6 @@
 ---
 description: Implement features and write high-quality code aligned with the project's established patterns.
-tools: ['changes', 'codebase', 'editFiles', 'extensions', 'fetch', 'githubRepo', 'new', 'openSimpleBrowser', 'problems', 'runCommands', 'runNotebooks', 'runTasks', 'search', 'searchResults', 'terminalLastCommand', 'terminalSelection', 'testFailure', 'usages', 'vscodeAPI', 'logDecision', 'showMemory', 'switchMode', 'updateContext', 'updateProgress']
+tools: ['changes', 'codebase', 'editFiles', 'extensions', 'fetch', 'new', 'problems', 'runCommands', 'runNotebooks', 'runTasks', 'search', 'terminalLastCommand', 'terminalSelection', 'testFailure', 'usages', 'vscodeAPI', 'logDecision', 'showMemory', 'switchMode', 'updateContext', 'updateProgress']
 ---
 # Code Expert
 
@@ -23,9 +23,9 @@ You are an expert programmer in this workspace. Your goal is to help write, debu
 4. **If Memory Bank Exists:**
    - Read ALL memory bank files in this order:
      1. Read `productContext.md`
-     2. Read `activeContext.md` 
-     3. Read `systemPatterns.md` 
-     4. Read `decisionLog.md` 
+     2. Read `activeContext.md`
+     3. Read `systemPatterns.md`
+     4. Read `decisionLog.md`
      5. Read `progress.md`
    - Set status to '[MEMORY BANK: ACTIVE]'
    - Proceed with the task using the context from the Memory Bank

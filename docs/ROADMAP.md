@@ -1,6 +1,6 @@
 # AutoML MCP System - Roadmap
 
-> Last Updated: 2026-01-06
+> Last Updated: 2026-01-27
 
 ## 🎯 Vision
 
@@ -8,13 +8,18 @@
 
 ---
 
-## 📊 Current Status (v1.6)
+## 📊 Current Status (v1.8-dev)
 
 ### ✅ 已完成功能
 
 | 模組 | 功能 | 工具數 | 狀態 |
 |------|------|--------|------|
-| **Quality Audit** | Ruff 0 報錯, MyPy 類型修正, uv 遷移 | - | ✅ NEW |
+| **MCP Progress** | SSE 即時進度通知 | - | ✅ NEW |
+| **Test Suite** | 720 tests, 0 failures | - | ✅ NEW |
+| **Docker Infra** | STORAGE_MODE local-first, 全服務健康 | - | ✅ NEW |
+| **DDD Refactor** | automl-service 完整 DDD 架構 | - | ✅ NEW |
+| **RedisManager** | 統一連線池 Singleton | - | ✅ NEW |
+| **Quality Audit** | Ruff 0 報錯, MyPy 類型修正, uv 遷移 | - | ✅ |
 | **Data Quality** | 品質偵測、轉換建議、準備度評估 | 2 | ✅ |
 | **AI Framework** | Claude Skills, Constitution-Bylaw | 12 Skills | ✅ |
 | **Project Mgmt** | 專案目錄、視覺化列表、報告產生 | 4 | ✅ |
@@ -33,6 +38,29 @@
 | **Result Persistence** | Redis + MinIO 儲存 | - | ✅ |
 
 **總計: 104+ MCP 工具**
+
+### 🆕 2026-01-27 更新
+
+- **MCP Progress Notifications** (SSE 即時進度)
+  - `wait_for_completion()` 透過 `ctx.report_progress()` 串流 worker 進度
+  - `smart_analyze`, `analyze_medical_study` 分段進度回報
+  - MCP SDK 1.25.0 `Context.report_progress(progress, total, message)`
+
+- **完整測試套件** (720 tests, 0 failures)
+  - MCP server: 446 passed, 1 skipped
+  - Root tests: 274 passed, 33 skipped
+  - 修復所有 flaky tests (httpx module binding 污染)
+
+- **Docker Infrastructure 修復**
+  - stats-worker STORAGE_MODE 支援
+  - shared module Dockerfile COPY 修正
+  - 全服務健康：automl-mcp, stats-service, stats-worker x2, redis
+
+- **DDD 架構重構** (automl-service)
+  - Domain models, Application use_cases, Infrastructure repositories
+
+- **RedisManager Singleton** (共享連線池)
+  - 從 4+ 獨立連線池 → 1 共享池，減少 50%+ 連線
 
 ### 🆕 2026-01-06 更新
 

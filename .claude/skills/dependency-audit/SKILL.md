@@ -350,20 +350,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          
+
       - name: Install dependencies
         run: |
           pip install pip-audit safety pip-licenses
           pip install -r requirements.txt
-          
+
       - name: Security audit
         run: pip-audit --strict
-        
+
       - name: License check
         run: |
           pip-licenses --format=markdown > license-report.md

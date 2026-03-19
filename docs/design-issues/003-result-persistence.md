@@ -46,7 +46,7 @@ class ResultStorage:
     def __init__(self, redis_client, minio_client):
         self.redis = redis_client
         self.minio = minio_client
-    
+
     async def save_result(
         self,
         result: dict,
@@ -57,7 +57,7 @@ class ResultStorage:
     ) -> dict:
         """
         Save analysis result to Redis (quick access) and MinIO (persistent).
-        
+
         Returns:
             {
                 "result_id": "stat_xxx",
@@ -82,7 +82,7 @@ async def compare_groups(
 ) -> dict:
     """..."""
     result = {...}
-    
+
     if save_result:
         result_id = await result_storage.save_result(
             result=result,
@@ -91,7 +91,7 @@ async def compare_groups(
         )
         result["result_id"] = result_id
         result["result_path"] = f"results/{user_id}/compare_groups/{result_id}.json"
-    
+
     return result
 ```
 

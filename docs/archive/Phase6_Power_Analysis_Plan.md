@@ -196,23 +196,23 @@ class PowerAnalysisResult:
     """Power analysis result"""
     test_type: str               # "t-test", "proportion", "anova", etc.
     scenario: str                # "sample_size" or "power"
-    
+
     # 計算結果
     sample_size_per_group: Optional[int]
     total_sample_size: Optional[int]
     power: Optional[float]
-    
+
     # 輸入參數
     parameters: Dict[str, Any]
-    
+
     # 效應量資訊
     effect_size: Optional[float]
     effect_size_type: str        # "Cohen's d", "Cohen's h", "f", etc.
     effect_size_interpretation: str  # "small", "medium", "large"
-    
+
     # 敏感度分析
     sensitivity_analysis: Optional[Dict]  # power curves
-    
+
     # 臨床解讀
     interpretation: str
     recommendations: List[str]

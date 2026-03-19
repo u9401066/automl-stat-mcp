@@ -67,18 +67,18 @@ class DataQualityReport:
 
 class DataQualityAnalyzer:
     """資料品質分析器"""
-    
+
     # 閾值設定
     SKEW_THRESHOLD = 1.0  # mean/median ratio
     HIGH_CARDINALITY_THRESHOLD = 0.9  # unique/rows ratio
     OUTLIER_IQR_MULTIPLIER = 1.5
-    
+
     def analyze(self, df: pd.DataFrame) -> DataQualityReport:
         """完整資料品質分析"""
         warnings = []
         transform_suggestions = []
         blocking_issues = []
-        
+
         for col in df.columns:
             # 檢查全 NaN
             if df[col].isna().all():
@@ -92,7 +92,7 @@ class DataQualityAnalyzer:
                 ))
                 blocking_issues.append(f"ALL_NAN:{col}")
                 continue
-            
+
             # 檢查常數欄
             if df[col].nunique() == 1:
                 warnings.append(QualityWarning(
@@ -104,7 +104,7 @@ class DataQualityAnalyzer:
                     stats={"unique": 1, "value": df[col].dropna().iloc[0]}
                 ))
                 continue
-            
+
             # 檢查高基數 ID 欄
             cardinality_ratio = df[col].nunique() / len(df)
             if cardinality_ratio >= self.HIGH_CARDINALITY_THRESHOLD:
@@ -117,7 +117,7 @@ class DataQualityAnalyzer:
                         impact="不適合作為分類或分組變數",
                         stats={"unique": df[col].nunique(), "cardinality_ratio": cardinality_ratio}
                     ))
-            
+
             # 檢查偏態（僅數值欄）
             if pd.api.types.is_numeric_dtype(df[col]):
                 mean = df[col].mean()
@@ -133,7 +133,7 @@ class DataQualityAnalyzer:
                             impact="參數統計方法（如 t-test）可能不準確",
                             stats={"mean": mean, "median": median, "skew_ratio": skew_ratio}
                         ))
-                        
+
                         # 建議 Transform
                         if (df[col] > 0).all():  # 可以取 log
                             log_values = np.log(df[col])
@@ -147,10 +147,10 @@ class DataQualityAnalyzer:
                                     "median": log_values.median()
                                 }
                             ))
-        
+
         # 評估分析可行性
         analysis_ready = len(blocking_issues) == 0
-        
+
         # 生成建議動作
         recommended_actions = []
         for w in warnings:
@@ -160,7 +160,7 @@ class DataQualityAnalyzer:
                 recommended_actions.append(f"排除 {w.column} 於分析")
             elif w.issue == "SKEWED":
                 recommended_actions.append(f"對 {w.column} 應用 log transform")
-        
+
         return DataQualityReport(
             warnings=warnings,
             transform_suggestions=transform_suggestions,
@@ -181,7 +181,7 @@ class QuickStatsResponse(BaseModel):
     column_info: List[dict]
     missing_summary: dict
     numeric_summary: Optional[dict]
-    
+
     # 新增欄位
     quality_warnings: Optional[List[dict]] = None
     transform_suggestions: Optional[List[dict]] = None
@@ -196,14 +196,14 @@ class QuickStatsResponse(BaseModel):
 async def quality_check(request: QuickStatsRequest):
     """
     🔍 資料品質檢查
-    
+
     偵測資料品質問題並提供建議：
     - 全 NaN 欄
-    - 常數欄  
+    - 常數欄
     - 高基數 ID 欄
     - 偏態資料
     - 極端值
-    
+
     Returns:
         quality_warnings: 品質警告列表
         transform_suggestions: Transform 建議
@@ -276,7 +276,7 @@ def apply_transform(df: pd.DataFrame, col: str, transform: str) -> pd.Series:
 
 ```
 TestAllNaNColumns (3 tests)
-TestConstantColumns (3 tests)  
+TestConstantColumns (3 tests)
 TestHighCardinalityIDColumns (2 tests)
 TestSkewedDataNeedingTransform (2 tests)
 TestOutliers (1 test)

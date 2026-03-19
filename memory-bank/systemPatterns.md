@@ -461,10 +461,10 @@ MCP 統計分析工具返回 MinIO URLs (visualization_urls[])，Agent 需要主
 下載程式碼範例：
 ```python
 from minio import Minio
-client = Minio('192.168.1.102:9000', 
+client = Minio('192.168.1.102:9000',
                access_key='...', secret_key='...',
                secure=False)
-client.fget_object('stats-reports', 
+client.fget_object('stats-reports',
                    'mcp_user/roc-{job_id}/roc_curve.png',
                    'results/02_univariate/roc_curve.png')
 ```

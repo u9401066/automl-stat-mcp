@@ -113,7 +113,7 @@ stats-service
 
 ```
 POST /cleaning/convert-binary
-POST /cleaning/encode-categorical  
+POST /cleaning/encode-categorical
 POST /cleaning/handle-missing
 POST /cleaning/remove-columns
 POST /cleaning/filter-rows

@@ -35,20 +35,11 @@ docker run -d -p 6379:6379 redis:7-alpine
 ```bash
 # 根目錄安裝所有依賴
 cd /home/eric/workspace251204
+uv venv
 uv sync --all-extras
 
-# 或個別服務
-cd stats-service && uv venv && uv pip install -r requirements.txt
-cd automl-service && uv venv && uv pip install -r requirements.txt
-cd automl-mcp-server && uv venv && uv pip install -r requirements.txt
-```
-
-**使用 pip**：
-```bash
-# 根目錄
-pip install -r stats-service/requirements.txt
-pip install -r automl-service/requirements.txt
-pip install -r automl-mcp-server/requirements.txt
+# 安裝本地 hook（建議）
+uv run pre-commit install --install-hooks
 ```
 
 ### 3. 環境變數設定
@@ -88,17 +79,15 @@ CELERY_RESULT_BACKEND=redis://localhost:6379/1
 # Terminal 1: Stats Service
 cd stats-service
 export STORAGE_MODE=local DATA_ROOT=/home/eric/workspace251204
-python -m src.main
-# 或
-uvicorn src.main:app --host 0.0.0.0 --port 8003
+uv run python -m src.main
 
 # Terminal 2: Stats Worker
 cd stats-worker
-celery -A src.celery_app worker --loglevel=info --pool=solo
+uv run celery -A src.celery_app worker --loglevel=info --pool=solo
 
 # Terminal 3: MCP Server
 cd automl-mcp-server
-python src/main.py --mode sse --host 0.0.0.0 --port 8002
+uv run python src/main.py --mode sse --host 0.0.0.0 --port 8002
 ```
 
 **完整配置（含 AutoML）**：
@@ -106,13 +95,11 @@ python src/main.py --mode sse --host 0.0.0.0 --port 8002
 ```bash
 # Terminal 4: AutoML Service
 cd automl-service
-python -m src.main
-# 或
-uvicorn src.main:app --host 0.0.0.0 --port 8001
+uv run python -m src.main
 
 # Terminal 5: AutoML Worker (需要更多 RAM)
 cd automl-worker
-celery -A src.celery_app worker --loglevel=info --pool=solo --concurrency=1
+uv run celery -A src.celery_app worker --loglevel=info --pool=solo --concurrency=1
 ```
 
 ### 5. 驗證服務

@@ -6,7 +6,7 @@
 
 **AI-powered statistical analysis and AutoML platform using Model Context Protocol (MCP).**
 
-AutoML Stat MCP provides 51+ statistical and machine learning tools through the MCP interface, enabling AI agents (Claude, GPT, etc.) to perform comprehensive clinical research analysis.
+AutoML Stat MCP provides 51+ statistical and machine learning tools through the MCP interface, enabling AI agents (Claude, GPT, etc.) to perform comprehensive clinical research analysis. Supports **real-time progress notifications** via SSE for long-running operations.
 
 ---
 
@@ -88,12 +88,35 @@ curl http://localhost:8003/api/files/list
 
 ### Connect to AI Agent
 
-Configure your AI agent (Claude Desktop, Cursor, etc.) to connect to the MCP server:
+#### VS Code Copilot (推薦)
+
+在你的專案根目錄建立 `.vscode/mcp.json`：
+
+```json
+{
+  "servers": {
+    "automl-stat-mcp": {
+      "url": "http://localhost:8002/sse",
+      "type": "sse"
+    }
+  }
+}
+```
+
+或使用快速設定腳本，在目標專案目錄執行：
+
+```bash
+/path/to/automl-stat-mcp/scripts/setup-vscode-mcp.sh
+```
+
+#### Claude Desktop / Cursor
+
+在 MCP 設定中新增：
 
 ```json
 {
   "mcpServers": {
-    "clinical-automl": {
+    "automl-stat-mcp": {
       "url": "http://localhost:8002/sse"
     }
   }
@@ -290,19 +313,27 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guid
 ### Development Setup
 
 ```bash
-# Clone with submodules
-git clone --recursive https://github.com/yourusername/clinical-automl-mcp.git
-cd clinical-automl-mcp
+# Clone your fork or local mirror
+git clone --recursive https://github.com/YOUR_USERNAME/automl-stat-mcp.git
+cd automl-stat-mcp
 
-# Create virtual environment
-python -m venv .venv
+# Sync the workspace environment
+uv venv
 source .venv/bin/activate  # or .venv\Scripts\activate on Windows
+uv sync --all-extras
 
-# Install development dependencies
-pip install -e ".[dev]"
+# Install developer hooks
+make hooks-install
+
+# Run quality gates
+make check
 
 # Run tests (interactive mode)
 ./run_tests.sh
+
+# Or use focused targets
+make test        # smoke tests
+make test-all    # full pytest collection
 
 # Or run specific test suites
 ./run_tests.sh fast        # Fast tests only
@@ -326,16 +357,16 @@ See [TESTING_ENHANCEMENT_PLAN.md](docs/TESTING_ENHANCEMENT_PLAN.md) for details.
 
 ```bash
 # Run all tests
-pytest tests/
+uv run pytest
 
 # Run with coverage
-pytest --cov=. --cov-report=html tests/
+uv run pytest --cov=. --cov-report=html tests/
 
 # Run specific markers
-pytest -m "edge_case" tests/
-pytest -m "e2e" tests/
-pytest -m "performance" tests/
-pytest -m "security" tests/
+uv run pytest -m "edge_case" tests/
+uv run pytest -m "e2e" tests/
+uv run pytest -m "performance" tests/
+uv run pytest -m "security" tests/
 ```
 
 ---
@@ -360,5 +391,5 @@ Built with these excellent open source projects:
 
 ## 📧 Contact
 
-- Issues: [GitHub Issues](https://github.com/yourusername/clinical-automl-mcp/issues)
-- Discussions: [GitHub Discussions](https://github.com/yourusername/clinical-automl-mcp/discussions)
+- Use the repository Issues tab for bug reports and regressions.
+- Use the repository Discussions tab for design questions and workflow proposals.

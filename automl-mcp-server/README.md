@@ -46,27 +46,28 @@ MCP Server for AutoML capabilities, enabling AI Agents to train and compare ML m
 
 - Python 3.10+
 - AutoML Service running (see automl-service/)
-- MinIO for dataset storage
+- Local storage is supported by default; MinIO is only required for `STORAGE_MODE=minio`
 
 ### Installation
 
 ```bash
 cd automl-mcp-server
-pip install -r requirements.txt
+uv venv
+source .venv/bin/activate
+uv sync
 ```
 
 ### Run MCP Server
 
 ```bash
 # STDIO mode (for VS Code Copilot / Claude Desktop)
-python -m src.infrastructure.mcp.server
+uv run python -m src.infrastructure.mcp.server
 
 # SSE mode (for remote access)
-python -m src.infrastructure.mcp.server --transport sse --port 8002
+uv run python -m src.infrastructure.mcp.server --transport sse --port 8002
 
 # Development with MCP Inspector
-pip install "mcp[cli]"
-mcp dev src/infrastructure/mcp/server.py
+uv run mcp dev src/infrastructure/mcp/server.py
 ```
 
 ### VS Code Copilot Configuration
@@ -78,8 +79,8 @@ Add to `.vscode/mcp.json`:
   "servers": {
     "automl-mcp": {
       "type": "stdio",
-      "command": "python",
-      "args": ["-m", "src.infrastructure.mcp.server"],
+      "command": "uv",
+      "args": ["run", "python", "-m", "src.infrastructure.mcp.server"],
       "cwd": "${workspaceFolder}/automl-mcp-server"
     }
   }
@@ -94,8 +95,8 @@ Add to `claude_desktop_config.json`:
 {
   "mcpServers": {
     "automl": {
-      "command": "python",
-      "args": ["-m", "src.infrastructure.mcp.server"],
+      "command": "uv",
+      "args": ["run", "python", "-m", "src.infrastructure.mcp.server"],
       "cwd": "/path/to/automl-mcp-server"
     }
   }
@@ -147,7 +148,7 @@ Agent: upload_dataset(
        → temporary: {"job_id": "job456", ...}
 ```
 
-> ⚠️ **Important**: Copilot does NOT read file content. MCP Server reads files 
+> ⚠️ **Important**: Copilot does NOT read file content. MCP Server reads files
 > directly from mounted volumes. This saves tokens and prevents truncation.
 
 ### Dataset Management
@@ -190,7 +191,7 @@ Agent: upload_dataset(
 ```
 User: "I have a dataset at minio://bucket/data.csv. Can you train a model to predict the 'outcome' column?"
 
-Agent: 
+Agent:
 1. register_dataset(name="my_data", minio_path="bucket/data.csv", user_id="user1")
    → {"dataset_id": "abc123", "columns": ["feature1", "feature2", "outcome"]}
 
@@ -204,7 +205,7 @@ Agent:
 
 5. "Training is 30% complete..."
 
-6. get_job_status(job_id="job456", user_id="user1") 
+6. get_job_status(job_id="job456", user_id="user1")
    → {"status": "completed", "model_id": "model789"}
 
 7. get_model_leaderboard(model_id="model789", user_id="user1")

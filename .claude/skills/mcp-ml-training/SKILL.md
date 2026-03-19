@@ -279,7 +279,7 @@ Agent 執行：
 
 1. 列出檔案確認存在
    mcp_automl_list_available_files(directory="/data/sample_data")
-   
+
 2. 上傳資料集
    mcp_automl_upload_dataset(
        name="titanic_train",
@@ -310,7 +310,7 @@ Agent 執行：
 
 5. 取得結果
    mcp_automl_get_model_leaderboard(model_id="model-def456")
-   
+
 回報使用者：
 "✅ 訓練完成！
 最佳模型：WeightedEnsemble_L2
