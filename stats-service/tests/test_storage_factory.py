@@ -193,11 +193,21 @@ class TestLocalStorageService:
         resolved = storage._resolve_path("subdir/file.csv")
         assert str(resolved) == f"{temp_dir}/subdir/file.csv"
 
-    def test_resolve_absolute_path(self, storage):
-        """Test absolute path is used as-is."""
-        abs_path = "/absolute/path/file.csv"
+    def test_resolve_absolute_path_within_root(self, storage, temp_dir):
+        """Test absolute paths are allowed only within the configured root."""
+        abs_path = f"{temp_dir}/absolute/path/file.csv"
         resolved = storage._resolve_path(abs_path)
         assert str(resolved) == abs_path
+
+    def test_resolve_absolute_path_outside_root_rejected(self, storage):
+        """Test absolute paths outside the configured root are rejected."""
+        with pytest.raises(ValueError):
+            storage._resolve_path("/absolute/path/file.csv")
+
+    def test_resolve_relative_traversal_rejected(self, storage):
+        """Test relative traversal outside the configured root is rejected."""
+        with pytest.raises(ValueError):
+            storage._resolve_path("../../etc/passwd")
 
     # =========================================================================
     # Public URL

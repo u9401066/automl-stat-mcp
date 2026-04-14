@@ -23,6 +23,8 @@ import pandas as pd
 from mcp.server.fastmcp import Context, FastMCP
 from scipy import stats as scipy_stats
 
+from shared.infrastructure.path_safety import UnsafePathError, resolve_safe_path
+
 logger = logging.getLogger(__name__)
 
 # =============================================================================
@@ -35,6 +37,8 @@ DATA_MOUNT_PATHS = {
     "projects": "/data/projects",
     "uploads": "/data/uploads",
 }
+
+ALLOWED_LOCAL_PATHS = [*DATA_MOUNT_PATHS.values(), "/tmp"]
 
 # Default values
 DEFAULT_USER_ID = os.getenv("DEFAULT_USER_ID", "eric")
@@ -100,10 +104,6 @@ def validate_file_exists(csv_path: str) -> tuple[bool, str]:
     """
     path = Path(csv_path)
 
-    if path.exists() and path.is_file():
-        return True, str(path)
-
-    # Try common alternatives
     alternatives = [
         csv_path,
         f"/data/sample_data/{path.name}",
@@ -111,10 +111,15 @@ def validate_file_exists(csv_path: str) -> tuple[bool, str]:
     ]
 
     for alt in alternatives:
-        if Path(alt).exists():
-            return True, alt
+        try:
+            safe_path = resolve_safe_path(alt, base_root="/data", allowed_roots=ALLOWED_LOCAL_PATHS)
+        except UnsafePathError:
+            continue
 
-    return False, f"File not found: {csv_path}. Use list_available_files() to see available files."
+        if safe_path.exists() and safe_path.is_file():
+            return True, str(safe_path)
+
+    return False, f"File not found or blocked by path policy: {csv_path}. Use list_available_files() to see available files."
 
 
 # =============================================================================

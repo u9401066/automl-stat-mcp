@@ -21,6 +21,8 @@ import pandas as pd
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
+from shared.infrastructure.path_safety import UnsafePathError, resolve_safe_path
+
 router = APIRouter(prefix="/cleaning", tags=["Data Cleaning"])
 
 
@@ -154,24 +156,13 @@ def _validate_path(csv_path: str) -> str:
     2. 確認在允許的目錄內
     3. 拒絕讀取系統檔案
     """
-    from pathlib import Path
-
-    # 解析真實路徑
     try:
-        real_path = str(Path(csv_path).resolve())
-    except Exception:
-        raise HTTPException(status_code=400, detail=f"Invalid path: {csv_path}") from None
-
-    # 檢查是否在允許的目錄內
-    is_allowed = any(real_path.startswith(allowed) for allowed in ALLOWED_PATHS)
-
-    if not is_allowed:
+        return str(resolve_safe_path(csv_path, base_root="/data", allowed_roots=ALLOWED_PATHS))
+    except UnsafePathError as e:
         raise HTTPException(
             status_code=403,
-            detail=f"Access denied: Path must be within allowed directories ({', '.join(ALLOWED_PATHS)})",
-        )
-
-    return real_path
+            detail=f"Access denied: {e}",
+        ) from e
 
 
 def _load_csv(csv_path: str) -> pd.DataFrame:
@@ -196,11 +187,14 @@ def _save_csv(df: pd.DataFrame, save_path: Optional[str], original_path: str) ->
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         save_path = f"{base}_cleaned_{timestamp}{ext}"
 
-    # Ensure directory exists
-    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    try:
+        safe_path = resolve_safe_path(save_path, base_root="/data", allowed_roots=ALLOWED_PATHS)
+    except UnsafePathError as e:
+        raise HTTPException(status_code=403, detail=f"Access denied: {e}") from e
 
-    df.to_csv(save_path, index=False)
-    return save_path
+    safe_path.parent.mkdir(parents=True, exist_ok=True)
+    df.to_csv(safe_path, index=False)
+    return str(safe_path)
 
 
 def _get_column_info(df: pd.DataFrame) -> List[Dict[str, Any]]:

@@ -23,6 +23,8 @@ from typing import List, Optional
 
 import pandas as pd
 
+from shared.infrastructure.path_safety import UnsafePathError, resolve_safe_path
+
 logger = logging.getLogger(__name__)
 
 
@@ -118,20 +120,17 @@ class LocalStorageService(StorageService):
 
     Path resolution:
     - Relative paths are resolved from LOCAL_DATA_ROOT
-    - Absolute paths are used as-is
-    - Container paths (/data/...) are used directly
+    - Absolute paths must stay within the configured data root
+    - Path traversal outside the data root is rejected
     """
 
     def __init__(self, data_root: str = "/data"):
-        self.data_root = Path(data_root)
+        self.data_root = Path(data_root).resolve(strict=False)
         logger.info(f"LocalStorageService initialized with root: {self.data_root}")
 
     def _resolve_path(self, path: str) -> Path:
-        """Resolve path to absolute local path."""
-        p = Path(path)
-        if p.is_absolute():
-            return p
-        return self.data_root / path
+        """Resolve path to an allowed absolute local path."""
+        return resolve_safe_path(path, base_root=self.data_root, allowed_roots=[self.data_root])
 
     async def read_csv(
         self,
@@ -211,7 +210,11 @@ class LocalStorageService(StorageService):
 
     async def file_exists(self, path: str) -> bool:
         """Check if file exists."""
-        return self._resolve_path(path).exists()
+        try:
+            return self._resolve_path(path).exists()
+        except UnsafePathError as e:
+            logger.warning(f"Blocked file_exists outside data root: {e}")
+            return False
 
     async def list_files(
         self,
@@ -220,7 +223,12 @@ class LocalStorageService(StorageService):
         recursive: bool = False,
     ) -> List[dict]:
         """List files in directory."""
-        dir_path = self._resolve_path(path)
+        try:
+            dir_path = self._resolve_path(path)
+        except UnsafePathError as e:
+            logger.warning(f"Blocked list_files outside data root: {e}")
+            return []
+
         if not dir_path.exists():
             return []
 
@@ -241,8 +249,8 @@ class LocalStorageService(StorageService):
 
     async def delete_file(self, path: str) -> bool:
         """Delete a file."""
-        file_path = self._resolve_path(path)
         try:
+            file_path = self._resolve_path(path)
             file_path.unlink()
             return True
         except FileNotFoundError:
