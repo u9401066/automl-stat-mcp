@@ -11,7 +11,11 @@ from typing import Any, Dict, List, Optional
 import pandas as pd
 from mcp.server.fastmcp import FastMCP
 
+from shared.infrastructure.path_safety import resolve_safe_path
+
 logger = logging.getLogger(__name__)
+
+ALLOWED_LOCAL_PATHS = ["/data/sample_data", "/data/projects", "/data/uploads", "/tmp"]
 
 
 def register_cleaning_tools(mcp: FastMCP, automl_client) -> None:
@@ -24,8 +28,9 @@ def register_cleaning_tools(mcp: FastMCP, automl_client) -> None:
     # ==================== HELPER FUNCTIONS ====================
 
     def _parse_csv(csv_path: str) -> pd.DataFrame:
-        """Load CSV from path"""
-        return pd.read_csv(csv_path)
+        """Load CSV from an allowed local path."""
+        safe_path = resolve_safe_path(csv_path, base_root="/data", allowed_roots=ALLOWED_LOCAL_PATHS)
+        return pd.read_csv(safe_path)
 
     def _get_csv_content(df: pd.DataFrame) -> str:
         """Convert DataFrame to CSV string (in-memory, no file write).

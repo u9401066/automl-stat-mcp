@@ -133,3 +133,5 @@ C) 整合到 Stats Service（選擇）- 邏輯相關，共用環境
 | 2025-12-11 | 儲存架構改為 Redis (暫存+TTL) + MinIO (永久儲存), 完全移除本地檔案儲存 | 1. 避免重複儲存造成空間浪費和同步問題 2. Redis TTL 自動清理過期資料 3. MinIO 提供可靠的永久儲存 4. 簡化架構，減少維護負擔 |
 | 2025-12-16 | 建立 MCP 工具流程改善計畫，優先執行 AGENTS.md 強化與新增 mcp-quick-analysis Skill | 經 medical_study_200.csv 測試發現：1) 路徑混淆最常見 2) 98+工具選擇困難 3) user_id 重複輸入 4) auto_analyze 不穩定。採用漸進式改善：P0 更新 AGENTS.md 加入路徑速查表和工具選擇指南，P1 新增 mcp-quick-analysis Skill 整合自動路徑轉換和智能工具選擇。暫不修改 MCP Server 端（成本高）。 |
 | 2026-01-06 | 採用手工外科手術式修復 (Surgical Fix) 代替自動化正則腳本進行代碼品質清理 | 在處理數千個 Ruff B904 (Exception chaining) 報錯時，發現自動化腳本容易破壞複雜的 f-string 與 decorator 語法（導致 Python 語法錯誤）。為了保證系統穩定性，改為使用 `sed` 與 `replace_string_in_file` 進行有針對性的手動修復，並同時解決 MyPy 的深層類型推斷問題（如 `Dict[str, Any]` 註解）。這雖然耗時較長，但確保了核心路由邏輯的 100% 正確性與類型安全性。 |
+
+[2026-04-14 23:32:15] - 將本地檔案路徑安全視為跨服務基礎設施責任：新增 shared.infrastructure.path_safety，所有 local storage 與直接讀檔入口都必須先驗證路徑落在允許的資料目錄。

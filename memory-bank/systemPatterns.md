@@ -500,3 +500,5 @@ client.fget_object('stats-reports',
 - stats-worker/src/config.py TTL settings
 - upload_tools.py _process_csv_in_memory()
 - cleaning_tools.py _get_csv_content()
+
+[2026-04-14 23:32:15] - 新增共用 Path Safety Pattern：以 resolve_safe_path 統一正規化/驗證路徑，阻擋絕對路徑越界、/data/../../ 類型 traversal，並限制寫入只發生在允許的 mounted data roots。

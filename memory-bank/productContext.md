@@ -478,3 +478,5 @@ Separated Container Architecture with 4 components: 1) AutoML API (FastAPI) - li
 ## Project Description
 
 AutoML MCP System - Multi-user AutoML and statistical analysis platform accessible via AI Agents through MCP protocol
+
+[2026-04-14 23:32:15] - 專案安全模型補充：Agent/Service 的本地檔案存取只允許 sample_data、projects、uploads 與暫存目錄，避免任意容器檔案暴露給 MCP 工具或 API。

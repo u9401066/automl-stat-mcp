@@ -23,3 +23,5 @@
 - 補充更多測試（chaos testing, regression testing）
 - 整合 CI/CD 自動化測試
 - 實作測試覆蓋率監控
+
+[2026-04-14 23:32:15] - 完成高階設計缺陷修補：封鎖 LocalStorage 任意讀寫、MCP cleaning 直接讀檔越界、stats cleaning save_path 任意寫入；新增回歸測試 tests/unit/test_path_safety.py。

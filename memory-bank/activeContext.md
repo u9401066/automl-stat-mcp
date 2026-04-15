@@ -86,3 +86,5 @@
 - [ROADMAP](../docs/ROADMAP.md) - 完整開發藍圖
 - [CHANGELOG](../CHANGELOG.md) - 版本更新記錄
 - [Design Issue #001](../docs/design-issues/001-data-cleaning-workflow.md) - 資料清理設計
+
+[2026-04-14 23:32:15] - 遠端 code review 聚焦於本地檔案存取設計缺陷：LocalStorage 與部分 MCP/cleaning 入口允許絕對路徑與 `..` 路徑遍歷，已集中修補並補上回歸測試。
