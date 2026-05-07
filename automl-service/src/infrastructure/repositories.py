@@ -50,7 +50,7 @@ class InMemoryDatasetRepository(DatasetRepository):
         if DATASETS_META_DIR.exists():
             for meta_file in DATASETS_META_DIR.glob("*.json"):
                 try:
-                    with open(meta_file, "r") as f:
+                    with open(meta_file, "r", encoding="utf-8") as f:
                         data = json.load(f)
                         dataset = Dataset(
                             id=DatasetId.from_string(data["id"]),
@@ -83,8 +83,8 @@ class InMemoryDatasetRepository(DatasetRepository):
             "file_size_bytes": dataset.file_size_bytes,
             "created_at": dataset.created_at.isoformat(),
         }
-        with open(meta_file, "w") as f:
-            json.dump(data, f, indent=2)
+        with open(meta_file, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
 
     def _save_to_redis(self, dataset: Dataset):
         """Save dataset metadata to Redis for cross-service access"""
@@ -148,7 +148,7 @@ class InMemoryModelRepository(ModelRepository):
         if MODELS_META_DIR.exists():
             for meta_file in MODELS_META_DIR.glob("*.json"):
                 try:
-                    with open(meta_file, "r") as f:
+                    with open(meta_file, "r", encoding="utf-8") as f:
                         data = json.load(f)
                         leaderboard = [
                             LeaderboardEntry(**entry)
@@ -199,8 +199,8 @@ class InMemoryModelRepository(ModelRepository):
             "session_id": model.session_id,
             "created_at": model.created_at.isoformat(),
         }
-        with open(meta_file, "w") as f:
-            json.dump(data, f, indent=2)
+        with open(meta_file, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
 
     async def save(self, model: MLModel) -> None:
         self._models[str(model.id)] = model
@@ -249,7 +249,7 @@ class InMemoryJobRepository(JobRepository):
         if JOBS_META_DIR.exists():
             for job_file in JOBS_META_DIR.glob("*.json"):
                 try:
-                    with open(job_file, "r") as f:
+                    with open(job_file, "r", encoding="utf-8") as f:
                         data = json.load(f)
                         job = Job(
                             id=JobId.from_string(data["id"]),
@@ -292,8 +292,8 @@ class InMemoryJobRepository(JobRepository):
             "started_at": job.started_at.isoformat() if job.started_at else None,
             "completed_at": job.completed_at.isoformat() if job.completed_at else None,
         }
-        with open(job_file, "w") as f:
-            json.dump(data, f, indent=2)
+        with open(job_file, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
 
     async def save(self, job: Job) -> None:
         self._jobs[str(job.id)] = job

@@ -37,6 +37,42 @@ DATA_MOUNT_PATHS = {
 
 # Default values
 DEFAULT_USER_ID = os.getenv("DEFAULT_USER_ID", "eric")
+CSV_ENCODING_CANDIDATES = (
+    "utf-8-sig",
+    "utf-8",
+    "utf-16",
+    "utf-16le",
+    "utf-16be",
+    "cp950",
+    "big5",
+    "latin1",
+)
+
+
+def _raise_if_decoded_frame_is_suspicious(df: pd.DataFrame, encoding: str) -> None:
+    for column in df.columns:
+        if "\x00" in str(column):
+            raise UnicodeError(f"CSV decoded with {encoding!r} contains NUL column text")
+    object_columns = df.select_dtypes(include=["object"]).columns[:10]
+    for column in object_columns:
+        sample = df[column].dropna().astype(str).head(20)
+        if any("\x00" in value for value in sample):
+            raise UnicodeError(f"CSV decoded with {encoding!r} contains NUL cell text")
+
+
+def _read_csv_with_fallback(path: str, **kwargs) -> pd.DataFrame:
+    last_error: Exception | None = None
+    for encoding in CSV_ENCODING_CANDIDATES:
+        try:
+            df = pd.read_csv(path, encoding=encoding, **kwargs)
+            _raise_if_decoded_frame_is_suspicious(df, encoding)
+            return df
+        except UnicodeError as exc:
+            last_error = exc
+            continue
+    if last_error is not None:
+        raise last_error
+    return pd.read_csv(path, **kwargs)
 
 
 def resolve_csv_path(user_input: str) -> str:
@@ -349,7 +385,7 @@ def register_integrated_tools(mcp: FastMCP, automl_client) -> None:
 
         try:
             # Read data
-            df = pd.read_csv(resolved_path)
+            df = _read_csv_with_fallback(resolved_path)
 
             # 1. Quick Stats (always)
             quick_stats = compute_quick_stats(df)
@@ -468,7 +504,7 @@ def register_integrated_tools(mcp: FastMCP, automl_client) -> None:
         }
 
         try:
-            df = pd.read_csv(resolved_path)
+            df = _read_csv_with_fallback(resolved_path)
 
             # 1. Table One (Baseline Characteristics)
             tableone = compute_tableone(df, treatment_column, pval=True)
@@ -562,7 +598,7 @@ def register_integrated_tools(mcp: FastMCP, automl_client) -> None:
         resolved_path = msg
 
         try:
-            df = pd.read_csv(resolved_path, nrows=n_rows + 100)  # Read a bit more for stats
+            df = _read_csv_with_fallback(resolved_path, nrows=n_rows + 100)  # Read a bit more for stats
 
             # Basic info
             result = {
@@ -644,7 +680,7 @@ def register_integrated_tools(mcp: FastMCP, automl_client) -> None:
         user_id = user_id or DEFAULT_USER_ID
 
         try:
-            df = pd.read_csv(resolved_path)
+            df = _read_csv_with_fallback(resolved_path)
             result = compute_group_comparison(df, outcome_column, treatment_column)
 
             # Add interpretation

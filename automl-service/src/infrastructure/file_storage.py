@@ -14,6 +14,47 @@ from ..config import MINIO_ACCESS_KEY, MINIO_BUCKET, MINIO_ENDPOINT, MINIO_SECRE
 from ..domain.services import FileStorageService
 
 
+CSV_ENCODING_CANDIDATES = (
+    "utf-8-sig",
+    "utf-8",
+    "utf-16",
+    "utf-16le",
+    "utf-16be",
+    "cp950",
+    "big5",
+    "latin1",
+)
+
+
+def _raise_if_decoded_frame_is_suspicious(df: pd.DataFrame, encoding: str) -> None:
+    for column in df.columns:
+        if "\x00" in str(column):
+            raise UnicodeError(f"CSV decoded with {encoding!r} contains NUL column text")
+    object_columns = df.select_dtypes(include=["object"]).columns[:10]
+    for column in object_columns:
+        sample = df[column].dropna().astype(str).head(20)
+        if any("\x00" in value for value in sample):
+            raise UnicodeError(f"CSV decoded with {encoding!r} contains NUL cell text")
+
+
+def _read_csv_with_fallback(source) -> pd.DataFrame:
+    last_error: Exception | None = None
+    for encoding in CSV_ENCODING_CANDIDATES:
+        try:
+            if isinstance(source, (bytes, bytearray)):
+                df = pd.read_csv(io.BytesIO(source), encoding=encoding)
+            else:
+                df = pd.read_csv(source, encoding=encoding)
+            _raise_if_decoded_frame_is_suspicious(df, encoding)
+            return df
+        except UnicodeError as exc:
+            last_error = exc
+            continue
+    if last_error is not None:
+        raise last_error
+    return pd.read_csv(source)
+
+
 class MinIOStorageService(FileStorageService):
     """MinIO implementation of FileStorageService"""
 
@@ -101,7 +142,7 @@ class MinIOStorageService(FileStorageService):
             response.close()
             response.release_conn()
 
-            return pd.read_csv(io.BytesIO(data))
+            return _read_csv_with_fallback(data)
         except S3Error as e:
             raise ValueError(f"Failed to read CSV: {e}") from e
 
@@ -183,11 +224,11 @@ class LocalFileStorageService(FileStorageService):
         }
 
     async def read_csv(self, path: str) -> pd.DataFrame:
-        return pd.read_csv(path)
+        return _read_csv_with_fallback(path)
 
     async def validate_csv(self, path: str) -> Tuple[bool, List[str], int]:
         try:
-            df = pd.read_csv(path)
+            df = _read_csv_with_fallback(path)
             return True, df.columns.tolist(), len(df)
         except Exception:
             return False, [], 0

@@ -25,6 +25,55 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 
+CSV_ENCODING_CANDIDATES = (
+    "utf-8-sig",
+    "utf-8",
+    "utf-16",
+    "utf-16le",
+    "utf-16be",
+    "cp950",
+    "big5",
+    "latin1",
+)
+
+
+def _raise_if_decoded_frame_is_suspicious(df: pd.DataFrame, encoding: str) -> None:
+    """Reject decodes that technically succeed but leave UTF-16 NUL artifacts."""
+    for column in df.columns:
+        if "\x00" in str(column):
+            raise UnicodeError(f"CSV decoded with {encoding!r} contains NUL column text")
+
+    object_columns = df.select_dtypes(include=["object"]).columns[:10]
+    for column in object_columns:
+        sample = df[column].dropna().astype(str).head(20)
+        if any("\x00" in value for value in sample):
+            raise UnicodeError(f"CSV decoded with {encoding!r} contains NUL cell text")
+
+
+def _read_csv_with_fallback(source, n_rows: Optional[int] = None) -> pd.DataFrame:
+    """Read CSV with UTF-first fallback for Windows/Taiwan locale exports."""
+    last_error: Exception | None = None
+    for encoding in CSV_ENCODING_CANDIDATES:
+        try:
+            kwargs: dict[str, Any] = {"encoding": encoding}
+            if n_rows is not None:
+                kwargs["nrows"] = n_rows
+            if isinstance(source, (bytes, bytearray)):
+                df = pd.read_csv(io.BytesIO(source), **kwargs)
+            else:
+                df = pd.read_csv(source, **kwargs)
+            _raise_if_decoded_frame_is_suspicious(df, encoding)
+            return df
+        except UnicodeError as exc:
+            last_error = exc
+            continue
+    if last_error is not None:
+        raise last_error
+    if n_rows:
+        return pd.read_csv(source, nrows=n_rows)
+    return pd.read_csv(source)
+
+
 # =============================================================================
 # Abstract Storage Interface
 # =============================================================================
@@ -160,9 +209,7 @@ class LocalStorageService(StorageService):
         """Read CSV file into DataFrame."""
         file_path = self._resolve_path(path)
         try:
-            if n_rows:
-                return pd.read_csv(file_path, nrows=n_rows)
-            return pd.read_csv(file_path)
+            return _read_csv_with_fallback(file_path, n_rows=n_rows)
         except FileNotFoundError:
             logger.warning(f"File not found: {file_path}")
             return None
@@ -185,7 +232,7 @@ class LocalStorageService(StorageService):
         """Read JSON file."""
         file_path = self._resolve_path(path)
         try:
-            with open(file_path) as f:
+            with open(file_path, encoding="utf-8") as f:
                 return json.load(f)
         except FileNotFoundError:
             return None
@@ -201,7 +248,7 @@ class LocalStorageService(StorageService):
         """Write dict to JSON file."""
         file_path = self._resolve_path(path)
         file_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(file_path, "w") as f:
+        with open(file_path, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2, default=str)
         return str(file_path)
 
@@ -288,7 +335,7 @@ class LocalStorageService(StorageService):
         """Validate local CSV readability and basic shape."""
         file_path = self._resolve_path(path)
         try:
-            df = pd.read_csv(file_path)
+            df = _read_csv_with_fallback(file_path)
         except Exception as exc:
             logger.error(f"Failed to validate CSV {file_path}: {exc}")
             return False, [], 0
@@ -388,9 +435,7 @@ class MinIOStorageService(StorageService):
             response.close()
             response.release_conn()
 
-            if n_rows:
-                return pd.read_csv(io.BytesIO(data), nrows=n_rows)
-            return pd.read_csv(io.BytesIO(data))
+            return _read_csv_with_fallback(data, n_rows=n_rows)
         except Exception as e:
             logger.error(f"Failed to read CSV {bucket}/{object_name}: {e}")
             return None

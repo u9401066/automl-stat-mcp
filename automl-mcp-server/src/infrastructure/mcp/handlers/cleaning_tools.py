@@ -12,6 +12,28 @@ from mcp.server.fastmcp import FastMCP
 
 logger = logging.getLogger(__name__)
 
+CSV_ENCODING_CANDIDATES = (
+    "utf-8-sig",
+    "utf-8",
+    "utf-16",
+    "utf-16le",
+    "utf-16be",
+    "cp950",
+    "big5",
+    "latin1",
+)
+
+
+def _raise_if_decoded_frame_is_suspicious(df: pd.DataFrame, encoding: str) -> None:
+    for column in df.columns:
+        if "\x00" in str(column):
+            raise UnicodeError(f"CSV decoded with {encoding!r} contains NUL column text")
+    object_columns = df.select_dtypes(include=["object"]).columns[:10]
+    for column in object_columns:
+        sample = df[column].dropna().astype(str).head(20)
+        if any("\x00" in value for value in sample):
+            raise UnicodeError(f"CSV decoded with {encoding!r} contains NUL cell text")
+
 
 def register_cleaning_tools(mcp: FastMCP, automl_client) -> None:
     """Register data cleaning tools with MCP server"""
@@ -24,6 +46,17 @@ def register_cleaning_tools(mcp: FastMCP, automl_client) -> None:
 
     def _parse_csv(csv_path: str) -> pd.DataFrame:
         """Load CSV from path"""
+        last_error: Exception | None = None
+        for encoding in CSV_ENCODING_CANDIDATES:
+            try:
+                df = pd.read_csv(csv_path, encoding=encoding)
+                _raise_if_decoded_frame_is_suspicious(df, encoding)
+                return df
+            except UnicodeError as exc:
+                last_error = exc
+                continue
+        if last_error is not None:
+            raise last_error
         return pd.read_csv(csv_path)
 
     def _get_csv_content(df: pd.DataFrame) -> str:
